@@ -1,13 +1,14 @@
 # Asset Tree Management Specification
 
 ## Overview
-Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery) using a recursive tree structure where nodes represent assets and sub-assets. Unlike common tree view UIs where each node only has a name, in this app each node also has a Data Card which has any number of informational fields pertaining to the node. Further, each Data Field itself has an expandable area that holds metadata (such as edit history for the Field) and other features relevent to a Data Field. This structure allows users to construct and understand detailed models of real world assets.
+Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent assets and sub-assets. Unlike common tree view UIs where each node only has a name, in this app each node also has a Data Card which has any number of informational fields pertaining to the node. Further, each Data Field itself has an expandable area that holds metadata (such as edit history for the Field) and other features relevent to a Data Field. This structure allows users to construct and understand detailed models of real world assets.
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
 - **Self Similarity**: Single TreeNode component handles all levels, with state variants for different contexts
 - **Self-Construction**: Users create and edit assets, structure, and attributes
-- **Modeless In-Situ Editing**: Edit without leaving tree view or entering edit modes
+- **All-Editable**: Everything is edited, changed, added by Users (except metadata).
+- **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
 - **Offline-First Data**: Local-first with sync capabilities
 
@@ -282,7 +283,7 @@ These fields are available for selection during node creation on the isCardUnder
 3. **Indexing Requirements:**
    - TreeNode: Index on parentId, nodeName
    - DataField: Index on parentNodeId, fieldName
-   - For performance with large datasets
+
 
 4. **Data Validation:**
    - Enforce at UI component level
@@ -296,3 +297,6 @@ These fields are available for selection during node creation on the isCardUnder
 - **Skip customProperties**: Focus on basic node and DataField types only
 - **Skip isRequired**: No "required data field" features for now
 - **Skip isEditable and isLocked**: All data fields are editable for now, no "locking" features for now
+
+## Styling Design
+![ROOT view image](ROOT_view.ui.svg)
