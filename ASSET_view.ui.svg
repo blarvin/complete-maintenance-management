@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="333" height="660" viewBox="0 40 333 660">
+    <style>
+        /* Hide legacy dp_* content so only the cleaned mockup is visible */
+        [id^="dp_"] { display: none; }
+        [id^="dp_path"], [id^="dp_text"] { display: none; }
+    </style>
+
+    <!-- Screen title (match ROOT heading style) -->
+    <text x="166" y="60" fill="#c51000" font-family="Trebuchet MS" font-size="18" font-weight="700" text-anchor="middle">ASSET view</text>
+
+	<!-- Cleaned overlay mirroring ROOT style with isParent and isChild states --> 
+	<g id="asset_mockup_clean" transform="matrix(1,0,0,1,-32,-32)">
+		<g id="layout">
+			<rect id="app_container" x="43" y="140" width="310" height="580" fill="#004275"/>
+			<!-- Parent row and card: aligned to app_container like ROOT, parent a bit larger -->
+			<rect id="tree_node_isparent" x="45" y="237" width="305" height="50" rx="25" fill="#bdf79b"/>
+            <rect id="data_card_parent" x="110" y="257" width="230" height="130" rx="12" fill="#6b6b6b"/>
+        </g>
+        <g id="node_title_isparent" transform="matrix(1,0,0,1,85,250)">
+			<text xml:space="preserve" fill="black" font-family="Nirmala UI" font-size="13" font-weight="700" x="0" y="0">Bigger Digger . HPU #3 . hydraulic pump . <tspan font-weight="700">electric motor</tspan></text>
+		</g>
+        <text id="node_subtitle_isparent" transform="matrix(1,0,0,1,120,265)" xml:space="preserve" fill="black" font-family="Yu Gothic UI" font-size="7" font-style="italic" x="0" y="0">3 phase motor driving hydraulic pump</text>
+		<!-- Left up button chevron for parent -->
+		<path id="up_button_isparent" fill="#004275" d="M 141 272 L 138 266 L 145 266 Z"/>
+		<!-- Simple grey tags in parent card -->
+		<g id="parent_field_tags" transform="matrix(1,0,0,1,-32,-32)">
+			<path id="field_tag_voltage" fill="#545454" d="M 156 352 L 183 352 L 183 363 L 156 363 Z"/>
+			<path id="field_tag_mpn" fill="#545454" d="M 198 334 L 253 334 L 253 345 L 198 345 Z"/>
+			<path id="field_tag_manufacturer" fill="#545454" d="M 132 285 L 206 285 L 206 296 L 132 296 Z"/>
+		</g>
+        <!-- "Add new data field" appears once in the card (avoid duplicate IDs) -->
+		<!-- Tree line and branch lines on the left with small NewAsset buttons -->
+		<circle id="tree_line_head" cx="86" cy="260" r="5" fill="#99f9cf"/>
+		<path id="tree_line" d="M 86 260 L 86 700" stroke="#99f9cf" stroke-width="3" fill="none"/>
+		<g id="tree_line_buttons" fill="#99f9cf" stroke="#004275" stroke-width="0.3">
+            <circle id="new_asset_01" cx="86" cy="401" r="4"/>
+            <path d="M 85 401 L 87 401 M 86 400 L 86 402"/>
+            <circle id="new_asset_02" cx="86" cy="441" r="4"/>
+            <path d="M 85 441 L 87 441 M 86 440 L 86 442"/>
+            <circle id="new_asset_03" cx="86" cy="481" r="4"/>
+            <path d="M 85 481 L 87 481 M 86 480 L 86 482"/>
+            <circle id="new_asset_04" cx="86" cy="521" r="4"/>
+            <path d="M 85 521 L 87 521 M 86 520 L 86 522"/>
+            <circle id="new_asset_05" cx="86" cy="561" r="4"/>
+            <path d="M 85 561 L 87 561 M 86 560 L 86 562"/>
+            <circle id="new_asset_06" cx="86" cy="601" r="4"/>
+            <path d="M 85 601 L 87 601 M 86 600 L 86 602"/>
+            <circle id="new_asset_07" cx="86" cy="641" r="4"/>
+            <path d="M 85 641 L 87 641 M 86 640 L 86 642"/>
+            <circle id="new_asset_08" cx="86" cy="681" r="4"/>
+            <path d="M 85 681 L 87 681 M 86 680 L 86 682"/>
+        </g>
+        <g id="branch_lines" stroke="#99f9cf" stroke-width="3" fill="none">
+            <path id="branch_01" d="M 86 401 L 98 401"/>
+            <path id="branch_02" d="M 86 441 L 98 441"/>
+            <path id="branch_03" d="M 86 481 L 98 481"/>
+            <path id="branch_04" d="M 86 521 L 98 521"/>
+            <path id="branch_05" d="M 86 561 L 98 561"/>
+            <path id="branch_06" d="M 86 601 L 98 601"/>
+            <path id="branch_07" d="M 86 641 L 98 641"/>
+            <path id="branch_08" d="M 86 681 L 98 681"/>
+        </g>
+		<!-- Children rows: slightly smaller than ROOT; aligned to branch centers -->
+		<rect id="tree_node_ischild_01" x="100" y="385" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<text id="node_title_ischild_01" x="110" y="399" fill="black" font-family="Nirmala UI" font-size="9" font-weight="700" lengthAdjust="spacingAndGlyphs" textLength="225">HPU #3 . hydraulic pump . electric motor . shaft coupling</text>
+		<text id="node_subtitle_ischild_01" x="110" y="412" fill="black" font-family="Yu Gothic UI" font-size="7" font-style="italic">Coupling connecting motor shaft to pump shaft</text>
+
+		<rect id="tree_node_ischild_02" x="100" y="425" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<text id="node_title_ischild_02" x="110" y="439" fill="black" font-family="Nirmala UI" font-size="9" font-weight="700" lengthAdjust="spacingAndGlyphs" textLength="225">HPU #3 . hydraulic pump . electric motor . bell housing</text>
+		<text id="node_subtitle_ischild_02" x="110" y="452" fill="black" font-family="Yu Gothic UI" font-size="7" font-style="italic">Mounting bracket holding pump to motor</text>
+
+		<!-- Placeholder rows for more children -->
+		<rect id="tree_node_ischild_03" x="100" y="465" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<rect id="tree_node_ischild_04" x="100" y="505" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<rect id="tree_node_ischild_05" x="100" y="545" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<rect id="tree_node_ischild_06" x="100" y="585" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<rect id="tree_node_ischild_07" x="100" y="625" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<rect id="tree_node_ischild_08" x="100" y="665" width="245" height="32" rx="16" fill="#9be8c6"/>
+		<!-- TypeOf tag in card -->
+		<text id="data_field_typeof" x="120" y="330" fill="white" font-family="Yu Gothic UI" font-size="7" font-style="italic">TypeOf:  #electricMotor</text>
+		<text id="add_field_text" x="140" y="350" fill="white" font-family="Yu Gothic UI" font-size="7" font-style="italic">Add new data field</text>
+	</g>
+</svg>

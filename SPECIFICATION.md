@@ -299,4 +299,14 @@ These fields are available for selection during node creation on the isCardUnder
 - **Skip isEditable and isLocked**: All data fields are editable for now, no "locking" features for now
 
 ## Styling Design
-![ROOT view image](ROOT_view.ui.svg)
+
+<div style="display:flex; gap:16px; align-items:flex-start;">
+  <div>
+    <p><strong>ROOT view</strong></p>
+    <img src="ROOT_view.ui.svg" alt="ROOT view image"/>
+  </div>
+  <div>
+    <p><strong>ASSET view</strong></p>
+    <img src="ASSET_view.ui.svg" alt="ASSET view image"/>
+  </div>
+</div>
