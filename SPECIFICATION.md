@@ -300,7 +300,7 @@ These fields are available for selection during node creation on the isCardUnder
 
 ## Styling Design
 
-<div style="display:flex; gap:16px; align-items:flex-start;">
+<div style="display:flex; gap:200px; align-items:flex-start;">
   <div>
     <p><strong>ROOT view</strong></p>
     <img src="ROOT_view.ui.svg" alt="ROOT view image"/>
