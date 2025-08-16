@@ -4,10 +4,10 @@
 Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent things and their parts. 
 
 Unlike common tree view UIs where each node only has a name, this app has four levels of knowledge structure: 
-- Level I: Nodes represent things and their constituent parts. These also feature a subtitle.
+- Level I: Nodes represent things and their constituent parts. These feature a Title and a Subtitle.
 - Level II: Each Node has one Data Card containing any number of Data Fields (facts about that thing).
 - Level III: Each Data Field has a Field Details section containing context (e.g., metadata) and management actions (e.g., delete).
-- Level IV: Each Field Value has a complete user‑accessible History.
+- Level IV: Each Field has a complete user‑accessible history of previous Field values.
 
 This structure enables users to construct and understand detailed hierarchical models of real world assets.
 
@@ -16,7 +16,7 @@ This structure enables users to construct and understand detailed hierarchical m
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
 - **Self Similarity**: Single TreeNode component handles all levels, with state variants for different contexts
-- **Self-Construction**: Users create and edit assets, structure, and attributes
+- **Self-Construction**: Users create and edit assets, structure, and attributes.
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
@@ -26,7 +26,7 @@ This structure enables users to construct and understand detailed hierarchical m
 
 ### Views
 - **ROOT View**: Listview of top-level Assets (TreeNodes in root state) + "Create New Asset" button at the bottom. Single flex container element for layout.
-- **ASSET View**: Single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) with 20rem left padding containing all child TreeNodes (isChild state). 
+- **ASSET View**: Single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left by a configurable CSS custom property (e.g., `--child-indent`). A non-interactive Tree Line runs slightly left of child nodes, matching the alignment shown in `ASSET_view.svg`.
 
 ### Core component hierarchy
 - **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
@@ -38,8 +38,9 @@ This structure enables users to construct and understand detailed hierarchical m
 - **DataFieldDetails**: Expandable section with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
 - **ExpandDataField**: Button to expand the DataFieldDetails section. Simple chevron to the left of each Data Field.
 - **AddDataField**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
-- **"Up" Button**: On the left end of parent nodes (Asset node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
-- **CreateNewTreeNode**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here"
+- **"Up" Button**: On the left end of parent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
+- **CreateNewTreeNode**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here". On ASSET view, each isChild CreateNewTreeNode renders as its own row in the children container, aligned to the Tree Line (slightly left of isChild TreeNodes), using normal document flow (no absolute positioning). Its visual position is determined by DOM order among sibling isChild TreeNodes.
+- **tree-line and branch-lines**: Non-interactive CSS-only decorations inside the children container. The Tree Line is a vertical guide positioned slightly left of child nodes (as in `ASSET_view.svg`), derived from `--child-indent` with a small offset (e.g., `--tree-line-offset`). Each child row shows a short horizontal branch from the Tree Line to the node. These elements do not affect layout or capture pointer events. (See Styling Design below)
 
 ## TreeNode States
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
