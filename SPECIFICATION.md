@@ -341,3 +341,151 @@ Data Fields are either created by Users or selected from a library sourced from 
     <img src="ASSET_view.svg" alt="ASSET view image"/>
   </div>
 </div>
+
+### Style Guide (Phase 1)
+
+- **Principles**: Flat (no shadows), high-contrast text, heavy pill radii, minimal flourish. Use CSS variables so the look can evolve later without refactoring.
+
+- **CSS Tokens** (derived from the mockups):
+```css
+:root {
+  /* Palette */
+  --color-bg: #212a40;            /* dark slate (page background) */
+  --color-surface: #a3a69c;       /* ash gray surfaces */
+  --color-node-main: #a6e07f;     /* light green (primary accent) */
+  --color-node-child: #d0f6d1;    /* tea green (child nodes/highlights) */
+  --color-accent-warm: #fcb281;   /* sandy brown (icons, cues) */
+  --color-text: #212a40;          /* dark slate (text) */
+
+
+
+  /* Typography */
+  --font-title: "Nirmala UI", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  --font-body:  "Yu Gothic UI", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
+  --font-size-title: 13px;  /* matches mockups */
+  --font-size-body:  9px;   /* matches mockups */
+  --line-height: 1.35;
+
+  /* Layout & Shape */
+  --gap: 2px;              /* global small gap */
+  --radius-pill: 9999px;   /* heavy pill */
+
+  /* Tree visuals */
+  --child-indent: 1.5rem;         /* indent for children container */
+  --tree-line-offset: 0.5rem;     /* tree line sits slightly left of nodes */
+  --tree-line-width: 4px;
+  --tree-line-color: var(--color-surface);
+  --branch-line-length: 0.5rem;
+  --branch-line-thickness: 4px;
+}
+```
+
+- **Global**:
+```css
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height);
+}
+
+.TitleText { font-family: var(--font-title); font-size: var(--font-size-title); font-weight: 700; }
+.BodyText  { font-family: var(--font-body);  font-size: var(--font-size-body);  }
+.Italic    { font-style: italic; }
+```
+
+- **Surfaces & Pills**:
+```css
+.surface {
+  background: var(--color-surface);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  box-shadow: none; /* stay flat */
+  border: 0;
+}
+
+.surface--subtle { background: var(--color-node-child); }
+.accent          { background: var(--color-node-main); }
+.accent--warm    { background: var(--color-accent-warm); }
+```
+
+- **Buttons** (pill):
+```css
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-pill);
+  border: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.btn--primary { background: var(--color-node-main); }
+.btn--block { width: 100%; justify-content: center; }
+```
+
+- **Tree visuals (non-interactive)**:
+```css
+/* Children container: indented column with a vertical tree line drawn via a pseudo-element */
+.children {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding-left: var(--child-indent);
+}
+
+.children::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--child-indent) - var(--tree-line-offset));
+  top: 0; bottom: 0;
+  width: var(--tree-line-width);
+  background: var(--tree-line-color);
+  pointer-events: none;
+}
+
+/* Each child row gets a small horizontal branch connecting to the vertical tree line */
+.childRow { position: relative; }
+.childRow::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--child-indent) - var(--tree-line-offset));
+  top: 50%; transform: translateY(-50%);
+  width: var(--branch-line-length);
+  height: var(--branch-line-thickness);
+  background: var(--tree-line-color);
+  pointer-events: none;
+}
+
+/* Optional: align CreateNewTreeNode slightly left, toward the Tree Line */
+.createNewTreeNode { /* normal flow; adjust only if you want a slight left bias */
+  text-align: left;
+}
+```
+
+- **Component stubs** (for reference):
+```css
+.treeNode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.nodeHeader { display: flex; align-items: center; gap: 0.5rem; }
+.nodeTitle  { composes: TitleText; }
+.nodeSubtitle { composes: BodyText; }
+
+.dataCardShell { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms ease; }
+.dataCardShell[data-expanded="true"] { grid-template-rows: 1fr; }
+.dataCardOverflow { overflow: hidden; }
+.dataCard { transform: translateY(-100%); transition: transform 200ms ease; }
+.dataCardShell[data-expanded="true"] .dataCard { transform: translateY(0); }
+```
+
+Notes:
+- Colors and sizes are intentionally minimal and flat to keep Phase 1 simple; adjust variables to evolve the style later.
+- The tree-line and branch-lines are purely decorative and must not affect layout or pointer events.
