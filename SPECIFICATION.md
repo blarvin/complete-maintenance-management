@@ -10,7 +10,7 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
-- **Offline-First Data**: Local-first with sync capabilities
+- **Offline-First Data**: Local-first with sync capabilities (Phase 1 is local-only)
 
 ## Component Architecture
 
@@ -24,7 +24,7 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 - **NodeSubtitle**: Simple description or location string
 - **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref.
 - **CardExpandButton**: Simple chevron to expand/collapse DataCard, to the right of NodeSubtitle
-- **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static), and a drag handle appears for reordering. No separate input sub-component needed. 
+- **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
 - **DataFieldMetadata**: Expandable "details" section with Value history, edit history, creation details, etc. and a delete feature for the DataField.
 - **ExpandDataField**: Button to expand the DataFieldMetadata section. Simple chevron to the right of each DataField.
 - **AddDataField**: Button at the bottom of the DataCard to create a new DataField for the Asset node on its DataCard.
@@ -43,7 +43,7 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 
 ## DataField States
 - **isMetadataExpanded**: Metadata / details area is expanded/collapsed. Persisted to local storage.
-- **isEditing**: DataField is active for editing (active input field, drag handle to the left). Not persisted - component-local state only.
+- **isEditing**: DataField is active for editing (active input field). Not persisted - component-local state only.
 
 ### State Transitions (use finite state machine pattern)
 - isRoot → isParent (navigate to ASSET VIEW)
@@ -59,19 +59,18 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 
 ### Node Creation
 - **"Create New Asset" button**: Creates a new TreeNode in isUnderConstruction state, as a child of the current parent "Asset".
-- **New TreeNode Construction UI**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode, and fill in the default DataField values in the DataCard. Name is required; empty names are not allowed.
-- **New TreeNode DataField Construction UI**: Dropdown menus on the isCardUnderConstruction state of the DataCard for selecting DataFields. Multiple DataFields can be selected for inclusion, see Example DataFields below. The first row is the "Node Metadata" row, with programmatically generated Labels and Values. The next three rows are the defaults, if not filled then not saved. Then five rows of simple drop-down menus for user selection from the full DataField Library. The 10th row has the AddDataField button. The 11th row has the "Save" and "Cancel" buttons. Any fields left empty are not saved.
+- **New TreeNode Construction UI**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
+- **Add Fields After Creation**: Additional DataFields can be added after creation using the AddDataField section on the DataCard.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
 
 ## DataField Management 
-- **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field and drag handle. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
+- **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
 - **Add Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories, (similar to isCardUnderConstruction).
 - **Delete Data Field**: Expand the DataFieldMetadata to see a "Delete" button at the bottom of the section.
-- **Delete TreeNode**: Available in DataCard metadata section. Confirmation required. Deletes node and all children.
-- **Reorder on Data Card**: When a Data Field is active for editing, a small "drag handle" appears to the left of the row. The user can drag the row up or down to reorder the DataFields on the DataCard. (Implementation: Show drag handle when isEditing=true. Use HTML5 drag events for interaction. Recalculate and persist cardOrdering numbers to storage.)
+- **Delete TreeNode**: Available in DataCard metadata section. Confirmation required. Phase 1: Only leaf nodes can be deleted. Cascade delete of a node and all its children is deferred to a later phase.
 
 ### Default DataFields ... Added at node creation time.
-- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are server-assigned. Until server ack, updatedAt is absent; the UI should display ‘Pending’
+- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned in Phase 1.
 - **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user, no entry required).
 - **"Description"**: A short description of the asset. (No entry required)
 - **"Tags"**: A list of tags that can be used to search for the asset (arbitrary comma-separated strings entered by user. No entry required).
@@ -92,22 +91,14 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 - Current Reading:
 - Power Rating:
 - Note:
-- Image: <IMAGE>
 
 ### Empty State (ROOT View)
 - Default welcome message "Create a new asset to get started"
 - CreateNewTreeNode button (isRoot state)
 
 
-## Data Fetching Strategy:
-- **Offline-First Architecture**: All data operations work against local IndexedDB first, with automatic synchronization to cloud/server when connected.
-- **Breadth-first data fetching**: Fetch top-level TreeNodeRecords + DataFieldRecords first, then their children, then their children's children, etc.
-- **Bidirectional Auto-Sync**: All local changes immediately persist to IndexedDB and queue for cloud/server sync when connected
-- **Background Progressive Loading**: Automatically fetch tree layers breadth-first
-- **Each chunk**: One TreeNode + its DataFields (DataFields are fetched in parallel)
-- **Display Strategy**: Show what's loaded, continue fetching in background
-- **Cache Strategy**: IndexedDB + browser cache for offline resilience
-- **Conflict Resolution**: Last-write-wins with version tracking for merge conflicts between local and cloud data 
+## Data Persistence (Phase 1)
+- Local-first, local-only. No background fetching or cloud sync in Phase 1.
 
 ## Data Model
 
@@ -138,7 +129,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | parentId | string \| "ROOT" | Yes | Reference to parent node | Must exist or be "ROOT" |
 | ancestorNamePath | string | Yes | Pipe-delimited ancestor names | Auto-generated from ancestors |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
-| updatedAt | timestamp | Yes | Last modification time (epoch) | Server-assigned on sync |
+| updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | nodeOrdering | number | No | Display order among siblings | Default: 0 |
 | dataFields | Map<string, string> | No | Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
@@ -160,9 +151,9 @@ The system uses a hierarchical tree structure with two primary entities:
 | parentNodeId | string | Yes | Parent TreeNode reference | Must exist in TreeNode table |
 | dataValue | string | Yes | Stored value (any type as string) | Max 1000 chars |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
-| updatedAt | timestamp | Yes | Last modification time (epoch) | Server-assigned on sync |
+| updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
-| componentType | string | No | Special rendering type | From allowed list |
+| componentType | string | No | Special rendering type | (Phase 2) From allowed list |
 
 **Phase 2 Fields (Future):**
 - componentVersion: string - For debugging
@@ -177,15 +168,15 @@ The system uses a hierarchical tree structure with two primary entities:
 1. Root nodes must have parentId = "ROOT"
 2. Node names should be meaningful but don't need to be unique
 3. ancestorNamePath is automatically maintained by the system
-4. Deleting a node must handle or cascade to all children
+4. Phase 1: Only leaf nodes can be deleted; cascade delete will be introduced in a later phase
 5. Maximum tree depth is implementation-dependent (suggest 10 levels)
 
 #### DataField Rules
 1. Field names should be descriptive (e.g., "Serial Number" not "SN")
 2. cardOrdering must be unique within each parent node
 3. All values are stored as strings (parsing/validation in UI)
-4. Metadata field `updatedAt` auto-updates on changes (server-assigned)
-5. Reordering updates cardOrdering for all affected fields
+4. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
+5. (Phase 2) Reordering updates cardOrdering for all affected fields
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 
@@ -244,8 +235,7 @@ Data Fields are either created by Users or selected from a library sourced from 
     "dataValue": "HVAC-2024-001",
     "updatedBy": "user123",
     "updatedAt": 1709856000000,
-    "cardOrdering": 1,
-    "componentType": "text"
+    "cardOrdering": 1
   },
   {
     "id": "660e8400-e29b-41d4-a716-446655440005",
@@ -254,43 +244,10 @@ Data Fields are either created by Users or selected from a library sourced from 
     "dataValue": "In Service",
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
-    "cardOrdering": 2,
-    "componentType": "text"
+    "cardOrdering": 2
   }
 ]
 ```
-
-### Implementation Notes
-
-1. **Storage Strategy:**
-   - Primary: IndexedDB for offline-first capability
-   - Future: Cloud sync with conflict resolution
-
-2. **ID Generation:**
-   - Client-generated UUIDs (v4) for offline creation
-   - No dependency on server for ID assignment; server echoes client IDs
-
-3. **Indexing Requirements:**
-   - TreeNode: Index on parentId, nodeName
-   - DataField: Index on parentNodeId, fieldName
-
-
-4. **Data Validation:**
-   - Enforce at UI component level
-   - Validate before IndexedDB writes
-   - Server-side validation on sync
-
-5. **Sync & Consistency (Phase 1):**
-   - Conflict Resolution: Use Last-Write-Wins (LWW) when reconciling with the cloud. The authoritative winner is the record with the highest server `updatedAt` timestamp.
-   - Timestamps: All authoritative timestamps (`updatedAt`) are assigned by the server during sync. Client may keep a local monotonic clock for UX, but must replace local values with server timestamps on ack.
-   - Until server ack, updatedAt may be missing; treat as pending.
-   - UUID Assignment: Default to client-generated UUIDv4 for offline creation (as specified above). Server must accept and echo IDs. If server-side IDs are adopted later, use a `provisionalId` remap strategy and update both IndexedDB and in-memory state atomically.
-   - Cache/UI Update Rules: Apply local optimistic updates immediately; replace local `updatedAt` with the server timestamp on ack.
-   - Deletions: Treat delete as a hard delete propagated to all clients. Clients must gracefully handle missing references (prune missing `DataField` IDs from `TreeNode.dataFields`) and recompute `cardOrdering`.
-   - Duplicates/Moves: For Phase 1, treat move/duplicate as delete+create without special conflict handling. LWW applies to resulting records.
-
-
-
 
 ## Styling Design
 
