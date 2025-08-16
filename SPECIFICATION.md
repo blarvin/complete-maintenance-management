@@ -1,7 +1,7 @@
 # Asset Tree Management Specification
 
 ## Overview
-Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent assets and sub-assets. Unlike common tree view UIs where each node only has a name, in this app each node also has a Data Card which has any number of informational fields pertaining to the node. Further, each Data Field itself has an expandable area that holds metadata (such as edit history for the Field) and other features relevent to a Data Field. This structure allows users to construct and understand detailed models of real world assets.
+Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent assets and sub-assets. Unlike common tree view UIs where each node only has a name, in this app each node also has a Data Card which has any number of informational fields pertaining to the node. Further, each Data Field itself has an expandable area that holds metadata (such as edit history for the Field) and other features relevent to a Data Field. This structure allows users to construct and understand detailed hierarchical models of real world assets.
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
@@ -100,6 +100,19 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 ## Data Persistence (Phase 1)
 - Local-first, local-only. No background fetching or cloud sync in Phase 1.
   - Stores: `treeNodes`, `dataFields`, `dataFieldHistory` (new)
+  - No IndexedDB in Phase 1; use `localStorage` for persistence between sessions
+  - Single-tab simplicity: no multi-tab coordination; in-tab state is the source of truth
+  - Keys: use three keys: `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
+  - Serialization: JSON.stringify of in-memory state with `{ schemaVersion, lastSavedAt, data }`
+  - Write policy: debounce saves (~300ms) after mutations; optional manual "Save Now" for debugging
+  - Load on startup: parse stored JSON; if missing/corrupt, start empty.
+  - Integrity: maintain `dataFields` and `childNodes` mirrors via small helpers on every mutation (create/update/delete) before saving:
+    - `addNode`, `removeNode` update parent `childNodes`
+    - `addField`, `removeField` update parent `dataFields`
+    - `recomputeMirrorsFromTables()` is available for startup/dev sanity checks
+  - Saves: direct overwrite per key with try/catch; debounced to reduce churn
+  - Size limits: `localStorage` ~5MB.
+  
 
 ## Data Model
 
@@ -203,13 +216,6 @@ Phase 1 Notes:
 3. All values are stored as strings (parsing/validation in UI)
 4. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
 5. (Phase 2) Reordering updates cardOrdering for all affected fields
-
-#### DataFieldHistory Rules
-1. Append-only: never modify or delete history rows (except maintenance/pruning in later phases).
-2. On `DataField` create: insert history with `action: "create"`, `prevValue: null`, `newValue: initialValue`, `rev: 0`.
-3. On value update: if `newValue !== current.dataValue`, insert history with `action: "update"`, increment `rev` by 1.
-4. On delete: insert history with `action: "delete"`, `newValue: null`, increment `rev` by 1, then remove the `DataField`.
-5. Use a single transaction to update `dataFields` and append to `dataFieldHistory` to ensure atomicity.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 

@@ -7,13 +7,6 @@
 
 ## Deferred to Later Phases
 
-### DataCard Animations
-Moved from SPECIFICATION.md → DataCard section:
-
-Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref.
-
-Note: Phase 1 uses a simple expand/collapse without coupled animations.
-
 ### Reordering on Data Card
 Moved from SPECIFICATION.md → DataField Management:
 
