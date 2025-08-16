@@ -70,11 +70,11 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 - **Delete TreeNode**: Available in DataCard metadata section. Confirmation required. Deletes node and all children.
 - **Reorder on Data Card**: When a Data Field is active for editing, a small "drag handle" appears to the left of the row. The user can drag the row up or down to reorder the DataFields on the DataCard. (Implementation: Show drag handle when isEditing=true. Use HTML5 drag events for interaction. Recalculate and persist cardOrdering numbers to storage.)
 
-### Default DataFields ... Added and active for Value entry at node creation time, but entry not required.
-- **"Node Metadata"**: History and metadata for the node: createdBy, createdAt, updatedBy, updatedAt. (generated, non-optional)
-- **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user).
-- **"Description"**: A short description of the asset.
-- **"Tags"**: A list of tags that can be used to search for the asset (arbitrary comma-separated strings entered by user).
+### Default DataFields ... Added at node creation time.
+- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are server-assigned. Until server ack, updatedAt is absent; the UI should display ‘Pending’
+- **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user, no entry required).
+- **"Description"**: A short description of the asset. (No entry required)
+- **"Tags"**: A list of tags that can be used to search for the asset (arbitrary comma-separated strings entered by user. No entry required).
 
 
 ### Example DataFields (hardcoded for now)
@@ -132,15 +132,13 @@ The system uses a hierarchical tree structure with two primary entities:
 
 | Field | Type | Required | Description | Constraints |
 |-------|------|----------|-------------|-------------|
-| id | string (UUID) | Yes | Unique identifier | Generated client-side |
+| id | string (UUID) | Yes | Unique identifier | Generated client-side and used as canonical ID |
 | nodeName | string | Yes | Display name of the asset | Max 100 chars, required |
 | nodeSubtitle | string | No | Additional description/location | Max 200 chars |
 | parentId | string \| "ROOT" | Yes | Reference to parent node | Must exist or be "ROOT" |
 | ancestorNamePath | string | Yes | Pipe-delimited ancestor names | Auto-generated from ancestors |
-| createdBy | string | Yes | User ID of creator | Valid user ID |
-| createdAt | timestamp | Yes | Creation time (epoch) | Generated client-side |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
-| updatedAt | timestamp | Yes | Last modification time (epoch) | Auto-updated on changes |
+| updatedAt | timestamp | Yes | Last modification time (epoch) | Server-assigned on sync |
 | nodeOrdering | number | No | Display order among siblings | Default: 0 |
 | dataFields | Map<string, string> | No | Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
@@ -157,14 +155,12 @@ The system uses a hierarchical tree structure with two primary entities:
 
 | Field | Type | Required | Description | Constraints |
 |-------|------|----------|-------------|-------------|
-| id | string (UUID) | Yes | Unique identifier | Generated client-side |
+| id | string (UUID) | Yes | Unique identifier | Generated client-side and used as canonical ID |
 | fieldName | string | Yes | Display label | Max 50 chars, user-editable |
 | parentNodeId | string | Yes | Parent TreeNode reference | Must exist in TreeNode table |
 | dataValue | string | Yes | Stored value (any type as string) | Max 1000 chars |
-| createdBy | string | Yes | User ID of creator | Valid user ID |
-| createdAt | timestamp | Yes | Creation time (epoch) | Generated client-side |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
-| updatedAt | timestamp | Yes | Last modification time (epoch) | Auto-updated on changes |
+| updatedAt | timestamp | Yes | Last modification time (epoch) | Server-assigned on sync |
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
 | componentType | string | No | Special rendering type | From allowed list |
 
@@ -188,12 +184,12 @@ The system uses a hierarchical tree structure with two primary entities:
 1. Field names should be descriptive (e.g., "Serial Number" not "SN")
 2. cardOrdering must be unique within each parent node
 3. All values are stored as strings (parsing/validation in UI)
-4. Metadata fields (createdAt, updatedAt) auto-update on changes
+4. Metadata field `updatedAt` auto-updates on changes (server-assigned)
 5. Reordering updates cardOrdering for all affected fields
 
-### DataField Library
+### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 
-These fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard (Phase 1 uses hardcoded list, phase 2 will implement crowd-sourced library):
+Data Fields are either created by Users or selected from a library sourced from previous creations of the Users. The string value of "fieldName" is used as the user-facing Field Name (i.e. a label) for phase 1. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. Phase 1 uses hardcoded list, phase 2 will implement User-sourced library. (Dev Note: insert comment at function defaulting the label to fieldName):
 
 | Field Name | Category | Type | Example Value | Notes |
 |------------|----------|------|---------------|-------|
@@ -223,8 +219,6 @@ These fields are available for selection during node creation on the isCardUnder
   "nodeSubtitle": "Building A Primary Cooling System",
   "parentId": "ROOT",
   "ancestorNamePath": "",
-  "createdBy": "user123",
-  "createdAt": 1709856000000,
   "updatedBy": "user456",
   "updatedAt": 1709942400000,
   "nodeOrdering": 0,
@@ -248,8 +242,6 @@ These fields are available for selection during node creation on the isCardUnder
     "fieldName": "Serial Number",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
     "dataValue": "HVAC-2024-001",
-    "createdBy": "user123",
-    "createdAt": 1709856000000,
     "updatedBy": "user123",
     "updatedAt": 1709856000000,
     "cardOrdering": 1,
@@ -260,8 +252,6 @@ These fields are available for selection during node creation on the isCardUnder
     "fieldName": "Status",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
     "dataValue": "In Service",
-    "createdBy": "user123",
-    "createdAt": 1709856000000,
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
     "cardOrdering": 2,
@@ -278,7 +268,7 @@ These fields are available for selection during node creation on the isCardUnder
 
 2. **ID Generation:**
    - Client-generated UUIDs (v4) for offline creation
-   - No dependency on server for ID assignment
+   - No dependency on server for ID assignment; server echoes client IDs
 
 3. **Indexing Requirements:**
    - TreeNode: Index on parentId, nodeName
@@ -290,13 +280,17 @@ These fields are available for selection during node creation on the isCardUnder
    - Validate before IndexedDB writes
    - Server-side validation on sync
 
+5. **Sync & Consistency (Phase 1):**
+   - Conflict Resolution: Use Last-Write-Wins (LWW) when reconciling with the cloud. The authoritative winner is the record with the highest server `updatedAt` timestamp.
+   - Timestamps: All authoritative timestamps (`updatedAt`) are assigned by the server during sync. Client may keep a local monotonic clock for UX, but must replace local values with server timestamps on ack.
+   - Until server ack, updatedAt may be missing; treat as pending.
+   - UUID Assignment: Default to client-generated UUIDv4 for offline creation (as specified above). Server must accept and echo IDs. If server-side IDs are adopted later, use a `provisionalId` remap strategy and update both IndexedDB and in-memory state atomically.
+   - Cache/UI Update Rules: Apply local optimistic updates immediately; replace local `updatedAt` with the server timestamp on ack.
+   - Deletions: Treat delete as a hard delete propagated to all clients. Clients must gracefully handle missing references (prune missing `DataField` IDs from `TreeNode.dataFields`) and recompute `cardOrdering`.
+   - Duplicates/Moves: For Phase 1, treat move/duplicate as delete+create without special conflict handling. LWW applies to resulting records.
 
-## Phase 1 Prototyping Simplifications
-- **Skip virtualParents**: Focus on basic parent-child relationships only
-- **Skip componentType and componentVersion**: Use hardcoded list of available DataFields 
-- **Skip customProperties**: Focus on basic node and DataField types only
-- **Skip isRequired**: No "required data field" features for now
-- **Skip isEditable and isLocked**: All data fields are editable for now, no "locking" features for now
+
+
 
 ## Styling Design
 
