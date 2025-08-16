@@ -1,7 +1,17 @@
 # Asset Tree Management Specification
 
 ## Overview
-Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent assets and sub-assets. Unlike common tree view UIs where each node only has a name, in this app each node also has a Data Card which has any number of informational fields pertaining to the node. Further, each Data Field itself has an expandable area that holds metadata (such as edit history for the Field) and other features relevent to a Data Field. This structure allows users to construct and understand detailed hierarchical models of real world assets.
+Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent things and their parts. 
+
+Unlike common tree view UIs where each node only has a name, this app has four levels of knowledge structure: 
+- Level I: Nodes represent things and their constituent parts. These also feature a subtitle.
+- Level II: Each Node has one Data Card containing any number of Data Fields (facts about that thing).
+- Level III: Each Data Field has a Field Details section containing context (e.g., metadata) and management actions (e.g., delete).
+- Level IV: Each Field Value has a complete user‑accessible History.
+
+This structure enables users to construct and understand detailed hierarchical models of real world assets.
+
+
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
@@ -23,11 +33,11 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 - **NodeTitle**: Displays breadcrumb path "Ancestor1 / Ancestor2 / Parent / **CurrentNode**" (current node in bold). Parsed from ancestorNamePath string.
 - **NodeSubtitle**: Simple description or location string
 - **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref.
-- **CardExpandButton**: Simple chevron to expand/collapse DataCard, to the right of NodeSubtitle
+- **CardExpandButton**: Simple chevron to expand/collapse DataCard, to the left of NodeSubtitle
 - **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
-- **DataFieldMetadata**: Expandable "details" section with Value history, edit history, creation details, etc. and a delete feature for the DataField.
-- **ExpandDataField**: Button to expand the DataFieldMetadata section. Simple chevron to the right of each DataField.
-- **AddDataField**: Button at the bottom of the DataCard to create a new DataField for the Asset node on its DataCard.
+- **DataFieldDetails**: Expandable section with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
+- **ExpandDataField**: Button to expand the DataFieldDetails section. Simple chevron to the left of each Data Field.
+- **AddDataField**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
 - **"Up" Button**: On the left end of parent nodes (Asset node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
 - **CreateNewTreeNode**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here"
 
@@ -39,11 +49,11 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 
 ## DataCard States
 - **isCardExpanded**: DataCard is open/closed. Persisted to local storage.
-- **isCardUnderConstruction**: Default DataField values are active for entry in-situ (though not required). "Save" and "Cancel" buttons at the bottom.
+- **isCardUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). "Save" and "Cancel" buttons at the bottom.
 
 ## DataField States
-- **isMetadataExpanded**: Metadata / details area is expanded/collapsed. Persisted to local storage.
-- **isEditing**: DataField is active for editing (active input field). Not persisted - component-local state only.
+- **isMetadataExpanded**: Field Details area is expanded/collapsed. Persisted to local storage.
+- **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
 
 ### State Transitions (use finite state machine pattern)
 - isRoot → isParent (navigate to ASSET VIEW)
@@ -66,7 +76,7 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
 - **Add Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories, (similar to isCardUnderConstruction).
-- **Delete Data Field**: Expand the DataFieldMetadata to see a "Delete" button at the bottom of the section.
+- **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
 - **Delete TreeNode**: Available in DataCard metadata section. Confirmation required. Phase 1: Only leaf nodes can be deleted. Cascade delete of a node and all its children is deferred to a later phase.
 
 ### Default DataFields ... Added at node creation time.
@@ -163,7 +173,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | id | string (UUID) | Yes | Unique identifier | Generated client-side and used as canonical ID |
 | fieldName | string | Yes | Display label | Max 50 chars, user-editable |
 | parentNodeId | string | Yes | Parent TreeNode reference | Must exist in TreeNode table |
-| dataValue | string | Yes | Stored value (any type as string) | Max 1000 chars |
+| fieldValue | string | Yes | Stored value (any type as string) | Max 1000 chars |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
@@ -186,7 +196,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | dataFieldId | string (UUID) | Yes | Reference to `DataField.id` | Must exist in `DataField` table |
 | parentNodeId | string (UUID) | Yes | Reference to owning `TreeNode` | Denormalized for easy queries |
 | action | enum | Yes | "create" \| "update" \| "delete" | |
-| property | string | Yes | Changed property | Phase 1 fixed: "dataValue" |
+| property | string | Yes | Changed property | Phase 1 fixed: "fieldValue" |
 | prevValue | string \| null | Yes | Previous value | null on create |
 | newValue | string \| null | Yes | New value | null on delete |
 | editedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
@@ -199,7 +209,7 @@ Indexes:
 
 Phase 1 Notes:
 - Single-user environment; use a constant `editedBy` (e.g., "localUser") or device identifier.
-- Only `dataValue` changes are logged. Label (`fieldName`) rename history is deferred to Phase 2.
+- Only `fieldValue` changes are logged. Label (`fieldName`) rename history is deferred to Phase 2.
 
 ### Business Rules
 
@@ -271,7 +281,7 @@ Data Fields are either created by Users or selected from a library sourced from 
     "id": "660e8400-e29b-41d4-a716-446655440004",
     "fieldName": "Serial Number",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
-    "dataValue": "HVAC-2024-001",
+    "fieldValue": "HVAC-2024-001",
     "updatedBy": "user123",
     "updatedAt": 1709856000000,
     "cardOrdering": 1
@@ -280,7 +290,7 @@ Data Fields are either created by Users or selected from a library sourced from 
     "id": "660e8400-e29b-41d4-a716-446655440005",
     "fieldName": "Status",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
-    "dataValue": "In Service",
+    "fieldValue": "In Service",
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
     "cardOrdering": 2
@@ -296,7 +306,7 @@ Data Fields are either created by Users or selected from a library sourced from 
     "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
     "action": "create",
-    "property": "dataValue",
+    "property": "fieldValue",
     "prevValue": null,
     "newValue": "HVAC-2024-001",
     "editedBy": "localUser",
@@ -308,7 +318,7 @@ Data Fields are either created by Users or selected from a library sourced from 
     "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
     "action": "update",
-    "property": "dataValue",
+    "property": "fieldValue",
     "prevValue": "HVAC-2024-001",
     "newValue": "HVAC-2025-002",
     "editedBy": "localUser",
@@ -320,13 +330,13 @@ Data Fields are either created by Users or selected from a library sourced from 
 
 ## Styling Design
 
-<div style="display:flex; gap:200px; align-items:flex-start;">
+<div style="display:flex; gap:25%; align-items:flex-start;">
   <div>
     <p><strong>ROOT view</strong></p>
-    <img src="ROOT_view.ui.svg" alt="ROOT view image"/>
+    <img src="ROOT_view.svg" alt="ROOT view image"/>
   </div>
   <div>
     <p><strong>ASSET view</strong></p>
-    <img src="ASSET_view.ui.svg" alt="ASSET view image"/>
+    <img src="ASSET_view.svg" alt="ASSET view image"/>
   </div>
 </div>
