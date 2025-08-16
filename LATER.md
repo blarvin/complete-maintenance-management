@@ -90,3 +90,18 @@ Original excerpts:
 - DataField.componentType: Special rendering type (From allowed list)
 
 Note: In Phase 1, timestamps are client-assigned; componentType rendering types deferred.
+
+### History & Audit Enhancements
+Moved from SPECIFICATION.md → Data Model / DataFieldHistory:
+
+- Phase 1 implements minimal append-only history for `DataField.dataValue` in a dedicated `dataFieldHistory` store, keyed by `${dataFieldId}:${rev}` and indexed by `dataFieldId`, `editedAt`.
+- Phase 2 will expand history coverage and UI:
+  - Record `fieldName` changes (label renames) with `property: "fieldName"` entries
+  - Optional history for other properties (e.g., `cardOrdering` moves)
+  - Rollback/restore to a given `rev`
+  - Pagination, filtering, and search within history
+  - Multi-user provenance with real user IDs and server-assigned timestamps
+  - Merge strategy guidance for sync conflicts (event-level dedupe via `id`, causal ordering)
+  - Pruning/archival policies for very long histories
+
+Note: Single-user Phase 1 uses a constant `editedBy` (e.g., "localUser"). Real user identity and trust features deferred to Phase 2.

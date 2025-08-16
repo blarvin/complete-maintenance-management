@@ -99,6 +99,7 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 
 ## Data Persistence (Phase 1)
 - Local-first, local-only. No background fetching or cloud sync in Phase 1.
+  - Stores: `treeNodes`, `dataFields`, `dataFieldHistory` (new)
 
 ## Data Model
 
@@ -162,6 +163,31 @@ The system uses a hierarchical tree structure with two primary entities:
 - isLocked: boolean - Edit protection
 - isEditable: boolean - Permission control
 
+#### DataFieldHistory Entity (Phase 1 minimal)
+
+**Purpose:** Immutable append-only audit log of changes to a single `DataField`'s properties (Phase 1: value changes only)
+
+| Field | Type | Required | Description | Constraints |
+|-------|------|----------|-------------|-------------|
+| id | string | Yes | Primary key | Composite key `${dataFieldId}:${rev}` |
+| dataFieldId | string (UUID) | Yes | Reference to `DataField.id` | Must exist in `DataField` table |
+| parentNodeId | string (UUID) | Yes | Reference to owning `TreeNode` | Denormalized for easy queries |
+| action | enum | Yes | "create" \| "update" \| "delete" | |
+| property | string | Yes | Changed property | Phase 1 fixed: "dataValue" |
+| prevValue | string \| null | Yes | Previous value | null on create |
+| newValue | string \| null | Yes | New value | null on delete |
+| editedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
+| editedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
+| rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
+
+Indexes:
+- by `dataFieldId`
+- by `editedAt`
+
+Phase 1 Notes:
+- Single-user environment; use a constant `editedBy` (e.g., "localUser") or device identifier.
+- Only `dataValue` changes are logged. Label (`fieldName`) rename history is deferred to Phase 2.
+
 ### Business Rules
 
 #### TreeNode Rules
@@ -177,6 +203,13 @@ The system uses a hierarchical tree structure with two primary entities:
 3. All values are stored as strings (parsing/validation in UI)
 4. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
 5. (Phase 2) Reordering updates cardOrdering for all affected fields
+
+#### DataFieldHistory Rules
+1. Append-only: never modify or delete history rows (except maintenance/pruning in later phases).
+2. On `DataField` create: insert history with `action: "create"`, `prevValue: null`, `newValue: initialValue`, `rev: 0`.
+3. On value update: if `newValue !== current.dataValue`, insert history with `action: "update"`, increment `rev` by 1.
+4. On delete: insert history with `action: "delete"`, `newValue: null`, increment `rev` by 1, then remove the `DataField`.
+5. Use a single transaction to update `dataFields` and append to `dataFieldHistory` to ensure atomicity.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 
@@ -245,6 +278,36 @@ Data Fields are either created by Users or selected from a library sourced from 
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
     "cardOrdering": 2
+  }
+]
+```
+
+#### DataFieldHistory Example (for a single field)
+```json
+[
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440004:0",
+    "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
+    "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
+    "action": "create",
+    "property": "dataValue",
+    "prevValue": null,
+    "newValue": "HVAC-2024-001",
+    "editedBy": "localUser",
+    "editedAt": 1709856000000,
+    "rev": 0
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440004:1",
+    "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
+    "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
+    "action": "update",
+    "property": "dataValue",
+    "prevValue": "HVAC-2024-001",
+    "newValue": "HVAC-2025-002",
+    "editedBy": "localUser",
+    "editedAt": 1709942400000,
+    "rev": 1
   }
 ]
 ```
