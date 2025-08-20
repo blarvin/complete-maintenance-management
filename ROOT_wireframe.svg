@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="317.76" height="624.96">
+	<path id="dp_path001" transform="matrix(1,0,0,1,-70.7613,-714.885)" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 71.428,715.552 L 388.227,715.552 L 388.227,1339.55 L 71.428,1339.55 Z "/>
+	<text id="dp_text002" transform="matrix(1,0,0,1,51.4093,50.1053)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="19" font-weight="400" x="0" y="0">TreeNode.isRoot.title</text>
+	<g id="dp_dp003" transform="matrix(1,0,0,1,-70.7613,-714.885)">
+		<path id="dp_path004" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,803.211 L 94.804,803.211"/>
+		<path id="dp_path005" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,868.741 L 94.804,868.741"/>
+		<path id="dp_path006" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,1063.34 L 94.804,1063.34"/>
+		<path id="dp_path007" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,1128.87 L 94.804,1128.87"/>
+		<path id="dp_path008" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,1196.96 L 94.804,1196.96"/>
+	</g>
+	<text id="dp_text009" transform="matrix(1,0,0,1,54.5333,522.151)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="19" font-weight="400" x="0" y="0">CreateNewNode.isRoot</text>
+	<g id="dp_dp010" transform="matrix(1,0,0,1,-70.7613,-714.885)">
+		<path id="dp_path011" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,1262.49 L 94.804,1262.49"/>
+		<path id="dp_path012" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 369.055,741.081 L 94.804,741.081"/>
+		<path id="dp_path013" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 128.34,872.008 L 128.34,1047.83 L 369.053,1047.83 L 369.053,872.629"/>
+	</g>
+	<text id="dp_text014" transform="matrix(1,0,0,1,91.728,73.9347)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="13" font-weight="400" x="0" y="0">TreeNode.isRoot.subTitle</text>
+	<path id="dp_chevron001" transform="matrix(1,0,0,1,68.8133,67.4347)" fill="#212a40" d="M 0 -6 L 0 6 L 8 0 Z "/>
+	<text id="dp_text016" transform="matrix(1,0,0,1,51.4093,376.063)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="19" font-weight="400" x="0" y="0">TreeNode.isRoot.title</text>
+	<text id="dp_text017" transform="matrix(1,0,0,1,91.728,399.892)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="13" font-weight="400" x="0" y="0">TreeNode.isRoot.subTitle</text>
+	<path id="dp_chevron002" transform="matrix(1,0,0,1,68.8133,393.392)" fill="#212a40" d="M 0 -6 L 0 6 L 8 0 Z "/>
+	<text id="dp_text019" transform="matrix(1,0,0,1,51.4093,441.595)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="19" font-weight="400" x="0" y="0">TreeNode.isRoot.title</text>
+	<text id="dp_text020" transform="matrix(1,0,0,1,91.728,465.424)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="13" font-weight="400" x="0" y="0">TreeNode.isRoot.subTitle</text>
+	<path id="dp_chevron003" transform="matrix(1,0,0,1,68.8133,458.924)" fill="#212a40" d="M 0 -6 L 0 6 L 8 0 Z "/>
+	<text id="dp_text022" transform="matrix(1,0,0,1,51.4093,114.787)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="19" font-weight="400" x="0" y="0">TreeNode.isRoot.title</text>
+	<text id="dp_text023" transform="matrix(1,0,0,1,91.728,138.616)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="13" font-weight="400" x="0" y="0">TreeNode.isRoot.subTitle</text>
+	<path id="dp_chevron004" transform="matrix(-8.49831e-016,1,-1,-8.49831e-016,67.2187,132.116)" fill="#212a40" d="M 0 -6 L 0 6 L 8 0 Z "/>
+	<text id="dp_text025" transform="matrix(1,0,0,1,61.1027,169.601)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="16" font-weight="400" x="0" y="0">DataCard.isExpanded</text>
+	<g id="dp_dp026" transform="matrix(1,0,0,1,-70.7613,-714.885)">
+		<path id="dp_path027" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 240.419,904.193 L 140.645,904.193"/>
+		<path id="dp_path028" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 240.419,928.864 L 140.645,928.864"/>
+		<path id="dp_path029" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 240.419,953.535 L 140.645,953.535"/>
+		<path id="dp_path030" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 240.419,978.205 L 140.645,978.205"/>
+		<path id="dp_path031" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 240.419,1002.88 L 140.645,1002.88"/>
+		<path id="dp_path032" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 240.419,1027.55 L 140.645,1027.55"/>
+	</g>
+	<text id="dp_text033" transform="matrix(1.01571,0,0,1,69.016,204.729)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldName</text>
+	<g id="dp_dp034" transform="matrix(1,0,0,1,-70.7613,-714.885)">
+		<path id="dp_path035" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 355.401,904.193 L 250.789,904.193"/>
+		<path id="dp_path036" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 355.401,928.864 L 250.789,928.864"/>
+		<path id="dp_path037" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 355.401,953.535 L 250.789,953.535"/>
+		<path id="dp_path038" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 355.401,978.205 L 250.789,978.205"/>
+		<path id="dp_path039" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 355.401,1002.88 L 250.789,1002.88"/>
+		<path id="dp_path040" fill="none" fill-rule="evenodd" stroke="black" stroke-width="1.33333" d="M 355.401,1027.55 L 250.789,1027.55"/>
+	</g>
+	<text id="dp_text041" transform="matrix(1,0,0,1,180.028,204.729)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldValue</text>
+	<text id="dp_text042" transform="matrix(1.01571,0,0,1,69.016,229.652)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldName</text>
+	<text id="dp_text043" transform="matrix(1,0,0,1,180.028,229.652)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldValue</text>
+	<text id="dp_text044" transform="matrix(1.01571,0,0,1,69.016,253.652)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldName</text>
+	<text id="dp_text045" transform="matrix(1,0,0,1,180.028,253.652)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldValue</text>
+	<text id="dp_text046" transform="matrix(1.01571,0,0,1,69.016,278.575)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldName</text>
+	<text id="dp_text047" transform="matrix(1,0,0,1,180.028,278.575)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldValue</text>
+	<text id="dp_text048" transform="matrix(1.01571,0,0,1,69.016,304.112)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldName</text>
+	<text id="dp_text049" transform="matrix(1,0,0,1,180.028,304.112)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">DataField.fieldValue</text>
+	<text id="dp_text050" transform="matrix(1.0157,0,0,1,87.5707,325.651)" xml:space="preserve" fill="black" font-family="Ubuntu Mono" font-size="9" font-weight="400" x="0" y="0">AddDataField</text>
+	<g id="dp_plus001" transform="matrix(1,0,0,1,72.012,321.151)">
+		<rect x="-1" y="-6" width="2" height="12" fill="#212a40"/>
+		<rect x="-6" y="-1" width="12" height="2" fill="#212a40"/>
+	</g>
+</svg>

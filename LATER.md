@@ -14,6 +14,8 @@ When a Data Field is active for editing, a small "drag handle" appears to the le
 
 Note: Reintroduce with persistent `cardOrdering` recalculation and UI affordances.
 
+- **tree-line and branch-lines**: Non-interactive CSS-only decorations inside the children container. The Tree Line is a vertical guide positioned slightly left of child nodes (as in `ASSET_view.svg`), derived from `--child-indent` with a small offset (e.g., `--tree-line-offset`). Each child row shows a short horizontal branch from the Tree Line to the node. These elements do not affect layout or capture pointer events. (See Styling Design below)
+
 ### Image / Media Fields
 Moved from SPECIFICATION.md → Example DataFields:
 

@@ -15,38 +15,37 @@ This structure enables users to construct and understand detailed hierarchical m
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
-- **Self Similarity**: Single TreeNode component handles all levels, with state variants for different contexts
-- **Self-Construction**: Users create and edit assets, structure, and attributes.
+- **Self Similarity**: Single TreeNode component handles all levels
+- **Self-Construction**: Users are fully enabled to create and edit assets, structure, and attributes.
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
-- **Offline-First Data**: Local-first with sync capabilities (Phase 1 is local-only)
+- **Offline-First Data**: Local-first with sync capabilities
 
 ## Component Architecture
 
 ### Views
 - **ROOT View**: Listview of top-level Assets (TreeNodes in root state) + "Create New Asset" button at the bottom. Single flex container element for layout.
-- **ASSET View**: Single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left by a configurable CSS custom property (e.g., `--child-indent`). A non-interactive Tree Line runs slightly left of child nodes, matching the alignment shown in `ASSET_view.svg`.
+- **ASSET View**: Listview comprisiong a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`).
 
 ### Core component hierarchy
 - **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
 - **NodeTitle**: Displays breadcrumb path "Ancestor1 / Ancestor2 / Parent / **CurrentNode**" (current node in bold). Parsed from ancestorNamePath string.
 - **NodeSubtitle**: Simple description or location string
-- **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref.
-- **CardExpandButton**: Simple chevron to expand/collapse DataCard, to the left of NodeSubtitle
+- **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref. This expands/retracts using a simple chevron button, located on the body of the parent TreeNode to the left of NodeSubtitle.
 - **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
-- **DataFieldDetails**: Expandable section with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
-- **ExpandDataField**: Button to expand the DataFieldDetails section. Simple chevron to the left of each Data Field.
-- **AddDataField**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
+- **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
+- **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
 - **"Up" Button**: On the left end of parent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
-- **CreateNewTreeNode**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here". On ASSET view, each isChild CreateNewTreeNode renders as its own row in the children container, aligned to the Tree Line (slightly left of isChild TreeNodes), using normal document flow (no absolute positioning). Its visual position is determined by DOM order among sibling isChild TreeNodes.
-- **tree-line and branch-lines**: Non-interactive CSS-only decorations inside the children container. The Tree Line is a vertical guide positioned slightly left of child nodes (as in `ASSET_view.svg`), derived from `--child-indent` with a small offset (e.g., `--tree-line-offset`). Each child row shows a short horizontal branch from the Tree Line to the node. These elements do not affect layout or capture pointer events. (See Styling Design below)
+- **CreateNodeButton**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here". On ASSET view, each isChild CreateNodeButton renders as its own row in the children container, aligned to the Tree Line (slightly left of isChild TreeNodes), using normal document flow (no absolute positioning). Its visual position is determined by DOM order among sibling isChild TreeNodes.
+- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. In phase 1 this only contains a DELETE button, to delete the node and all of its children.
+
 
 ## TreeNode States
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of ASSET view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of ASSET view.
 - **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, no "Up" button, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
-- **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNewTreeNode button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard is set to isCardExpanded and isCardUnderConstruction 
+- **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard is set to isCardExpanded and isCardUnderConstruction 
 
 ## DataCard States
 - **isCardExpanded**: DataCard is open/closed. Persisted to local storage.
@@ -55,6 +54,10 @@ This structure enables users to construct and understand detailed hierarchical m
 ## DataField States
 - **isMetadataExpanded**: Field Details area is expanded/collapsed. Persisted to local storage.
 - **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
+
+## CreateNodeButton Variants
+- **root**: Large button styled like a ROOT node; appears on the ROOT view. Label: "Create New Asset".
+- **child**: Small inline button rendered as its own row in the children container (aligned between isChild TreeNodes, and to the left in padding gutter). Alt text: "Create New Sub‑Asset Here". Clicking inserts a new TreeNode among siblings at the click location (DOM order determines placement).
 
 ### State Transitions (use finite state machine pattern)
 - isRoot → isParent (navigate to ASSET VIEW)
@@ -69,16 +72,16 @@ This structure enables users to construct and understand detailed hierarchical m
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
 
 ### Node Creation
-- **"Create New Asset" button**: Creates a new TreeNode in isUnderConstruction state, as a child of the current parent "Asset".
-- **New TreeNode Construction UI**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
-- **Add Fields After Creation**: Additional DataFields can be added after creation using the AddDataField section on the DataCard.
+- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped. 
+- **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
+- **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
-- **Add Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories, (similar to isCardUnderConstruction).
+- **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories, (similar to isCardUnderConstruction).
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
-- **Delete TreeNode**: Available in DataCard metadata section. Confirmation required. Phase 1: Only leaf nodes can be deleted. Cascade delete of a node and all its children is deferred to a later phase.
+
 
 ### Default DataFields ... Added at node creation time.
 - **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned in Phase 1.
@@ -105,7 +108,7 @@ This structure enables users to construct and understand detailed hierarchical m
 
 ### Empty State (ROOT View)
 - Default welcome message "Create a new asset to get started"
-- CreateNewTreeNode button (isRoot state)
+- CreateNodeButton button (isRoot state)
 
 
 ## Data Persistence (Phase 1)
@@ -331,14 +334,16 @@ Data Fields are either created by Users or selected from a library sourced from 
 
 ## Styling Design
 
-<div style="display:flex; gap:25%; align-items:flex-start;">
+<div style="display:flex; gap:25%; align-items:flex-start; background:white; padding:1.5rem; border-radius:1rem;">
   <div>
-    <p><strong>ROOT view</strong></p>
+    <p style="color:black"><strong>ROOT view</strong></p>
     <img src="ROOT_view.svg" alt="ROOT view image"/>
+    <img src="ROOT_wireframe.svg" alt="ROOT wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
   <div>
-    <p><strong>ASSET view</strong></p>
+    <p style="color:black"><strong>ASSET view</strong></p>
     <img src="ASSET_view.svg" alt="ASSET view image"/>
+    <img src="ASSET_wireframe.svg" alt="ASSET wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
 </div>
 
@@ -461,8 +466,8 @@ html, body {
   pointer-events: none;
 }
 
-/* Optional: align CreateNewTreeNode slightly left, toward the Tree Line */
-.createNewTreeNode { /* normal flow; adjust only if you want a slight left bias */
+/* Optional: align CreateNodeButton slightly left, toward the Tree Line */
+.createNodeButton { /* normal flow; adjust only if you want a slight left bias */
   text-align: left;
 }
 ```

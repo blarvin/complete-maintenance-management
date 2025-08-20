@@ -1,0 +1,919 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   width="317.76"
+   height="624.96"
+   id="svg12"
+   sodipodi:docname="ASSET_wireframe.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs12" />
+  <sodipodi:namedview
+     id="namedview12"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="4.3582512"
+     inkscape:cx="158.89401"
+     inkscape:cy="110.48009"
+     inkscape:window-width="1920"
+     inkscape:window-height="1051"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg12"
+     showguides="false" />
+  <path
+     style="stroke:#000000;stroke-opacity:1;fill:none"
+     d="M 0.667,0.667 H 317.466 V 624.665 H 0.667 Z"
+     id="dp_path002" />
+  <path
+     id="dp_path003"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="#000000"
+     stroke-width="1.35995"
+     d="M 298.674,22.794 H 13.363" />
+  <path
+     id="dp_path004"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="#000000"
+     stroke-width="1.33333"
+     d="M 298.675,88.324 H 13.363" />
+  <text
+     id="dp_text006"
+     transform="matrix(1,0,0,1,40.7293,49.2547)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="19"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">TreeNode.isParent.title</text>
+  <text
+     id="dp_text007"
+     transform="matrix(1,0,0,1,81.048,73.084)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="13"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">TreeNode.isParent.subTitle</text>
+  <path
+     id="dp_chevron001"
+     fill="#212a40"
+     d="m 74.65063,64.1245 h -12 l 6,8 z"
+     style="fill:#000000" />
+  <text
+     id="dp_text009"
+     transform="translate(57.2307,104.921)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="16"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="font-size:10.6667px;fill:#000000">(DataCard.isExpanded)</text>
+  <text
+     id="dp_text020"
+     transform="matrix(1.0157,0,0,1,84.5507,390.787)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="font-size:9.26092px;fill:#000000">AddDataField</text>
+  <g
+     id="dp_plus001"
+     transform="matrix(0.79866083,0,0,0.7955,68.65063,387.349)"
+     style="fill:#000000">
+    <rect
+       x="-1"
+       y="-6"
+       width="2"
+       height="12"
+       fill="#212a40"
+       id="rect1"
+       style="fill:#000000" />
+    <rect
+       x="-6"
+       y="-1"
+       width="12"
+       height="2"
+       fill="#212a40"
+       id="rect2"
+       style="fill:#000000" />
+  </g>
+  <g
+     id="dp_dp022"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path023"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 750.516,1133.98 L 503.54,1133.98"
+       style="fill:#000000" />
+    <path
+       id="dp_path024"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 749.12,1172.94 L 502.144,1172.94"
+       style="fill:#000000" />
+  </g>
+  <text
+     id="dp_text025"
+     transform="scale(1.14025,0.87700068)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="17.1038px"
+     font-weight="400"
+     x="48.314327"
+     y="494.69467"
+     style="fill:#000000;stroke-width:1.14025">TreeNode.isChild.title</text>
+  <text
+     id="dp_text026"
+     transform="scale(1.1240641,0.88962902)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="12.3647px"
+     font-weight="400"
+     x="44.145081"
+     y="507.18024"
+     style="fill:#000000;stroke-width:1.12406">TreeNode.isChild.subTitle</text>
+  <path
+     id="dp_path027"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 749.12,1211.89 L 502.144,1211.89"
+     style="fill:#000000" />
+  <text
+     id="dp_text028"
+     transform="scale(1.14025,0.87700068)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="17.1038px"
+     font-weight="400"
+     x="47.090034"
+     y="540.68286"
+     style="fill:#000000;stroke-width:1.14025">TreeNode.isChild.title</text>
+  <text
+     id="dp_text029"
+     transform="scale(1.1240641,0.88962902)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="12.3647px"
+     font-weight="400"
+     x="44.1451"
+     y="551.99866"
+     style="fill:#000000;stroke-width:1.12406">TreeNode.isChild.subTitle</text>
+  <path
+     id="dp_path030"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 749.12,1250.85 L 502.144,1250.85"
+     style="fill:#000000" />
+  <text
+     id="dp_text031"
+     transform="scale(1.14025,0.87700068)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="17.1038px"
+     font-weight="400"
+     x="47.090034"
+     y="585.88623"
+     style="fill:#000000;stroke-width:1.14025">TreeNode.isChild.title</text>
+  <text
+     id="dp_text032"
+     transform="scale(1.1240641,0.88962902)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="12.3647px"
+     font-weight="400"
+     x="44.145119"
+     y="595.27075"
+     style="fill:#000000;stroke-width:1.12406">TreeNode.isChild.subTitle</text>
+  <path
+     id="dp_path033"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 749.12,1289.8 L 502.144,1289.8"
+     style="fill:#000000" />
+  <text
+     id="dp_text034"
+     transform="scale(1.14025,0.87700068)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="17.1038px"
+     font-weight="400"
+     x="47.090034"
+     y="629.51862"
+     style="fill:#000000;stroke-width:1.14025">TreeNode.isChild.title</text>
+  <text
+     id="dp_text035"
+     transform="scale(1.1240641,0.88962902)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="12.3647px"
+     font-weight="400"
+     x="44.145138"
+     y="639.31659"
+     style="fill:#000000;stroke-width:1.12406">TreeNode.isChild.subTitle</text>
+  <g
+     id="dp_dp036"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path037"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 629.42,884.456 L 532.401,884.456"
+       style="fill:#000000" />
+    <path
+       id="dp_path038"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 741.225,884.456 L 639.503,884.456"
+       style="fill:#000000" />
+  </g>
+  <path
+     id="dp_chevron002"
+     fill="#212a40"
+     d="m 65.0667,128.785 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_chevron003"
+     fill="#212a40"
+     d="m 65.0667,146.13093 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_path041"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 629.42,906.081 L 532.401,906.081"
+     style="fill:#000000" />
+  <text
+     id="dp_text042"
+     transform="matrix(0.881328,0,0,1,79.716,182.158)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <path
+     id="dp_path043"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 741.225,906.081 L 639.503,906.081"
+     style="fill:#000000" />
+  <text
+     id="dp_text044"
+     transform="matrix(0.872608,0,0,1,187.662,182.158)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <text
+     id="dp_text045"
+     transform="matrix(0.881328,0,0,1,79.716,206.513)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <text
+     id="dp_text046"
+     transform="matrix(0.872608,0,0,1,187.662,206.513)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <g
+     id="dp_dp047"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path048"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 629.42,929.015 L 532.401,929.015"
+       style="fill:#000000" />
+    <path
+       id="dp_path049"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 741.225,929.015 L 639.503,929.015"
+       style="fill:#000000" />
+  </g>
+  <path
+     id="dp_chevron004"
+     fill="#212a40"
+     d="m 65.0667,163.90433 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_chevron005"
+     fill="#212a40"
+     d="m 65.0667,197.698 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_path052"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 629.42,952.989 L 532.401,952.989"
+     style="fill:#000000" />
+  <text
+     id="dp_text053"
+     transform="matrix(0.881328,0,0,1,79.716,229.065)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <path
+     id="dp_path054"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 741.225,952.989 L 639.503,952.989"
+     style="fill:#000000" />
+  <text
+     id="dp_text055"
+     transform="matrix(0.872608,0,0,1,187.662,229.065)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <text
+     id="dp_text056"
+     transform="matrix(0.881328,0,0,1,79.716,253.42)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <text
+     id="dp_text057"
+     transform="matrix(0.872608,0,0,1,187.662,253.42)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <g
+     id="dp_dp058"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path059"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 629.42,975.921 L 532.401,975.921"
+       style="fill:#000000" />
+    <path
+       id="dp_path060"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 741.225,975.921 L 639.503,975.921"
+       style="fill:#000000" />
+  </g>
+  <path
+     id="dp_chevron006"
+     fill="#212a40"
+     d="m 65.0667,220.25 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_chevron007"
+     fill="#212a40"
+     d="m 65.0667,244.605 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_path063"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 629.42,999.376 L 532.401,999.376"
+     style="fill:#000000" />
+  <text
+     id="dp_text064"
+     transform="matrix(0.881328,0,0,1,79.716,275.451)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <path
+     id="dp_path065"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 741.225,999.376 L 639.503,999.376"
+     style="fill:#000000" />
+  <text
+     id="dp_text066"
+     transform="matrix(0.872608,0,0,1,187.662,275.451)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <text
+     id="dp_text067"
+     transform="matrix(0.881328,0,0,1,79.716,299.807)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <text
+     id="dp_text068"
+     transform="matrix(0.872608,0,0,1,187.662,299.807)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <g
+     id="dp_dp069"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path070"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 629.42,1022.31 L 532.401,1022.31"
+       style="fill:#000000" />
+    <path
+       id="dp_path071"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 741.225,1022.31 L 639.503,1022.31"
+       style="fill:#000000" />
+  </g>
+  <path
+     id="dp_chevron008"
+     fill="#212a40"
+     d="m 65.0667,266.636 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_chevron009"
+     fill="#212a40"
+     d="m 65.0667,290.992 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_path074"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 629.42,1045.24 L 532.401,1045.24"
+     style="fill:#000000" />
+  <text
+     id="dp_text075"
+     transform="matrix(0.881328,0,0,1,79.716,321.316)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <path
+     id="dp_path076"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="none"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 741.225,1045.24 L 639.503,1045.24"
+     style="fill:#000000" />
+  <text
+     id="dp_text077"
+     transform="matrix(0.872608,0,0,1,187.662,321.316)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <text
+     id="dp_text078"
+     transform="matrix(0.881328,0,0,1,79.716,345.672)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <text
+     id="dp_text079"
+     transform="matrix(0.872608,0,0,1,187.662,345.672)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <g
+     id="dp_dp080"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path081"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 629.42,1068.17 L 532.401,1068.17"
+       style="fill:#000000" />
+    <path
+       id="dp_path082"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 741.225,1068.17 L 639.503,1068.17"
+       style="fill:#000000" />
+  </g>
+  <path
+     id="dp_chevron010"
+     fill="#212a40"
+     d="m 65.0667,312.501 v 10 l 7.16786,-5 z"
+     style="fill:#000000;stroke-width:1.01192" />
+  <path
+     id="dp_chevron011"
+     transform="matrix(1.02398,1.13386e-015,-1.1595e-015,1,65.0667,341.771)"
+     fill="#212a40"
+     d="M 0 -5 L 0 5 L 7 0 Z "
+     style="fill:#000000" />
+  <text
+     id="dp_text085"
+     transform="matrix(0.881328,0,0,1,79.716,366.776)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldName</text>
+  <text
+     id="dp_text086"
+     transform="matrix(0.872608,0,0,1,187.662,366.776)"
+     xml:space="preserve"
+     fill="black"
+     font-family="Ubuntu Mono"
+     font-size="10"
+     font-weight="400"
+     x="0"
+     y="0"
+     style="fill:#000000">DataField.fieldValue</text>
+  <g
+     id="dp_dp087"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     style="fill:#000000">
+    <path
+       id="dp_path088"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 629.42,1089.28 L 532.401,1089.28"
+       style="fill:#000000" />
+    <path
+       id="dp_path089"
+       fill="none"
+       fill-rule="evenodd"
+       stroke="black"
+       stroke-width="1.33333"
+       d="M 741.225,1089.28 L 639.503,1089.28"
+       style="fill:#000000" />
+  </g>
+  <path
+     id="dp_chevron012"
+     transform="matrix(1.02398,1.13386e-015,-1.1595e-015,1,65.0667,362.874)"
+     fill="#212a40"
+     d="M 0 -5 L 0 5 L 7 0 Z "
+     style="fill:#000000" />
+  <path
+     id="dp_path091"
+     transform="matrix(1,0,0,1,-451.841,-714.885)"
+     fill="#212a40"
+     fill-rule="evenodd"
+     stroke="black"
+     stroke-width="1.33333"
+     d="M 474,758.068 L 468,770.601 L 471.72,770.601 L 471.72,784.735 L 476.28,784.735 L 476.28,770.601 L 480,770.601 Z "
+     style="fill:#000000" />
+  <g
+     id="dp_plus002"
+     transform="translate(25.8787,418.42833)"
+     style="fill:#000000">
+    <rect
+       x="-1"
+       y="-6"
+       width="2"
+       height="12"
+       fill="#212a40"
+       id="rect3"
+       style="fill:#000000" />
+    <rect
+       x="-6"
+       y="-1"
+       width="12"
+       height="2"
+       fill="#212a40"
+       id="rect4"
+       style="fill:#000000" />
+  </g>
+  <g
+     id="dp_plus003"
+     transform="translate(24.8787,457.38833)"
+     style="fill:#000000">
+    <rect
+       x="-1"
+       y="-6"
+       width="2"
+       height="12"
+       fill="#212a40"
+       id="rect5"
+       style="fill:#000000" />
+    <rect
+       x="-6"
+       y="-1"
+       width="12"
+       height="2"
+       fill="#212a40"
+       id="rect6"
+       style="fill:#000000" />
+  </g>
+  <g
+     id="dp_plus004"
+     transform="translate(25.8787,497.67167)"
+     style="fill:#000000">
+    <rect
+       x="-1"
+       y="-6"
+       width="2"
+       height="12"
+       fill="#212a40"
+       id="rect7"
+       style="fill:#000000" />
+    <rect
+       x="-6"
+       y="-1"
+       width="12"
+       height="2"
+       fill="#212a40"
+       id="rect8"
+       style="fill:#000000" />
+  </g>
+  <g
+     id="dp_plus005"
+     transform="translate(26.8787,535.29833)"
+     style="fill:#000000">
+    <rect
+       x="-1"
+       y="-6"
+       width="2"
+       height="12"
+       fill="#212a40"
+       id="rect9"
+       style="fill:#000000" />
+    <rect
+       x="-6"
+       y="-1"
+       width="12"
+       height="2"
+       fill="#212a40"
+       id="rect10"
+       style="fill:#000000" />
+  </g>
+  <g
+     id="dp_plus006"
+     transform="translate(27.8787,575.58167)"
+     style="fill:#000000">
+    <rect
+       x="-1"
+       y="-6"
+       width="2"
+       height="12"
+       fill="#212a40"
+       id="rect11"
+       style="fill:#000000" />
+    <rect
+       x="-6"
+       y="-1"
+       width="12"
+       height="2"
+       fill="#212a40"
+       id="rect12"
+       style="fill:#000000" />
+  </g>
+  <path
+     style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.999605;stroke-opacity:1"
+     d="m 63.858801,400.38999 c 225.257459,0 225.305189,-0.45898 225.305189,-0.45898"
+     id="path12" />
+  <rect
+     style="fill:#aaaaaa;fill-opacity:1;stroke:none;stroke-width:0.829335;stroke-opacity:1"
+     id="rect13"
+     width="208.82401"
+     height="16.582104"
+     x="80.744797"
+     y="126.54895"
+     ry="0" />
+  <text
+     id="dp_text018"
+     transform="scale(0.93879071,1.0652001)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9.38791px"
+     font-weight="400"
+     x="87.846413"
+     y="130.16803"
+     style="fill:#000000;stroke-width:0.938791">fieldName:</text>
+  <text
+     id="dp_text019"
+     transform="scale(0.93413489,1.0705092)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9.34135px"
+     font-weight="400"
+     x="145.62756"
+     y="129.52715"
+     style="fill:#000000;stroke-width:0.934135">fieldValue</text>
+  <rect
+     style="fill:#7c7c7c;fill-opacity:1;stroke:none;stroke-width:0.829335;stroke-opacity:1"
+     id="rect14"
+     width="208.82401"
+     height="16.582104"
+     x="80.744797"
+     y="143.13106"
+     ry="0" />
+  <rect
+     style="fill:#aaaaaa;fill-opacity:1;stroke:none;stroke-width:0.829335;stroke-opacity:1"
+     id="rect15"
+     width="208.82401"
+     height="16.582104"
+     x="80.744797"
+     y="159.71317"
+     ry="0" />
+  <text
+     id="text15"
+     transform="scale(0.93879073,1.0652001)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9.38791px"
+     font-weight="400"
+     x="87.846413"
+     y="145.46181"
+     style="fill:#000000;stroke-width:0.938791">fieldName:</text>
+  <text
+     id="text16"
+     transform="scale(0.93413489,1.0705092)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9.34135px"
+     font-weight="400"
+     x="145.62756"
+     y="144.74507"
+     style="fill:#000000;stroke-width:0.934135">fieldValue</text>
+  <text
+     id="text17"
+     transform="scale(0.93879074,1.0652001)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9.38791px"
+     font-weight="400"
+     x="87.846413"
+     y="160.75558"
+     style="fill:#000000;stroke-width:0.938791">fieldName:</text>
+  <text
+     id="text18"
+     transform="scale(0.93413489,1.0705092)"
+     xml:space="preserve"
+     fill="black"
+     font-family="'Ubuntu Mono'"
+     font-size="9.34135px"
+     font-weight="400"
+     x="145.62756"
+     y="159.963"
+     style="fill:#000000;stroke-width:0.934135">fieldValue</text>
+</svg>
