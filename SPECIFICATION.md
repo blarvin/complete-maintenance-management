@@ -25,8 +25,9 @@ This structure enables users to construct and understand detailed hierarchical m
 ## Component Architecture
 
 ### Views
-- **ROOT View**: Listview of top-level Assets (TreeNodes in root state) + "Create New Asset" button at the bottom. Single flex container element for layout.
-- **ASSET View**: Listview comprisiong a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`).
+- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single flex container element for layout. Each ROOT node is a Collection, reating a root asset creates a new Collection.
+- **ASSET View**: Listview comprisiong a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`). ASSET View is always scoped to one `collectionId` (the current root’s id).
+
 
 ### Core component hierarchy
 - **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
@@ -38,7 +39,7 @@ This structure enables users to construct and understand detailed hierarchical m
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
 - **"Up" Button**: On the left end of parent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
 - **CreateNodeButton**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here". On ASSET view, each isChild CreateNodeButton renders as its own row in the children container, aligned to the Tree Line (slightly left of isChild TreeNodes), using normal document flow (no absolute positioning). Its visual position is determined by DOM order among sibling isChild TreeNodes.
-- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. In phase 1 this only contains a DELETE button, to delete the node and all of its children.
+- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. In phase 1 this only contains a DELETE button.
 
 
 ## TreeNode States
@@ -75,7 +76,14 @@ This structure enables users to construct and understand detailed hierarchical m
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped. 
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
+- **Collections**: Creating a root node sets `collectionId = id`. Creating a child sets `collectionId = parent.collectionId`.
+
+### Node Deletion (Phase 1)
 - **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
+- Deleting any `TreeNode` performs a hard cascade: remove the node, all descendant nodes, their `DataField`s, and their `DataFieldHistory`.
+- No history is retained after cascade; we do not write per-field "delete" history entries during cascade.
+- Root (collection) deletion cascades identically.
+- UI: one confirm dialog summarizing counts (nodes, fields) before proceeding. Action is irreversible.
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
@@ -108,12 +116,12 @@ This structure enables users to construct and understand detailed hierarchical m
 
 ### Empty State (ROOT View)
 - Default welcome message "Create a new asset to get started"
-- CreateNodeButton button (isRoot state)
+- CreateNodeButton shown (isRoot state)
 
 
 ## Data Persistence (Phase 1)
 - Local-first, local-only. No background fetching or cloud sync in Phase 1.
-  - Stores: `treeNodes`, `dataFields`, `dataFieldHistory` (new)
+  - Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
   - No IndexedDB in Phase 1; use `localStorage` for persistence between sessions
   - Single-tab simplicity: no multi-tab coordination; in-tab state is the source of truth
   - Keys: use three keys: `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
@@ -161,6 +169,8 @@ The system uses a hierarchical tree structure with two primary entities:
 | nodeOrdering | number | No | Display order among siblings | Default: 0 |
 | dataFields | Map<string, string> | No | Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
+| collectionId | string | Yes | Collection boundary identifier | Root: equals `id`. Children: inherited root |
+
 
 **Phase 2 Fields (Future):**
 - virtualParents: string[] - For cross-references (cables, pipes, connections)
@@ -182,6 +192,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
 | componentType | string | No | Special rendering type | (Phase 2) From allowed list |
+| collectionId | string | Yes      | Collection boundary identifier      | Inherited root |
 
 **Phase 2 Fields (Future):**
 - componentVersion: string - For debugging
@@ -206,16 +217,27 @@ The system uses a hierarchical tree structure with two primary entities:
 | editedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
 | editedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
 | rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
+| collectionId | string | Yes      | Collection boundary identifier      | Inherited root |
 
 Indexes:
-- by `dataFieldId`
-- by `editedAt`
+- treeNodes: by collectionId, by parentId, by updatedAt
+- dataFields: by collectionId, by parentNodeId, by cardOrdering
+- dataFieldHistory: by collectionId, by dataFieldId, by editedAt
 
 Phase 1 Notes:
 - Single-user environment; use a constant `editedBy` (e.g., "localUser") or device identifier.
 - Only `fieldValue` changes are logged. Label (`fieldName`) rename history is deferred to Phase 2.
 
 ### Business Rules
+
+#### Collection Rules
+
+1. All nodes/fields/history in a subtree share the same `collectionId`.
+2. Cross-collection links or moves are not allowed in Phase 1. To “move” across collections, delete and recreate.
+3. Deletion in Phase 1:
+   - Only leaf nodes can be deleted.
+   - A Collection (root) can only be deleted when it has no children (no cascade in Phase 1).
+4. Queries, counts, and UI filters must be constrained to the current `collectionId` outside ROOT view.
 
 #### TreeNode Rules
 1. Root nodes must have parentId = "ROOT"
@@ -230,6 +252,19 @@ Phase 1 Notes:
 3. All values are stored as strings (parsing/validation in UI)
 4. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
 5. (Phase 2) Reordering updates cardOrdering for all affected fields
+
+### Data Persistence (Collections)
+- **Partitioning**: All records include `collectionId`. Stores remain the same keys:
+  - `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
+- **Active scope**: Maintain an in-memory `activeCollectionId` (optional to persist). 
+  - ROOT view: no active collection (null).
+  - ASSET view: `activeCollectionId` = current root’s `id`.
+- **Creation**:
+  - Root node: `collectionId = id`.
+  - Child nodes/fields/history: `collectionId = parent’s collectionId`.
+- **Indexes**:
+  - Add “by `collectionId`” to all three stores for fast filtering.
+- **Startup migration** (dev helper): If any record lacks `collectionId`, derive it by walking up to root and stamp it.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 

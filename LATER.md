@@ -100,3 +100,18 @@ Moved from SPECIFICATION.md → Data Model / DataFieldHistory:
   - Pruning/archival policies for very long histories
 
 Note: Single-user Phase 1 uses a constant `editedBy` (e.g., "localUser"). Real user identity and trust features deferred to Phase 2.
+
+- Export/import add “Export Collection (JSON)” and “Import Collection” to LATER.md.
+
+- Cross-collection references and moves
+- Per-collection settings and field libraries
+- Multi-collection search and dashboards
+- Implementation helpers to add:
+  deriveCollectionId(nodeId): string
+  stampCollectionIds() run on startup for migration
+  filterByCollection<T>(records, collectionId) for UI queries
+
+- Soft delete/recycle bin with restore window
+- Audit-preserving deletes (keep history, tombstone nodes)
+- Per-collection export before destructive ops
+- Undo for last destructive action
