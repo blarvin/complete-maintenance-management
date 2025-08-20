@@ -121,19 +121,19 @@ This structure enables users to construct and understand detailed hierarchical m
 
 ## Data Persistence (Phase 1)
 - Local-first, local-only. No background fetching or cloud sync in Phase 1.
-  - Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
-  - No IndexedDB in Phase 1; use `localStorage` for persistence between sessions
-  - Single-tab simplicity: no multi-tab coordination; in-tab state is the source of truth
-  - Keys: use three keys: `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
-  - Serialization: JSON.stringify of in-memory state with `{ schemaVersion, lastSavedAt, data }`
-  - Write policy: debounce saves (~300ms) after mutations; optional manual "Save Now" for debugging
-  - Load on startup: parse stored JSON; if missing/corrupt, start empty.
-  - Integrity: maintain `dataFields` and `childNodes` mirrors via small helpers on every mutation (create/update/delete) before saving:
-    - `addNode`, `removeNode` update parent `childNodes`
-    - `addField`, `removeField` update parent `dataFields`
-    - `recomputeMirrorsFromTables()` is available for startup/dev sanity checks
-  - Saves: direct overwrite per key with try/catch; debounced to reduce churn
-  - Size limits: `localStorage` ~5MB.
+- Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
+- No IndexedDB in Phase 1; use `localStorage` for persistence between sessions
+- Single-tab simplicity: no multi-tab coordination; in-tab state is the source of truth
+- Keys: `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
+- Serialization: JSON.stringify of in-memory state with `{ schemaVersion, lastSavedAt, data }`
+- Write policy: debounce saves (~300ms) after mutations; optional manual "Save Now" for debugging
+- Load on startup: parse stored JSON; if missing/corrupt, start empty.
+- Integrity: maintain `dataFields` and `childNodes` mirrors via small helpers on every mutation (create/update/delete) before saving:
+  - `addNode`, `removeNode` update parent `childNodes`
+  - `addField`, `removeField` update parent `dataFields`
+  - `recomputeMirrorsFromTables()` is available for startup/dev sanity checks
+- Saves: direct overwrite per key with try/catch; debounced to reduce churn
+- Size limits: `localStorage` ~5MB.
   
 
 ## Data Model
