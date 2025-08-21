@@ -16,24 +16,17 @@
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
 - **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
 
-### Data Layer (Local-Only)
-- **Persistence**: `localStorage` only (Phase 1); single-tab source of truth
-- **Stores/keys**:
-  - `cmms:treeNodes`
-  - `cmms:dataFields`
-  - `cmms:dataFieldHistory`
-  - UI state (expand/collapse): `cmms:ui:cardsExpanded`, `cmms:ui:fieldDetailsExpanded`
-- **Serialization**: `{ schemaVersion, lastSavedAt, data }` via JSON.stringify
-- **Debounce saves**: ~300ms after mutations
-- **Load behavior**: Parse on startup; if missing/corrupt, start empty
-- **Integrity helpers**: Maintain mirrors on every mutation
-  - `addNode`, `removeNode` keep parent `childNodes` accurate
-  - `addField`, `removeField` keep parent `dataFields` accurate
-  - `recomputeMirrorsFromTables()` available for sanity checks (dev-only)
+### Data Layer (Offline-Only)
+- **Persistence**: Firebase Firestore Web SDK with offline persistence (IndexedDB) enabled
+- **Phase 1 mode**: Offline-only; no network/sync. Optional Firebase CLI Emulator for local projects.
+- **Collections**: `treeNodes`, `dataFields`, `dataFieldHistory` (each record includes `treeID` and `treeType`="AssetTree")
+- **Timestamps/IDs**: `Date.now()` for `updatedAt`; `crypto.randomUUID()` for IDs; `editedBy`="localUser"
+- **Writes**: Use SDK; debounce mutations (~300ms) to reduce churn; keep integrity helpers (maintain `childNodes`/`dataFields` mirrors) before writes
+- **UI state**: Still in `localStorage` (`treeview:ui:cardsExpanded`, `treeview:ui:fieldDetailsExpanded`)
 
 ### Types & IDs
-- **IDs**: `crypto.randomUUID()`; fallback tiny UUID if necessary
-- **editedBy**: constant `"localUser"` (single-user Phase 1)
+- **IDs**: `crypto.randomUUID()`
+- **editedBy**: constant "localUser"
 - **updatedAt**: `Date.now()` on each mutation
 - **Entity types**: Align with SPEC for `TreeNode`, `DataField`, `DataFieldHistory`
 

@@ -115,3 +115,16 @@ Note: Single-user Phase 1 uses a constant `editedBy` (e.g., "localUser"). Real u
 - Audit-preserving deletes (keep history, tombstone nodes)
 - Per-collection export before destructive ops
 - Undo for last destructive action
+
+**TreeNode Entity Phase 2 Fields (Future):**
+- virtualParents: string[] - For cross-references (cables, pipes, connections)
+- componentType: string - For special node types (settings, templates)
+- componentVersion: string - For debugging and compatibility
+- customProperties: string[] - For extensibility (API keys, sources)
+
+- **Startup migration** (dev helper): If any record lacks `treeID`, derive it by walking up to root and stamp it.
+
+5. (Phase 2) Reordering updates cardOrdering for all affected fields
+- Label (`fieldName`) rename history is deferred to Phase 2.
+
+Data Fields are either created by Users (simple Field Name + Field Value Type) or selected from a library sourced from previous creations of the Users

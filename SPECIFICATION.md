@@ -25,8 +25,8 @@ This structure enables users to construct and understand detailed hierarchical m
 ## Component Architecture
 
 ### Views
-- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single flex container element for layout. Each ROOT node is a Collection, reating a root asset creates a new Collection.
-- **ASSET View**: Listview comprisiong a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`). ASSET View is always scoped to one `collectionId` (the current root’s id).
+- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single flex container element for layout. Each ROOT node is a Tree, reating a root asset creates a new Tree.
+- **ASSET View**: Listview comprisiong a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
 
 
 ### Core component hierarchy
@@ -39,7 +39,7 @@ This structure enables users to construct and understand detailed hierarchical m
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
 - **"Up" Button**: On the left end of parent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
 - **CreateNodeButton**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here". On ASSET view, each isChild CreateNodeButton renders as its own row in the children container, aligned to the Tree Line (slightly left of isChild TreeNodes), using normal document flow (no absolute positioning). Its visual position is determined by DOM order among sibling isChild TreeNodes.
-- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. In phase 1 this only contains a DELETE button.
+- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode.  (phase 1: DELETE button only.)
 
 
 ## TreeNode States
@@ -76,13 +76,13 @@ This structure enables users to construct and understand detailed hierarchical m
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped. 
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
-- **Collections**: Creating a root node sets `collectionId = id`. Creating a child sets `collectionId = parent.collectionId`.
+- **Unique Trees**: Creating a root node sets `treeID = id`. Creating a child sets `treeID = parent.treeID`.
 
-### Node Deletion (Phase 1)
+### Node Deletion
 - **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
 - Deleting any `TreeNode` performs a hard cascade: remove the node, all descendant nodes, their `DataField`s, and their `DataFieldHistory`.
 - No history is retained after cascade; we do not write per-field "delete" history entries during cascade.
-- Root (collection) deletion cascades identically.
+- Root (tree) deletion cascades identically.
 - UI: one confirm dialog summarizing counts (nodes, fields) before proceeding. Action is irreversible.
 
 ## DataField Management 
@@ -90,51 +90,38 @@ This structure enables users to construct and understand detailed hierarchical m
 - **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories, (similar to isCardUnderConstruction).
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
 
+### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
+
+Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name (i.e. a label). These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. (Dev Note: insert comment at function defaulting the label to fieldName):
+
+| Field Name | Category | Type | Example Value | Notes |
+|------------|----------|------|---------------|-------|
+| Description | General | Text | "Primary cooling pump for HVAC" | Short asset description |
+| Type Of | Classification | Text | "Pump", "Vehicle", "Building" | User-defined categories |
+| Tags | Search | CSV | "critical, hvac, maintenance" | Comma-separated values |
+| Location | Location | Text | "Building A, Room 102" | Physical location |
+| Serial Number | Identification | Text | "SN-123456789" | Manufacturer serial |
+| Part Number | Identification | Text | "PN-ABC-123" | Manufacturer part number |
+| Manufacturer | Identification | Text | "Acme Inc." | Equipment manufacturer |
+| Model | Identification | Text | "Model XYZ-500" | Equipment model |
+| Status | Status | Enum | "In Service", "Maintenance", "Retired" | Operational status |
+| Installed Date | Temporal | Date | "2025-01-01" | Installation date |
+| Weight | Physical | Text | "36.2 kg" | Physical weight |
+| Dimensions | Physical | Text | "310 x 210 x 110 mm" | Physical dimensions |
+| Power Rating | Electrical | Text | "1200W" | Power specifications |
+| Current Reading | Measurement | Text | "5.4 amps at 2025-01-01" | Current measurements |
+| Note | General | Text | "Requires quarterly maintenance" | General notes |
+| Description | General | Text | "12-pin relay, 120V coil, Motorola pattern" | Most things need this |
 
 ### Default DataFields ... Added at node creation time.
-- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned in Phase 1.
+- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned.
 - **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user, no entry required).
 - **"Description"**: A short description of the asset. (No entry required)
 - **"Tags"**: A list of tags that can be used to search for the asset (arbitrary comma-separated strings entered by user. No entry required).
 
-
-### Example DataFields (hardcoded for now)
-- Location: 
-- Description: 
-- Serial Number:
-- Part Number:
-- Manufacturer:
-- Model:
-- Weight:
-- Dimensions:
-- Color:
-- Installed Date:
-- Status:
-- Current Reading:
-- Power Rating:
-- Note:
-
 ### Empty State (ROOT View)
 - Default welcome message "Create a new asset to get started"
-- CreateNodeButton shown (isRoot state)
-
-
-## Data Persistence (Phase 1)
-- Local-first, local-only. No background fetching or cloud sync in Phase 1.
-- Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
-- No IndexedDB in Phase 1; use `localStorage` for persistence between sessions
-- Single-tab simplicity: no multi-tab coordination; in-tab state is the source of truth
-- Keys: `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
-- Serialization: JSON.stringify of in-memory state with `{ schemaVersion, lastSavedAt, data }`
-- Write policy: debounce saves (~300ms) after mutations; optional manual "Save Now" for debugging
-- Load on startup: parse stored JSON; if missing/corrupt, start empty.
-- Integrity: maintain `dataFields` and `childNodes` mirrors via small helpers on every mutation (create/update/delete) before saving:
-  - `addNode`, `removeNode` update parent `childNodes`
-  - `addField`, `removeField` update parent `dataFields`
-  - `recomputeMirrorsFromTables()` is available for startup/dev sanity checks
-- Saves: direct overwrite per key with try/catch; debounced to reduce churn
-- Size limits: `localStorage` ~5MB.
-  
+- CreateNodeButton shown (isRoot state) 
 
 ## Data Model
 
@@ -169,14 +156,8 @@ The system uses a hierarchical tree structure with two primary entities:
 | nodeOrdering | number | No | Display order among siblings | Default: 0 |
 | dataFields | Map<string, string> | No | Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
-| collectionId | string | Yes | Collection boundary identifier | Root: equals `id`. Children: inherited root |
-
-
-**Phase 2 Fields (Future):**
-- virtualParents: string[] - For cross-references (cables, pipes, connections)
-- componentType: string - For special node types (settings, templates)
-- componentVersion: string - For debugging and compatibility
-- customProperties: string[] - For extensibility (API keys, sources)
+| treeID | string | Yes | Tree boundary identifier | Root: equals `id`. Children: inherited root |
+| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
 #### DataField Entity
 
@@ -192,7 +173,8 @@ The system uses a hierarchical tree structure with two primary entities:
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
 | componentType | string | No | Special rendering type | (Phase 2) From allowed list |
-| collectionId | string | Yes      | Collection boundary identifier      | Inherited root |
+| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
+| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
 **Phase 2 Fields (Future):**
 - componentVersion: string - For debugging
@@ -217,76 +199,36 @@ The system uses a hierarchical tree structure with two primary entities:
 | editedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
 | editedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
 | rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
-| collectionId | string | Yes      | Collection boundary identifier      | Inherited root |
+| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
+| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
 Indexes:
-- treeNodes: by collectionId, by parentId, by updatedAt
-- dataFields: by collectionId, by parentNodeId, by cardOrdering
-- dataFieldHistory: by collectionId, by dataFieldId, by editedAt
-
-Phase 1 Notes:
-- Single-user environment; use a constant `editedBy` (e.g., "localUser") or device identifier.
-- Only `fieldValue` changes are logged. Label (`fieldName`) rename history is deferred to Phase 2.
+- treeNodes: by treeID, by parentId, by updatedAt
+- dataFields: by treeID, by parentNodeId, by cardOrdering
+- dataFieldHistory: by treeID, by dataFieldId, by editedAt
 
 ### Business Rules
-
-#### Collection Rules
-
-1. All nodes/fields/history in a subtree share the same `collectionId`.
-2. Cross-collection links or moves are not allowed in Phase 1. To “move” across collections, delete and recreate.
-3. Deletion in Phase 1:
-   - Only leaf nodes can be deleted.
-   - A Collection (root) can only be deleted when it has no children (no cascade in Phase 1).
-4. Queries, counts, and UI filters must be constrained to the current `collectionId` outside ROOT view.
 
 #### TreeNode Rules
 1. Root nodes must have parentId = "ROOT"
 2. Node names should be meaningful but don't need to be unique
 3. ancestorNamePath is automatically maintained by the system
-4. Phase 1: Only leaf nodes can be deleted; cascade delete will be introduced in a later phase
-5. Maximum tree depth is implementation-dependent (suggest 10 levels)
 
 #### DataField Rules
 1. Field names should be descriptive (e.g., "Serial Number" not "SN")
 2. cardOrdering must be unique within each parent node
 3. All values are stored as strings (parsing/validation in UI)
 4. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
-5. (Phase 2) Reordering updates cardOrdering for all affected fields
 
-### Data Persistence (Collections)
-- **Partitioning**: All records include `collectionId`. Stores remain the same keys:
-  - `cmms:treeNodes`, `cmms:dataFields`, `cmms:dataFieldHistory`
-- **Active scope**: Maintain an in-memory `activeCollectionId` (optional to persist). 
-  - ROOT view: no active collection (null).
-  - ASSET view: `activeCollectionId` = current root’s `id`.
+## Data Persistence
+- Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
+- Keys: `treeview:treeNodes`, `treeview:dataFields`, `treeview:dataFieldHistory`
+- **Partitioning**: All records include `treeID` and `treeType` (Phase 1: `treeType` = "AssetTree"). 
+- **Active scope**: Maintain an in-memory `activeNodeId`. 
 - **Creation**:
-  - Root node: `collectionId = id`.
-  - Child nodes/fields/history: `collectionId = parent’s collectionId`.
-- **Indexes**:
-  - Add “by `collectionId`” to all three stores for fast filtering.
-- **Startup migration** (dev helper): If any record lacks `collectionId`, derive it by walking up to root and stamp it.
-
-### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
-
-Data Fields are either created by Users or selected from a library sourced from previous creations of the Users. The string value of "fieldName" is used as the user-facing Field Name (i.e. a label) for phase 1. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. Phase 1 uses hardcoded list, phase 2 will implement User-sourced library. (Dev Note: insert comment at function defaulting the label to fieldName):
-
-| Field Name | Category | Type | Example Value | Notes |
-|------------|----------|------|---------------|-------|
-| Description | General | Text | "Primary cooling pump for HVAC" | Short asset description |
-| Type Of | Classification | Text | "Pump", "Vehicle", "Building" | User-defined categories |
-| Tags | Search | CSV | "critical, hvac, maintenance" | Comma-separated values |
-| Location | Location | Text | "Building A, Room 102" | Physical location |
-| Serial Number | Identification | Text | "SN-123456789" | Manufacturer serial |
-| Part Number | Identification | Text | "PN-ABC-123" | Manufacturer part number |
-| Manufacturer | Identification | Text | "Acme Inc." | Equipment manufacturer |
-| Model | Identification | Text | "Model XYZ-500" | Equipment model |
-| Status | Status | Enum | "In Service", "Maintenance", "Retired" | Operational status |
-| Installed Date | Temporal | Date | "2025-01-01" | Installation date |
-| Weight | Physical | Text | "36.2 kg" | Physical weight |
-| Dimensions | Physical | Text | "310 x 210 x 110 mm" | Physical dimensions |
-| Power Rating | Electrical | Text | "1200W" | Power specifications |
-| Current Reading | Measurement | Text | "5.4 amps at 2025-01-01" | Current measurements |
-| Note | General | Text | "Requires quarterly maintenance" | General notes |
+  - Root node: `treeID = id`.
+  - Child nodes/fields/history: `treeID = parent’s treeID`.
+- Single-user environment; use a constant `editedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1). 
 
 ### Data Examples
 
