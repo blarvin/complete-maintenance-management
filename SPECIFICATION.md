@@ -21,7 +21,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
-- **Offline-First**: Full UI and any data created locally or already loaded is available indeffinately pending cloud sync. No difference in UX online or offline.
+- **Offline-First**: Full UI and any data created locally or already loaded is available indeffinately pending cloud sync. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile.
 
 ## Component Architecture
 
