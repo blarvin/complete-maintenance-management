@@ -11,7 +11,8 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 
 This structure enables users to construct and understand detailed hierarchical models of real world assets.
 
-
+## Problem Domain and Solution Domain
+The problem domain contains things like Assets, sub-assets, parts, sub-assemblies, power, energy, weight, size, age, risk, drawings, facts, Addresses, People, etc. The solution is a "Tree View" or "Tree Browser" wherein Users can easily create a meningful, accessible, clear structure from their domain of things, and make changes and updates to data about those things.
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
@@ -20,7 +21,7 @@ This structure enables users to construct and understand detailed hierarchical m
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
-- **Offline-First Data**: Local-first with sync capabilities
+- **Offline-First**: Full UI and any data created locally or already loaded is available indeffinately pending cloud sync. No difference in UX online or offline.
 
 ## Component Architecture
 
