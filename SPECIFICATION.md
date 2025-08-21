@@ -92,8 +92,7 @@ This structure enables users to construct and understand detailed hierarchical m
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
-
-Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name (i.e. a label). These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. (Dev Note: insert comment at function defaulting the label to fieldName):
+Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard.
 
 | Field Name | Category | Type | Example Value | Notes |
 |------------|----------|------|---------------|-------|
