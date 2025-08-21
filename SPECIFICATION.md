@@ -46,11 +46,11 @@ This structure enables users to construct and understand detailed hierarchical m
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of ASSET view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of ASSET view.
 - **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, no "Up" button, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
-- **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard is set to isCardExpanded and isCardUnderConstruction 
+- **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard is set to isExpanded and isCardUnderConstruction 
 
 ## DataCard States
-- **isCardExpanded**: DataCard is open/closed. Persisted to local storage.
-- **isCardUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). "Save" and "Cancel" buttons at the bottom.
+- **isExpanded**: DataCard is open/closed. Persisted to local storage.
+- **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). "Save" and "Cancel" buttons at the bottom.
 
 ## DataField States
 - **isMetadataExpanded**: Field Details area is expanded/collapsed. Persisted to local storage.
@@ -75,8 +75,9 @@ This structure enables users to construct and understand detailed hierarchical m
 ### Node Creation
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped. 
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
+- **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default Field with de-selectable checkboxes to the left. 
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
-- **Unique Trees**: Creating a root node sets `treeID = id`. Creating a child sets `treeID = parent.treeID`.
+- **Unique Trees**: Creating node on ROOT view sets `treeID = id`. Creating a node on ASSET view (a child node) sets `treeID = parent.treeID`.
 
 ### Node Deletion
 - **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
