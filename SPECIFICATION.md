@@ -21,13 +21,13 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
-- **Offline-First**: Full UI and any data created locally or already loaded is available indefinitely pending cloud sync. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile.
+- **Offline-First**: Full UI and any data created locally or already loaded is available indefinitely pending cloud sync. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile. (phase 1 is local-only persistence)
 
 ## Component Architecture
 
 ### Views
 - **ROOT View**: Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
-- **ASSET View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
+- **ASSET View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`).
 
 
 ### Core component hierarchy
@@ -41,8 +41,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **"Up" Button**: On the left end of isParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and ASSET views.
 - **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
-- **Snackbar**: Global transient notification at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Queues messages; newest replaces current with reset timer. Used for DataField saves, DataField deletes, and Node cascade deletes (with Undo where applicable).
-
+- **Snackbar**: Global transient notification at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes (with Undo where applicable). Single-slot, replace current toast with latest if a new one arises.
 
 ## TreeNode States
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by `cardOrdering`, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
@@ -59,8 +58,8 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
 
 ## CreateNodeButton Contextual Variants
-- **root** (ROOT view): Large button styled like a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset". Creates a new Tree (sets `treeID = id`) and navigates to the new node’s ASSET (BRANCH) view.
-- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a child `TreeNode` (inherits `treeID = parent.treeID`) and inserts it according to button DOM order. Normal document flow; no absolute positioning. DOM order determines visual position among sibling `TreeNode`s.
+- **root** (ROOT view): Large button styled like a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset".
+- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it according to button DOM order. Normal document flow; no absolute positioning. DOM order determines `nodeOrdering`.
 - **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
 ### State Transitions (use finite state machine pattern)
@@ -78,9 +77,9 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ### Node Creation
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped and persisted; siblings display sorted by `nodeOrdering`.
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
-- **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default DataFields, with DataFieldValue ready for user entry. If any DataFieldValue remains empty, the whole field is removed at creation.
+- **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default DataFields, with DataFieldValue ready for user entry, but may be left blank.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
-- **Unique Trees**: Creating node on ROOT view sets `treeID = id`. Creating a node on ASSET view (a child node) sets `treeID = parent.treeID`.
+
 
 ### Node Deletion
 - **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
@@ -119,7 +118,6 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 
 
 ### Default DataFields ... Added at node creation time.
-- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned.
 - **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user, no entry required).
 - **"Description"**: A short description of the asset. (No entry required)
 - **"Tags"**: A list of tags that can be used to search for the asset (arbitrary comma-separated strings entered by user. No entry required).
@@ -160,8 +158,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | nodeOrdering | number | No | Display order among siblings | Default: 0, unique per parent |
 | dataFields | Map<string, boolean> | No | Presence set of Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
-| treeID | string | Yes | Tree boundary identifier | Root: equals `id`. Children: inherited root |
-| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+
 
 #### DataField Entity
 
@@ -172,13 +169,11 @@ The system uses a hierarchical tree structure with two primary entities:
 | id | string (UUID) | Yes | Unique identifier | Generated client-side and used as canonical ID |
 | fieldName | string | Yes | Display label | Max 50 chars, user-editable |
 | parentNodeId | string | Yes | Parent TreeNode reference | Must exist in TreeNode table |
-| fieldValue | string | Yes | Stored value (any type as string) | Max 1000 chars |
+| fieldValue | string \| null | Yes | Stored value (any type as string) | Max 1000 chars |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
-| componentType | string | No | Special rendering type | (Phase 2) From allowed list |
-| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
-| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+
 
 **Phase 2 Fields (Future):**
 - componentVersion: string - For debugging
@@ -200,17 +195,15 @@ The system uses a hierarchical tree structure with two primary entities:
 | property | string | Yes | Changed property | Phase 1 fixed: "fieldValue" |
 | prevValue | string \| null | Yes | Previous value | null on create |
 | newValue | string \| null | Yes | New value | null on delete |
-| Notes |  |  | For cascade deletes, no new history entries are appended | |
 | updatedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
 | updatedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
 | rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
-| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
-| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+
 
 Indexes:
-- treeNodes: by treeID, by parentId, by nodeOrdering, by updatedAt
-- dataFields: by treeID, by parentNodeId, by cardOrdering
-- dataFieldHistory: by treeID, by dataFieldId, by updatedAt
+- treeNodes: by parentId, by nodeOrdering, by updatedAt
+- dataFields: by parentNodeId, by cardOrdering
+- dataFieldHistory: by dataFieldId, by updatedAt
 
 ### Business Rules
 
@@ -227,11 +220,7 @@ Indexes:
 ## Data Persistence
 - Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
 - Keys: `treeview:treeNodes`, `treeview:dataFields`, `treeview:dataFieldHistory`
-- **Partitioning**: All records include `treeID` and `treeType` (Phase 1: `treeType` = "AssetTree"). 
-- **Creation**:
-  - Root node: `treeID = id`.
-  - Child nodes/fields/history: `treeID = parent’s treeID`.
-- Single-user environment; use a constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1). 
+- Single-user environment; use a constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1). // WHAT???
 
 ### Data Examples
 

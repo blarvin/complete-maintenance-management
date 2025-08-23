@@ -145,4 +145,36 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 
 - newDataField custom entry + automatic add to library
 
--Note to self: What is "Keys must exist in TreeNode table" on line 160??
+- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned. THIS SHOULD BE IN NODE TOOLS, NOT A DATAFIELD
+
+- Note to self: What is "Keys must exist in TreeNode table" on line 160??
+
+- For cascade deletes, no new history entries are appended ??
+
+- **Unique Trees**: Creating node on ROOT view sets `treeID = id`. Creating a node on ASSET view (a child node) sets `treeID = parent.treeID`.
+
+- **Partitioning**: All records include `treeID` and `treeType` (Phase 1: `treeType` = "AssetTree").
+
+- **Creation**:
+  - Root node: `treeID = id`.
+  - Child nodes/fields/history: `treeID = parent’s treeID`.
+
+| treeID | string | Yes | Tree boundary identifier | Root: equals `id`. Children: inherited root |
+| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+
+| componentType | string | No | Special rendering type | (Phase 2) From allowed list |
+| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
+| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+
+| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
+| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+
+[createNodeButton.isRoot] Creates a new Tree (sets `treeID = id`) and navigates to the new node’s ASSET (BRANCH) view.
+
+ASSET View is always scoped to one `treeID` (the current root’s id).
+
+### Interaction/UX risks
+- Double‑tap to edit (L94–L98, L38): Double‑tap is unreliable on mobile, conflicts with OS zoom, and hurts accessibility/keyboard support. Prefer single‑tap edit affordance (icon/button), long‑press on mobile, Enter to save, Esc to cancel; keep double‑tap optional at most.
+- Multiple inline Create buttons (L62–L65, L79): n+1 “Create Here” buttons between child rows add clutter and tab‑stop pain. Consider a single “+ Add sub‑asset” that inserts relative to a selected sibling or uses a simple append, and defer in‑between insertion to later.
+- Delete/Undo timing (L86–L92): 5s Undo plus “irreversible” is brittle. Clarify whether Undo survives navigation and whether deletes are soft until timer elapses or applied immediately with a restore snapshot.
+- “NodeTools” delete only (L43): Consider at least “Rename/Move” later; if Phase 1 is delete‑only, explicitly state edits happen in the node header and card.
