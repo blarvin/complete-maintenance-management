@@ -26,8 +26,8 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ## Component Architecture
 
 ### Views
-- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single flex container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
-- **ASSET View**: Listview comprising a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
+- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
+- **ASSET View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
 
 
 ### Core component hierarchy
@@ -59,7 +59,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 ## CreateNodeButton Contextual Variants
 - **root** (ROOT view): Large button styled like a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset". Creates a new Tree (sets `treeID = id`) and navigates to the new node’s ASSET (BRANCH) view.
-- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own rows, positioned in the children container’s left gutter column (CSS Grid). Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a child `TreeNode` (inherits `treeID = parent.treeID`) and inserts it according to button DOM order. Normal document flow; no absolute positioning. DOM order determines visual position among sibling `TreeNode`s.
+- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a child `TreeNode` (inherits `treeID = parent.treeID`) and inserts it according to button DOM order. Normal document flow; no absolute positioning. DOM order determines visual position among sibling `TreeNode`s.
 - **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
 ### State Transitions (use finite state machine pattern)
@@ -410,13 +410,13 @@ html, body {
 
 - **Tree visuals (non-interactive)**:
 ```css
-/* Children container: indented column with a vertical tree line drawn via a pseudo-element */
+/* Children container: grid with a left gutter column and vertical tree line */
 .children {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  padding-left: var(--child-indent);
+  display: grid;
+  grid-template-columns: var(--child-indent) 1fr;
+  grid-auto-rows: auto;
+  row-gap: var(--gap);
 }
 
 .children::before {
@@ -430,7 +430,7 @@ html, body {
 }
 
 /* Each child row gets a small horizontal branch connecting to the vertical tree line */
-.childRow { position: relative; }
+.childRow { position: relative; grid-column: 2; }
 .childRow::before {
   content: "";
   position: absolute;
@@ -442,21 +442,15 @@ html, body {
   pointer-events: none;
 }
 
-/* Optional: align CreateNodeButton slightly left, toward the Tree Line */
-.createNodeButton { /* normal flow; adjust only if you want a slight left bias */
-  text-align: left;
-}
+/* CreateNodeButton sits in gutter column */
+.createNodeButton { grid-column: 1; justify-self: start; text-align: left; }
 ```
 
 - **Component stubs** (for reference):
 ```css
-.treeNode {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
+.treeNode { display: grid; row-gap: var(--gap); }
 
-.nodeHeader { display: flex; align-items: center; gap: 0.5rem; }
+.nodeHeader { display: grid; grid-auto-flow: column; align-items: center; column-gap: 0.5rem; }
 .nodeTitle  { font-family: var(--font-title); font-size: var(--font-size-title); font-weight: 700; }
 .nodeSubtitle { font-family: var(--font-body);  font-size: var(--font-size-body); }
 
