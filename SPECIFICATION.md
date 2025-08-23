@@ -174,13 +174,6 @@ The system uses a hierarchical tree structure with two primary entities:
 | cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
 
 
-**Phase 2 Fields (Future):**
-- componentVersion: string - For debugging
-- customProperties: string[] - For extensibility
-- isRequired: boolean - Validation flag
-- isLocked: boolean - Edit protection
-- isEditable: boolean - Permission control
-
 #### DataFieldHistory Entity (Phase 1 minimal)
 
 **Purpose:** Immutable append-only audit log of changes to a single `DataField`'s properties (Phase 1: value changes only)
