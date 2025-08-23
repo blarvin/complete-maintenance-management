@@ -44,7 +44,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 
 ## TreeNode States
-- **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
+- **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by `cardOrdering`, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of ASSET view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of ASSET view.
 - **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
 - **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard state is also set to isUnderConstruction.
@@ -75,7 +75,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
 
 ### Node Creation
-- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped. 
+- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped and persisted; siblings display sorted by `nodeOrdering`.
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
 - **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default DataFields, with DataFieldValue ready for user entry. If any DataFieldValue remains empty, the whole field is removed at creation.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
@@ -90,7 +90,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
-- **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories, (similar to isCardUnderConstruction).
+- **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories (similar to `isUnderConstruction` defaults). New fields get `cardOrdering = max+1` for the parent.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
@@ -154,7 +154,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | parentId | string \| "ROOT" | Yes | Reference to parent node | Must exist or be "ROOT" |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
-| nodeOrdering | number | No | Display order among siblings | Default: 0 |
+| nodeOrdering | number | No | Display order among siblings | Default: 0, unique per parent |
 | dataFields | Map<string, boolean> | No | Presence set of Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
 | treeID | string | Yes | Tree boundary identifier | Root: equals `id`. Children: inherited root |
@@ -204,7 +204,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
 Indexes:
-- treeNodes: by treeID, by parentId, by updatedAt
+- treeNodes: by treeID, by parentId, by nodeOrdering, by updatedAt
 - dataFields: by treeID, by parentNodeId, by cardOrdering
 - dataFieldHistory: by treeID, by dataFieldId, by updatedAt
 
