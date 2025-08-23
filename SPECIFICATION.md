@@ -156,8 +156,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | nodeOrdering | number | No | Display order among siblings | Default: 0, unique per parent |
-| dataFields | Map<string, boolean> | No | Presence set of Field ID references | Keys must exist in DataField table |
-| childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
+
 
 
 #### DataField Entity
@@ -233,16 +232,7 @@ Indexes:
   "parentId": null,
   "updatedBy": "user456",
   "updatedAt": 1709942400000,
-  "nodeOrdering": 0,
-  "dataFields": {
-    "660e8400-e29b-41d4-a716-446655440004": true,
-    "660e8400-e29b-41d4-a716-446655440005": true,
-    "660e8400-e29b-41d4-a716-446655440006": true
-  },
-  "childNodes": {
-    "550e8400-e29b-41d4-a716-446655440002": true,
-    "550e8400-e29b-41d4-a716-446655440003": true
-  }
+  "nodeOrdering": 0
 }
 ```
 
