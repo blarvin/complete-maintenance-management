@@ -40,7 +40,8 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
 - **"Up" Button**: On the left end of isParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and ASSET views.
-- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode.  (phase 1: DELETE button only.)
+- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
+- **Snackbar**: Global transient notification at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Queues messages; newest replaces current with reset timer. Used for DataField saves, DataField deletes, and Node cascade deletes (with Undo where applicable).
 
 
 ## TreeNode States
@@ -85,14 +86,15 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
 - Deleting any `TreeNode` performs a hard cascade: remove the node, all descendant nodes, their `DataField`s, and their `DataFieldHistory`.
 - During cascade, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
+- After confirming, show a Snackbar with 5s Undo. If Undo is taken, restore removed records from a temporary in-memory snapshot; otherwise finalize the delete.
 - Root (tree) deletion cascades identically.
-- UI: one confirm dialog summarizing counts (nodes, fields) before proceeding. Action is irreversible.
+- UI: one confirm dialog summarizing counts (nodes, fields) before proceeding; Snackbar with Undo follows. After undo window lapses, action is irreversible.
 
 ## DataField Management 
-- **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
+- **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
 - **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories (similar to `isUnderConstruction` defaults). New fields get `cardOrdering = max+1` for the parent.
-- **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
-  - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null`.
+- **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Deletion triggers a Snackbar with 5s Undo before finalizing.
+  - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` if Undo is not taken.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard.

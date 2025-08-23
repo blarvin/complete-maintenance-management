@@ -16,6 +16,9 @@
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
 - **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
 
+### Mobile-first UI and UX
+- **diasble pinch-zoom to reduce double-tap conflicts
+
 ### Data Layer (Offline-Only)
 - **Persistence**: Firebase Firestore Web SDK with offline persistence (IndexedDB) enabled
 - **Phase 1 mode**: Offline-only; no network/sync. Optional Firebase CLI Emulator for local projects.

@@ -141,4 +141,6 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 - UpButton should be ready for action: it should store the parentId at each instance location (context) when created, rather than a function to find this prop. Or some kind of cache? [test which is faster / snappier]
 - Down-tree nav as well?
 
+- double-tap settings and options in User Settings
+
 -Note to self: What is "Keys must exist in TreeNode table" on line 160??
