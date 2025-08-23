@@ -143,4 +143,6 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 
 - double-tap settings and options in User Settings
 
+- newDataField custom entry + automatic add to library
+
 -Note to self: What is "Keys must exist in TreeNode table" on line 160??

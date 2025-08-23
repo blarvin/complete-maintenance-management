@@ -26,7 +26,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ## Component Architecture
 
 ### Views
-- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
+- **ROOT View**: Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
 - **ASSET View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
 
 
@@ -92,7 +92,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
-- **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories (similar to `isUnderConstruction` defaults). New fields get `cardOrdering = max+1` for the parent.
+- **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library. New fields get `cardOrdering = max+1` for the parent.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Deletion triggers a Snackbar with 5s Undo before finalizing.
   - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` if Undo is not taken.
 
@@ -228,7 +228,6 @@ Indexes:
 - Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
 - Keys: `treeview:treeNodes`, `treeview:dataFields`, `treeview:dataFieldHistory`
 - **Partitioning**: All records include `treeID` and `treeType` (Phase 1: `treeType` = "AssetTree"). 
-- **Active scope**: Maintain an in-memory `activeNodeId`. 
 - **Creation**:
   - Root node: `treeID = id`.
   - Child nodes/fields/history: `treeID = parent’s treeID`.
