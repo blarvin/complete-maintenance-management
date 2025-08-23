@@ -97,7 +97,7 @@ Note: In Phase 1, timestamps are client-assigned; componentType rendering types 
 ### History & Audit Enhancements
 Moved from SPECIFICATION.md → Data Model / DataFieldHistory:
 
-- Phase 1 implements minimal append-only history for `DataField.dataValue` in a dedicated `dataFieldHistory` store, keyed by `${dataFieldId}:${rev}` and indexed by `dataFieldId`, `editedAt`.
+- Phase 1 implements minimal append-only history for `DataField.dataValue` in a dedicated `dataFieldHistory` store, keyed by `${dataFieldId}:${rev}` and indexed by `dataFieldId`, `updatedAt`.
 - Phase 2 will expand history coverage and UI:
   - Record `fieldName` changes (label renames) with `property: "fieldName"` entries
   - Optional history for other properties (e.g., `cardOrdering` moves)
@@ -107,7 +107,7 @@ Moved from SPECIFICATION.md → Data Model / DataFieldHistory:
   - Merge strategy guidance for sync conflicts (event-level dedupe via `id`, causal ordering)
   - Pruning/archival policies for very long histories
 
-Note: Single-user Phase 1 uses a constant `editedBy` (e.g., "localUser"). Real user identity and trust features deferred to Phase 2.
+Note: Single-user Phase 1 uses a constant `updatedBy` (e.g., "localUser"). Real user identity and trust features deferred to Phase 2.
 
 - Export/import add “Export Collection (JSON)” and “Import Collection” to LATER.md.
 

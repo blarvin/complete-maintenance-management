@@ -197,8 +197,8 @@ The system uses a hierarchical tree structure with two primary entities:
 | property | string | Yes | Changed property | Phase 1 fixed: "fieldValue" |
 | prevValue | string \| null | Yes | Previous value | null on create |
 | newValue | string \| null | Yes | New value | null on delete |
-| editedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
-| editedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
+| updatedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
+| updatedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
 | rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
 | treeID | string | Yes      | Tree boundary identifier      | Inherited root |
 | treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
@@ -206,7 +206,7 @@ The system uses a hierarchical tree structure with two primary entities:
 Indexes:
 - treeNodes: by treeID, by parentId, by updatedAt
 - dataFields: by treeID, by parentNodeId, by cardOrdering
-- dataFieldHistory: by treeID, by dataFieldId, by editedAt
+- dataFieldHistory: by treeID, by dataFieldId, by updatedAt
 
 ### Business Rules
 
@@ -228,7 +228,7 @@ Indexes:
 - **Creation**:
   - Root node: `treeID = id`.
   - Child nodes/fields/history: `treeID = parent’s treeID`.
-- Single-user environment; use a constant `editedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1). 
+- Single-user environment; use a constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1). 
 
 ### Data Examples
 
@@ -289,8 +289,8 @@ Indexes:
     "property": "fieldValue",
     "prevValue": null,
     "newValue": "HVAC-2024-001",
-    "editedBy": "localUser",
-    "editedAt": 1709856000000,
+    "updatedBy": "localUser",
+    "updatedAt": 1709856000000,
     "rev": 0
   },
   {
@@ -301,8 +301,8 @@ Indexes:
     "property": "fieldValue",
     "prevValue": "HVAC-2024-001",
     "newValue": "HVAC-2025-002",
-    "editedBy": "localUser",
-    "editedAt": 1709942400000,
+    "updatedBy": "localUser",
+    "updatedAt": 1709942400000,
     "rev": 1
   }
 ]
