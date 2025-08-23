@@ -128,3 +128,7 @@ Note: Single-user Phase 1 uses a constant `editedBy` (e.g., "localUser"). Real u
 - Label (`fieldName`) rename history is deferred to Phase 2.
 
 Data Fields are either created by Users (simple Field Name + Field Value Type) or selected from a library sourced from previous creations of the Users
+
+- Double-tap upButton navigates all the way to ROOT view.
+- UpButton should be ready for action: it should store the parentId at each instance location (context) when created, rather than a function to find this prop. Or some kind of cache? [test which is faster / snappier]
+- Down-tree nav as well?

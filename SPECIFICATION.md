@@ -34,32 +34,33 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
 - **NodeTitle**: Displays breadcrumb path "Ancestor1 / Ancestor2 / Parent / **CurrentNode**" (current node in bold). Parsed from ancestorNamePath string.
 - **NodeSubtitle**: Simple description or location string
-- **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref. This expands/retracts using a simple chevron button, located on the body of the parent TreeNode to the left of NodeSubtitle.
+- **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref. This expands/retracts using a simple chevron button, located on the body of the parent TreeNode to the right of NodeSubtitle.
 - **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
 - **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
-- **"Up" Button**: On the left end of parent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to home page.
-- **CreateNodeButton**: Button to create a new TreeNode. Has two states: isRoot: label "Create New Asset" and isChild: label "Create New Sub-Asset Here". On ASSET view, each isChild CreateNodeButton renders as its own row in the children container, aligned to the Tree Line (slightly left of isChild TreeNodes), using normal document flow (no absolute positioning). Its visual position is determined by DOM order among sibling isChild TreeNodes.
+- **"Up" Button**: On the left end of iParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to ROOT view.
+- **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and ASSET views.
 - **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode.  (phase 1: DELETE button only.)
 
 
 ## TreeNode States
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of ASSET view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of ASSET view.
-- **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, no "Up" button, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
-- **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard is set to isExpanded and isCardUnderConstruction 
+- **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
+- **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard state is also set to isUnderConstruction.
 
 ## DataCard States
 - **isExpanded**: DataCard is open/closed. Persisted to local storage.
-- **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). "Save" and "Cancel" buttons at the bottom.
+- **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). NodeTools not shown. CreateDataFieldButton in last row and functions as normal. "Save" and "Cancel" buttons at the bottom.
 
 ## DataField States
 - **isMetadataExpanded**: Field Details area is expanded/collapsed. Persisted to local storage.
 - **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
 
-## CreateNodeButton Variants
-- **root**: Large button styled like a ROOT node; appears on the ROOT view. Label: "Create New Asset".
-- **child**: Small inline button rendered as its own row in the children container (aligned between isChild TreeNodes, and to the left in padding gutter). Alt text: "Create New Sub‑Asset Here". Clicking inserts a new TreeNode among siblings at the click location (DOM order determines placement).
+## CreateNodeButton Contextual Variants
+- **root** (ROOT view): Large button styled like a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset". Creates a new Tree (sets `treeID = id`) and navigates to the new node’s ASSET (BRANCH) view.
+- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own rows, positioned in the children container’s left gutter column (CSS Grid). Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a child `TreeNode` (inherits `treeID = parent.treeID`) and inserts it according to button DOM order. Normal document flow; no absolute positioning. DOM order determines visual position among sibling `TreeNode`s.
+- **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
 ### State Transitions (use finite state machine pattern)
 - isRoot → isParent (navigate to ASSET VIEW)
@@ -76,7 +77,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ### Node Creation
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped. 
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
-- **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default Field with de-selectable checkboxes to the left. 
+- **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default DataFields, with DataFieldValue ready for user entry. If any DataFieldValue remains empty, the whole field is removed at creation.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
 - **Unique Trees**: Creating node on ROOT view sets `treeID = id`. Creating a node on ASSET view (a child node) sets `treeID = parent.treeID`.
 
@@ -212,8 +213,8 @@ Indexes:
 
 #### TreeNode Rules
 1. Root nodes must have parentId = "ROOT"
-2. Node names should be meaningful but don't need to be unique
-3. ancestorNamePath is automatically maintained by the system
+2. Node names don't need to be unique
+3. ancestorNamePath is procedurally generated by client at node creation
 
 #### DataField Rules
 1. Field names should be descriptive (e.g., "Serial Number" not "SN")
