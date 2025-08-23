@@ -12,7 +12,7 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 This structure enables users to construct and understand detailed hierarchical models of real world assets.
 
 ## Problem Domain and Solution Domain
-The problem domain contains things like Assets, sub-assets, parts, sub-assemblies, power, energy, weight, size, age, risk, drawings, facts, Addresses, People, etc. The solution is a "Tree View" or "Tree Browser" wherein Users can easily create a meningful, accessible, clear structure from their domain of things, and make changes and updates to data about those things.
+The problem domain contains things like Assets, sub-assets, parts, sub-assemblies, power, energy, weight, size, age, risk, drawings, facts, Addresses, People, etc. The solution is a "Tree View" or "Tree Browser" wherein Users can easily create a meaningful, accessible, clear structure from their domain of things, and make changes and updates to data about those things.
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
@@ -21,24 +21,24 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
-- **Offline-First**: Full UI and any data created locally or already loaded is available indeffinately pending cloud sync. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile.
+- **Offline-First**: Full UI and any data created locally or already loaded is available indefinitely pending cloud sync. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile.
 
 ## Component Architecture
 
 ### Views
-- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single flex container element for layout. Each ROOT node is a Tree, reating a root asset creates a new Tree.
-- **ASSET View**: Listview comprisiong a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
+- **ROOT View**: Listview of top-level TreeNodes (isRoot state) + "Create New Asset" button at the bottom. Single flex container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
+- **ASSET View**: Listview comprising a single flex container (column) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (flex, column) indented on the left (e.g., `--child-indent`). ASSET View is always scoped to one `treeID` (the current root’s id).
 
 
 ### Core component hierarchy
 - **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
-- **NodeTitle**: Displays breadcrumb path "Ancestor1 / Ancestor2 / Parent / **CurrentNode**" (current node in bold). Parsed from ancestorNamePath string.
+- **NodeTitle**: Displays the current node's `nodeName` (bold).
 - **NodeSubtitle**: Simple description or location string
 - **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref. This expands/retracts using a simple chevron button, located on the body of the parent TreeNode to the right of NodeSubtitle.
 - **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
 - **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
-- **"Up" Button**: On the left end of iParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to ROOT view.
+- **"Up" Button**: On the left end of isParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and ASSET views.
 - **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode.  (phase 1: DELETE button only.)
 
@@ -113,7 +113,7 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 | Power Rating | Electrical | Text | "1200W" | Power specifications |
 | Current Reading | Measurement | Text | "5.4 amps at 2025-01-01" | Current measurements |
 | Note | General | Text | "Requires quarterly maintenance" | General notes |
-| Description | General | Text | "12-pin relay, 120V coil, Motorola pattern" | Most things need this |
+
 
 ### Default DataFields ... Added at node creation time.
 - **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned.
@@ -152,11 +152,10 @@ The system uses a hierarchical tree structure with two primary entities:
 | nodeName | string | Yes | Display name of the asset | Max 100 chars, required |
 | nodeSubtitle | string | No | Additional description/location | Max 200 chars |
 | parentId | string \| "ROOT" | Yes | Reference to parent node | Must exist or be "ROOT" |
-| ancestorNamePath | string | Yes | Pipe-delimited ancestor names | Auto-generated from ancestors |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | nodeOrdering | number | No | Display order among siblings | Default: 0 |
-| dataFields | Map<string, string> | No | Field ID references | Keys must exist in DataField table |
+| dataFields | Map<string, boolean> | No | Presence set of Field ID references | Keys must exist in DataField table |
 | childNodes | Map<string, boolean> | No | Child node references | Keys must exist in TreeNode table |
 | treeID | string | Yes | Tree boundary identifier | Root: equals `id`. Children: inherited root |
 | treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
@@ -214,7 +213,6 @@ Indexes:
 #### TreeNode Rules
 1. Root nodes must have parentId = "ROOT"
 2. Node names don't need to be unique
-3. ancestorNamePath is procedurally generated by client at node creation
 
 #### DataField Rules
 1. Field names should be descriptive (e.g., "Serial Number" not "SN")
@@ -241,7 +239,6 @@ Indexes:
   "nodeName": "Main HVAC Unit",
   "nodeSubtitle": "Building A Primary Cooling System",
   "parentId": "ROOT",
-  "ancestorNamePath": "",
   "updatedBy": "user456",
   "updatedAt": 1709942400000,
   "nodeOrdering": 0,
@@ -460,8 +457,8 @@ html, body {
 }
 
 .nodeHeader { display: flex; align-items: center; gap: 0.5rem; }
-.nodeTitle  { composes: TitleText; }
-.nodeSubtitle { composes: BodyText; }
+.nodeTitle  { font-family: var(--font-title); font-size: var(--font-size-title); font-weight: 700; }
+.nodeSubtitle { font-family: var(--font-body);  font-size: var(--font-size-body); }
 
 .dataCardShell { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms ease; }
 .dataCardShell[data-expanded="true"] { grid-template-rows: 1fr; }
