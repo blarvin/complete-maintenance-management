@@ -355,11 +355,6 @@ Indexes:
 
   /* Tree visuals */
   --child-indent: 1.5rem;         /* indent for children container */
-  --tree-line-offset: 0.5rem;     /* tree line sits slightly left of nodes */
-  --tree-line-width: 4px;
-  --tree-line-color: var(--color-surface);
-  --branch-line-length: 0.5rem;
-  --branch-line-thickness: 4px;
 }
 ```
 
@@ -412,7 +407,7 @@ html, body {
 
 - **Tree visuals (non-interactive)**:
 ```css
-/* Children container: grid with a left gutter column and vertical tree line */
+/* Children container: grid with a left gutter column */
 .children {
   position: relative;
   display: grid;
@@ -421,28 +416,11 @@ html, body {
   row-gap: var(--gap);
 }
 
-.children::before {
-  content: "";
-  position: absolute;
-  left: calc(var(--child-indent) - var(--tree-line-offset));
-  top: 0; bottom: 0;
-  width: var(--tree-line-width);
-  background: var(--tree-line-color);
-  pointer-events: none;
-}
+.children::before { display: none; }
 
-/* Each child row gets a small horizontal branch connecting to the vertical tree line */
+/* Each child row */
 .childRow { position: relative; grid-column: 2; }
-.childRow::before {
-  content: "";
-  position: absolute;
-  left: calc(var(--child-indent) - var(--tree-line-offset));
-  top: 50%; transform: translateY(-50%);
-  width: var(--branch-line-length);
-  height: var(--branch-line-thickness);
-  background: var(--tree-line-color);
-  pointer-events: none;
-}
+.childRow::before { display: none; }
 
 /* CreateNodeButton sits in gutter column */
 .createNodeButton { grid-column: 1; justify-self: start; text-align: left; }
@@ -465,4 +443,3 @@ html, body {
 
 Notes:
 - Colors and sizes are intentionally minimal and flat to keep Phase 1 simple; adjust variables to evolve the style later.
-- The tree-line and branch-lines are purely decorative and must not affect layout or pointer events.
