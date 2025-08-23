@@ -84,7 +84,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ### Node Deletion
 - **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
 - Deleting any `TreeNode` performs a hard cascade: remove the node, all descendant nodes, their `DataField`s, and their `DataFieldHistory`.
-- No history is retained after cascade; we do not write per-field "delete" history entries during cascade.
+- During cascade, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
 - Root (tree) deletion cascades identically.
 - UI: one confirm dialog summarizing counts (nodes, fields) before proceeding. Action is irreversible.
 
@@ -92,6 +92,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Use browser alert for confirmation of save or cancel.
 - **Create Data Field**: A "+" button at bottom of DataCard, expands an area with DataFields organized in categories (similar to `isUnderConstruction` defaults). New fields get `cardOrdering = max+1` for the parent.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section.
+  - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null`.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
 Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard.
@@ -197,6 +198,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | property | string | Yes | Changed property | Phase 1 fixed: "fieldValue" |
 | prevValue | string \| null | Yes | Previous value | null on create |
 | newValue | string \| null | Yes | New value | null on delete |
+| Notes |  |  | For cascade deletes, no new history entries are appended | |
 | updatedBy | string | Yes | Editor identifier | Phase 1: constant (e.g., "localUser") |
 | updatedAt | timestamp | Yes | When the change occurred (epoch) | Client-assigned in Phase 1 |
 | rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
