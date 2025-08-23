@@ -38,10 +38,10 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
 - **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
-- **"Up" Button**: On the left end of isParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is "ROOT", navigates to ROOT view.
+- **"Up" Button**: On the left end of isParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and ASSET views.
 - **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
-- **Snackbar**: Global transient notification at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes (with Undo where applicable). Single-slot, replace current toast with latest if a new one arises.
+- **Snackbar**: Global transient notification toast at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes. Single-slot, replace current toast with latest if a new one arises.
 
 ## TreeNode States
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by `cardOrdering`, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
@@ -87,7 +87,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - During cascade, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
 - After confirming, show a Snackbar with 5s Undo. If Undo is taken, restore removed records from a temporary in-memory snapshot; otherwise finalize the delete.
 - Root (tree) deletion cascades identically.
-- UI: one confirm dialog summarizing counts (nodes, fields) before proceeding; Snackbar with Undo follows. After undo window lapses, action is irreversible.
+- UI: one confirm dialog summarizing counts (nodes, fields) before proceeding; Snackbar with Undo follows. After undo window lapses, action is irreversible. - Undo semantics: Deletes apply immediately to storage; an in-memory snapshot enables Undo for 5s. Undo restores all removed records with original IDs. Undo is available across in-app navigation but not across page reloads. Newer toasts replace older ones; only the latest operation can be undone. For manual field deletes, the "delete" history entry is written only after the undo window elapses; cascade deletes write no history entries.
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
@@ -152,7 +152,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | id | string (UUID) | Yes | Unique identifier | Generated client-side and used as canonical ID |
 | nodeName | string | Yes | Display name of the asset | Max 100 chars, required |
 | nodeSubtitle | string | No | Additional description/location | Max 200 chars |
-| parentId | string \| "ROOT" | Yes | Reference to parent node | Must exist or be "ROOT" |
+| parentId | string \| null | Yes | Reference to parent node | Must exist or be null |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
 | nodeOrdering | number | No | Display order among siblings | Default: 0, unique per parent |
@@ -208,7 +208,7 @@ Indexes:
 ### Business Rules
 
 #### TreeNode Rules
-1. Root nodes must have parentId = "ROOT"
+1. Root nodes must have parentId = null
 2. Node names don't need to be unique
 
 #### DataField Rules
@@ -230,7 +230,7 @@ Indexes:
   "id": "550e8400-e29b-41d4-a716-446655440001",
   "nodeName": "Main HVAC Unit",
   "nodeSubtitle": "Building A Primary Cooling System",
-  "parentId": "ROOT",
+  "parentId": null,
   "updatedBy": "user456",
   "updatedAt": 1709942400000,
   "nodeOrdering": 0,
