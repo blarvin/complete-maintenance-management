@@ -44,7 +44,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **Snackbar**: Global transient notification toast at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes. Single-slot, replace current toast with latest if a new one arises.
 
 ## TreeNode States
-- **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by `cardOrdering`, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
+- **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by updatedAt, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of ASSET view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of ASSET view.
 - **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
 - **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard state is also set to isUnderConstruction.
@@ -59,7 +59,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 ## CreateNodeButton Contextual Variants
 - **root** (ROOT view): Large button styled like a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset".
-- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it according to button DOM order. Normal document flow; no absolute positioning. DOM order determines `nodeOrdering`.
+- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it according to button DOM order. Normal document flow; no absolute positioning.
 - **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
 ### State Transitions (use finite state machine pattern)
@@ -75,7 +75,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
 
 ### Node Creation
-- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode. The new TreeNode's `nodeOrdering` is determined from DOM order of the CreateNodeButton tapped and persisted; siblings display sorted by `nodeOrdering`.
+- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode.
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
 - **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default DataFields, with DataFieldValue ready for user entry, but may be left blank.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
@@ -91,7 +91,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
-- **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library. New fields get `cardOrdering = max+1` for the parent.
+- **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Deletion triggers a Snackbar with 5s Undo before finalizing.
   - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` if Undo is not taken.
 
@@ -143,6 +143,10 @@ The system uses a hierarchical tree structure with two primary entities:
 
 ### Entity Schemas
 
+Sorting policy (Phase 1):
+- Children within a parent are displayed sorted by `updatedAt` ascending.
+- DataFields within a DataCard are displayed sorted by `updatedAt` ascending.
+
 #### TreeNode Entity
 
 **Purpose:** Represents physical assets (vehicles, buildings, machinery) in a hierarchical structure
@@ -155,7 +159,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | parentId | string \| null | Yes | Reference to parent node | Must exist or be null |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
-| nodeOrdering | number | No | Display order among siblings | Default: 0, unique per parent |
+ 
 
 
 
@@ -171,7 +175,7 @@ The system uses a hierarchical tree structure with two primary entities:
 | fieldValue | string \| null | Yes | Stored value (any type as string) | Max 1000 chars |
 | updatedBy | string | Yes | User ID of last editor | Valid user ID |
 | updatedAt | timestamp | Yes | Last modification time (epoch) | Client-assigned in Phase 1; server-assigned in later phases |
-| cardOrdering | number | Yes | Display position on DataCard | >= 0, unique per parent |
+ 
 
 
 #### DataFieldHistory Entity (Phase 1 minimal)
@@ -193,8 +197,8 @@ The system uses a hierarchical tree structure with two primary entities:
 
 
 Indexes:
-- treeNodes: by parentId, by nodeOrdering, by updatedAt
-- dataFields: by parentNodeId, by cardOrdering
+- treeNodes: by parentId, by updatedAt
+- dataFields: by parentNodeId, by updatedAt
 - dataFieldHistory: by dataFieldId, by updatedAt
 
 ### Business Rules
@@ -205,9 +209,8 @@ Indexes:
 
 #### DataField Rules
 1. Field names should be descriptive (e.g., "Serial Number" not "SN")
-2. cardOrdering must be unique within each parent node
-3. All values are stored as strings (parsing/validation in UI)
-4. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
+2. All values are stored as strings (parsing/validation in UI)
+3. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
 
 ## Data Persistence
 - Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
@@ -224,8 +227,7 @@ Indexes:
   "nodeSubtitle": "Building A Primary Cooling System",
   "parentId": null,
   "updatedBy": "user456",
-  "updatedAt": 1709942400000,
-  "nodeOrdering": 0
+  "updatedAt": 1709942400000
 }
 ```
 
@@ -238,8 +240,7 @@ Indexes:
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
     "fieldValue": "HVAC-2024-001",
     "updatedBy": "user123",
-    "updatedAt": 1709856000000,
-    "cardOrdering": 1
+    "updatedAt": 1709856000000
   },
   {
     "id": "660e8400-e29b-41d4-a716-446655440005",
@@ -247,8 +248,7 @@ Indexes:
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
     "fieldValue": "In Service",
     "updatedBy": "user456",
-    "updatedAt": 1709942400000,
-    "cardOrdering": 2
+    "updatedAt": 1709942400000
   }
 ]
 ```

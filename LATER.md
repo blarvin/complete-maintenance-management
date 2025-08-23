@@ -174,11 +174,14 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 ASSET View is always scoped to one `treeID` (the current root’s id).
 
 **Phase 2 dataFields (Future):**
+- cardOrdering: 
 - componentVersion: string - For debugging
 - customProperties: string[] - For extensibility
 - isRequired: boolean - Validation flag
 - isLocked: boolean - Edit protection
 - isEditable: boolean - Permission control
+
+### "Breadth-first quantized background lazy loading"
 
 ### Interaction/UX risks
 - Double‑tap to edit (L94–L98, L38): Double‑tap is unreliable on mobile, conflicts with OS zoom, and hurts accessibility/keyboard support. Prefer single‑tap edit affordance (icon/button), long‑press on mobile, Enter to save, Esc to cancel; keep double‑tap optional at most.
