@@ -91,8 +91,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
-- **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library.
- - **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library. In Phase 1, "Create" strictly means selecting from this prefab library; users do not define new field types at creation time.
+- **Create Data Field**: A "+" button at bottom of DataCard opens a dropdown to select from the hardcoded DataField Library. Phase 1: creation is selection-only; users cannot define new field types.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Deletion triggers a Snackbar with 5s Undo before finalizing.
   - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` if Undo is not taken.
 
@@ -276,7 +275,7 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 <div style="display:flex; gap:25%; align-items:flex-start; background:white; padding:1.5rem; border-radius:1rem;">
   <div>
     <p style="color:black"><strong>ROOT view</strong></p>
-    <img src="ROOT_view.svg" alt="ROOT view image"/>
+    <img src="ROOT_wireframe.svg" alt="ROOT view image"/>
     <img src="ROOT_wireframe.svg" alt="ROOT wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
   <div>
@@ -288,119 +287,4 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 
 ### Style Guide (Phase 1)
 
-- **Principles**: Flat (no shadows), high-contrast text, heavy pill radii, minimal flourish. Use CSS variables so the look can evolve later without refactoring.
 
-- **CSS Tokens** (derived from the mockups):
-```css
-:root {
-  /* Palette */
-  --color-bg: #212a40;            /* dark slate (page background) */
-  --color-surface: #a3a69c;       /* ash gray surfaces */
-  --color-node-main: #a6e07f;     /* light green (primary accent) */
-  --color-node-child: #d0f6d1;    /* tea green (child nodes/highlights) */
-  --color-accent-warm: #fcb281;   /* sandy brown (icons, cues) */
-  --color-text: #212a40;          /* dark slate (text) */
-
-
-
-  /* Typography */
-  --font-title: "Nirmala UI", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
-  --font-body:  "Yu Gothic UI", system-ui, -apple-system, Segoe UI, Arial, sans-serif;
-  --font-size-title: 13px;  /* matches mockups */
-  --font-size-body:  9px;   /* matches mockups */
-  --line-height: 1.35;
-
-  /* Layout & Shape */
-  --gap: 2px;              /* global small gap */
-  --radius-pill: 9999px;   /* heavy pill */
-
-  /* Tree visuals */
-  --child-indent: 1.5rem;         /* indent for children container */
-}
-```
-
-- **Global**:
-```css
-html, body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-body);
-  font-size: var(--font-size-body);
-  line-height: var(--line-height);
-}
-
-.TitleText { font-family: var(--font-title); font-size: var(--font-size-title); font-weight: 700; }
-.BodyText  { font-family: var(--font-body);  font-size: var(--font-size-body);  }
-.Italic    { font-style: italic; }
-```
-
-- **Surfaces & Pills**:
-```css
-.surface {
-  background: var(--color-surface);
-  border-radius: var(--radius-pill);
-  color: var(--color-text);
-  box-shadow: none; /* stay flat */
-  border: 0;
-}
-
-.surface--subtle { background: var(--color-node-child); }
-.accent          { background: var(--color-node-main); }
-.accent--warm    { background: var(--color-accent-warm); }
-```
-
-- **Buttons** (pill):
-```css
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: var(--radius-pill);
-  border: 0;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.btn--primary { background: var(--color-node-main); }
-.btn--block { width: 100%; justify-content: center; }
-```
-
-- **Tree visuals (non-interactive)**:
-```css
-/* Children container: grid with a left gutter column */
-.children {
-  position: relative;
-  display: grid;
-  grid-template-columns: var(--child-indent) 1fr;
-  grid-auto-rows: auto;
-  row-gap: var(--gap);
-}
-
-.children::before { display: none; }
-
-/* Each child row */
-.childRow { position: relative; grid-column: 2; }
-.childRow::before { display: none; }
-
-/* CreateNodeButton sits in gutter column */
-.createNodeButton { grid-column: 1; justify-self: start; text-align: left; }
-```
-
-- **Component stubs** (for reference):
-```css
-.treeNode { display: grid; row-gap: var(--gap); }
-
-.nodeHeader { display: grid; grid-auto-flow: column; align-items: center; column-gap: 0.5rem; }
-.nodeTitle  { font-family: var(--font-title); font-size: var(--font-size-title); font-weight: 700; }
-.nodeSubtitle { font-family: var(--font-body);  font-size: var(--font-size-body); }
-
-.dataCardShell { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 200ms ease; }
-.dataCardShell[data-expanded="true"] { grid-template-rows: 1fr; }
-.dataCardOverflow { overflow: hidden; }
-.dataCard { transform: translateY(-100%); transition: transform 200ms ease; }
-.dataCardShell[data-expanded="true"] .dataCard { transform: translateY(0); }
-```
-
-Notes:
-- Colors and sizes are intentionally minimal and flat to keep Phase 1 simple; adjust variables to evolve the style later.
