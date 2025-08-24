@@ -38,7 +38,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **DataField**: Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
 - **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
-- **"Up" Button**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
+- **"UpButton**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
 - **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
 - **Snackbar**: Global transient notification toast at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes. Single-slot, replace current toast with latest if a new one arises.
@@ -278,8 +278,8 @@ Data Fields are selected from a library. The string value of "fieldName" is used
     <img src="ROOT_wireframe.svg" alt="ROOT view image"/>
   </div>
   <div>
-    <p style="color:black"><strong>BRANCH view</strong></p>
-    <img src="BRANCH_view.svg" alt="BRANCH view image"/>
+    <p style="color:lt-grey"><strong>BRANCH view</strong></p>
+    <img src="BRANCH_wireframe.svg" alt="BRANCH view image"/>
   </div>
 </div>
 
