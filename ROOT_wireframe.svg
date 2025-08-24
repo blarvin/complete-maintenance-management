@@ -56,44 +56,44 @@
 <text x="59" y="406" font-size="12" fill="#222" font-weight="600">+ Add Field</text>
 
 <!-- Node 4 (collapsed) -->
-<rect x="16" y="437" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
-<text x="32" y="467" font-size="16" font-weight="700" fill="#111">Asset Name D</text>
-<text x="32" y="487" font-size="12" fill="#666">Subtitle / Location / Short description</text>
-<g transform="translate(346,477)">
+<rect x="16" y="444" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="32" y="474" font-size="16" font-weight="700" fill="#111">Asset Name D</text>
+<text x="32" y="494" font-size="12" fill="#666">Subtitle / Location / Short description</text>
+<g transform="translate(346,484)">
   <polygon points="12,0 0,6 12,12" fill="#000"/>
   <title>Expand DataCard</title>
 </g>
 
 
 <!-- Node 5 (collapsed) -->
-<rect x="16" y="512" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
-<text x="32" y="542" font-size="16" font-weight="700" fill="#111">Asset Name E</text>
-<text x="32" y="562" font-size="12" fill="#666">Subtitle / Location / Short description</text>
-<g transform="translate(346,552)">
+<rect x="16" y="522" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="32" y="552" font-size="16" font-weight="700" fill="#111">Asset Name E</text>
+<text x="32" y="572" font-size="12" fill="#666">Subtitle / Location / Short description</text>
+<g transform="translate(346,562)">
   <polygon points="12,0 0,6 12,12" fill="#000"/>
   <title>Expand DataCard</title>
 </g>
 
 <!-- Node 6 (collapsed) -->
-<rect x="16" y="587" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
-<text x="32" y="617" font-size="16" font-weight="700" fill="#111">Asset Name F</text>
-<text x="32" y="637" font-size="12" fill="#666">Subtitle / Location / Short description</text>
-<g transform="translate(346,627)">
+<rect x="16" y="597" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="32" y="627" font-size="16" font-weight="700" fill="#111">Asset Name F</text>
+<text x="32" y="647" font-size="12" fill="#666">Subtitle / Location / Short description</text>
+<g transform="translate(346,637)">
   <polygon points="12,0 0,6 12,12" fill="#000"/>
   <title>Expand DataCard</title>
 </g>
 
 <!-- Node 7 (collapsed) -->
-<rect x="16" y="662" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
-<text x="32" y="692" font-size="16" font-weight="700" fill="#111">Asset Name G</text>
-<text x="32" y="712" font-size="12" fill="#666">Subtitle / Location / Short description</text>
-<g transform="translate(346,702)">
+<rect x="16" y="672" width="358" height="72" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="32" y="702" font-size="16" font-weight="700" fill="#111">Asset Name G</text>
+<text x="32" y="722" font-size="12" fill="#666">Subtitle / Location / Short description</text>
+<g transform="translate(346,712)">
   <polygon points="12,0 0,6 12,12" fill="#000"/>
   <title>Expand DataCard</title>
 </g>
 
 <!-- Create New Asset button (root variant) -->
-<rect x="16" y="739" width="358" height="56" fill="#fff" stroke="#000" stroke-width="1.5"/>
-<text x="195" y="771" font-size="16" text-anchor="middle" fill="#000">Create New Asset</text>
+<rect x="16" y="756" width="358" height="56" fill="#fff" stroke="#000" stroke-width="1.5"/>
+<text x="195" y="788" font-size="16" text-anchor="middle" fill="#000">Create New Asset</text>
 </svg>
 
