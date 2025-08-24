@@ -272,16 +272,14 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 
 ## Styling Design
 
-<div style="display:flex; gap:25%; align-items:flex-start; background:white; padding:1.5rem; border-radius:1rem;">
+<div style="display:flex; gap:25%; align-items:flex-start; padding:1.5rem; border-radius:1rem;">
   <div>
-    <p style="color:black"><strong>ROOT view</strong></p>
+    <p style="color:lt-grey"><strong>ROOT view</strong></p>
     <img src="ROOT_wireframe.svg" alt="ROOT view image"/>
-    <img src="ROOT_wireframe.svg" alt="ROOT wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
   <div>
     <p style="color:black"><strong>BRANCH view</strong></p>
     <img src="BRANCH_view.svg" alt="BRANCH view image"/>
-    <img src="BRANCH_wireframe.svg" alt="BRANCH wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
 </div>
 
