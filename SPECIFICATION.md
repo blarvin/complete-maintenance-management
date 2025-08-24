@@ -7,12 +7,12 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 - Level I: Nodes represent things and their constituent parts. These feature a Title and a Subtitle.
 - Level II: Each Node has one Data Card containing any number of Data Fields (facts about that thing).
 - Level III: Each Data Field has a Field Details section containing context (e.g., metadata) and management actions (e.g., delete).
-- Level IV: Each Field has a complete user‑accessible history of previous Field values.
+- Level IV: Each Data Field has a user‑facing history of previous Field values.
 
 This structure enables users to construct and understand detailed hierarchical models of real world assets.
 
 ## Problem Domain and Solution Domain
-The problem domain contains things like Assets, sub-assets, parts, sub-assemblies, power, energy, weight, size, age, risk, drawings, facts, Addresses, People, etc. The solution is a "Tree View" or "Tree Browser" wherein Users can easily create a meaningful, accessible, clear structure from their domain of things, and make changes and updates to data about those things.
+The problem domain contains things like Assets, sub-assets, parts, sub-assemblies, power, energy, weight, size, age, risk, drawings, facts, Addresses, People, etc. The solution domain includes a "Tree View" or "Tree Browser" wherein Users can easily create a meaningful, accessible, clear structure from their domain of things, and make changes and updates to data about those things.
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
@@ -26,8 +26,8 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ## Component Architecture
 
 ### Views
-- **ROOT View**: Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout. Each ROOT node is a Tree, creating a root asset creates a new Tree.
-- **ASSET View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`).
+- **ROOT View**: Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout.
+- **BRANCH View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`).
 
 
 ### Core component hierarchy
@@ -35,18 +35,18 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **NodeTitle**: Displays the current node's `nodeName` (bold).
 - **NodeSubtitle**: Simple description or location string
 - **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref. This expands/retracts using a simple chevron button, located on the body of the parent TreeNode to the right of NodeSubtitle.
-- **DataField**: Row item with Label:Value pairs, which users add to an asset node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
+- **DataField**: Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed. 
 - **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
-- **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the Asset node on its DataCard.
-- **"Up" Button**: On the left end of isParent nodes (node at top of ASSET view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
-- **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and ASSET views.
+- **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
+- **"Up" Button**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
+- **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
 - **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
 - **Snackbar**: Global transient notification toast at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes. Single-slot, replace current toast with latest if a new one arises.
 
 ## TreeNode States
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by updatedAt, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
-- **isParent**: Current node being viewed at top of ASSET view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of ASSET view.
-- **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the ASSET view.
+- **isParent**: Current node being viewed at top of BRANCH view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of BRANCH view.
+- **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the BRANCH view.
 - **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard state is also set to isUnderConstruction.
 
 ## DataCard States
@@ -58,12 +58,12 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
 
 ## CreateNodeButton Contextual Variants
-- **root** (ROOT view): Large button styled like a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset".
-- **child** (ASSET/BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it according to button DOM order. Normal document flow; no absolute positioning.
+- **root** (ROOT view): Large button styled to mimic a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset".
+- **child** (BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it according to button DOM order. Normal document flow; no absolute positioning.
 - **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
 ### State Transitions (use finite state machine pattern)
-- isRoot → isParent (navigate to ASSET VIEW)
+- isRoot → isParent (navigate to BRANCH VIEW)
 - isChild → isParent (navigate deeper)
 - isParent → isRoot (navigate to home using "Up" button)
 - isUnderConstruction → isRoot or isChild (new node created in-situ where button clicked)
@@ -75,7 +75,7 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
 
 ### Node Creation
-- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the ASSET view, multiple child variant instances appear between the isChild instances of TreeNode.
+- **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the BRANCH view, multiple child variant instances appear between the isChild instances of TreeNode.
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
 - **Add DataFields at Node creation**: In isUnderConstruction state, the `DataCard.isUnderConstruction` contains the default DataFields, with DataFieldValue ready for user entry, but may be left blank.
 - **Actions**: "Create"/"Cancel" buttons to finalize or abort the creation of the new TreeNode.
@@ -92,15 +92,16 @@ The problem domain contains things like Assets, sub-assets, parts, sub-assemblie
 ## DataField Management 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
 - **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library.
+ - **Create Data Field**: A "+" button at bottom of DataCard, expands a dropdown menu to choose one from the DataField library. In Phase 1, "Create" strictly means selecting from this prefab library; users do not define new field types at creation time.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Deletion triggers a Snackbar with 5s Undo before finalizing.
   - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` if Undo is not taken.
 
 ### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
-Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard.
+Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. In Phase 1, creating a Data Field is selection-only from this library; ad-hoc/custom field definitions are deferred.
 
 | Field Name | Category | Type | Example Value | Notes |
 |------------|----------|------|---------------|-------|
-| Description | General | Text | "Primary cooling pump for HVAC" | Short asset description |
+| Description | General | Text | "Primary cooling pump for HVAC" | Short description |
 | Type Of | Classification | Text | "Pump", "Vehicle", "Building" | User-defined categories |
 | Tags | Search | CSV | "critical, hvac, maintenance" | Comma-separated values |
 | Location | Location | Text | "Building A, Room 102" | Physical location |
@@ -120,7 +121,7 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 ### Default DataFields ... Added at node creation time.
 - **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user, no entry required).
 - **"Description"**: A short description of the asset. (No entry required)
-- **"Tags"**: A list of tags that can be used to search for the asset (arbitrary comma-separated strings entered by user. No entry required).
+- **"Tags"**: A list of classification tags  (arbitrary comma-separated strings entered by user. No entry required).
 
 ### Empty State (ROOT View)
 - Default welcome message "Create a new asset to get started"
@@ -128,28 +129,9 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 
 ## Data Model
 
-### Conceptual Overview
-
-The system uses a hierarchical tree structure with two primary entities:
-
-1. **TreeNode** - Represents assets and sub-assets in a recursive tree structure
-2. **DataField** - Key-value attributes attached to each TreeNode
-
-**Entity Relationships:**
-- TreeNode has 0..1 parent TreeNode (self-referential)
-- TreeNode has 0..n child TreeNodes
-- TreeNode has 0..n DataFields
-- DataField belongs to exactly 1 TreeNode
-
-### Entity Schemas
-
-Sorting policy (Phase 1):
-- Children within a parent are displayed sorted by `updatedAt` ascending.
-- DataFields within a DataCard are displayed sorted by `updatedAt` ascending.
-
 #### TreeNode Entity
 
-**Purpose:** Represents physical assets (vehicles, buildings, machinery) in a hierarchical structure
+**Purpose:** Represents physical assets or logical containers in a hierarchical structure
 
 | Field | Type | Required | Description | Constraints |
 |-------|------|----------|-------------|-------------|
@@ -196,28 +178,34 @@ Sorting policy (Phase 1):
 | rev | number | Yes | Monotonic revision per `dataFieldId` | Starts at 0 for create |
 
 
-Indexes:
+**Indexes**:
 - treeNodes: by parentId, by updatedAt
 - dataFields: by parentNodeId, by updatedAt
 - dataFieldHistory: by dataFieldId, by updatedAt
 
-### Business Rules
+**Entity Relationships**:
+- TreeNode has 0..1 parent TreeNode (self-referential)
+- TreeNode has 0..n child TreeNodes
+- TreeNode has 0..n DataFields
+- DataField belongs to exactly 1 TreeNode
 
-#### TreeNode Rules
-1. Root nodes must have parentId = null
-2. Node names don't need to be unique
+**Sorting policy**:
+- Children within a parent are displayed sorted by `updatedAt` ascending.
+- DataFields within a DataCard are displayed sorted by `updatedAt` ascending.
 
-#### DataField Rules
-1. Field names should be descriptive (e.g., "Serial Number" not "SN")
-2. All values are stored as strings (parsing/validation in UI)
-3. Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
+**TreeNode Rules**:
+- Root nodes must have parentId = null
+- Node names don't need to be unique
 
-## Data Persistence
+**DataField Rules**:
+- All values are stored as strings (parsing/validation in UI)
+- Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
+
+**Data Persistence**:
 - Stores: `treeNodes`, `dataFields`, `dataFieldHistory`
 - Keys: `treeview:treeNodes`, `treeview:dataFields`, `treeview:dataFieldHistory`
 - Single-user environment; use a constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1). // WHAT???
 
-### Data Examples
 
 #### TreeNode Example
 ```json
@@ -292,9 +280,9 @@ Indexes:
     <img src="ROOT_wireframe.svg" alt="ROOT wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
   <div>
-    <p style="color:black"><strong>ASSET view</strong></p>
-    <img src="ASSET_view.svg" alt="ASSET view image"/>
-    <img src="ASSET_wireframe.svg" alt="ASSET wireframe" style="margin-top:2rem; max-width:100%;"/>
+    <p style="color:black"><strong>BRANCH view</strong></p>
+    <img src="BRANCH_view.svg" alt="BRANCH view image"/>
+    <img src="BRANCH_wireframe.svg" alt="BRANCH wireframe" style="margin-top:2rem; max-width:100%;"/>
   </div>
 </div>
 
