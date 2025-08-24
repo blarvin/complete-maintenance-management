@@ -11,6 +11,13 @@
 - **Adapter**: Static site build (SSG) for Netlify; no server/runtime code in Phase 1
 - **Routes**: Single route `/` that renders either ROOT or BRANCH view via in-app state. No URL changes for navigation (per SPEC).
 
+### Data Layer
+- **Persistence**: Firebase Firestore Web SDK with offline persistence (IndexedDB) enabled
+- **Timestamps/IDs**: `Date.now()` for `updatedAt`; `crypto.randomUUID()` for IDs; `editedBy`="localUser"
+- **Writes**: Use SDK; debounce mutations (~300ms) to reduce churn; keep integrity helpers (maintain `childNodes`/`dataFields` mirrors) before writes
+- **UI state**: `localStorage` (`treeview:ui:cardsExpanded`, `treeview:ui:fieldDetailsExpanded`)
+
+
 ### Styling Strategy
 - **Primary**: Plain CSS Modules colocated with components (e.g., `TreeNode.css?inline`)
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
@@ -19,11 +26,6 @@
 ### Mobile-first UI and UX
 - **Disable pinch-zoom** to reduce double-tap conflicts
 
-### Data Layer (Offline-Only)
-- **Persistence**: Firebase Firestore Web SDK with offline persistence (IndexedDB) enabled
-- **Timestamps/IDs**: `Date.now()` for `updatedAt`; `crypto.randomUUID()` for IDs; `editedBy`="localUser"
-- **Writes**: Use SDK; debounce mutations (~300ms) to reduce churn; keep integrity helpers (maintain `childNodes`/`dataFields` mirrors) before writes
-- **UI state**: `localStorage` (`treeview:ui:cardsExpanded`, `treeview:ui:fieldDetailsExpanded`)
 
 ### State Management
 - **Approach**: Qwik `useStore` + context providers; no external state library

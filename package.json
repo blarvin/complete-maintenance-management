@@ -1,0 +1,25 @@
+{
+  "name": "treeview",
+  "version": "0.0.6",
+  "description": "a tree view ui for hierarchical data",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blarvin/complete-maintenance-management.git"
+  },
+  "keywords": [
+    "tree"
+  ],
+  "author": "blarvin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/blarvin/complete-maintenance-management/issues"
+  },
+  "homepage": "https://github.com/blarvin/complete-maintenance-management#readme",
+  "dependencies": {
+    "firebase": "^12.1.0"
+  }
+}
