@@ -4,7 +4,9 @@
   "description": "a tree view ui for hierarchical data",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "emulators": "firebase emulators:start --only firestore",
+    "seed": "tsx scripts/seed.ts"
   },
   "repository": {
     "type": "git",
@@ -21,5 +23,11 @@
   "homepage": "https://github.com/blarvin/complete-maintenance-management#readme",
   "dependencies": {
     "firebase": "^12.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.34.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
   }
 }
