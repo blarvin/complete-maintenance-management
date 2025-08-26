@@ -17,6 +17,7 @@ const app = initializeApp(firebaseConfig);
 
 // Use persistent IndexedDB in browser; memory cache in Node (scripts)
 const isBrowser = typeof window !== "undefined" && typeof indexedDB !== "undefined";
+export const isBrowserEnv = isBrowser;
 export const db = initializeFirestore(app, {
     localCache: isBrowser
         ? persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) })
@@ -31,3 +32,7 @@ const isDev =
 if (isDev) {
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
 }
+
+// These are used by the data layer status checker.
+export const isUsingEmulator = isDev;
+export const projectId = firebaseConfig.projectId;
