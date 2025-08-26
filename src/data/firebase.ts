@@ -10,7 +10,7 @@ import {
 const firebaseConfig = {
     apiKey: "dev-placeholder",
     authDomain: "dev-placeholder.firebaseapp.com",
-    projectId: "dev-placeholder",
+    projectId: "treeview-blarapp",
 };
 
 const app = initializeApp(firebaseConfig);
