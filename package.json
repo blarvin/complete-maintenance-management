@@ -4,6 +4,11 @@
   "description": "a tree view ui for hierarchical data",
   "main": "index.js",
   "scripts": {
+    "dev": "vite --mode ssr",
+    "build": "vite build",
+    "preview": "vite preview --strictPort",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "test": "test",
     "emulators": "firebase emulators:start --only firestore"
   },
@@ -26,9 +31,11 @@
     "firebase": "^12.1.0"
   },
   "devDependencies": {
+    "@types/node": "^24.3.0",
     "eslint": "^9.34.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite": "^5.4.10"
   }
 }
