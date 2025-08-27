@@ -5,10 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "test",
-    "emulators": "firebase emulators:start --only firestore",
-    "seed": "tsx scripts/seed.ts",
-    "healthcheck": "tsx scripts/healthcheck.ts",
-    "emulators:healthcheck": "firebase emulators:exec --only firestore --project treeview-blarapp -- \"npm run -s healthcheck\""
+    "emulators": "firebase emulators:start --only firestore"
   },
   "repository": {
     "type": "git",

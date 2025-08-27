@@ -188,3 +188,8 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 - Multiple inline Create buttons (L62–L65, L79): n+1 “Create Here” buttons between child rows add clutter and tab‑stop pain. Consider a single “+ Add sub‑asset” that inserts relative to a selected sibling or uses a simple append, and defer in‑between insertion to later.
 - Delete/Undo timing (L86–L92): 5s Undo plus “irreversible” is brittle. Clarify whether Undo survives navigation and whether deletes are soft until timer elapses or applied immediately with a restore snapshot.
 - “NodeTools” delete only (L43): Consider at least “Rename/Move” later; if Phase 1 is delete‑only, explicitly state edits happen in the node header and card.
+
+- **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
+- **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
+### TailwindCSS
+- limit use to `@apply` within component CSS to keep HTML uncluttered
