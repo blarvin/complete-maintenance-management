@@ -9,10 +9,7 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 - Level III: Each Data Field has a Field Details section containing context (e.g., metadata) and management actions (e.g., delete).
 - Level IV: Each Data Field has a user‑facing history of previous Field values.
 
-This structure enables users to construct and understand detailed hierarchical models of real world assets.
-
-## Problem Domain and Solution Domain
-The problem domain contains things like Assets, sub-assets, parts, sub-assemblies, power, energy, weight, size, age, risk, drawings, facts, Addresses, People, etc. The solution domain includes a "Tree View" or "Tree Browser" wherein Users can easily create a meaningful, accessible, clear structure from their domain of things, and make changes and updates to data about those things.
+This structure enables users to construct, explore, and understand detailed hierarchical models of real world assets.
 
 ## Core Principles
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.

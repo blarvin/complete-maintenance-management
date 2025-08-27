@@ -1,0 +1,118 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #111;
+    font-family: Inter, Arial, sans-serif;
+}
+
+.view-container {
+    width: 100%;
+    max-width: 650px;
+    min-width: 275px;
+    min-height: 560px;
+    margin: 0 auto;
+    padding: 6px 6px 6px;
+}
+
+.node {
+    width: 100%;
+    max-width: 650px;
+    min-width: 275px;
+    border: 1.5px solid #000;
+    background: #fff;
+    margin-bottom: 3px;
+}
+
+.node__body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 3px 3px 3px 8px;
+    min-height: 35px;
+}
+
+.node__title {
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1;
+    margin: 0 0 6px 0;
+}
+
+.node__subtitle {
+    font-size: 9px;
+    color: #666;
+    line-height: 1;
+}
+
+.node__chevron {
+    font-size: 18px;
+    color: #000;
+    padding: 8px 6px;
+    transform: translateY(10px);
+}
+
+.datacard {
+    border: 1.5px solid #000;
+    border-top: 0;
+    margin: 0 0 12px 31px;
+    background: #fff;
+    padding-top: 10px;
+}
+
+.datacard__rows {}
+
+.datacard__row {
+    display: grid;
+    grid-template-columns: 60px 1.5fr;
+    font-size: 10px;
+    gap: 6px;
+    align-items: baseline;
+    margin: 0 6px 6px 10px;
+}
+
+.datacard__label {
+    color: #111;
+}
+
+.datacard__value {
+    color: #222;
+}
+
+.datacard__value--underlined {
+    text-decoration: underline;
+}
+
+.datacard__add {
+    font-size: 10px;
+    font-weight: 600;
+    color: #222;
+    margin: 6px 6px 6px 10px;
+}
+
+.create-node {
+    width: 100%;
+    max-width: 650px;
+    min-width: 275px;
+    border: 1.5px solid #000;
+    background: #fff;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    margin-top: 3px;
+    font-size: 16px;
+    color: #000;
+}
+
+.node--expanded {
+    margin-bottom: 0;
+}
+
+.node--expanded .node__body {
+    padding-bottom: 0;
+}
