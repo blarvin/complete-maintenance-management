@@ -1,10 +1,12 @@
 // src/components/views/RootView.tsx
-import { component$, $, useSignal } from '@builder.io/qwik';
+import { component$, $, useSignal, useVisibleTask$ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { DEFAULT_DATAFIELD_NAMES } from '../../data/fieldLibrary';
 import { createNode } from '../../data/repo/treeNodes';
 import { addField } from '../../data/repo/dataFields';
+import { listRootNodes } from '../../data/repo/treeNodes';
+import type { TreeNode as TreeNodeRecord } from '../../data/models';
 
 type UnderConstructionNode = {
     id: string;
@@ -15,6 +17,15 @@ type UnderConstructionNode = {
 
 export const RootView = component$(() => {
     const ucNode = useSignal<UnderConstructionNode | null>(null);
+    const nodes = useSignal<TreeNodeRecord[]>([]);
+
+    const loadNodes$ = $(async () => {
+        nodes.value = await listRootNodes();
+    });
+
+    useVisibleTask$(async () => {
+        await loadNodes$();
+    });
 
     const startCreate$ = $(() => {
         if (ucNode.value) return;
@@ -38,10 +49,14 @@ export const RootView = component$(() => {
             await addField({ id: generateId(), fieldName: f.fieldName, parentNodeId: id, fieldValue: f.fieldValue ?? null });
         }
         ucNode.value = null;
+        await loadNodes$();
     });
 
     return (
         <main class="view-root">
+            {nodes.value.map((n) => (
+                <TreeNode key={n.id} id={n.id} nodeName={n.nodeName} nodeSubtitle={n.nodeSubtitle ?? ''} mode="isRoot" />
+            ))}
             {ucNode.value ? (
                 <TreeNode
                     id={ucNode.value.id}

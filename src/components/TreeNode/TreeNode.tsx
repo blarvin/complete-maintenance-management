@@ -3,6 +3,8 @@ import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
 import { DataField } from '../DataField/DataField';
+import { listFieldsForNode } from '../../data/repo/dataFields';
+import type { DataField as DataFieldRecord } from '../../data/models';
 
 export type TreeNodeMode = 'isRoot' | 'isParent' | 'isChild' | 'isUnderConstruction';
 
@@ -22,10 +24,17 @@ export const TreeNode = component$((props: TreeNodeProps) => {
     const nameValue = useSignal<string>(props.nodeName || '');
     const subtitleValue = useSignal<string>(props.nodeSubtitle || '');
     const nameInputRef = useSignal<HTMLInputElement>();
+    const persistedFields = useSignal<DataFieldRecord[] | null>(null);
 
     useVisibleTask$(() => {
         if (props.mode === 'isUnderConstruction') {
             nameInputRef.value?.focus();
+        }
+    });
+
+    useVisibleTask$(async () => {
+        if (props.mode !== 'isUnderConstruction') {
+            persistedFields.value = await listFieldsForNode(props.id);
         }
     });
 
@@ -98,7 +107,9 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                                 </>
                             ) : (
                                 <>
-                                    {/* No sample data in Phase 1; real fields render when present */}
+                                    {persistedFields.value?.map((f) => (
+                                        <DataField key={f.id} fieldName={f.fieldName} fieldValue={f.fieldValue} />
+                                    ))}
                                 </>
                             )}
                         </DataCard>

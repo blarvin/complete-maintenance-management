@@ -81,3 +81,8 @@ export async function deleteField(id: string) {
   };
   await setDoc(doc(collection(db, HISTORY), hist.id), hist);
 }
+
+export async function listFieldsForNode(parentNodeId: string) {
+  const q = query(collection(db, FIELDS), where("parentNodeId", "==", parentNodeId), orderBy("updatedAt", "asc"));
+  return (await getDocs(q)).docs.map(d => d.data() as DataField);
+}
