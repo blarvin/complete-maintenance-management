@@ -61,6 +61,25 @@ body {
     line-height: 1;
 }
 
+/* Under-construction: ensure header inputs stack vertically and fill width */
+input.node__title,
+input.node__subtitle {
+    display: block;
+    width: 100%;
+}
+
+/* Ensure inputs with these classes stack like the final static text */
+input.node__title,
+input.node__subtitle {
+    display: block;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    outline: none;
+    background: transparent;
+    font: inherit;
+}
+
 .node__chevron {
     font-size: 18px;
     color: #000;
@@ -100,6 +119,21 @@ body {
 
 .datafield__value--underlined {
     text-decoration: underline;
+}
+
+/* Under-construction: value inputs mimic final text appearance */
+input.datafield__value {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    border-bottom: 1px solid #222;
+    /* show underline even when empty */
 }
 
 .datacard__add {

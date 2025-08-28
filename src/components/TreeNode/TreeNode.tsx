@@ -1,4 +1,4 @@
-import { component$, useSignal } from '@builder.io/qwik';
+import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
@@ -11,37 +11,96 @@ export type TreeNodeProps = {
     nodeName: string;
     nodeSubtitle: string;
     mode: TreeNodeMode;
+    ucDefaults?: { fieldName: string; fieldValue: string | null }[];
+    onCancel$?: PropFunction<() => void>;
+    onCreate$?: PropFunction<(payload: { nodeName: string; nodeSubtitle: string; fields: { fieldName: string; fieldValue: string | null }[] }) => void>;
 };
 
 export const TreeNode = component$((props: TreeNodeProps) => {
-    const isExpanded = useSignal<boolean>(false);
+    const isExpanded = useSignal<boolean>(props.mode === 'isUnderConstruction');
+    const ucFields = useSignal<{ fieldName: string; fieldValue: string | null }[]>(props.ucDefaults ?? []);
+    const nameValue = useSignal<string>(props.nodeName || '');
+    const subtitleValue = useSignal<string>(props.nodeSubtitle || '');
+    const nameInputRef = useSignal<HTMLInputElement>();
 
-    const sampleFields = [
-        { label: 'Type Of', value: 'Pump' },
-        { label: 'Description', value: 'Primary cooling pump for HVAC' },
-        { label: 'Tags', value: 'critical, hvac, maintenance' },
-        { label: 'Status', value: 'In Service' },
-        { label: 'Installed Date', value: '2025-01-01' },
-    ];
+    useVisibleTask$(() => {
+        if (props.mode === 'isUnderConstruction') {
+            nameInputRef.value?.focus();
+        }
+    });
+
+    const handleCreate$ = $(async () => {
+        if (!props.onCreate$) return;
+        await props.onCreate$({ nodeName: nameValue.value, nodeSubtitle: subtitleValue.value, fields: ucFields.value });
+    });
 
     return (
         <>
             <section class={{ node: true, 'node--expanded': isExpanded.value }}>
-                <div class="node__body" onClick$={() => (isExpanded.value = !isExpanded.value)}>
+                <div
+                    class="node__body"
+                    onClick$={() => {
+                        if (props.mode !== 'isUnderConstruction') {
+                            isExpanded.value = !isExpanded.value;
+                        }
+                    }}
+                >
                     <div>
-                        <NodeTitle nodeName={props.nodeName} />
-                        <NodeSubtitle nodeSubtitle={props.nodeSubtitle} />
+                        {props.mode === 'isUnderConstruction' ? (
+                            <>
+                                <input
+                                    class="node__title"
+                                    ref={nameInputRef}
+                                    placeholder="Name"
+                                    value={nameValue.value}
+                                    onInput$={(e) => (nameValue.value = (e.target as HTMLInputElement).value)}
+                                />
+                                <input
+                                    class="node__subtitle"
+                                    placeholder="Subtitle / Location / Short description"
+                                    value={subtitleValue.value}
+                                    onInput$={(e) => (subtitleValue.value = (e.target as HTMLInputElement).value)}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <NodeTitle nodeName={props.nodeName} />
+                                <NodeSubtitle nodeSubtitle={props.nodeSubtitle} />
+                            </>
+                        )}
                     </div>
-                    <div class="node__chevron">{isExpanded.value ? '▾' : '◂'}</div>
+                    <div class="node__chevron">{props.mode === 'isUnderConstruction' ? '▾' : isExpanded.value ? '▾' : '◂'}</div>
                 </div>
             </section>
             <div class={{ 'node__expand': true, 'node__expand--open': isExpanded.value }}>
                 <div class="node__expand-clip">
                     <div class="node__expand-slide">
                         <DataCard>
-                            {sampleFields.map((f) => (
-                                <DataField fieldName={f.label} fieldValue={f.value} />
-                            ))}
+                            {props.mode === 'isUnderConstruction' ? (
+                                <>
+                                    {ucFields.value.map((f, idx) => (
+                                        <div class="datafield" key={`${f.fieldName}-${idx}`}>
+                                            <div class="datafield__label">{f.fieldName}:</div>
+                                            <input
+                                                class={{ 'datafield__value': true, 'datafield__value--underlined': !!f.fieldValue }}
+                                                value={f.fieldValue ?? ''}
+                                                onInput$={(e, t) => {
+                                                    const val = (e.target as HTMLInputElement).value;
+                                                    ucFields.value = ucFields.value.map((row, i) => (i === idx ? { ...row, fieldValue: val || null } : row));
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                                        <button onClick$={props.onCancel$}>Cancel</button>
+                                        <button onClick$={handleCreate$}>Create</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* No sample data in Phase 1; real fields render when present */}
+                                </>
+                            )}
                         </DataCard>
                     </div>
                 </div>
