@@ -11,13 +11,22 @@ body {
     font-family: Inter, Arial, sans-serif;
 }
 
+/* Center the main container from the parent (body) instead of using child margins */
+body {
+    display: flex;
+    justify-content: center;
+}
+
 .view-container {
     width: 100%;
     max-width: 650px;
     min-width: 275px;
     min-height: 560px;
-    margin: 0 auto;
     padding: 6px 6px 6px;
+    /* Parent-only vertical spacing between children (.node, .create-node) */
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .node {
@@ -26,7 +35,7 @@ body {
     min-width: 275px;
     border: 1.5px solid #000;
     background: #fff;
-    margin-bottom: 3px;
+    z-index: 2;
 }
 
 .node__body {
@@ -41,6 +50,8 @@ body {
     font-weight: 700;
     font-size: 12px;
     line-height: 1;
+    /* Using a small child margin here to separate title/subtitle within the same block.
+       Without additional markup, moving this to a parent-controlled gap is not feasible. */
     margin: 0 0 6px 0;
 }
 
@@ -58,14 +69,26 @@ body {
 }
 
 .datacard {
+    transform: translateY(-3px);
+    z-index: 1;
     border: 1.5px solid #000;
     border-top: 0;
-    margin: 0 0 12px 31px;
+    /* Left indent retained as a margin: cannot shift to parent without affecting header layout */
+    margin-left: 31px;
     background: #fff;
-    padding-top: 10px;
+    /* Replace child margins with parent padding/gap */
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.datacard__rows {}
+.datacard__rows {
+    /* Parent controls spacing between rows */
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
 
 .datacard__row {
     display: grid;
@@ -73,7 +96,6 @@ body {
     font-size: 10px;
     gap: 6px;
     align-items: baseline;
-    margin: 0 6px 6px 10px;
 }
 
 .datacard__label {
@@ -92,7 +114,6 @@ body {
     font-size: 10px;
     font-weight: 600;
     color: #222;
-    margin: 6px 6px 6px 10px;
 }
 
 .create-node {
@@ -104,15 +125,10 @@ body {
     height: 35px;
     display: grid;
     place-items: center;
-    margin-top: 3px;
     font-size: 16px;
     color: #000;
 }
 
-.node--expanded {
-    margin-bottom: 0;
-}
+.node--expanded {}
 
-.node--expanded .node__body {
-    padding-bottom: 0;
-}
+.node--expanded .node__body {}
