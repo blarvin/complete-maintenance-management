@@ -69,7 +69,6 @@ body {
 }
 
 .datacard {
-    transform: translateY(-3px);
     z-index: 1;
     border: 1.5px solid #000;
     border-top: 0;
@@ -125,3 +124,31 @@ body {
 .node--expanded {}
 
 .node--expanded .node__body {}
+
+/* Expansion wrapper right after .node */
+.node__expand {
+    transform: translateY(-3px);
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 220ms ease;
+    z-index: 1;
+    /* behind .node (z-index: 2) for the slide-from-behind effect */
+}
+
+.node__expand--open {
+    grid-template-rows: 1fr;
+}
+
+.node__expand-clip {
+    overflow: hidden;
+}
+
+.node__expand-slide {
+    transform: translateY(-100%);
+    transition: transform 220ms ease;
+}
+
+/* When open, slide the inner card into view */
+.node__expand--open .node__expand-slide {
+    transform: translateY(0);
+}

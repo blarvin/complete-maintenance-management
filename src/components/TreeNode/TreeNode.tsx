@@ -35,13 +35,17 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                     <div class="node__chevron">{isExpanded.value ? '▾' : '◂'}</div>
                 </div>
             </section>
-            {isExpanded.value && (
-                <DataCard>
-                    {sampleFields.map((field) => (
-                        <DataField fieldName={field.label} fieldValue={field.value} />
-                    ))}
-                </DataCard>
-            )}
+            <div class={{ 'node__expand': true, 'node__expand--open': isExpanded.value }}>
+                <div class="node__expand-clip">
+                    <div class="node__expand-slide">
+                        <DataCard>
+                            {sampleFields.map((f) => (
+                                <DataField fieldName={f.label} fieldValue={f.value} />
+                            ))}
+                        </DataCard>
+                    </div>
+                </div>
+            </div>
         </>
     );
 });
