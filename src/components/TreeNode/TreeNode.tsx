@@ -2,6 +2,7 @@ import { component$, useSignal } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
+import { DataField } from '../DataField/DataField';
 
 export type TreeNodeMode = 'isRoot' | 'isParent' | 'isChild' | 'isUnderConstruction';
 
@@ -15,7 +16,7 @@ export type TreeNodeProps = {
 export const TreeNode = component$((props: TreeNodeProps) => {
     const isExpanded = useSignal<boolean>(false);
 
-    const defaultRows = [
+    const sampleFields = [
         { label: 'Type Of', value: 'Pump' },
         { label: 'Description', value: 'Primary cooling pump for HVAC' },
         { label: 'Tags', value: 'critical, hvac, maintenance' },
@@ -34,7 +35,13 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                     <div class="node__chevron">{isExpanded.value ? '▾' : '◂'}</div>
                 </div>
             </section>
-            {isExpanded.value && <DataCard rows={defaultRows} />}
+            {isExpanded.value && (
+                <DataCard>
+                    {sampleFields.map((field) => (
+                        <DataField fieldName={field.label} fieldValue={field.value} />
+                    ))}
+                </DataCard>
+            )}
         </>
     );
 });

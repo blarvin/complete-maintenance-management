@@ -17,7 +17,7 @@ body {
     justify-content: center;
 }
 
-.view-container {
+.view-root {
     width: 100%;
     max-width: 650px;
     min-width: 275px;
@@ -76,21 +76,14 @@ body {
     /* Left indent retained as a margin: cannot shift to parent without affecting header layout */
     margin-left: 31px;
     background: #fff;
-    /* Replace child margins with parent padding/gap */
     padding: 6px;
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.datacard__rows {
-    /* Parent controls spacing between rows */
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.datacard__row {
+/* DataField owns its internal two-column layout */
+.datafield {
     display: grid;
     grid-template-columns: 60px 1.5fr;
     font-size: 10px;
@@ -98,15 +91,15 @@ body {
     align-items: baseline;
 }
 
-.datacard__label {
+.datafield__label {
     color: #111;
 }
 
-.datacard__value {
+.datafield__value {
     color: #222;
 }
 
-.datacard__value--underlined {
+.datafield__value--underlined {
     text-decoration: underline;
 }
 

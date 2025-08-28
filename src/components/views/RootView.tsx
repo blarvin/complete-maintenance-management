@@ -13,7 +13,7 @@ export const RootView = component$(() => {
     ];
 
     return (
-        <main class="view-container">
+        <main class="view-root">
             {sampleNodes.map((n) => (
                 <TreeNode key={n.id} id={n.id} nodeName={n.nodeName} nodeSubtitle={n.nodeSubtitle} mode="isRoot" />
             ))}
