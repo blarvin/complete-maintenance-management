@@ -3,10 +3,10 @@ import { component$, $, useSignal, useVisibleTask$ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { DEFAULT_DATAFIELD_NAMES } from '../../data/fieldLibrary';
-import { createNode } from '../../data/repo/treeNodes';
-import { addField } from '../../data/repo/dataFields';
 import { listRootNodes } from '../../data/repo/treeNodes';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
+import { generateId } from '../../utils/id';
+import { createRootNodeWithDefaultFields } from '../../data/services/createNode';
 
 type UnderConstructionNode = {
     id: string;
@@ -44,10 +44,7 @@ export const RootView = component$(() => {
     const completeCreate$ = $(async (payload: { nodeName: string; nodeSubtitle: string; fields: { fieldName: string; fieldValue: string | null }[] }) => {
         if (!ucNode.value) return;
         const id = ucNode.value.id;
-        await createNode({ id, nodeName: payload.nodeName || 'Untitled', nodeSubtitle: payload.nodeSubtitle || '', parentId: null });
-        for (const f of payload.fields) {
-            await addField({ id: generateId(), fieldName: f.fieldName, parentNodeId: id, fieldValue: f.fieldValue ?? null });
-        }
+        await createRootNodeWithDefaultFields({ id, nodeName: payload.nodeName, nodeSubtitle: payload.nodeSubtitle, defaults: payload.fields });
         ucNode.value = null;
         await loadNodes$();
     });
@@ -72,17 +69,5 @@ export const RootView = component$(() => {
         </main>
     );
 });
-
-function generateId(): string {
-    // Prefer crypto.randomUUID when available
-    try {
-        // @ts-ignore
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            // @ts-ignore
-            return crypto.randomUUID();
-        }
-    } catch { }
-    return `id_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
 
 
