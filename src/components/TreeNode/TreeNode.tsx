@@ -46,14 +46,7 @@ export const TreeNode = component$((props: TreeNodeProps) => {
     return (
         <>
             <section class={{ node: true, 'node--expanded': isExpanded.value }}>
-                <div
-                    class="node__body"
-                    onClick$={() => {
-                        if (props.mode !== 'isUnderConstruction') {
-                            isExpanded.value = !isExpanded.value;
-                        }
-                    }}
-                >
+                <div class="node__body">
                     <div>
                         {props.mode === 'isUnderConstruction' ? (
                             <>
@@ -78,7 +71,18 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                             </>
                         )}
                     </div>
-                    <div class="node__chevron">{props.mode === 'isUnderConstruction' ? '▾' : isExpanded.value ? '▾' : '◂'}</div>
+                    <div
+                        class="node__chevron"
+                        onClick$={(e) => {
+                            e.stopPropagation();
+                            isExpanded.value = !isExpanded.value;
+                        }}
+                        title={isExpanded.value ? 'Collapse' : 'Expand'}
+                        aria-label={isExpanded.value ? 'Collapse' : 'Expand'}
+                        role="button"
+                    >
+                        {isExpanded.value ? '▾' : '◂'}
+                    </div>
                 </div>
             </section>
             <div class={{ 'node__expand': true, 'node__expand--open': isExpanded.value }}>

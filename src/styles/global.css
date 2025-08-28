@@ -85,6 +85,7 @@ input.node__subtitle {
     color: #000;
     padding: 8px 6px;
     transform: translateY(10px);
+    cursor: pointer;
 }
 
 .datacard {
