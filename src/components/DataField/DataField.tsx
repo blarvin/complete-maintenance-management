@@ -1,4 +1,4 @@
-import { component$, useSignal, $, useVisibleTask$ } from '@builder.io/qwik';
+import { component$, useSignal, $, useVisibleTask$, useOnDocument } from '@builder.io/qwik';
 import { updateFieldValue } from '../../data/repo/dataFields';
 
 export type DataFieldProps = {
@@ -9,6 +9,7 @@ export type DataFieldProps = {
 
 export const DataField = component$<DataFieldProps>((props) => {
     const isEditing = useSignal<boolean>(false);
+    const rootEl = useSignal<HTMLElement>();
     const currentValue = useSignal<string>(props.fieldValue ?? '');
     const editValue = useSignal<string>('');
     const lastDownAt = useSignal<number>(0);
@@ -80,8 +81,18 @@ export const DataField = component$<DataFieldProps>((props) => {
         }
     });
 
+    // Cancel edit on any outside click
+    useOnDocument('pointerdown', $((ev: Event) => {
+        if (!isEditing.value) return;
+        const container = rootEl.value;
+        const target = ev.target as Node | null;
+        if (container && target && !container.contains(target)) {
+            cancel$();
+        }
+    }));
+
     return (
-        <div class="datafield">
+        <div class="datafield" ref={rootEl}>
             <div class="datafield__label">{props.fieldName}:</div>
             {isEditing.value ? (
                 <input
@@ -90,11 +101,8 @@ export const DataField = component$<DataFieldProps>((props) => {
                     onInput$={(e) => (editValue.value = (e.target as HTMLInputElement).value)}
                     onPointerDown$={inputPointerDown$}
                     onBlur$={$(() => {
-                        const now = Date.now();
-                        setTimeout(() => {
-                            if (Date.now() < suppressCancelUntil.value) return;
-                            if (isEditing.value) cancel$();
-                        }, 200);
+                        if (Date.now() < suppressCancelUntil.value) return;
+                        if (isEditing.value) cancel$();
                     })}
                     onKeyDown$={$((e) => {
                         const key = (e as KeyboardEvent).key;
