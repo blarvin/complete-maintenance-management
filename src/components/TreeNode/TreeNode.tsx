@@ -112,7 +112,7 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                             ) : (
                                 <>
                                     {persistedFields.value?.map((f) => (
-                                        <DataField key={f.id} fieldName={f.fieldName} fieldValue={f.fieldValue} />
+                                        <DataField key={f.id} id={f.id} fieldName={f.fieldName} fieldValue={f.fieldValue} />
                                     ))}
                                 </>
                             )}
