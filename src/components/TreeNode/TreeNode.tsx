@@ -16,6 +16,7 @@ export type TreeNodeProps = {
     ucDefaults?: { fieldName: string; fieldValue: string | null }[];
     onCancel$?: PropFunction<() => void>;
     onCreate$?: PropFunction<(payload: { nodeName: string; nodeSubtitle: string; fields: { fieldName: string; fieldValue: string | null }[] }) => void>;
+    onNodeClick$?: PropFunction<() => void>;
 };
 
 export const TreeNode = component$((props: TreeNodeProps) => {
@@ -46,7 +47,7 @@ export const TreeNode = component$((props: TreeNodeProps) => {
     return (
         <>
             <section class={{ node: true, 'node--expanded': isExpanded.value }}>
-                <div class="node__body">
+                <div class={{ 'node__body': true, 'node__body--clickable': !!props.onNodeClick$ }} onClick$={props.onNodeClick$}>
                     <div>
                         {props.mode === 'isUnderConstruction' ? (
                             <>

@@ -1,8 +1,13 @@
 import { db } from "../firebase";
-import { collection, doc, setDoc, getDocs, query, where, orderBy, deleteDoc, getCountFromServer } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, getCountFromServer } from "firebase/firestore";
 import { TreeNode } from "../models";
 
 const NODES = "treeNodes";
+
+export async function getNodeById(id: string): Promise<TreeNode | null> {
+  const snap = await getDoc(doc(db, NODES, id));
+  return snap.exists() ? (snap.data() as TreeNode) : null;
+}
 
 export async function createNode(partial: Omit<TreeNode, "updatedBy" | "updatedAt">) {
   const now = Date.now();

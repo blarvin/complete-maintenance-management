@@ -29,6 +29,10 @@ body {
     gap: 3px;
 }
 
+.node__body--clickable {
+    cursor: pointer;
+}
+
 .node {
     width: 100%;
     max-width: 650px;
@@ -186,4 +190,75 @@ input.datafield__value {
 /* When open, slide the inner card into view */
 .node__expand--open .node__expand-slide {
     transform: translateY(0);
+}
+
+/* ========================= */
+/* BRANCH VIEW               */
+/* ========================= */
+
+.view-branch {
+    width: 100%;
+    max-width: 650px;
+    min-width: 275px;
+    min-height: 560px;
+    padding: 6px 6px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.branch-parent-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.branch-parent-node {
+    flex: 1;
+    min-width: 0;
+}
+
+.branch-children {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-left: var(--child-indent, 24px);
+}
+
+
+/* ========================= */
+/* UP BUTTON                 */
+/* ========================= */
+
+.up-button {
+    width: 32px;
+    height: 35px;
+    min-width: 32px;
+    border: 1.5px solid #000;
+    background: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.up-button:hover {
+    background: #f0f0f0;
+}
+
+/* ========================= */
+/* CREATE NODE CHILD VARIANT */
+/* ========================= */
+
+.create-node--child {
+    height: 28px;
+    font-size: 12px;
+    border-style: dashed;
+    color: #666;
+    cursor: pointer;
+}
+
+.create-node--child:hover {
+    background: #f9f9f9;
+    color: #000;
 }

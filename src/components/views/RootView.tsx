@@ -1,5 +1,5 @@
 // src/components/views/RootView.tsx
-import { component$, $, useSignal, useVisibleTask$ } from '@builder.io/qwik';
+import { component$, $, useSignal, useVisibleTask$, PropFunction } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { DEFAULT_DATAFIELD_NAMES } from '../../data/fieldLibrary';
@@ -15,15 +15,27 @@ type UnderConstructionNode = {
     defaultFields: { fieldName: string; fieldValue: string | null }[];
 };
 
-export const RootView = component$(() => {
+export type RootViewProps = {
+    onNavigate$: PropFunction<(nodeId: string | null) => void>;
+};
+
+export const RootView = component$((props: RootViewProps) => {
     const ucNode = useSignal<UnderConstructionNode | null>(null);
     const nodes = useSignal<TreeNodeRecord[]>([]);
 
     const loadNodes$ = $(async () => {
-        nodes.value = await listRootNodes();
+        console.log('[RootView] Loading nodes...');
+        try {
+            nodes.value = await listRootNodes();
+            console.log('[RootView] Loaded', nodes.value.length, 'nodes');
+        } catch (err) {
+            console.error('[RootView] Error loading nodes:', err);
+            throw err;
+        }
     });
 
     useVisibleTask$(async () => {
+        console.log('[RootView] Mounted, calling loadNodes$');
         await loadNodes$();
     });
 
@@ -52,7 +64,14 @@ export const RootView = component$(() => {
     return (
         <main class="view-root">
             {nodes.value.map((n) => (
-                <TreeNode key={n.id} id={n.id} nodeName={n.nodeName} nodeSubtitle={n.nodeSubtitle ?? ''} mode="isRoot" />
+                <TreeNode
+                    key={n.id}
+                    id={n.id}
+                    nodeName={n.nodeName}
+                    nodeSubtitle={n.nodeSubtitle ?? ''}
+                    mode="isRoot"
+                    onNodeClick$={() => props.onNavigate$(n.id)}
+                />
             ))}
             {ucNode.value ? (
                 <TreeNode
