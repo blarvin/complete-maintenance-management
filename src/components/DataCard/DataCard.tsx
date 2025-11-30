@@ -4,9 +4,11 @@ export type DataCardProps = { children?: any };
 
 export const DataCard = component$<DataCardProps>((props) => {
     return (
-        <div class="datacard">
+        <div class="datacard" role="region" aria-label="Node details">
             <Slot />
-            <div class="datacard__add">+ Add Field</div>
+            <button type="button" class="datacard__add" aria-label="Add new field">
+                + Add Field
+            </button>
         </div>
     );
 });

@@ -45,10 +45,44 @@ export const TreeNode = component$((props: TreeNodeProps) => {
         await props.onCreate$({ nodeName: nameValue.value, nodeSubtitle: subtitleValue.value, fields: ucFields.value });
     });
 
+    const toggleExpand$ = $((e?: Event) => {
+        e?.stopPropagation();
+        isExpanded.value = !isExpanded.value;
+    });
+
+    const handleBodyKeyDown$ = $((e: KeyboardEvent) => {
+        if (props.onNodeClick$ && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            props.onNodeClick$();
+        }
+    });
+
+    const handleExpandKeyDown$ = $((e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleExpand$();
+        }
+    });
+
+    // Generate unique IDs for ARIA labeling
+    const titleId = `node-title-${props.id}`;
+    const isClickable = !!props.onNodeClick$;
+
     return (
         <>
-            <section class={{ node: true, 'node--expanded': isExpanded.value }}>
-                <div class={{ 'node__body': true, 'node__body--clickable': !!props.onNodeClick$ }} onClick$={props.onNodeClick$}>
+            <article 
+                class={{ node: true, 'node--expanded': isExpanded.value }}
+                aria-labelledby={titleId}
+            >
+                <div 
+                    class={{ 'node__body': true, 'node__body--clickable': isClickable }}
+                    onClick$={props.onNodeClick$}
+                    onKeyDown$={handleBodyKeyDown$}
+                    role={isClickable ? 'button' : undefined}
+                    tabIndex={isClickable ? 0 : undefined}
+                    aria-label={isClickable ? `Open ${props.nodeName || 'node'}` : undefined}
+                >
                     <div>
                         {props.mode === 'isUnderConstruction' ? (
                             <>
@@ -58,35 +92,35 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                                     placeholder="Name"
                                     value={nameValue.value}
                                     onInput$={(e) => (nameValue.value = (e.target as HTMLInputElement).value)}
+                                    aria-label="Node name"
                                 />
                                 <input
                                     class="node__subtitle"
                                     placeholder="Subtitle / Location / Short description"
                                     value={subtitleValue.value}
                                     onInput$={(e) => (subtitleValue.value = (e.target as HTMLInputElement).value)}
+                                    aria-label="Node subtitle"
                                 />
                             </>
                         ) : (
                             <>
-                                <NodeTitle nodeName={props.nodeName} />
+                                <NodeTitle nodeName={props.nodeName} id={titleId} />
                                 <NodeSubtitle nodeSubtitle={props.nodeSubtitle} />
                             </>
                         )}
                     </div>
-                    <div
+                    <button
+                        type="button"
                         class="node__chevron"
-                        onClick$={(e) => {
-                            e.stopPropagation();
-                            isExpanded.value = !isExpanded.value;
-                        }}
-                        title={isExpanded.value ? 'Collapse' : 'Expand'}
-                        aria-label={isExpanded.value ? 'Collapse' : 'Expand'}
-                        role="button"
+                        onClick$={toggleExpand$}
+                        onKeyDown$={handleExpandKeyDown$}
+                        aria-expanded={isExpanded.value}
+                        aria-label={isExpanded.value ? 'Collapse details' : 'Expand details'}
                     >
                         {isExpanded.value ? '▾' : '◂'}
-                    </div>
+                    </button>
                 </div>
-            </section>
+            </article>
             <div class={{ 'node__expand': true, 'node__expand--open': isExpanded.value }}>
                 <div class="node__expand-clip">
                     <div class="node__expand-slide">

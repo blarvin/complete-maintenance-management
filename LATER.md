@@ -1,6 +1,7 @@
 ## Phase 1 Prototyping Simplifications
+
 - **Skip virtualParents**: Focus on basic parent-child relationships only
-- **Skip componentType and componentVersion**: Use hardcoded list of available DataFields 
+- **Skip componentType and componentVersion**: Use hardcoded list of available DataFields
 - **Skip customProperties**: Focus on basic node and DataField types only
 - **Skip isRequired**: No "required data field" features for now
 - **Skip isEditable and isLocked**: All data fields are editable for now, no "locking" features for now
@@ -8,6 +9,7 @@
 ## Deferred to Later Phases
 
 ### Breadcrumbs & Ancestor Path
+
 Moved from SPECIFICATION.md → Core component hierarchy / Data Model:
 
 - UI: `NodeTitle` renders a breadcrumb: "Ancestor1 / Ancestor2 / Parent / CurrentNode" with the current node emphasized.
@@ -16,6 +18,7 @@ Moved from SPECIFICATION.md → Core component hierarchy / Data Model:
 - Business Rules: Keep consistent on moves; recompute for descendants on reparent. Not required in Phase 1.
 
 ### Reordering on Data Card
+
 Moved from SPECIFICATION.md → DataField Management:
 
 When a Data Field is active for editing, a small "drag handle" appears to the left of the row. The user can drag the row up or down to reorder the DataFields on the DataCard. (Implementation: Show drag handle when isEditing=true. Use HTML5 drag events for interaction. Recalculate and persist cardOrdering numbers to storage.)
@@ -25,6 +28,7 @@ Note: Reintroduce with persistent `cardOrdering` recalculation and UI affordance
 - **tree-line and branch-lines**: Non-interactive CSS-only decorations inside the children container. The Tree Line is a vertical guide positioned slightly left of child nodes (as in `ASSET_view.svg`), derived from `--child-indent` with a small offset (e.g., `--tree-line-offset`). Each child row shows a short horizontal branch from the Tree Line to the node. These elements do not affect layout or capture pointer events. (See Styling Design below)
 
 ### Image / Media Fields
+
 Moved from SPECIFICATION.md → Example DataFields:
 
 - Image: <IMAGE>
@@ -32,6 +36,7 @@ Moved from SPECIFICATION.md → Example DataFields:
 Note: Media upload, preview, storage, and caching are out of scope for Phase 1. All fields treated as text in Phase 1.
 
 ### Data Fetching and Sync Strategy
+
 Moved from SPECIFICATION.md → Data Fetching Strategy:
 
 - **Offline-First Architecture**: All data operations work against local IndexedDB first, with automatic synchronization to cloud/server when connected.
@@ -41,11 +46,12 @@ Moved from SPECIFICATION.md → Data Fetching Strategy:
 - **Each chunk**: One TreeNode + its DataFields (DataFields are fetched in parallel)
 - **Display Strategy**: Show what's loaded, continue fetching in background
 - **Cache Strategy**: IndexedDB + browser cache for offline resilience
-- **Conflict Resolution**: Last-write-wins with version tracking for merge conflicts between local and cloud data 
+- **Conflict Resolution**: Last-write-wins with version tracking for merge conflicts between local and cloud data
 
 Note: Phase 1 is local-only persistence without background fetching or server sync.
 
 ### Implementation Notes (moved as-is)
+
 Moved from SPECIFICATION.md → Implementation Notes:
 
 1. **Storage Strategy:**
@@ -75,12 +81,15 @@ Moved from SPECIFICATION.md → Implementation Notes:
    - Duplicates/Moves: For Phase 1, treat move/duplicate as delete+create without special conflict handling. LWW applies to resulting records.
 
 ### Business Rules: Cascade Delete
+
 Original text (SPEC): "Deleting a node must handle or cascade to all children"
 
 Note: In Phase 1, only leaf nodes are deletable. Full cascade delete will be implemented later.
 
 ### Data Model: Server-assigned timestamps and componentType
+
 ### Rich New Node Construction UI
+
 Moved from SPECIFICATION.md → Node Creation:
 
 - New TreeNode DataField Construction UI with multiple default rows and five dropdowns for user-selected fields; an Add button in row 10; and Save/Cancel in row 11; defaults skipped if empty.
@@ -95,6 +104,7 @@ Original excerpts:
 Note: In Phase 1, timestamps are client-assigned; componentType rendering types deferred.
 
 ### History & Audit Enhancements
+
 Moved from SPECIFICATION.md → Data Model / DataFieldHistory:
 
 - Phase 1 implements minimal append-only history for `DataField.dataValue` in a dedicated `dataFieldHistory` store, keyed by `${dataFieldId}:${rev}` and indexed by `dataFieldId`, `updatedAt`.
@@ -125,6 +135,7 @@ Note: Single-user Phase 1 uses a constant `updatedBy` (e.g., "localUser"). Real 
 - Undo for last destructive action
 
 **TreeNode Entity Phase 2 Fields (Future):**
+
 - virtualParents: string[] - For cross-references (cables, pipes, connections)
 - componentType: string - For special node types (settings, templates)
 - componentVersion: string - For debugging and compatibility
@@ -133,6 +144,7 @@ Note: Single-user Phase 1 uses a constant `updatedBy` (e.g., "localUser"). Real 
 - **Startup migration** (dev helper): If any record lacks `treeID`, derive it by walking up to root and stamp it.
 
 5. (Phase 2) Reordering updates cardOrdering for all affected fields
+
 - Label (`fieldName`) rename history is deferred to Phase 2.
 
 Data Fields are either created by Users (simple Field Name + Field Value Type) or selected from a library sourced from previous creations of the Users
@@ -163,10 +175,10 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 | treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
 | componentType | string | No | Special rendering type | (Phase 2) From allowed list |
-| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
+| treeID | string | Yes | Tree boundary identifier | Inherited root |
 | treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
-| treeID | string | Yes      | Tree boundary identifier      | Inherited root |
+| treeID | string | Yes | Tree boundary identifier | Inherited root |
 | treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
 
 [createNodeButton.isRoot] Creates a new Tree (sets `treeID = id`) and navigates to the new node’s ASSET (BRANCH) view.
@@ -174,7 +186,8 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 ASSET View is always scoped to one `treeID` (the current root’s id).
 
 **Phase 2 dataFields (Future):**
-- cardOrdering: 
+
+- cardOrdering:
 - componentVersion: string - For debugging
 - customProperties: string[] - For extensibility
 - isRequired: boolean - Validation flag
@@ -184,12 +197,33 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 ### "Breadth-first quantized background lazy loading"
 
 ### Interaction/UX risks
-- Double‑tap to edit (L94–L98, L38): Double‑tap is unreliable on mobile, conflicts with OS zoom, and hurts accessibility/keyboard support. Prefer single‑tap edit affordance (icon/button), long‑press on mobile, Enter to save, Esc to cancel; keep double‑tap optional at most.
+
+- Double‑tap to edit: Double‑tap kept for mouse users. **✅ RESOLVED:** Keyboard support now implemented (Enter/Space to edit, Escape to cancel). See IMPLEMENTATION.md → Accessibility.
 - Multiple inline Create buttons (L62–L65, L79): n+1 “Create Here” buttons between child rows add clutter and tab‑stop pain. Consider a single “+ Add sub‑asset” that inserts relative to a selected sibling or uses a simple append, and defer in‑between insertion to later.
 - Delete/Undo timing (L86–L92): 5s Undo plus “irreversible” is brittle. Clarify whether Undo survives navigation and whether deletes are soft until timer elapses or applied immediately with a restore snapshot.
 - “NodeTools” delete only (L43): Consider at least “Rename/Move” later; if Phase 1 is delete‑only, explicitly state edits happen in the node header and card.
 
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
 - **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
+
 ### TailwindCSS
+
 - limit use to `@apply` within component CSS to keep HTML uncluttered
+
+---
+
+## Resolved in Phase 1
+
+### ✅ Accessibility & AI Agent Compatibility
+
+Originally flagged as a risk: "Double-tap hurts accessibility/keyboard support"
+
+**Now implemented:**
+
+- Full keyboard navigation (Tab, Enter, Space, Escape)
+- Semantic HTML (`<article>`, `<button>`, `<h2>`, `<label>`)
+- ARIA attributes (`aria-expanded`, `aria-label`, `aria-labelledby`)
+- `:focus-visible` styles for keyboard users
+- AI agent compatibility - all elements appear in accessibility tree with descriptive names
+
+See IMPLEMENTATION.md → Accessibility section for full details.

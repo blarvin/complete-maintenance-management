@@ -11,6 +11,21 @@ body {
     font-family: Inter, Arial, sans-serif;
 }
 
+/* ========================= */
+/* FOCUS STYLES              */
+/* ========================= */
+
+/* Clear, visible focus indicator for keyboard navigation */
+:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
+/* Remove default focus ring for mouse users */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
 /* Center the main container from the parent (body) instead of using child margins */
 body {
     display: flex;
@@ -59,6 +74,14 @@ body {
     margin: 0 0 6px 0;
 }
 
+/* Reset h2 defaults when used as node title */
+h2.node__title {
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1;
+    margin: 0 0 6px 0;
+}
+
 .node__subtitle {
     font-size: 9px;
     color: #666;
@@ -90,6 +113,10 @@ input.node__subtitle {
     padding: 8px 6px;
     transform: translateY(10px);
     cursor: pointer;
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    font-family: inherit;
 }
 
 .datacard {
@@ -145,6 +172,17 @@ input.datafield__value {
     font-size: 10px;
     font-weight: 600;
     color: #222;
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.datacard__add:hover {
+    text-decoration: underline;
 }
 
 .create-node {
@@ -158,6 +196,13 @@ input.datafield__value {
     place-items: center;
     font-size: 16px;
     color: #000;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+}
+
+.create-node:hover {
+    background: #f9f9f9;
 }
 
 .node--expanded {}
@@ -255,10 +300,28 @@ input.datafield__value {
     font-size: 12px;
     border-style: dashed;
     color: #666;
-    cursor: pointer;
 }
 
 .create-node--child:hover {
     background: #f9f9f9;
     color: #000;
+}
+
+/* ========================= */
+/* DATAFIELD ACCESSIBILITY   */
+/* ========================= */
+
+.datafield__value--editable {
+    cursor: pointer;
+}
+
+.datafield__placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+/* Label styling (reset for using as label element) */
+label.datafield__label {
+    font-weight: normal;
+    cursor: default;
 }

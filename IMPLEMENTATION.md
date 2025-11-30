@@ -47,6 +47,45 @@
 
 - Manual testing only; smoke flows: create node, navigate up/down, add/edit/delete field, persistence across reloads
 - Add `npm run typecheck` and lint script
+
+### Accessibility (A11y)
+
+The app is designed with **full accessibility support**, both for human users with assistive technologies and for **AI agent interaction** (screen reader-like DOM access).
+
+**Key accessibility features implemented:**
+
+1. **Semantic HTML Elements**
+   - `<article>` for tree nodes with `aria-labelledby` referencing the title
+   - `<h2>` for node titles (proper heading hierarchy)
+   - `<button>` for all interactive elements (not clickable `<div>`s)
+   - `<label>` for data field labels with proper `id` association
+
+2. **ARIA Attributes**
+   - `aria-expanded` on expand/collapse buttons
+   - `aria-label` for buttons with icon-only or unclear text content
+   - `aria-labelledby` linking inputs to their labels
+   - `role="region"` with `aria-label` for content sections
+   - `role="button"` with `tabIndex` for custom interactive elements
+
+3. **Keyboard Navigation**
+   - All interactive elements are focusable via Tab
+   - Enter/Space activates buttons and starts editing
+   - Escape cancels editing mode
+   - `:focus-visible` styles for clear keyboard focus indicators
+
+4. **AI Agent Compatibility**
+   - All interactive elements appear in the accessibility tree with descriptive names
+   - Actions like "Open Node Name", "Expand details", "Add Sub-Asset" are clearly labeled
+   - Form inputs have proper `aria-label` or `aria-labelledby`
+   - Enables AI tools (like Cursor's browser integration) to navigate and interact with the app programmatically
+
+**Components with accessibility support:**
+
+- `CreateNodeButton` - semantic `<button>` with `aria-label`
+- `TreeNode` - `<article>` with keyboard handlers, `aria-expanded` chevron button
+- `DataCard` - `role="region"` with accessible "Add Field" button
+- `DataField` - keyboard editing (Enter to edit), proper label association
+- `UpButton` - semantic `<button>` with navigation context in `aria-label`
   /
   ├─ .firebaserc
   ├─ firebase.json

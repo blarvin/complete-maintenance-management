@@ -68,6 +68,14 @@ export const DataField = component$<DataFieldProps>((props) => {
         }
     });
 
+    const valueKeyDown$ = $((e: KeyboardEvent) => {
+        if (isEditing.value) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            beginEdit$();
+        }
+    });
+
     const inputPointerDown$ = $(async (ev: any) => {
         if (!isEditing.value) return;
         const e = ev as PointerEvent | MouseEvent;
@@ -91,9 +99,12 @@ export const DataField = component$<DataFieldProps>((props) => {
         }
     }));
 
+    // Generate unique ID for label association
+    const labelId = `field-label-${props.id}`;
+
     return (
         <div class="datafield" ref={rootEl}>
-            <div class="datafield__label">{props.fieldName}:</div>
+            <label class="datafield__label" id={labelId}>{props.fieldName}:</label>
             {isEditing.value ? (
                 <input
                     class={{ 'datafield__value': true, 'datafield__value--underlined': !!editValue.value }}
@@ -115,11 +126,20 @@ export const DataField = component$<DataFieldProps>((props) => {
                             cancel$();
                         }
                     })}
+                    aria-labelledby={labelId}
                     autoFocus
                 />
             ) : (
-                <div class={{ 'datafield__value': true, 'datafield__value--underlined': hasValue }} onPointerDown$={valuePointerDown$}>
-                    {currentValue.value}
+                <div 
+                    class={{ 'datafield__value': true, 'datafield__value--underlined': hasValue, 'datafield__value--editable': true }} 
+                    onPointerDown$={valuePointerDown$}
+                    onKeyDown$={valueKeyDown$}
+                    tabIndex={0}
+                    role="button"
+                    aria-labelledby={labelId}
+                    aria-description="Press Enter to edit"
+                >
+                    {currentValue.value || <span class="datafield__placeholder">Empty</span>}
                 </div>
             )}
         </div>

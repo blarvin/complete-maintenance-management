@@ -12,27 +12,27 @@ export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
 
     if (props.variant === 'root') {
         return (
-            <div
+            <button
+                type="button"
                 class="create-node"
                 onClick$={handleClick$}
-                title="Create New Asset"
                 aria-label="Create New Asset"
             >
                 Create New Asset
-            </div>
+            </button>
         );
     }
 
     if (props.variant === 'child') {
         return (
-            <div
+            <button
+                type="button"
                 class="create-node create-node--child"
                 onClick$={handleClick$}
-                title="Create New Sub-Asset"
-                aria-label="Create New Sub-Asset"
+                aria-label="Add Sub-Asset"
             >
                 + Add Sub-Asset
-            </div>
+            </button>
         );
     }
 

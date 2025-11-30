@@ -1,8 +1,13 @@
 import { component$ } from '@builder.io/qwik';
 
-export const NodeTitle = component$((props: { nodeName: string }) => {
+export type NodeTitleProps = {
+    nodeName: string;
+    id?: string;
+};
+
+export const NodeTitle = component$<NodeTitleProps>((props) => {
     return (
-        <div class="node__title">{props.nodeName}</div>
+        <h2 class="node__title" id={props.id}>{props.nodeName}</h2>
     );
 });
 
