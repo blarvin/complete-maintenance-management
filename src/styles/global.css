@@ -185,6 +185,13 @@ input.datafield__value {
     text-decoration: underline;
 }
 
+/* Under-construction mode action buttons */
+.construction-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
 .create-node {
     width: 100%;
     max-width: 650px;
