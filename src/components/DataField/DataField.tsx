@@ -1,5 +1,6 @@
 import { component$, useSignal, $, useVisibleTask$, useOnDocument } from '@builder.io/qwik';
 import { updateFieldValue } from '../../data/repo/dataFields';
+import { useDoubleTap } from '../../hooks/useDoubleTap';
 
 export type DataFieldProps = {
     id: string;
@@ -12,12 +13,10 @@ export const DataField = component$<DataFieldProps>((props) => {
     const rootEl = useSignal<HTMLElement>();
     const currentValue = useSignal<string>(props.fieldValue ?? '');
     const editValue = useSignal<string>('');
-    const lastDownAt = useSignal<number>(0);
-    const lastDownX = useSignal<number>(0);
-    const lastDownY = useSignal<number>(0);
     const suppressCancelUntil = useSignal<number>(0);
-    const DOUBLE_CLICK_MS = 280;
-    const DOUBLE_CLICK_SLOP = 6; // px
+
+    // Double-tap detection hook
+    const { checkDoubleTap$ } = useDoubleTap();
 
     useVisibleTask$(() => {
         currentValue.value = props.fieldValue ?? '';
@@ -44,25 +43,12 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const hasValue = !!currentValue.value;
 
-    const registerDownAndIsDouble$ = $((x: number, y: number) => {
-        const now = Date.now();
-        const withinTime = now - lastDownAt.value <= DOUBLE_CLICK_MS;
-        const dx = Math.abs(x - lastDownX.value);
-        const dy = Math.abs(y - lastDownY.value);
-        const withinSlop = dx <= DOUBLE_CLICK_SLOP && dy <= DOUBLE_CLICK_SLOP;
-        const isDouble = withinTime && withinSlop;
-        lastDownAt.value = now;
-        lastDownX.value = x;
-        lastDownY.value = y;
-        return isDouble;
-    });
-
     const valuePointerDown$ = $(async (ev: any) => {
         if (isEditing.value) return;
         const e = ev as PointerEvent | MouseEvent;
-        const x = (e as any).clientX ?? 0;
-        const y = (e as any).clientY ?? 0;
-        const isDouble = await registerDownAndIsDouble$(x, y);
+        const x = e.clientX ?? 0;
+        const y = e.clientY ?? 0;
+        const isDouble = await checkDoubleTap$(x, y);
         if (isDouble) {
             await beginEdit$();
         }
@@ -79,12 +65,11 @@ export const DataField = component$<DataFieldProps>((props) => {
     const inputPointerDown$ = $(async (ev: any) => {
         if (!isEditing.value) return;
         const e = ev as PointerEvent | MouseEvent;
-        const x = (e as any).clientX ?? 0;
-        const y = (e as any).clientY ?? 0;
+        const x = e.clientX ?? 0;
+        const y = e.clientY ?? 0;
         suppressCancelUntil.value = Date.now() + 220;
-        const isDouble = await registerDownAndIsDouble$(x, y);
+        const isDouble = await checkDoubleTap$(x, y);
         if (isDouble) {
-            // Save on custom double-click
             await save$();
         }
     });

@@ -202,7 +202,7 @@ export function useNodeCreation(opts: {
 
 ---
 
-### 3. Extract Double-Click Detection as Reusable Hook
+### 3. ✅ Extract Double-Click Detection as Reusable Hook
 
 **Problem:** `DataField.tsx` has ~40 lines of complex double-click detection logic with multiple signals (`lastDownAt`, `lastDownX`, `lastDownY`, `suppressCancelUntil`) and magic numbers.
 
@@ -222,6 +222,8 @@ export function useDoubleTap(opts: {
 - DataField.tsx shrinks by ~40 lines
 - Reusable for any double-tap interaction
 - Configuration (timing, slop) in one place
+
+**Implemented:** Created `src/hooks/useDoubleTap.ts` (50 lines) with exported constants and configurable thresholds. DataField.tsx now uses the hook, reduced from 150 to 131 lines. Comprehensive unit tests in `src/test/doubleTap.test.ts`.
 
 ---
 
