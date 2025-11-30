@@ -33,9 +33,10 @@ export const TreeNode = component$((props: TreeNodeProps) => {
         }
     });
 
-    useVisibleTask$(async () => {
+    useVisibleTask$(async ({ track }) => {
+        const nodeId = track(() => props.id);
         if (props.mode !== 'isUnderConstruction') {
-            persistedFields.value = await listFieldsForNode(props.id);
+            persistedFields.value = await listFieldsForNode(nodeId);
         }
     });
 

@@ -9,8 +9,7 @@
     "preview": "vite preview --strictPort",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "test",
-    "emulators": "firebase emulators:start --only firestore"
+    "test": "test"
   },
   "repository": {
     "type": "git",
