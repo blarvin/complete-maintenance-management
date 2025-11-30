@@ -9,7 +9,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { testId, cleanupTestNode, settle } from './testUtils';
 import { createNode, getNodeById, listChildren, listRootNodes } from '../data/repo/treeNodes';
-import { listFieldsForNode } from '../data/repo/dataFields';
+import { listFieldsForNode, addField } from '../data/repo/dataFields';
 import { createRootNodeWithDefaultFields, createChildNodeWithDefaultFields } from '../data/services/createNode';
 
 describe('TreeNode Data Layer', () => {
@@ -178,16 +178,20 @@ describe('TreeNode Data Layer', () => {
             const id = testId();
             createdNodeIds.push(id);
 
-            await createRootNodeWithDefaultFields({
+            // Create node without fields first
+            await createNode({
                 id,
                 nodeName: 'Sorted Fields Node',
                 nodeSubtitle: '',
-                defaults: [
-                    { fieldName: 'First', fieldValue: '1' },
-                    { fieldName: 'Second', fieldValue: '2' },
-                    { fieldName: 'Third', fieldValue: '3' },
-                ],
+                parentId: null,
             });
+
+            // Create fields sequentially with delays to ensure different timestamps
+            await addField({ id: testId(), fieldName: 'First', parentNodeId: id, fieldValue: '1' });
+            await settle(50);
+            await addField({ id: testId(), fieldName: 'Second', parentNodeId: id, fieldValue: '2' });
+            await settle(50);
+            await addField({ id: testId(), fieldName: 'Third', parentNodeId: id, fieldValue: '3' });
 
             await settle();
             const fields = await listFieldsForNode(id);

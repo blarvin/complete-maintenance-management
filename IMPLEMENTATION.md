@@ -144,7 +144,7 @@ The codebase has a solid foundation with good separation between views (`RootVie
 
 ---
 
-### 1. Extract Under-Construction Logic from TreeNode
+### 1. ✅ Extract Under-Construction Logic from TreeNode
 
 **Problem:** `TreeNode.tsx` (164 lines) handles four distinct modes: display, under-construction input, data fetching, and expand/collapse. This violates single responsibility.
 
@@ -164,9 +164,11 @@ TreeNode/
 - TreeNode becomes a thin orchestrator that composes other components
 - Construction logic can be tested/modified independently
 
+**Implemented:** Split into 4 files (48 + 96 + 109 + 34 lines). TreeNode.tsx is now a thin orchestrator.
+
 ---
 
-### 2. Extract Shared UnderConstruction State Pattern
+### 2. ✅ Extract Shared UnderConstruction State Pattern
 
 **Problem:** `RootView` and `BranchView` both define identical:
 
@@ -195,6 +197,8 @@ export function useNodeCreation(opts: {
 - DRY: Single source of truth for creation flow
 - Views become simpler composition of shared behaviors
 - Easier to add features (e.g., validation) in one place
+
+**Implemented:** Created `src/hooks/useNodeCreation.ts` (73 lines). Both views now use this hook. Also merged `createNode` functions (item 6) as part of this.
 
 ---
 
@@ -301,7 +305,7 @@ export const DOUBLE_TAP = {
 
 ---
 
-### 6. Merge Duplicate createNode Functions
+### 6. ✅ Merge Duplicate createNode Functions
 
 **Problem:** `createRootNodeWithDefaultFields` and `createChildNodeWithDefaultFields` are nearly identical (only differs by `parentId: null` vs `parentId: input.parentId`).
 
@@ -315,23 +319,8 @@ export async function createNodeWithDefaultFields(input: {
   nodeSubtitle: string;
   defaults: { fieldName: string; fieldValue: string | null }[];
 }) {
-  await createNode({
-    id: input.id,
-    nodeName: input.nodeName || "Untitled",
-    nodeSubtitle: input.nodeSubtitle || "",
-    parentId: input.parentId ?? null,
-  });
-  // Parallelize field creation
-  await Promise.all(
-    input.defaults.map((f) =>
-      addField({
-        id: generateId(),
-        fieldName: f.fieldName,
-        parentNodeId: input.id,
-        fieldValue: f.fieldValue ?? null,
-      })
-    )
-  );
+  await createNode({ ... });
+  await Promise.all(input.defaults.map((f) => addField({ ... })));
 }
 ```
 
@@ -340,6 +329,8 @@ export async function createNodeWithDefaultFields(input: {
 - DRY: One function instead of two
 - Parallel field creation (minor perf improvement)
 - Cleaner API
+
+**Implemented:** Created unified function in `src/data/services/createNode.ts`. Legacy functions now delegate to it. Completed with item 2.
 
 ---
 

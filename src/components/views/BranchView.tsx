@@ -1,20 +1,15 @@
-// src/components/views/BranchView.tsx
+/**
+ * BranchView - Displays a parent node with its children.
+ * Uses shared useNodeCreation hook for the creation flow.
+ */
+
 import { component$, $, useSignal, useTask$, PropFunction } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { UpButton } from '../UpButton/UpButton';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { DEFAULT_DATAFIELD_NAMES } from '../../data/fieldLibrary';
 import { getNodeById, listChildren } from '../../data/repo/treeNodes';
+import { useNodeCreation } from '../../hooks/useNodeCreation';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
-import { generateId } from '../../utils/id';
-import { createChildNodeWithDefaultFields } from '../../data/services/createNode';
-
-type UnderConstructionNode = {
-    id: string;
-    nodeName: string;
-    nodeSubtitle: string;
-    defaultFields: { fieldName: string; fieldValue: string | null }[];
-};
 
 export type BranchViewProps = {
     parentId: string;
@@ -24,7 +19,6 @@ export type BranchViewProps = {
 export const BranchView = component$((props: BranchViewProps) => {
     const parentNode = useSignal<TreeNodeRecord | null>(null);
     const children = useSignal<TreeNodeRecord[]>([]);
-    const ucNode = useSignal<UnderConstructionNode | null>(null);
 
     const loadData$ = $(async (parentId: string) => {
         const [parent, kids] = await Promise.all([
@@ -35,40 +29,19 @@ export const BranchView = component$((props: BranchViewProps) => {
         children.value = kids;
     });
 
-    // Track parentId changes and reload data (also reset any in-progress creation)
+    const { ucNode, startCreate$, cancelCreate$, completeCreate$, resetCreate$ } = useNodeCreation({
+        parentId: props.parentId,
+        onCreated$: $(async () => {
+            await loadData$(props.parentId);
+        }),
+    });
+
+    // Track parentId changes and reload data
     useTask$(async ({ track }) => {
         const parentId = track(() => props.parentId);
-        if (!parentId) return;  // Guard against invalid parentId
-        ucNode.value = null;  // Reset under-construction state when navigating
+        if (!parentId) return;
+        resetCreate$();  // Reset under-construction state when navigating
         await loadData$(parentId);
-    });
-
-    const startCreate$ = $(() => {
-        if (ucNode.value) return;
-        ucNode.value = {
-            id: generateId(),
-            nodeName: '',
-            nodeSubtitle: '',
-            defaultFields: DEFAULT_DATAFIELD_NAMES.map((n) => ({ fieldName: n, fieldValue: null })),
-        };
-    });
-
-    const cancelCreate$ = $(() => {
-        ucNode.value = null;
-    });
-
-    const completeCreate$ = $(async (payload: { nodeName: string; nodeSubtitle: string; fields: { fieldName: string; fieldValue: string | null }[] }) => {
-        if (!ucNode.value) return;
-        const id = ucNode.value.id;
-        await createChildNodeWithDefaultFields({
-            id,
-            parentId: props.parentId,
-            nodeName: payload.nodeName,
-            nodeSubtitle: payload.nodeSubtitle,
-            defaults: payload.fields,
-        });
-        ucNode.value = null;
-        await loadData$(props.parentId);
     });
 
     if (!parentNode.value) {
