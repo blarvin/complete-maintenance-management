@@ -9,7 +9,9 @@
     "preview": "vite preview --strictPort",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "test"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:cleanup": "npx tsx src/test/cleanup.ts"
   },
   "repository": {
     "type": "git",
