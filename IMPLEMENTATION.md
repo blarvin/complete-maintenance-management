@@ -479,6 +479,8 @@ export function toggleCardExpanded(nodeId: string): void { ... }
 - Centralized UI preference management
 - Ready for additional UI prefs
 
+**Implemented:** Created `src/state/uiPrefs.ts` (91 lines) with `loadUIPrefs()`, `saveUIPrefs()`, `isCardExpanded()`, `isFieldDetailsExpanded()`, `toggleCardExpanded()`, `toggleFieldDetailsExpanded()`, and `clearUIPrefs()`. Stores Sets as JSON arrays in localStorage under key `treeview:ui:prefs`. Tests in `src/test/uiPrefs.test.ts` (26 tests).
+
 ---
 
 ### 12. Consider Async Parallelization
@@ -512,7 +514,7 @@ const [parent, kids] = await Promise.all([...]);
 | 4        | Extract UnderConstruction hook       | High   | Medium | ✅     |
 | 5        | Split TreeNode component             | High   | Medium | ✅     |
 | 6        | Introduce service layer              | High   | Medium | ✅     |
-| 7        | Implement uiPrefs store              | Medium | Low    |        |
+| 7        | Implement uiPrefs store              | Medium | Low    | ✅     |
 | 8        | Add error handling pattern           | Medium | Low    |        |
 | 9        | CSS Modules migration                | Low    | Medium |        |
 | 10       | User context abstraction             | Low    | Low    |        |
@@ -542,7 +544,7 @@ const [parent, kids] = await Promise.all([...]);
 - ✅ `treeNodes.ts`, `dataFields.ts` - Use constants, use `now()` from time.ts
 - ✅ `RootView.tsx`, `BranchView.tsx` - Use hooks, use service layer
 - ✅ `DataField.tsx` - Use double-tap hook, use service layer
-- `uiPrefs.ts` - Implement
+- ✅ `uiPrefs.ts` - Implement
 
 ---
 
