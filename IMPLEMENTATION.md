@@ -227,7 +227,7 @@ export function useDoubleTap(opts: {
 
 ---
 
-### 4. Introduce Data Access Service Layer
+### 4. ✅ Introduce Data Access Service Layer
 
 **Problem:** Components directly import repo functions and call them with business logic mixed in:
 
@@ -269,6 +269,8 @@ export const nodeService = {
 - Components depend on abstraction, not Firestore concretions
 - Easier to swap backing service (e.g., localStorage for testing, different DB later)
 - Business logic in services, not scattered in components
+
+**Implemented:** Created `nodeService.ts` and `fieldService.ts` in `src/data/services/`. Updated `useTreeNodeFields.ts`, `DataField.tsx`, `RootView.tsx`, and `BranchView.tsx` to use services instead of direct repo imports. BranchView now uses `nodeService.getNodeWithChildren()` for parallel loading. Tests in `src/test/serviceLayer.test.ts`.
 
 ---
 
@@ -498,18 +500,18 @@ const [parent, kids] = await Promise.all([...]);
 
 ### Priority Order for Refactoring
 
-| Priority | Item                                 | Impact | Effort |
-| -------- | ------------------------------------ | ------ | ------ |
-| 1        | Consolidate hardcoded constants      | High   | Low    |
-| 2        | Merge duplicate createNode functions | Medium | Low    |
-| 3        | Extract double-click hook            | Medium | Low    |
-| 4        | Extract UnderConstruction hook       | High   | Medium |
-| 5        | Split TreeNode component             | High   | Medium |
-| 6        | Introduce service layer              | High   | Medium |
-| 7        | Implement uiPrefs store              | Medium | Low    |
-| 8        | Add error handling pattern           | Medium | Low    |
-| 9        | CSS Modules migration                | Low    | Medium |
-| 10       | User context abstraction             | Low    | Low    |
+| Priority | Item                                 | Impact | Effort | Status |
+| -------- | ------------------------------------ | ------ | ------ | ------ |
+| 1        | Consolidate hardcoded constants      | High   | Low    |        |
+| 2        | Merge duplicate createNode functions | Medium | Low    | ✅     |
+| 3        | Extract double-click hook            | Medium | Low    | ✅     |
+| 4        | Extract UnderConstruction hook       | High   | Medium | ✅     |
+| 5        | Split TreeNode component             | High   | Medium | ✅     |
+| 6        | Introduce service layer              | High   | Medium | ✅     |
+| 7        | Implement uiPrefs store              | Medium | Low    |        |
+| 8        | Add error handling pattern           | Medium | Low    |        |
+| 9        | CSS Modules migration                | Low    | Medium |        |
+| 10       | User context abstraction             | Low    | Low    |        |
 
 ---
 
@@ -519,23 +521,23 @@ const [parent, kids] = await Promise.all([...]);
 
 - `src/constants.ts` - Centralized constants
 - `src/constants/interaction.ts` - UI interaction constants
-- `src/hooks/useDoubleTap.ts` - Double-tap detection hook
-- `src/hooks/useNodeCreation.ts` - Shared creation flow hook
+- ✅ `src/hooks/useDoubleTap.ts` - Double-tap detection hook
+- ✅ `src/hooks/useNodeCreation.ts` - Shared creation flow hook
 - `src/context/userContext.ts` - User identity abstraction
-- `src/data/services/nodeService.ts` - Node operations service
-- `src/data/services/fieldService.ts` - Field operations service
+- ✅ `src/data/services/nodeService.ts` - Node operations service
+- ✅ `src/data/services/fieldService.ts` - Field operations service
 - `src/utils/time.ts` - Timestamp utilities
 
 **Files to Split:**
 
-- `TreeNode.tsx` → `TreeNodeDisplay.tsx`, `TreeNodeConstruction.tsx`, `useTreeNodeFields.ts`
+- ✅ `TreeNode.tsx` → `TreeNodeDisplay.tsx`, `TreeNodeConstruction.tsx`, `useTreeNodeFields.ts`
 
 **Files to Modify:**
 
-- `createNode.ts` - Merge functions, parallelize
+- ✅ `createNode.ts` - Merge functions, parallelize
 - `treeNodes.ts`, `dataFields.ts` - Use constants
-- `RootView.tsx`, `BranchView.tsx` - Use hooks
-- `DataField.tsx` - Use double-tap hook
+- ✅ `RootView.tsx`, `BranchView.tsx` - Use hooks, use service layer
+- ✅ `DataField.tsx` - Use double-tap hook, use service layer
 - `uiPrefs.ts` - Implement
 
 ---

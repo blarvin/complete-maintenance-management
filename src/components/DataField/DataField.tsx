@@ -1,5 +1,5 @@
 import { component$, useSignal, $, useVisibleTask$, useOnDocument } from '@builder.io/qwik';
-import { updateFieldValue } from '../../data/repo/dataFields';
+import { fieldService } from '../../data/services/fieldService';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
 
 export type DataFieldProps = {
@@ -31,7 +31,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     const save$ = $(async () => {
         if (!isEditing.value) return;
         const newVal = editValue.value.trim() === '' ? null : editValue.value;
-        await updateFieldValue(props.id, newVal);
+        await fieldService.updateFieldValue(props.id, newVal);
         currentValue.value = newVal ?? '';
         isEditing.value = false;
     });

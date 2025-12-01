@@ -4,7 +4,7 @@
  */
 
 import { useSignal, useVisibleTask$ } from '@builder.io/qwik';
-import { listFieldsForNode } from '../../data/repo/dataFields';
+import { fieldService } from '../../data/services/fieldService';
 import type { DataField } from '../../data/models';
 
 export type UseTreeNodeFieldsOptions = {
@@ -26,7 +26,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         }
 
         isLoading.value = true;
-        fields.value = await listFieldsForNode(nodeId);
+        fields.value = await fieldService.getFieldsForNode(nodeId);
         isLoading.value = false;
     });
 

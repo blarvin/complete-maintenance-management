@@ -6,7 +6,7 @@
 import { component$, $, useSignal, useVisibleTask$, PropFunction } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { listRootNodes } from '../../data/repo/treeNodes';
+import { nodeService } from '../../data/services/nodeService';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
 
@@ -18,7 +18,7 @@ export const RootView = component$((props: RootViewProps) => {
     const nodes = useSignal<TreeNodeRecord[]>([]);
 
     const loadNodes$ = $(async () => {
-        nodes.value = await listRootNodes();
+        nodes.value = await nodeService.getRootNodes();
     });
 
     useVisibleTask$(async () => {

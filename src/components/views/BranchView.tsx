@@ -7,7 +7,7 @@ import { component$, $, useSignal, useTask$, PropFunction } from '@builder.io/qw
 import { TreeNode } from '../TreeNode/TreeNode';
 import { UpButton } from '../UpButton/UpButton';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { getNodeById, listChildren } from '../../data/repo/treeNodes';
+import { nodeService } from '../../data/services/nodeService';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
 
@@ -21,12 +21,9 @@ export const BranchView = component$((props: BranchViewProps) => {
     const children = useSignal<TreeNodeRecord[]>([]);
 
     const loadData$ = $(async (parentId: string) => {
-        const [parent, kids] = await Promise.all([
-            getNodeById(parentId),
-            listChildren(parentId),
-        ]);
-        parentNode.value = parent;
-        children.value = kids;
+        const result = await nodeService.getNodeWithChildren(parentId);
+        parentNode.value = result.node;
+        children.value = result.children;
     });
 
     const { ucNode, startCreate$, cancelCreate$, completeCreate$, resetCreate$ } = useNodeCreation({
