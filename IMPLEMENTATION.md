@@ -363,7 +363,7 @@ export const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
 
 ---
 
-### 8. Component-Colocated CSS Modules
+### 8. ✅ Component-Colocated CSS Modules
 
 **Problem:** All styles in one 327-line `global.css`. IMPLEMENTATION.md mentions CSS Modules but they're not being used. Hard to find styles for specific components.
 
@@ -401,7 +401,7 @@ Updated all components to import and use CSS modules. Slimmed `global.css` from 
 
 ---
 
-### 9. Extract User Context Abstraction
+### 9. ✅ Extract User Context Abstraction
 
 **Problem:** `"localUser"` hardcoded everywhere. When multi-user support is added, every file needs changing.
 
@@ -434,7 +434,7 @@ const node: TreeNode = {
 
 ---
 
-### 10. Add Basic Error Handling Pattern
+### 10. ✅ Add Basic Error Handling Pattern
 
 **Problem:** Most async operations have no try/catch. `RootView` has one `console.error` but no user feedback. Silent failures possible.
 
@@ -463,9 +463,17 @@ export async function safeAsync<T>(
 - No silent failures
 - Single place to add user notifications or monitoring
 
+**Implemented:** Created `src/data/services/withErrorHandling.ts` (85 lines) with three utilities:
+
+- `safeAsync(operation, fallback, context)` - Wraps async operations, returns fallback on error
+- `safeAsyncVoid(operation, context)` - For fire-and-forget operations that may fail silently
+- `withSafeAsync(fn, fallback, context)` - Creates wrapped version of any async function
+
+All utilities log errors with contextual labels. Tests in `src/test/errorHandling.test.ts` (19 tests).
+
 ---
 
-### 11. Implement Missing uiPrefs Store
+### 11. ✅ Implement Missing uiPrefs Store
 
 **Problem:** `uiPrefs.ts` is empty. Per-node `isCardExpanded` and per-field `isMetadataExpanded` should persist to localStorage per SPEC.
 
@@ -495,7 +503,7 @@ export function toggleCardExpanded(nodeId: string): void { ... }
 
 ---
 
-### 12. Consider Async Parallelization
+### 12. ✅ Consider Async Parallelization
 
 **Problem:** Sequential awaits where parallel would work:
 
@@ -514,6 +522,8 @@ const [parent, kids] = await Promise.all([...]);
 - ⚠️ `createNode.ts` - fields created sequentially in for-loop
 - ⚠️ `dataFields.ts` - history written after field update (unavoidable dependency)
 
+**implemented** Already done during above refactor efforts.
+
 ---
 
 ### Priority Order for Refactoring
@@ -527,7 +537,7 @@ const [parent, kids] = await Promise.all([...]);
 | 5        | Split TreeNode component             | High   | Medium | ✅     |
 | 6        | Introduce service layer              | High   | Medium | ✅     |
 | 7        | Implement uiPrefs store              | Medium | Low    | ✅     |
-| 8        | Add error handling pattern           | Medium | Low    |        |
+| 8        | Add error handling pattern           | Medium | Low    | ✅     |
 | 9        | CSS Modules migration                | Low    | Medium | ✅     |
 | 10       | User context abstraction             | Low    | Low    | ✅     |
 
