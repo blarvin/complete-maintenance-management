@@ -1,11 +1,16 @@
 export type ID = string;
 
+/**
+ * User ID type - currently constant, will be dynamic with auth
+ */
+export type UserId = string;
+
 export type TreeNode = {
   id: ID;
   nodeName: string;
   nodeSubtitle?: string;
   parentId: ID | null;
-  updatedBy: "localUser";
+  updatedBy: UserId;
   updatedAt: number; // epoch ms
 };
 
@@ -14,7 +19,7 @@ export type DataField = {
   fieldName: string;
   parentNodeId: ID;
   fieldValue: string | null;
-  updatedBy: "localUser";
+  updatedBy: UserId;
   updatedAt: number;
 };
 
@@ -26,7 +31,7 @@ export type DataFieldHistory = {
   property: "fieldValue";
   prevValue: string | null;
   newValue: string | null;
-  updatedBy: "localUser";
+  updatedBy: UserId;
   updatedAt: number;
   rev: number; // monotonic per dataFieldId, start 0 on create
 };
