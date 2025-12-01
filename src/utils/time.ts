@@ -14,8 +14,21 @@ export const now = (): number => Date.now();
 
 /**
  * Format a timestamp for display.
- * Returns locale-appropriate date/time string.
+ * Returns locale-appropriate date/time string with seconds.
  */
 export const formatTimestamp = (ts: number): string => 
     new Date(ts).toLocaleString();
+
+/**
+ * Format a timestamp for display without seconds.
+ * Returns locale-appropriate date/time string (e.g., "11/30/2025 10:55 PM").
+ */
+export const formatTimestampShort = (ts: number): string => 
+    new Date(ts).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 

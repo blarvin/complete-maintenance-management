@@ -1,0 +1,57 @@
+/* DataFieldDetails component styles */
+
+.details {
+    margin: 4px 12px 4px 22px; /* left: skip chevron column, right: symmetric padding */
+    padding: 6px 0 6px 8px;
+    border-left: 2px solid #ddd;
+    font-size: 9px;
+    color: #666;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.loading {
+    color: #999;
+    font-style: italic;
+}
+
+.editInfo {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    flex-wrap: wrap;
+}
+
+.editText {
+    color: #666;
+}
+
+.editCreated {
+    color: #888;
+    margin-left: 4px;
+}
+
+.deleteButton {
+    align-self: flex-start;
+    background: none;
+    border: 1px solid #c00;
+    color: #c00;
+    padding: 3px 8px;
+    font-size: 9px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.deleteButton:hover {
+    background: #c00;
+    color: #fff;
+}
+
+.deleteButton:focus-visible {
+    outline: 2px solid #c00;
+    outline-offset: 2px;
+}
+

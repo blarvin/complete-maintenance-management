@@ -31,7 +31,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const cardState = selectors.getDataCardState(appState, props.id);
     const isExpanded = cardState === 'EXPANDED';
     
-    const { fields } = useTreeNodeFields({ nodeId: props.id, enabled: true });
+    const { fields, reload$ } = useTreeNodeFields({ nodeId: props.id, enabled: true });
 
     const toggleExpand$ = $((e?: Event) => {
         e?.stopPropagation();
@@ -51,6 +51,11 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
             e.stopPropagation();
             toggleExpand$();
         }
+    });
+
+    const handleFieldDeleted$ = $(() => {
+        // Reload fields after a field is deleted
+        reload$();
     });
 
     const titleId = `node-title-${props.id}`;
@@ -96,6 +101,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                                     id={f.id}
                                     fieldName={f.fieldName}
                                     fieldValue={f.fieldValue}
+                                    onDeleted$={handleFieldDeleted$}
                                 />
                             ))}
                         </DataCard>

@@ -88,3 +88,8 @@ export async function listFieldsForNode(parentNodeId: string) {
   const q = query(collection(db, COLLECTIONS.FIELDS), where("parentNodeId", "==", parentNodeId), orderBy("updatedAt", "asc"));
   return (await getDocs(q)).docs.map(d => d.data() as DataField);
 }
+
+export async function getFieldHistory(dataFieldId: string) {
+  const q = query(collection(db, COLLECTIONS.HISTORY), where("dataFieldId", "==", dataFieldId), orderBy("rev", "asc"));
+  return (await getDocs(q)).docs.map(d => d.data() as DataFieldHistory);
+}

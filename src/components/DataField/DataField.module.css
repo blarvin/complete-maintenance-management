@@ -1,11 +1,39 @@
 /* DataField component styles */
 
+.datafieldWrapper {
+    display: flex;
+    flex-direction: column;
+}
+
 .datafield {
     display: grid;
-    grid-template-columns: 60px 1.5fr;
+    grid-template-columns: 18px 60px 1.5fr;
     font-size: 10px;
-    gap: 6px;
+    gap: 4px;
     align-items: baseline;
+}
+
+.datafieldChevron {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    color: #000;
+    cursor: pointer;
+    width: 18px;
+    text-align: center;
+    line-height: 1;
+    font-family: inherit;
+}
+
+.datafieldChevron:hover {
+    color: #444;
+}
+
+.datafieldChevron:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 1px;
 }
 
 .datafieldLabel {

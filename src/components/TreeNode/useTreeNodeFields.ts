@@ -7,7 +7,7 @@
  * during navigation.
  */
 
-import { useSignal, useTask$, useVisibleTask$, noSerialize, type NoSerialize } from '@builder.io/qwik';
+import { useSignal, useTask$, useVisibleTask$, $, type QRL } from '@builder.io/qwik';
 import { fieldService } from '../../data/services/fieldService';
 import type { DataField } from '../../data/models';
 
@@ -58,5 +58,13 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         isLoading.value = false;
     });
 
-    return { fields, isLoading };
+    // Reload function to refresh fields (e.g., after deletion)
+    const reload$ = $(async () => {
+        if (!currentEnabled.value) return;
+        isLoading.value = true;
+        fields.value = await fieldService.getFieldsForNode(currentNodeId.value);
+        isLoading.value = false;
+    });
+
+    return { fields, isLoading, reload$ };
 }
