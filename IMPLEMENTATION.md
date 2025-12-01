@@ -31,12 +31,89 @@
 ### State Management
 
 - **Approach**: Qwik `useStore` + context providers; no external state library
-- **Top-level app state**:
-  - `currentParentNodeId` (for BRANCH view), `null` shows ROOT view
-  - `treeNodes`, `dataFields`, `dataFieldHistory` (in-memory tables)
-  - Ephemeral UI: `editingFieldId`
-  - Persisted UI: per-node `isCardExpanded`, per-field `isMetadataExpanded`
-- **Finite State Machines**: Keep simple with typed flags/enums and pure helper reducers. No FSM library.
+- **Architecture**: FSM-patterned centralized state in `src/state/appState.ts`
+- **Pattern**: States are explicit types, transitions are guarded functions, derived state via selectors
+
+#### FSM State Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  STATE DEFINITIONS                                           │
+├─────────────────────────────────────────────────────────────┤
+│  ViewState:        ROOT | BRANCH(nodeId)                    │
+│  TreeNodeState:    ROOT | PARENT | CHILD | UNDER_CONSTRUCTION│
+│  DataCardState:    COLLAPSED | EXPANDED | UNDER_CONSTRUCTION │
+│  DataFieldState:   DISPLAY | EDITING                        │
+│  DataFieldDetailsState: COLLAPSED | EXPANDED                │
+├─────────────────────────────────────────────────────────────┤
+│  TRANSITIONS (with guards)                                  │
+├─────────────────────────────────────────────────────────────┤
+│  navigateToNode(nodeId)     ROOT→BRANCH, BRANCH→BRANCH      │
+│  navigateUp(parentId)       BRANCH→BRANCH, BRANCH→ROOT      │
+│  navigateToRoot()           *→ROOT                          │
+│  startConstruction(data)    Guard: !underConstruction       │
+│  cancelConstruction()       Clear UC state                  │
+│  completeConstruction()     Clear UC state                  │
+│  toggleCardExpanded(id)     COLLAPSED↔EXPANDED + persist    │
+│  toggleFieldDetailsExpanded(id)                             │
+│  startFieldEdit(id)         DISPLAY→EDITING (single field)  │
+│  stopFieldEdit()            EDITING→DISPLAY                 │
+├─────────────────────────────────────────────────────────────┤
+│  SELECTORS (derived state)                                  │
+├─────────────────────────────────────────────────────────────┤
+│  getTreeNodeState(appState, nodeId, parentId)               │
+│  getDataCardState(appState, nodeId)                         │
+│  getDataFieldState(appState, fieldId)                       │
+│  getDataFieldDetailsState(appState, fieldId)                │
+│  isRootView(appState)                                       │
+│  getCurrentNodeId(appState)                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Design Decisions
+
+1. **Why FSM-patterned, not full FSM library?**
+   - XState adds ~15KB and learning curve
+   - Our state transitions are simple enough for guarded functions
+   - Can migrate to XState later if complexity grows (approval workflows, parallel states)
+
+2. **Why centralized state?**
+   - SPEC requires persisted UI prefs (card expansion)
+   - SPEC requires single-field editing guarantee
+   - Navigation guards (can't navigate while constructing)
+   - Prepares for Snackbar/Undo (global access needed)
+
+3. **Why selectors for component states?**
+   - TreeNode state is _derived_ from view + position, not stored
+   - Keeps single source of truth (ViewState)
+   - Components ask "what state am I in?" rather than being told
+
+#### State Flow
+
+```
+User clicks node → navigateToNode$(nodeId)
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │ Guard: !underConstruction │
+              └─────────────────────┘
+                         │ pass
+                         ▼
+              ┌─────────────────────┐
+              │ Push current to history │
+              │ Set view = BRANCH(nodeId) │
+              │ Clear editingFieldId │
+              └─────────────────────┘
+                         │
+                         ▼
+              Component re-renders with new state
+```
+
+#### Persistence Integration
+
+- `ui.expandedCards` and `ui.expandedFieldDetails` are loaded from `uiPrefs.ts` on init
+- Every `toggleCardExpanded` / `toggleFieldDetailsExpanded` call persists to localStorage
+- Survives page reloads
 
 ### Notifications & Undo
 

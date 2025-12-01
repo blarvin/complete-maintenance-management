@@ -1,10 +1,10 @@
 import { component$ } from '@builder.io/qwik';
 import { QwikCityProvider, RouterOutlet } from '@builder.io/qwik-city';
 import './styles/global.css';
-import { useProvideAppStore } from './state/appStore';
+import { useProvideAppState } from './state/appState';
 
 export default component$(() => {
-    useProvideAppStore();
+    useProvideAppState();
     return (
         <QwikCityProvider>
             <head>
@@ -17,5 +17,3 @@ export default component$(() => {
         </QwikCityProvider>
     );
 });
-
-

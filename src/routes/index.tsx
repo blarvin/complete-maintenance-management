@@ -1,22 +1,18 @@
-import { component$, useSignal, $ } from '@builder.io/qwik';
+import { component$ } from '@builder.io/qwik';
 import { RootView } from '../components/views/RootView';
 import { BranchView } from '../components/views/BranchView';
+import { useAppState, selectors } from '../state/appState';
 
 export default component$(() => {
-    // null means we're at ROOT view, a string means we're viewing that node's branch
-    const currentNodeId = useSignal<string | null>(null);
+    const appState = useAppState();
+    
+    // Derive view from FSM state
+    const isRootView = selectors.isRootView(appState);
+    const currentNodeId = selectors.getCurrentNodeId(appState);
 
-    const handleNavigate$ = $((nodeId: string | null) => {
-        console.log('[Navigate]', nodeId === null ? 'ROOT' : nodeId);
-        currentNodeId.value = nodeId;
-    });
-
-    return currentNodeId.value === null ? (
-        <RootView onNavigate$={handleNavigate$} />
+    return isRootView ? (
+        <RootView />
     ) : (
-        <BranchView
-            parentId={currentNodeId.value}
-            onNavigate$={handleNavigate$}
-        />
+        <BranchView parentId={currentNodeId!} />
     );
 });

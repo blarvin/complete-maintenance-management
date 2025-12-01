@@ -1,6 +1,12 @@
+/**
+ * DataField - Editable field row with label:value pairs.
+ * Uses FSM state for editing (only one field can edit at a time per SPEC).
+ */
+
 import { component$, useSignal, $, useVisibleTask$, useOnDocument } from '@builder.io/qwik';
 import { fieldService } from '../../data/services/fieldService';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
+import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
@@ -10,7 +16,13 @@ export type DataFieldProps = {
 };
 
 export const DataField = component$<DataFieldProps>((props) => {
-    const isEditing = useSignal<boolean>(false);
+    const appState = useAppState();
+    const { startFieldEdit$, stopFieldEdit$ } = useAppTransitions();
+    
+    // Get field state from FSM
+    const fieldState = selectors.getDataFieldState(appState, props.id);
+    const isEditing = fieldState === 'EDITING';
+    
     const rootEl = useSignal<HTMLElement>();
     const currentValue = useSignal<string>(props.fieldValue ?? '');
     const editValue = useSignal<string>('');
@@ -24,28 +36,28 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const beginEdit$ = $(() => {
-        if (isEditing.value) return;
-        isEditing.value = true;
+        if (isEditing) return;
+        startFieldEdit$(props.id);
         editValue.value = currentValue.value;
     });
 
     const save$ = $(async () => {
-        if (!isEditing.value) return;
+        if (!isEditing) return;
         const newVal = editValue.value.trim() === '' ? null : editValue.value;
         await fieldService.updateFieldValue(props.id, newVal);
         currentValue.value = newVal ?? '';
-        isEditing.value = false;
+        stopFieldEdit$();
     });
 
     const cancel$ = $(() => {
-        isEditing.value = false;
+        stopFieldEdit$();
         editValue.value = currentValue.value;
     });
 
     const hasValue = !!currentValue.value;
 
     const valuePointerDown$ = $(async (ev: any) => {
-        if (isEditing.value) return;
+        if (isEditing) return;
         const e = ev as PointerEvent | MouseEvent;
         const x = e.clientX ?? 0;
         const y = e.clientY ?? 0;
@@ -56,7 +68,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const valueKeyDown$ = $((e: KeyboardEvent) => {
-        if (isEditing.value) return;
+        if (isEditing) return;
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             beginEdit$();
@@ -64,7 +76,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const inputPointerDown$ = $(async (ev: any) => {
-        if (!isEditing.value) return;
+        if (!isEditing) return;
         const e = ev as PointerEvent | MouseEvent;
         const x = e.clientX ?? 0;
         const y = e.clientY ?? 0;
@@ -77,7 +89,7 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     // Cancel edit on any outside click
     useOnDocument('pointerdown', $((ev: Event) => {
-        if (!isEditing.value) return;
+        if (!isEditing) return;
         const container = rootEl.value;
         const target = ev.target as Node | null;
         if (container && target && !container.contains(target)) {
@@ -91,7 +103,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     return (
         <div class={styles.datafield} ref={rootEl}>
             <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
-            {isEditing.value ? (
+            {isEditing ? (
                 <input
                     class={[styles.datafieldValue, editValue.value && styles.datafieldValueUnderlined]}
                     value={editValue.value}
@@ -99,7 +111,7 @@ export const DataField = component$<DataFieldProps>((props) => {
                     onPointerDown$={inputPointerDown$}
                     onBlur$={$(() => {
                         if (Date.now() < suppressCancelUntil.value) return;
-                        if (isEditing.value) cancel$();
+                        if (isEditing) cancel$();
                     })}
                     onKeyDown$={$((e) => {
                         const key = (e as KeyboardEvent).key;
@@ -131,5 +143,3 @@ export const DataField = component$<DataFieldProps>((props) => {
         </div>
     );
 });
-
-

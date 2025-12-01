@@ -1,32 +1,41 @@
 /**
  * TreeNodeDisplay - Read-only display mode for TreeNode.
  * Shows NodeTitle, NodeSubtitle, expandable DataCard with DataFields.
+ * Uses FSM state for card expansion (persisted).
  */
 
-import { component$, useSignal, $, PropFunction } from '@builder.io/qwik';
+import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
 import { DataField } from '../DataField/DataField';
 import { useTreeNodeFields } from './useTreeNodeFields';
+import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { DataField as DataFieldRecord } from '../../data/models';
+import type { TreeNodeState } from '../../state/appState';
 import styles from './TreeNode.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
     nodeName: string;
     nodeSubtitle: string;
-    initialExpanded?: boolean;
+    nodeState: TreeNodeState;
     onNodeClick$?: PropFunction<() => void>;
 };
 
 export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
-    const isExpanded = useSignal<boolean>(props.initialExpanded ?? false);
+    const appState = useAppState();
+    const { toggleCardExpanded$ } = useAppTransitions();
+    
+    // Get card state from FSM (persisted)
+    const cardState = selectors.getDataCardState(appState, props.id);
+    const isExpanded = cardState === 'EXPANDED';
+    
     const { fields } = useTreeNodeFields({ nodeId: props.id, enabled: true });
 
     const toggleExpand$ = $((e?: Event) => {
         e?.stopPropagation();
-        isExpanded.value = !isExpanded.value;
+        toggleCardExpanded$(props.id);
     });
 
     const handleBodyKeyDown$ = $((e: KeyboardEvent) => {
@@ -50,7 +59,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     return (
         <>
             <article
-                class={[styles.node, isExpanded.value && styles.nodeExpanded]}
+                class={[styles.node, isExpanded && styles.nodeExpanded]}
                 aria-labelledby={titleId}
             >
                 <div
@@ -70,14 +79,14 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                         class={styles.nodeChevron}
                         onClick$={toggleExpand$}
                         onKeyDown$={handleExpandKeyDown$}
-                        aria-expanded={isExpanded.value}
-                        aria-label={isExpanded.value ? 'Collapse details' : 'Expand details'}
+                        aria-expanded={isExpanded}
+                        aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
                     >
-                        {isExpanded.value ? '▾' : '◂'}
+                        {isExpanded ? '▾' : '◂'}
                     </button>
                 </div>
             </article>
-            <div class={[styles.nodeExpand, isExpanded.value && styles.nodeExpandOpen]}>
+            <div class={[styles.nodeExpand, isExpanded && styles.nodeExpandOpen]}>
                 <div class={styles.nodeExpandClip}>
                     <div class={styles.nodeExpandSlide}>
                         <DataCard>

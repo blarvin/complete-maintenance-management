@@ -1,19 +1,24 @@
 /**
  * TreeNode - Orchestrator component for tree nodes.
  * Delegates to TreeNodeDisplay (read mode) or TreeNodeConstruction (under-construction mode).
+ * 
+ * Uses FSM states instead of "modes":
+ * - ROOT: Top-level node in ROOT view
+ * - PARENT: Current node at top of BRANCH view
+ * - CHILD: Child node in BRANCH view
+ * - UNDER_CONSTRUCTION: New node being created
  */
 
 import { component$, PropFunction } from '@builder.io/qwik';
 import { TreeNodeDisplay } from './TreeNodeDisplay';
 import { TreeNodeConstruction } from './TreeNodeConstruction';
-
-export type TreeNodeMode = 'isRoot' | 'isParent' | 'isChild' | 'isUnderConstruction';
+import type { TreeNodeState } from '../../state/appState';
 
 export type TreeNodeProps = {
     id: string;
     nodeName: string;
     nodeSubtitle: string;
-    mode: TreeNodeMode;
+    nodeState: TreeNodeState;
     ucDefaults?: { fieldName: string; fieldValue: string | null }[];
     onCancel$?: PropFunction<() => void>;
     onCreate$?: PropFunction<(payload: {
@@ -25,8 +30,8 @@ export type TreeNodeProps = {
 };
 
 export const TreeNode = component$((props: TreeNodeProps) => {
-    // Under-construction mode: delegate to TreeNodeConstruction
-    if (props.mode === 'isUnderConstruction') {
+    // Under-construction state: delegate to TreeNodeConstruction
+    if (props.nodeState === 'UNDER_CONSTRUCTION') {
         return (
             <TreeNodeConstruction
                 id={props.id}
@@ -39,12 +44,13 @@ export const TreeNode = component$((props: TreeNodeProps) => {
         );
     }
 
-    // Display mode: delegate to TreeNodeDisplay
+    // Display states (ROOT, PARENT, CHILD): delegate to TreeNodeDisplay
     return (
         <TreeNodeDisplay
             id={props.id}
             nodeName={props.nodeName}
             nodeSubtitle={props.nodeSubtitle}
+            nodeState={props.nodeState}
             onNodeClick$={props.onNodeClick$}
         />
     );
