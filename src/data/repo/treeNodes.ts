@@ -2,6 +2,7 @@ import { db } from "../firebase";
 import { collection, doc, setDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, getCountFromServer } from "firebase/firestore";
 import { TreeNode } from "../models";
 import { COLLECTIONS, USER_ID } from "../../constants";
+import { now } from "../../utils/time";
 
 export async function getNodeById(id: string): Promise<TreeNode | null> {
   const snap = await getDoc(doc(db, COLLECTIONS.NODES, id));
@@ -9,8 +10,7 @@ export async function getNodeById(id: string): Promise<TreeNode | null> {
 }
 
 export async function createNode(partial: Omit<TreeNode, "updatedBy" | "updatedAt">) {
-  const now = Date.now();
-  const node: TreeNode = { ...partial, updatedBy: USER_ID, updatedAt: now };
+  const node: TreeNode = { ...partial, updatedBy: USER_ID, updatedAt: now() };
   await setDoc(doc(collection(db, COLLECTIONS.NODES), node.id), node);
   return node;
 }

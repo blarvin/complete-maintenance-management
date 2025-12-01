@@ -2,6 +2,7 @@ import { db } from "../firebase";
 import { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, updateDoc, deleteDoc } from "firebase/firestore";
 import { DataField, DataFieldHistory } from "../models";
 import { COLLECTIONS, USER_ID } from "../../constants";
+import { now } from "../../utils/time";
 
 async function nextRev(dataFieldId: string) {
   const q = query(collection(db, COLLECTIONS.HISTORY), where("dataFieldId", "==", dataFieldId), orderBy("rev", "desc"));
@@ -11,8 +12,8 @@ async function nextRev(dataFieldId: string) {
 }
 
 export async function addField(field: Omit<DataField, "updatedBy" | "updatedAt">) {
-  const now = Date.now();
-  const rec: DataField = { ...field, updatedBy: USER_ID, updatedAt: now };
+  const ts = now();
+  const rec: DataField = { ...field, updatedBy: USER_ID, updatedAt: ts };
   await setDoc(doc(collection(db, COLLECTIONS.FIELDS), rec.id), rec);
 
   const rev = await nextRev(rec.id);
@@ -25,7 +26,7 @@ export async function addField(field: Omit<DataField, "updatedBy" | "updatedAt">
     prevValue: null,
     newValue: rec.fieldValue,
     updatedBy: USER_ID,
-    updatedAt: now,
+    updatedAt: ts,
     rev,
   };
   await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
@@ -37,8 +38,8 @@ export async function updateFieldValue(id: string, newValue: string | null) {
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Field not found");
   const prev = snap.data() as DataField;
-  const now = Date.now();
-  await updateDoc(ref, { fieldValue: newValue, updatedAt: now, updatedBy: USER_ID });
+  const ts = now();
+  await updateDoc(ref, { fieldValue: newValue, updatedAt: ts, updatedBy: USER_ID });
 
   const rev = await nextRev(id);
   const hist: DataFieldHistory = {
@@ -50,7 +51,7 @@ export async function updateFieldValue(id: string, newValue: string | null) {
     prevValue: prev.fieldValue,
     newValue,
     updatedBy: USER_ID,
-    updatedAt: now,
+    updatedAt: ts,
     rev,
   };
   await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
@@ -63,7 +64,7 @@ export async function deleteField(id: string) {
   const prev = snap.data() as DataField;
   await deleteDoc(ref);
 
-  const now = Date.now();
+  const ts = now();
   const rev = await nextRev(id);
   const hist: DataFieldHistory = {
     id: `${id}:${rev}`,
@@ -74,7 +75,7 @@ export async function deleteField(id: string) {
     prevValue: prev.fieldValue,
     newValue: null,
     updatedBy: USER_ID,
-    updatedAt: now,
+    updatedAt: ts,
     rev,
   };
   await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);

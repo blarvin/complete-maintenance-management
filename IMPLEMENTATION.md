@@ -340,7 +340,7 @@ export async function createNodeWithDefaultFields(input: {
 
 ---
 
-### 7. Add Timestamp Utility
+### 7. ✅ Add Timestamp Utility
 
 **Problem:** `Date.now()` called directly in multiple places without abstraction.
 
@@ -358,6 +358,8 @@ export const formatTimestamp = (ts: number) => new Date(ts).toLocaleString();
 - Single place to modify timestamp logic
 - Easier to mock in tests
 - Ready for server-assigned timestamps later
+
+**Implemented:** Created `src/utils/time.ts` with `now()` and `formatTimestamp()`. Updated `treeNodes.ts` and `dataFields.ts` to use `now()` for all record timestamps. UI timing (`useDoubleTap.ts`) and ID generation (`id.ts`) left unchanged as they serve different purposes.
 
 ---
 
@@ -528,7 +530,7 @@ const [parent, kids] = await Promise.all([...]);
 - `src/context/userContext.ts` - User identity abstraction
 - ✅ `src/data/services/nodeService.ts` - Node operations service
 - ✅ `src/data/services/fieldService.ts` - Field operations service
-- `src/utils/time.ts` - Timestamp utilities
+- ✅ `src/utils/time.ts` - Timestamp utilities
 
 **Files to Split:**
 
@@ -537,7 +539,7 @@ const [parent, kids] = await Promise.all([...]);
 **Files to Modify:**
 
 - ✅ `createNode.ts` - Merge functions, parallelize
-- `treeNodes.ts`, `dataFields.ts` - Use constants
+- ✅ `treeNodes.ts`, `dataFields.ts` - Use constants, use `now()` from time.ts
 - ✅ `RootView.tsx`, `BranchView.tsx` - Use hooks, use service layer
 - ✅ `DataField.tsx` - Use double-tap hook, use service layer
 - `uiPrefs.ts` - Implement
