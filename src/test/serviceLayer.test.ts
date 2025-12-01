@@ -264,3 +264,163 @@ describe('fieldService', () => {
     });
 });
 
+/**
+ * Navigation scenario tests - verify correct data isolation when "navigating"
+ * between parent and child nodes (simulating the BranchView navigation flow).
+ * 
+ * This tests the data layer behavior that supports the UI fix where adding
+ * key={nodeId} to TreeNode ensures component remount on navigation.
+ */
+describe('Navigation data isolation', () => {
+    const createdNodeIds: string[] = [];
+
+    afterAll(async () => {
+        for (const nodeId of createdNodeIds) {
+            await cleanupTestNode(nodeId);
+        }
+    });
+
+    it('parent and child have distinct field values that do not leak', async () => {
+        const parentId = testId();
+        const childId = testId();
+        createdNodeIds.push(parentId, childId);
+
+        // Create parent with specific Tags value
+        await createNodeWithDefaultFields({
+            id: parentId,
+            parentId: null,
+            nodeName: 'Parent Node',
+            nodeSubtitle: 'Parent subtitle',
+            defaults: [{ fieldName: 'Tags', fieldValue: 'parent, alpha, one' }],
+        });
+
+        // Create child with DIFFERENT Tags value
+        await createNodeWithDefaultFields({
+            id: childId,
+            parentId,
+            nodeName: 'Child Node',
+            nodeSubtitle: 'Child subtitle',
+            defaults: [{ fieldName: 'Tags', fieldValue: 'child, beta, two' }],
+        });
+
+        await settle();
+
+        // Step 1: "View parent" - get parent's fields
+        const parentFields = await fieldService.getFieldsForNode(parentId);
+        const parentTags = parentFields.find(f => f.fieldName === 'Tags');
+        
+        expect(parentTags?.fieldValue).toBe('parent, alpha, one');
+
+        // Step 2: "Navigate to child" - get child's fields
+        const childFields = await fieldService.getFieldsForNode(childId);
+        const childTags = childFields.find(f => f.fieldName === 'Tags');
+        
+        expect(childTags?.fieldValue).toBe('child, beta, two');
+
+        // Verify they are different (the bug was showing parent's value for child)
+        expect(parentTags?.fieldValue).not.toBe(childTags?.fieldValue);
+    });
+
+    it('getNodeWithChildren returns correct node data when navigating into child', async () => {
+        const parentId = testId();
+        const childId = testId();
+        const grandchildId = testId();
+        createdNodeIds.push(parentId, childId, grandchildId);
+
+        // Build hierarchy: parent -> child -> grandchild
+        await createNodeWithDefaultFields({
+            id: parentId,
+            parentId: null,
+            nodeName: 'Grandparent',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Tags', fieldValue: 'grandparent-tags' }],
+        });
+
+        await createNodeWithDefaultFields({
+            id: childId,
+            parentId,
+            nodeName: 'Parent (was child)',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Tags', fieldValue: 'parent-tags' }],
+        });
+
+        await createNodeWithDefaultFields({
+            id: grandchildId,
+            parentId: childId,
+            nodeName: 'Child (was grandchild)',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Tags', fieldValue: 'child-tags' }],
+        });
+
+        await settle();
+
+        // Step 1: View grandparent as current node (isParent state)
+        const viewGrandparent = await nodeService.getNodeWithChildren(parentId);
+        expect(viewGrandparent.node?.nodeName).toBe('Grandparent');
+        expect(viewGrandparent.children.length).toBe(1);
+        expect(viewGrandparent.children[0].nodeName).toBe('Parent (was child)');
+
+        // Step 2: "Navigate into" child - now child becomes current node (isParent state)
+        const viewParent = await nodeService.getNodeWithChildren(childId);
+        expect(viewParent.node?.nodeName).toBe('Parent (was child)');
+        expect(viewParent.children.length).toBe(1);
+        expect(viewParent.children[0].nodeName).toBe('Child (was grandchild)');
+
+        // Verify fields are isolated to each node
+        const grandparentFields = await fieldService.getFieldsForNode(parentId);
+        const parentFields = await fieldService.getFieldsForNode(childId);
+        const childFields = await fieldService.getFieldsForNode(grandchildId);
+
+        expect(grandparentFields.find(f => f.fieldName === 'Tags')?.fieldValue).toBe('grandparent-tags');
+        expect(parentFields.find(f => f.fieldName === 'Tags')?.fieldValue).toBe('parent-tags');
+        expect(childFields.find(f => f.fieldName === 'Tags')?.fieldValue).toBe('child-tags');
+    });
+
+    it('sequential navigation calls return correct isolated data', async () => {
+        const nodeA = testId();
+        const nodeB = testId();
+        createdNodeIds.push(nodeA, nodeB);
+
+        // Create two sibling nodes with distinct data
+        await createNodeWithDefaultFields({
+            id: nodeA,
+            parentId: null,
+            nodeName: 'Node A',
+            nodeSubtitle: '',
+            defaults: [
+                { fieldName: 'Type Of', fieldValue: 'TypeA' },
+                { fieldName: 'Description', fieldValue: 'DescA' },
+            ],
+        });
+
+        await createNodeWithDefaultFields({
+            id: nodeB,
+            parentId: null,
+            nodeName: 'Node B',
+            nodeSubtitle: '',
+            defaults: [
+                { fieldName: 'Type Of', fieldValue: 'TypeB' },
+                { fieldName: 'Description', fieldValue: 'DescB' },
+            ],
+        });
+
+        await settle();
+
+        // Simulate rapid navigation: A -> B -> A -> B
+        const fieldsA1 = await fieldService.getFieldsForNode(nodeA);
+        const fieldsB1 = await fieldService.getFieldsForNode(nodeB);
+        const fieldsA2 = await fieldService.getFieldsForNode(nodeA);
+        const fieldsB2 = await fieldService.getFieldsForNode(nodeB);
+
+        // All calls should return consistent, isolated data
+        expect(fieldsA1.find(f => f.fieldName === 'Type Of')?.fieldValue).toBe('TypeA');
+        expect(fieldsB1.find(f => f.fieldName === 'Type Of')?.fieldValue).toBe('TypeB');
+        expect(fieldsA2.find(f => f.fieldName === 'Type Of')?.fieldValue).toBe('TypeA');
+        expect(fieldsB2.find(f => f.fieldName === 'Type Of')?.fieldValue).toBe('TypeB');
+
+        // Descriptions should also be isolated
+        expect(fieldsA1.find(f => f.fieldName === 'Description')?.fieldValue).toBe('DescA');
+        expect(fieldsB1.find(f => f.fieldName === 'Description')?.fieldValue).toBe('DescB');
+    });
+});
+
