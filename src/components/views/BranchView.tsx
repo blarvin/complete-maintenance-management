@@ -55,6 +55,7 @@ export const BranchView = component$((props: BranchViewProps) => {
                 />
                 <div class="branch-parent-node">
                     <TreeNode
+                        key={parentNode.value.id}
                         id={parentNode.value.id}
                         nodeName={parentNode.value.nodeName}
                         nodeSubtitle={parentNode.value.nodeSubtitle ?? ''}

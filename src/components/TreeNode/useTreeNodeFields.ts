@@ -1,9 +1,13 @@
 /**
  * Hook for loading persisted DataFields for a TreeNode.
  * Extracted from TreeNode to enable reuse and testing.
+ * 
+ * Uses useTask$ to sync props to signals, then useVisibleTask$ to load data
+ * when those signals change. This ensures fields reload when nodeId changes
+ * during navigation.
  */
 
-import { useSignal, useVisibleTask$ } from '@builder.io/qwik';
+import { useSignal, useTask$, useVisibleTask$, noSerialize, type NoSerialize } from '@builder.io/qwik';
 import { fieldService } from '../../data/services/fieldService';
 import type { DataField } from '../../data/models';
 
@@ -15,10 +19,34 @@ export type UseTreeNodeFieldsOptions = {
 export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     const fields = useSignal<DataField[] | null>(null);
     const isLoading = useSignal<boolean>(false);
+    
+    // Store nodeId in a signal so useVisibleTask$ can track it
+    const currentNodeId = useSignal<string>(options.nodeId);
+    const currentEnabled = useSignal<boolean>(options.enabled);
+    
+    // Version counter to trigger reload - increments when props change
+    const loadVersion = useSignal<number>(0);
 
+    // Sync props to signals during render (runs on every render)
+    // This detects prop changes and bumps the version to trigger reload
+    useTask$(({ track }) => {
+        // These tracks ensure the task re-runs when the hook is called with new options
+        const newNodeId = options.nodeId;
+        const newEnabled = options.enabled;
+        
+        if (currentNodeId.value !== newNodeId || currentEnabled.value !== newEnabled) {
+            currentNodeId.value = newNodeId;
+            currentEnabled.value = newEnabled;
+            loadVersion.value++;  // Trigger reload
+        }
+    });
+
+    // Load fields when version changes (client-only for Firebase access)
     useVisibleTask$(async ({ track }) => {
-        const nodeId = track(() => options.nodeId);
-        const enabled = track(() => options.enabled);
+        // Track the version to react to prop changes
+        const version = track(() => loadVersion.value);
+        const nodeId = currentNodeId.value;
+        const enabled = currentEnabled.value;
 
         if (!enabled) {
             fields.value = null;
