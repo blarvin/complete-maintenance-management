@@ -430,6 +430,8 @@ const node: TreeNode = {
 - Prepares for multi-user Phase 2
 - Self-documenting intent
 
+**Implemented:** Created `src/context/userContext.ts` (20 lines) with `getCurrentUserId()` function. Updated `treeNodes.ts` and `dataFields.ts` to import and use `getCurrentUserId()` instead of directly importing `USER_ID`. Updated `smoke.test.ts` to use the context for assertions.
+
 ---
 
 ### 10. Add Basic Error Handling Pattern
@@ -527,7 +529,7 @@ const [parent, kids] = await Promise.all([...]);
 | 7        | Implement uiPrefs store              | Medium | Low    | ✅     |
 | 8        | Add error handling pattern           | Medium | Low    |        |
 | 9        | CSS Modules migration                | Low    | Medium | ✅     |
-| 10       | User context abstraction             | Low    | Low    |        |
+| 10       | User context abstraction             | Low    | Low    | ✅     |
 
 ---
 
@@ -539,7 +541,7 @@ const [parent, kids] = await Promise.all([...]);
 - `src/constants/interaction.ts` - UI interaction constants (not needed - already in useDoubleTap.ts)
 - ✅ `src/hooks/useDoubleTap.ts` - Double-tap detection hook (includes DOUBLE_TAP_THRESHOLD_MS, DOUBLE_TAP_SLOP_PX)
 - ✅ `src/hooks/useNodeCreation.ts` - Shared creation flow hook
-- `src/context/userContext.ts` - User identity abstraction
+- ✅ `src/context/userContext.ts` - User identity abstraction
 - ✅ `src/data/services/nodeService.ts` - Node operations service
 - ✅ `src/data/services/fieldService.ts` - Field operations service
 - ✅ `src/utils/time.ts` - Timestamp utilities

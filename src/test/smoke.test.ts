@@ -6,6 +6,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { testId, cleanupTestNode, settle } from './testUtils';
 import { createNode, getNodeById, deleteLeafNode } from '../data/repo/treeNodes';
 import { addField, listFieldsForNode, updateFieldValue, deleteField } from '../data/repo/dataFields';
+import { getCurrentUserId } from '../context/userContext';
 
 describe('Smoke Tests', () => {
     const createdNodeIds: string[] = [];
@@ -31,7 +32,7 @@ describe('Smoke Tests', () => {
         
         expect(node.id).toBe(id);
         expect(node.nodeName).toBe('Smoke Test Node');
-        expect(node.updatedBy).toBe('localUser');
+        expect(node.updatedBy).toBe(getCurrentUserId());
         expect(node.updatedAt).toBeTypeOf('number');
     });
 

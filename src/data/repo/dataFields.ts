@@ -1,7 +1,8 @@
 import { db } from "../firebase";
 import { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, updateDoc, deleteDoc } from "firebase/firestore";
 import { DataField, DataFieldHistory } from "../models";
-import { COLLECTIONS, USER_ID } from "../../constants";
+import { COLLECTIONS } from "../../constants";
+import { getCurrentUserId } from "../../context/userContext";
 import { now } from "../../utils/time";
 
 async function nextRev(dataFieldId: string) {
@@ -13,7 +14,8 @@ async function nextRev(dataFieldId: string) {
 
 export async function addField(field: Omit<DataField, "updatedBy" | "updatedAt">) {
   const ts = now();
-  const rec: DataField = { ...field, updatedBy: USER_ID, updatedAt: ts };
+  const userId = getCurrentUserId();
+  const rec: DataField = { ...field, updatedBy: userId, updatedAt: ts };
   await setDoc(doc(collection(db, COLLECTIONS.FIELDS), rec.id), rec);
 
   const rev = await nextRev(rec.id);
@@ -25,7 +27,7 @@ export async function addField(field: Omit<DataField, "updatedBy" | "updatedAt">
     property: "fieldValue",
     prevValue: null,
     newValue: rec.fieldValue,
-    updatedBy: USER_ID,
+    updatedBy: userId,
     updatedAt: ts,
     rev,
   };
@@ -39,7 +41,8 @@ export async function updateFieldValue(id: string, newValue: string | null) {
   if (!snap.exists()) throw new Error("Field not found");
   const prev = snap.data() as DataField;
   const ts = now();
-  await updateDoc(ref, { fieldValue: newValue, updatedAt: ts, updatedBy: USER_ID });
+  const userId = getCurrentUserId();
+  await updateDoc(ref, { fieldValue: newValue, updatedAt: ts, updatedBy: userId });
 
   const rev = await nextRev(id);
   const hist: DataFieldHistory = {
@@ -50,7 +53,7 @@ export async function updateFieldValue(id: string, newValue: string | null) {
     property: "fieldValue",
     prevValue: prev.fieldValue,
     newValue,
-    updatedBy: USER_ID,
+    updatedBy: userId,
     updatedAt: ts,
     rev,
   };
@@ -74,7 +77,7 @@ export async function deleteField(id: string) {
     property: "fieldValue",
     prevValue: prev.fieldValue,
     newValue: null,
-    updatedBy: USER_ID,
+    updatedBy: getCurrentUserId(),
     updatedAt: ts,
     rev,
   };
