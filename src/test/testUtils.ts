@@ -5,16 +5,10 @@
 
 import { db } from '../data/firebase';
 import { collection, getDocs, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { COLLECTIONS } from '../constants';
 
 // All test fixture IDs start with this prefix
 export const TEST_PREFIX = 'TEST_';
-
-// Collection names (keep in sync with repo files)
-const COLLECTIONS = {
-    NODES: 'treeNodes',
-    FIELDS: 'dataFields',
-    HISTORY: 'dataFieldHistory',
-} as const;
 
 /**
  * Generate a test-tagged UUID

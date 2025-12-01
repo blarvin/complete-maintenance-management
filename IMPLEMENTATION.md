@@ -274,7 +274,7 @@ export const nodeService = {
 
 ---
 
-### 5. Consolidate Hardcoded Constants
+### 5. ✅ Consolidate Hardcoded Constants
 
 **Problem:** Magic values scattered throughout:
 
@@ -306,6 +306,8 @@ export const DOUBLE_TAP = {
 - Single source of truth for magic values
 - Easier to find and update when requirements change
 - Self-documenting code
+
+**Implemented:** Created `src/constants.ts` with `USER_ID` and `COLLECTIONS`. Updated `treeNodes.ts`, `dataFields.ts`, and `testUtils.ts` to import from centralized constants. Double-tap constants were already extracted in `useDoubleTap.ts` (as `DOUBLE_TAP_THRESHOLD_MS` and `DOUBLE_TAP_SLOP_PX`).
 
 ---
 
@@ -502,7 +504,7 @@ const [parent, kids] = await Promise.all([...]);
 
 | Priority | Item                                 | Impact | Effort | Status |
 | -------- | ------------------------------------ | ------ | ------ | ------ |
-| 1        | Consolidate hardcoded constants      | High   | Low    |        |
+| 1        | Consolidate hardcoded constants      | High   | Low    | ✅     |
 | 2        | Merge duplicate createNode functions | Medium | Low    | ✅     |
 | 3        | Extract double-click hook            | Medium | Low    | ✅     |
 | 4        | Extract UnderConstruction hook       | High   | Medium | ✅     |
@@ -519,9 +521,9 @@ const [parent, kids] = await Promise.all([...]);
 
 **New Files:**
 
-- `src/constants.ts` - Centralized constants
-- `src/constants/interaction.ts` - UI interaction constants
-- ✅ `src/hooks/useDoubleTap.ts` - Double-tap detection hook
+- ✅ `src/constants.ts` - Centralized constants (USER_ID, COLLECTIONS)
+- `src/constants/interaction.ts` - UI interaction constants (not needed - already in useDoubleTap.ts)
+- ✅ `src/hooks/useDoubleTap.ts` - Double-tap detection hook (includes DOUBLE_TAP_THRESHOLD_MS, DOUBLE_TAP_SLOP_PX)
 - ✅ `src/hooks/useNodeCreation.ts` - Shared creation flow hook
 - `src/context/userContext.ts` - User identity abstraction
 - ✅ `src/data/services/nodeService.ts` - Node operations service

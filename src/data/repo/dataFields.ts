@@ -1,12 +1,10 @@
 import { db } from "../firebase";
 import { collection, doc, setDoc, getDoc, getDocs, query, where, orderBy, updateDoc, deleteDoc } from "firebase/firestore";
 import { DataField, DataFieldHistory } from "../models";
-
-const FIELDS = "dataFields";
-const HISTORY = "dataFieldHistory";
+import { COLLECTIONS, USER_ID } from "../../constants";
 
 async function nextRev(dataFieldId: string) {
-  const q = query(collection(db, HISTORY), where("dataFieldId", "==", dataFieldId), orderBy("rev", "desc"));
+  const q = query(collection(db, COLLECTIONS.HISTORY), where("dataFieldId", "==", dataFieldId), orderBy("rev", "desc"));
   const snap = await getDocs(q);
   const rev = snap.docs.length ? (snap.docs[0].data() as DataFieldHistory).rev + 1 : 0;
   return rev;
@@ -14,8 +12,8 @@ async function nextRev(dataFieldId: string) {
 
 export async function addField(field: Omit<DataField, "updatedBy" | "updatedAt">) {
   const now = Date.now();
-  const rec: DataField = { ...field, updatedBy: "localUser", updatedAt: now };
-  await setDoc(doc(collection(db, FIELDS), rec.id), rec);
+  const rec: DataField = { ...field, updatedBy: USER_ID, updatedAt: now };
+  await setDoc(doc(collection(db, COLLECTIONS.FIELDS), rec.id), rec);
 
   const rev = await nextRev(rec.id);
   const hist: DataFieldHistory = {
@@ -26,21 +24,21 @@ export async function addField(field: Omit<DataField, "updatedBy" | "updatedAt">
     property: "fieldValue",
     prevValue: null,
     newValue: rec.fieldValue,
-    updatedBy: "localUser",
+    updatedBy: USER_ID,
     updatedAt: now,
     rev,
   };
-  await setDoc(doc(collection(db, HISTORY), hist.id), hist);
+  await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
   return rec;
 }
 
 export async function updateFieldValue(id: string, newValue: string | null) {
-  const ref = doc(db, FIELDS, id);
+  const ref = doc(db, COLLECTIONS.FIELDS, id);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Field not found");
   const prev = snap.data() as DataField;
   const now = Date.now();
-  await updateDoc(ref, { fieldValue: newValue, updatedAt: now, updatedBy: "localUser" });
+  await updateDoc(ref, { fieldValue: newValue, updatedAt: now, updatedBy: USER_ID });
 
   const rev = await nextRev(id);
   const hist: DataFieldHistory = {
@@ -51,15 +49,15 @@ export async function updateFieldValue(id: string, newValue: string | null) {
     property: "fieldValue",
     prevValue: prev.fieldValue,
     newValue,
-    updatedBy: "localUser",
+    updatedBy: USER_ID,
     updatedAt: now,
     rev,
   };
-  await setDoc(doc(collection(db, HISTORY), hist.id), hist);
+  await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
 }
 
 export async function deleteField(id: string) {
-  const ref = doc(db, FIELDS, id);
+  const ref = doc(db, COLLECTIONS.FIELDS, id);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const prev = snap.data() as DataField;
@@ -75,14 +73,14 @@ export async function deleteField(id: string) {
     property: "fieldValue",
     prevValue: prev.fieldValue,
     newValue: null,
-    updatedBy: "localUser",
+    updatedBy: USER_ID,
     updatedAt: now,
     rev,
   };
-  await setDoc(doc(collection(db, HISTORY), hist.id), hist);
+  await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
 }
 
 export async function listFieldsForNode(parentNodeId: string) {
-  const q = query(collection(db, FIELDS), where("parentNodeId", "==", parentNodeId), orderBy("updatedAt", "asc"));
+  const q = query(collection(db, COLLECTIONS.FIELDS), where("parentNodeId", "==", parentNodeId), orderBy("updatedAt", "asc"));
   return (await getDocs(q)).docs.map(d => d.data() as DataField);
 }
