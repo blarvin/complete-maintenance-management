@@ -1,0 +1,18 @@
+/* UpButton component styles */
+
+.upButton {
+    width: 32px;
+    height: 35px;
+    min-width: 32px;
+    border: 1.5px solid #000;
+    background: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+}
+
+.upButton:hover {
+    background: #f0f0f0;
+}
+

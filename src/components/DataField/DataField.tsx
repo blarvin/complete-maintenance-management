@@ -1,6 +1,7 @@
 import { component$, useSignal, $, useVisibleTask$, useOnDocument } from '@builder.io/qwik';
 import { fieldService } from '../../data/services/fieldService';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
+import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
@@ -88,11 +89,11 @@ export const DataField = component$<DataFieldProps>((props) => {
     const labelId = `field-label-${props.id}`;
 
     return (
-        <div class="datafield" ref={rootEl}>
-            <label class="datafield__label" id={labelId}>{props.fieldName}:</label>
+        <div class={styles.datafield} ref={rootEl}>
+            <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
             {isEditing.value ? (
                 <input
-                    class={{ 'datafield__value': true, 'datafield__value--underlined': !!editValue.value }}
+                    class={[styles.datafieldValue, editValue.value && styles.datafieldValueUnderlined]}
                     value={editValue.value}
                     onInput$={(e) => (editValue.value = (e.target as HTMLInputElement).value)}
                     onPointerDown$={inputPointerDown$}
@@ -116,7 +117,7 @@ export const DataField = component$<DataFieldProps>((props) => {
                 />
             ) : (
                 <div 
-                    class={{ 'datafield__value': true, 'datafield__value--underlined': hasValue, 'datafield__value--editable': true }} 
+                    class={[styles.datafieldValue, hasValue && styles.datafieldValueUnderlined, styles.datafieldValueEditable]} 
                     onPointerDown$={valuePointerDown$}
                     onKeyDown$={valueKeyDown$}
                     tabIndex={0}
@@ -124,7 +125,7 @@ export const DataField = component$<DataFieldProps>((props) => {
                     aria-labelledby={labelId}
                     aria-description="Press Enter to edit"
                 >
-                    {currentValue.value || <span class="datafield__placeholder">Empty</span>}
+                    {currentValue.value || <span class={styles.datafieldPlaceholder}>Empty</span>}
                 </div>
             )}
         </div>

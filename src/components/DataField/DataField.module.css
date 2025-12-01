@@ -1,0 +1,48 @@
+/* DataField component styles */
+
+.datafield {
+    display: grid;
+    grid-template-columns: 60px 1.5fr;
+    font-size: 10px;
+    gap: 6px;
+    align-items: baseline;
+}
+
+.datafieldLabel {
+    color: #111;
+    font-weight: normal;
+    cursor: default;
+}
+
+.datafieldValue {
+    color: #222;
+}
+
+.datafieldValueUnderlined {
+    text-decoration: underline;
+}
+
+.datafieldValueEditable {
+    cursor: pointer;
+}
+
+/* Under-construction: value inputs mimic final text appearance */
+input.datafieldValue {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    border-bottom: 1px solid #222;
+    /* show underline even when empty */
+}
+
+.datafieldPlaceholder {
+    color: #999;
+    font-style: italic;
+}
+

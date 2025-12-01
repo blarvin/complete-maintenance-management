@@ -1,0 +1,35 @@
+/* CreateNodeButton component styles */
+
+.createNode {
+    width: 100%;
+    max-width: 650px;
+    min-width: 275px;
+    border: 1.5px solid #000;
+    background: #fff;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    color: #000;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+}
+
+.createNode:hover {
+    background: #f9f9f9;
+}
+
+/* Child variant */
+.createNodeChild {
+    height: 28px;
+    font-size: 12px;
+    border-style: dashed;
+    color: #666;
+}
+
+.createNodeChild:hover {
+    background: #f9f9f9;
+    color: #000;
+}
+

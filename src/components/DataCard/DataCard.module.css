@@ -1,0 +1,32 @@
+/* DataCard component styles */
+
+.datacard {
+    z-index: 1;
+    border: 1.5px solid #000;
+    border-top: 0;
+    /* Left indent retained as a margin: cannot shift to parent without affecting header layout */
+    margin-left: 31px;
+    background: #fff;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.datacardAdd {
+    font-size: 10px;
+    font-weight: 600;
+    color: #222;
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.datacardAdd:hover {
+    text-decoration: underline;
+}
+

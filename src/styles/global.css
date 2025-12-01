@@ -1,3 +1,22 @@
+/**
+ * Global Styles
+ * Contains only:
+ * - Reset/base styles
+ * - Focus styles
+ * - View-level layout (.view-root, .view-branch)
+ * 
+ * Component-specific styles are colocated in CSS modules:
+ * - TreeNode.module.css
+ * - DataCard.module.css
+ * - DataField.module.css
+ * - CreateNodeButton.module.css
+ * - UpButton.module.css
+ */
+
+/* ========================= */
+/* RESET / BASE STYLES       */
+/* ========================= */
+
 * {
     box-sizing: border-box;
 }
@@ -9,6 +28,12 @@ body {
     background: #fff;
     color: #111;
     font-family: Inter, Arial, sans-serif;
+}
+
+/* Center the main container from the parent (body) instead of using child margins */
+body {
+    display: flex;
+    justify-content: center;
 }
 
 /* ========================= */
@@ -26,11 +51,9 @@ body {
     outline: none;
 }
 
-/* Center the main container from the parent (body) instead of using child margins */
-body {
-    display: flex;
-    justify-content: center;
-}
+/* ========================= */
+/* ROOT VIEW                 */
+/* ========================= */
 
 .view-root {
     width: 100%;
@@ -38,210 +61,10 @@ body {
     min-width: 275px;
     min-height: 560px;
     padding: 6px 6px 6px;
-    /* Parent-only vertical spacing between children (.node, .create-node) */
+    /* Parent-only vertical spacing between children */
     display: flex;
     flex-direction: column;
     gap: 3px;
-}
-
-.node__body--clickable {
-    cursor: pointer;
-}
-
-.node {
-    width: 100%;
-    max-width: 650px;
-    min-width: 275px;
-    border: 1.5px solid #000;
-    background: #fff;
-    z-index: 2;
-}
-
-.node__body {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    padding: 3px 3px 3px 8px;
-    min-height: 35px;
-}
-
-.node__title {
-    font-weight: 700;
-    font-size: 12px;
-    line-height: 1;
-    /* Using a small child margin here to separate title/subtitle within the same block.
-       Without additional markup, moving this to a parent-controlled gap is not feasible. */
-    margin: 0 0 6px 0;
-}
-
-/* Reset h2 defaults when used as node title */
-h2.node__title {
-    font-weight: 700;
-    font-size: 12px;
-    line-height: 1;
-    margin: 0 0 6px 0;
-}
-
-.node__subtitle {
-    font-size: 9px;
-    color: #666;
-    line-height: 1;
-}
-
-/* Under-construction: ensure header inputs stack vertically and fill width */
-input.node__title,
-input.node__subtitle {
-    display: block;
-    width: 100%;
-}
-
-/* Ensure inputs with these classes stack like the final static text */
-input.node__title,
-input.node__subtitle {
-    display: block;
-    width: 100%;
-    border: 0;
-    padding: 0;
-    outline: none;
-    background: transparent;
-    font: inherit;
-}
-
-.node__chevron {
-    font-size: 18px;
-    color: #000;
-    padding: 8px 6px;
-    transform: translateY(10px);
-    cursor: pointer;
-    /* Reset button defaults */
-    background: none;
-    border: none;
-    font-family: inherit;
-}
-
-.datacard {
-    z-index: 1;
-    border: 1.5px solid #000;
-    border-top: 0;
-    /* Left indent retained as a margin: cannot shift to parent without affecting header layout */
-    margin-left: 31px;
-    background: #fff;
-    padding: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-/* DataField owns its internal two-column layout */
-.datafield {
-    display: grid;
-    grid-template-columns: 60px 1.5fr;
-    font-size: 10px;
-    gap: 6px;
-    align-items: baseline;
-}
-
-.datafield__label {
-    color: #111;
-}
-
-.datafield__value {
-    color: #222;
-}
-
-.datafield__value--underlined {
-    text-decoration: underline;
-}
-
-/* Under-construction: value inputs mimic final text appearance */
-input.datafield__value {
-    appearance: none;
-    -webkit-appearance: none;
-    border: 0;
-    outline: none;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: inherit;
-    border-bottom: 1px solid #222;
-    /* show underline even when empty */
-}
-
-.datacard__add {
-    font-size: 10px;
-    font-weight: 600;
-    color: #222;
-    /* Reset button defaults */
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
-}
-
-.datacard__add:hover {
-    text-decoration: underline;
-}
-
-/* Under-construction mode action buttons */
-.construction-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 6px;
-}
-
-.create-node {
-    width: 100%;
-    max-width: 650px;
-    min-width: 275px;
-    border: 1.5px solid #000;
-    background: #fff;
-    height: 35px;
-    display: grid;
-    place-items: center;
-    font-size: 16px;
-    color: #000;
-    cursor: pointer;
-    font-family: inherit;
-    padding: 0;
-}
-
-.create-node:hover {
-    background: #f9f9f9;
-}
-
-.node--expanded {}
-
-.node--expanded .node__body {}
-
-/* Expansion wrapper right after .node */
-.node__expand {
-    transform: translateY(-3px);
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 220ms ease;
-    z-index: 1;
-    /* behind .node (z-index: 2) for the slide-from-behind effect */
-}
-
-.node__expand--open {
-    grid-template-rows: 1fr;
-}
-
-.node__expand-clip {
-    overflow: hidden;
-}
-
-.node__expand-slide {
-    transform: translateY(-100%);
-    transition: transform 220ms ease;
-}
-
-/* When open, slide the inner card into view */
-.node__expand--open .node__expand-slide {
-    transform: translateY(0);
 }
 
 /* ========================= */
@@ -275,60 +98,4 @@ input.datafield__value {
     flex-direction: column;
     gap: 3px;
     margin-left: var(--child-indent, 24px);
-}
-
-
-/* ========================= */
-/* UP BUTTON                 */
-/* ========================= */
-
-.up-button {
-    width: 32px;
-    height: 35px;
-    min-width: 32px;
-    border: 1.5px solid #000;
-    background: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-}
-
-.up-button:hover {
-    background: #f0f0f0;
-}
-
-/* ========================= */
-/* CREATE NODE CHILD VARIANT */
-/* ========================= */
-
-.create-node--child {
-    height: 28px;
-    font-size: 12px;
-    border-style: dashed;
-    color: #666;
-}
-
-.create-node--child:hover {
-    background: #f9f9f9;
-    color: #000;
-}
-
-/* ========================= */
-/* DATAFIELD ACCESSIBILITY   */
-/* ========================= */
-
-.datafield__value--editable {
-    cursor: pointer;
-}
-
-.datafield__placeholder {
-    color: #999;
-    font-style: italic;
-}
-
-/* Label styling (reset for using as label element) */
-label.datafield__label {
-    font-weight: normal;
-    cursor: default;
 }

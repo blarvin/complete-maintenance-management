@@ -389,6 +389,16 @@ Move component-specific styles (`.node`, `.datacard`, `.datafield`, etc.) to col
 - Easier to delete dead CSS
 - Better encapsulation
 
+**Implemented:** Created CSS module files colocated with components:
+
+- `TreeNode.module.css` (96 lines) - node, title, subtitle, chevron, expand animation styles
+- `DataCard.module.css` (25 lines) - card container and add button styles
+- `DataField.module.css` (47 lines) - field grid layout, label/value styles
+- `CreateNodeButton.module.css` (31 lines) - root and child variant button styles
+- `UpButton.module.css` (16 lines) - navigation button styles
+
+Updated all components to import and use CSS modules. Slimmed `global.css` from 334 to 92 lines (reset, focus, and view layout styles only).
+
 ---
 
 ### 9. Extract User Context Abstraction
@@ -516,7 +526,7 @@ const [parent, kids] = await Promise.all([...]);
 | 6        | Introduce service layer              | High   | Medium | ✅     |
 | 7        | Implement uiPrefs store              | Medium | Low    | ✅     |
 | 8        | Add error handling pattern           | Medium | Low    |        |
-| 9        | CSS Modules migration                | Low    | Medium |        |
+| 9        | CSS Modules migration                | Low    | Medium | ✅     |
 | 10       | User context abstraction             | Low    | Low    |        |
 
 ---

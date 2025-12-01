@@ -1,4 +1,5 @@
 import { component$, $, PropFunction } from '@builder.io/qwik';
+import styles from './CreateNodeButton.module.css';
 
 export type CreateNodeButtonProps = {
     variant: 'root' | 'child';
@@ -14,7 +15,7 @@ export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
         return (
             <button
                 type="button"
-                class="create-node"
+                class={styles.createNode}
                 onClick$={handleClick$}
                 aria-label="Create New Asset"
             >
@@ -27,7 +28,7 @@ export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
         return (
             <button
                 type="button"
-                class="create-node create-node--child"
+                class={[styles.createNode, styles.createNodeChild]}
                 onClick$={handleClick$}
                 aria-label="Add Sub-Asset"
             >

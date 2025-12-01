@@ -5,6 +5,8 @@
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { DataCard } from '../DataCard/DataCard';
+import styles from './TreeNode.module.css';
+import fieldStyles from '../DataField/DataField.module.css';
 
 export type ConstructionField = {
     fieldName: string;
@@ -54,11 +56,11 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
 
     return (
         <>
-            <article class="node node--expanded" aria-labelledby={titleId}>
-                <div class="node__body">
+            <article class={[styles.node, styles.nodeExpanded]} aria-labelledby={titleId}>
+                <div class={styles.nodeBody}>
                     <div>
                         <input
-                            class="node__title"
+                            class={styles.nodeTitle}
                             ref={nameInputRef}
                             placeholder="Name"
                             value={nameValue.value}
@@ -67,7 +69,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                             id={titleId}
                         />
                         <input
-                            class="node__subtitle"
+                            class={styles.nodeSubtitle}
                             placeholder="Subtitle / Location / Short description"
                             value={subtitleValue.value}
                             onInput$={(e) => (subtitleValue.value = (e.target as HTMLInputElement).value)}
@@ -76,7 +78,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </div>
                     <button
                         type="button"
-                        class="node__chevron"
+                        class={styles.nodeChevron}
                         aria-expanded={true}
                         aria-label="Collapse details"
                         disabled
@@ -85,22 +87,22 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </button>
                 </div>
             </article>
-            <div class="node__expand node__expand--open">
-                <div class="node__expand-clip">
-                    <div class="node__expand-slide">
+            <div class={[styles.nodeExpand, styles.nodeExpandOpen]}>
+                <div class={styles.nodeExpandClip}>
+                    <div class={styles.nodeExpandSlide}>
                         <DataCard>
                             {fields.value.map((f, idx) => (
-                                <div class="datafield" key={`${f.fieldName}-${idx}`}>
-                                    <div class="datafield__label">{f.fieldName}:</div>
+                                <div class={fieldStyles.datafield} key={`${f.fieldName}-${idx}`}>
+                                    <div class={fieldStyles.datafieldLabel}>{f.fieldName}:</div>
                                     <input
-                                        class={{ 'datafield__value': true, 'datafield__value--underlined': !!f.fieldValue }}
+                                        class={[fieldStyles.datafieldValue, f.fieldValue && fieldStyles.datafieldValueUnderlined]}
                                         value={f.fieldValue ?? ''}
                                         onInput$={(e) => updateFieldValue$(idx, (e.target as HTMLInputElement).value)}
                                         aria-label={`${f.fieldName} value`}
                                     />
                                 </div>
                             ))}
-                            <div class="construction-actions">
+                            <div class={styles.constructionActions}>
                                 <button type="button" onClick$={props.onCancel$}>Cancel</button>
                                 <button type="button" onClick$={handleCreate$}>Create</button>
                             </div>

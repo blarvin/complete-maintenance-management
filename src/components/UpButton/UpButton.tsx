@@ -1,4 +1,5 @@
 import { component$, PropFunction } from '@builder.io/qwik';
+import styles from './UpButton.module.css';
 
 export type UpButtonProps = {
     parentId: string | null;
@@ -8,7 +9,7 @@ export type UpButtonProps = {
 export const UpButton = component$((props: UpButtonProps) => {
     return (
         <button
-            class="up-button"
+            class={styles.upButton}
             onClick$={() => props.onNavigate$(props.parentId)}
             title={props.parentId ? 'Go to parent' : 'Go to root'}
             aria-label={props.parentId ? 'Go to parent' : 'Go to root'}

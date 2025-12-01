@@ -10,6 +10,7 @@ import { DataCard } from '../DataCard/DataCard';
 import { DataField } from '../DataField/DataField';
 import { useTreeNodeFields } from './useTreeNodeFields';
 import type { DataField as DataFieldRecord } from '../../data/models';
+import styles from './TreeNode.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
@@ -49,11 +50,11 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     return (
         <>
             <article
-                class={{ node: true, 'node--expanded': isExpanded.value }}
+                class={[styles.node, isExpanded.value && styles.nodeExpanded]}
                 aria-labelledby={titleId}
             >
                 <div
-                    class={{ 'node__body': true, 'node__body--clickable': isClickable }}
+                    class={[styles.nodeBody, isClickable && styles.nodeBodyClickable]}
                     onClick$={props.onNodeClick$}
                     onKeyDown$={handleBodyKeyDown$}
                     role={isClickable ? 'button' : undefined}
@@ -66,7 +67,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     </div>
                     <button
                         type="button"
-                        class="node__chevron"
+                        class={styles.nodeChevron}
                         onClick$={toggleExpand$}
                         onKeyDown$={handleExpandKeyDown$}
                         aria-expanded={isExpanded.value}
@@ -76,9 +77,9 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     </button>
                 </div>
             </article>
-            <div class={{ 'node__expand': true, 'node__expand--open': isExpanded.value }}>
-                <div class="node__expand-clip">
-                    <div class="node__expand-slide">
+            <div class={[styles.nodeExpand, isExpanded.value && styles.nodeExpandOpen]}>
+                <div class={styles.nodeExpandClip}>
+                    <div class={styles.nodeExpandSlide}>
                         <DataCard>
                             {fields.value?.map((f: DataFieldRecord) => (
                                 <DataField
