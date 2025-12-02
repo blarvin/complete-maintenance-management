@@ -14,7 +14,6 @@ import { useAppState, useAppTransitions, selectors } from '../../state/appState'
 import type { DataField as DataFieldRecord } from '../../data/models';
 import type { TreeNodeState } from '../../state/appState';
 import styles from './TreeNode.module.css';
-import cardStyles from '../DataCard/DataCard.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
@@ -63,7 +62,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const isClickable = !!props.onNodeClick$;
 
     return (
-        <>
+        <div class={styles.nodeWrapper}>
             <article
                 class={[styles.node, isExpanded && styles.nodeExpanded]}
                 aria-labelledby={titleId}
@@ -92,23 +91,17 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     </button>
                 </div>
             </article>
-            <div class={[cardStyles.expand, isExpanded && cardStyles.expandOpen]}>
-                <div class={cardStyles.expandClip}>
-                    <div class={cardStyles.expandSlide}>
-                        <DataCard>
-                            {fields.value?.map((f: DataFieldRecord) => (
-                                <DataField
-                                    key={f.id}
-                                    id={f.id}
-                                    fieldName={f.fieldName}
-                                    fieldValue={f.fieldValue}
-                                    onDeleted$={handleFieldDeleted$}
-                                />
-                            ))}
-                        </DataCard>
-                    </div>
-                </div>
-            </div>
-        </>
+            <DataCard isOpen={isExpanded}>
+                {fields.value?.map((f: DataFieldRecord) => (
+                    <DataField
+                        key={f.id}
+                        id={f.id}
+                        fieldName={f.fieldName}
+                        fieldValue={f.fieldValue}
+                        onDeleted$={handleFieldDeleted$}
+                    />
+                ))}
+            </DataCard>
+        </div>
     );
 });

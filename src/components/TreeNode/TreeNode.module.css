@@ -1,5 +1,10 @@
 /* TreeNode component styles */
 
+/* Wrapper keeps node header + DataCard together, unaffected by parent flex gap */
+.nodeWrapper {
+    /* Block element groups article + DataCard so parent's gap doesn't separate them */
+}
+
 .node {
     position: relative;
     width: 100%;

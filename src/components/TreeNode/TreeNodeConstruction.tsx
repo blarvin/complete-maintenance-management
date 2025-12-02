@@ -6,7 +6,6 @@
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { DataCard } from '../DataCard/DataCard';
 import styles from './TreeNode.module.css';
-import cardStyles from '../DataCard/DataCard.module.css';
 import fieldStyles from '../DataField/DataField.module.css';
 
 export type ConstructionField = {
@@ -56,7 +55,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     const titleId = `node-title-${props.id}`;
 
     return (
-        <>
+        <div class={styles.nodeWrapper}>
             <article class={[styles.node, styles.nodeExpanded]} aria-labelledby={titleId}>
                 <div class={styles.nodeBody}>
                     <div>
@@ -88,29 +87,23 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </button>
                 </div>
             </article>
-            <div class={[cardStyles.expand, cardStyles.expandOpen]}>
-                <div class={cardStyles.expandClip}>
-                    <div class={cardStyles.expandSlide}>
-                        <DataCard>
-                            {fields.value.map((f, idx) => (
-                                <div class={fieldStyles.datafield} key={`${f.fieldName}-${idx}`}>
-                                    <div class={fieldStyles.datafieldLabel}>{f.fieldName}:</div>
-                                    <input
-                                        class={[fieldStyles.datafieldValue, f.fieldValue && fieldStyles.datafieldValueUnderlined]}
-                                        value={f.fieldValue ?? ''}
-                                        onInput$={(e) => updateFieldValue$(idx, (e.target as HTMLInputElement).value)}
-                                        aria-label={`${f.fieldName} value`}
-                                    />
-                                </div>
-                            ))}
-                            <div class={styles.constructionActions}>
-                                <button type="button" onClick$={props.onCancel$}>Cancel</button>
-                                <button type="button" onClick$={handleCreate$}>Create</button>
-                            </div>
-                        </DataCard>
+            <DataCard isOpen={true}>
+                {fields.value.map((f, idx) => (
+                    <div class={fieldStyles.datafield} key={`${f.fieldName}-${idx}`}>
+                        <div class={fieldStyles.datafieldLabel}>{f.fieldName}:</div>
+                        <input
+                            class={[fieldStyles.datafieldValue, f.fieldValue && fieldStyles.datafieldValueUnderlined]}
+                            value={f.fieldValue ?? ''}
+                            onInput$={(e) => updateFieldValue$(idx, (e.target as HTMLInputElement).value)}
+                            aria-label={`${f.fieldName} value`}
+                        />
                     </div>
+                ))}
+                <div class={styles.constructionActions}>
+                    <button type="button" onClick$={props.onCancel$}>Cancel</button>
+                    <button type="button" onClick$={handleCreate$}>Create</button>
                 </div>
-            </div>
-        </>
+            </DataCard>
+        </div>
     );
 });
