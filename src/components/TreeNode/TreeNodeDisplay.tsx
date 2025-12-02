@@ -64,7 +64,9 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const titleId = `node-title-${props.id}`;
     const isClickable = !!props.onNodeClick$;
     const isParent = props.nodeState === 'PARENT';
-    const indentVar = isParent ? '35px' : '15px';
+    const isChild = props.nodeState === 'CHILD';
+    // All DataCards align 50px from widest node edge
+    const indentVar = isChild ? '18px' : '50px';
 
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
