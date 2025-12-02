@@ -1,11 +1,28 @@
 /* DataCard component styles */
 
 /* ─── Expansion wrapper ─── */
-/* Simple wrapper that clips content extending above the node */
-
-.expand {
+.wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    /* Use a specific cubic-bezier to ensure tight sync between height and transform */
+    transition: grid-template-rows 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Move layout properties here from .datacard */
+    margin-left: 31px;
+    margin-top: -1.5px; /* Tuck under node border */
+    z-index: 1; /* Behind parent node */
+    
+    /* Ensure content doesn't spill during animation */
     overflow: hidden;
-    z-index: 1; /* Behind parent node (z-index: 2) */
+}
+
+.wrapperOpen {
+    grid-template-rows: 1fr;
+}
+
+.inner {
+    min-height: 0;
+    /* This inner wrapper is the grid cell */
 }
 
 /* ─── DataCard itself ─── */
@@ -13,18 +30,22 @@
 .datacard {
     border: 1.5px solid #000;
     border-top: 0;
-    margin-left: 31px;
-    margin-top: -500px; /* Hidden behind node header */
     background: #fff;
     padding: 6px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    transition: margin-top 520ms ease-in-out;
+
+    /* Start position: shifted up by 100% of its own height */
+    transform: translateY(-100%);
+    
+    /* Match the wrapper transition exactly to prevent "pop-in" */
+    transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .datacardOpen {
-    margin-top: -1.5px; /* Tuck under node's bottom border (1.5px) */
+    /* End position: natural location */
+    transform: translateY(0);
 }
 
 .datacardAdd {
@@ -43,4 +64,3 @@
 .datacardAdd:hover {
     text-decoration: underline;
 }
-

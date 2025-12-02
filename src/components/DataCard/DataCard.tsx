@@ -8,7 +8,8 @@ export type DataCardProps = {
 
 export const DataCard = component$<DataCardProps>((props) => {
     return (
-        <div class={styles.expand}>
+        <div class={[styles.wrapper, props.isOpen && styles.wrapperOpen]}>
+            <div class={styles.inner}>
             <div
                 class={[styles.datacard, props.isOpen && styles.datacardOpen]}
                 role="region"
@@ -18,6 +19,7 @@ export const DataCard = component$<DataCardProps>((props) => {
                 <button type="button" class={styles.datacardAdd} aria-label="Add new field">
                     + Add Field
                 </button>
+                </div>
             </div>
         </div>
     );
