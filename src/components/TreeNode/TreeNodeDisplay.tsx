@@ -9,6 +9,7 @@ import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
 import { DataField } from '../DataField/DataField';
+import { UpButton } from '../UpButton/UpButton';
 import { useTreeNodeFields } from './useTreeNodeFields';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { DataField as DataFieldRecord } from '../../data/models';
@@ -20,7 +21,9 @@ export type TreeNodeDisplayProps = {
     nodeName: string;
     nodeSubtitle: string;
     nodeState: TreeNodeState;
+    parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
+    onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
 };
 
 export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
@@ -60,11 +63,13 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
 
     const titleId = `node-title-${props.id}`;
     const isClickable = !!props.onNodeClick$;
+    const isParent = props.nodeState === 'PARENT';
+    const indentVar = isParent ? '35px' : '15px';
 
     return (
-        <div class={styles.nodeWrapper}>
+        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
             <article
-                class={[styles.node, isExpanded && styles.nodeExpanded]}
+                class={[styles.node, isExpanded && styles.nodeExpanded, isParent && styles.nodeParent]}
                 aria-labelledby={titleId}
             >
                 <div
@@ -75,6 +80,14 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     tabIndex={isClickable ? 0 : undefined}
                     aria-label={isClickable ? `Open ${props.nodeName || 'node'}` : undefined}
                 >
+                    {isParent && props.onNavigateUp$ && (
+                        <div class={styles.upButtonWrapper}>
+                            <UpButton
+                                parentId={props.parentId ?? null}
+                                onNavigate$={props.onNavigateUp$}
+                            />
+                        </div>
+                    )}
                     <div>
                         <NodeTitle nodeName={props.nodeName} id={titleId} />
                         <NodeSubtitle nodeSubtitle={props.nodeSubtitle} />

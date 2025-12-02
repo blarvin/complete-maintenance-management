@@ -8,7 +8,8 @@
     transition: grid-template-rows 100ms cubic-bezier(0.4, 0, 0.2, 1);
     
     /* Move layout properties here from .datacard */
-    margin-left: 31px;
+    /* Variable indent driven by parent node state: 35px for parent, 15px for child */
+    margin-left: var(--datacard-indent, 40px);
     margin-top: -1.5px; /* Tuck under node border */
     z-index: 1; /* Behind parent node */
     

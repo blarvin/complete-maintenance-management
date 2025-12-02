@@ -10,7 +10,10 @@ export const UpButton = component$((props: UpButtonProps) => {
     return (
         <button
             class={styles.upButton}
-            onClick$={() => props.onNavigate$(props.parentId)}
+            onClick$={(e) => {
+                e.stopPropagation(); // Prevent node click
+                props.onNavigate$(props.parentId);
+            }}
             title={props.parentId ? 'Go to parent' : 'Go to root'}
             aria-label={props.parentId ? 'Go to parent' : 'Go to root'}
         >

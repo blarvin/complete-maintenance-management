@@ -89,12 +89,8 @@ export const BranchView = component$((props: BranchViewProps) => {
 
     return (
         <main class="view-branch">
-            {/* Parent node row with UpButton */}
+            {/* Parent node row */}
             <div class="branch-parent-row">
-                <UpButton
-                    parentId={parentNode.value.parentId}
-                    onNavigate$={navigateUp$}
-                />
                 <div class="branch-parent-node">
                     <TreeNode
                         key={parentNode.value.id}
@@ -102,6 +98,8 @@ export const BranchView = component$((props: BranchViewProps) => {
                         nodeName={parentNode.value.nodeName}
                         nodeSubtitle={parentNode.value.nodeSubtitle ?? ''}
                         nodeState="PARENT"
+                        parentId={parentNode.value.parentId}
+                        onNavigateUp$={navigateUp$}
                     />
                 </div>
             </div>

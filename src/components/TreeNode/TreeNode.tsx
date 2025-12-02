@@ -19,6 +19,7 @@ export type TreeNodeProps = {
     nodeName: string;
     nodeSubtitle: string;
     nodeState: TreeNodeState;
+    parentId?: string | null;
     ucDefaults?: { fieldName: string; fieldValue: string | null }[];
     onCancel$?: PropFunction<() => void>;
     onCreate$?: PropFunction<(payload: {
@@ -27,6 +28,7 @@ export type TreeNodeProps = {
         fields: { fieldName: string; fieldValue: string | null }[];
     }) => void>;
     onNodeClick$?: PropFunction<() => void>;
+    onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
 };
 
 export const TreeNode = component$((props: TreeNodeProps) => {
@@ -51,7 +53,9 @@ export const TreeNode = component$((props: TreeNodeProps) => {
             nodeName={props.nodeName}
             nodeSubtitle={props.nodeSubtitle}
             nodeState={props.nodeState}
+            parentId={props.parentId}
             onNodeClick$={props.onNodeClick$}
+            onNavigateUp$={props.onNavigateUp$}
         />
     );
 });

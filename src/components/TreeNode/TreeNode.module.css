@@ -25,6 +25,21 @@
     min-height: 35px;
 }
 
+/* Parent node specific layout */
+.nodeParent .nodeBody {
+    grid-template-columns: auto 1fr auto;
+    /* Adjust padding if needed since UpButton is flush left */
+    padding-left: 0; 
+}
+
+.upButtonWrapper {
+    /* Container for UpButton to align it properly */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px 0 0; /* Space between button and title */
+}
+
 .nodeBodyClickable {
     cursor: pointer;
 }

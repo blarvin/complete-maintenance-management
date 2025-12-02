@@ -64,7 +64,7 @@ body {
     /* Parent-only vertical spacing between children */
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
 }
 
 /* ========================= */
@@ -96,6 +96,6 @@ body {
 .branch-children {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    margin-left: var(--child-indent, 24px);
+    gap: 4px;
+    margin-left: 25px;
 }
