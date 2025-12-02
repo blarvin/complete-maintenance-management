@@ -14,6 +14,7 @@ import { useAppState, useAppTransitions, selectors } from '../../state/appState'
 import type { DataField as DataFieldRecord } from '../../data/models';
 import type { TreeNodeState } from '../../state/appState';
 import styles from './TreeNode.module.css';
+import cardStyles from '../DataCard/DataCard.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
@@ -91,9 +92,9 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     </button>
                 </div>
             </article>
-            <div class={[styles.nodeExpand, isExpanded && styles.nodeExpandOpen]}>
-                <div class={styles.nodeExpandClip}>
-                    <div class={styles.nodeExpandSlide}>
+            <div class={[cardStyles.expand, isExpanded && cardStyles.expandOpen]}>
+                <div class={cardStyles.expandClip}>
+                    <div class={cardStyles.expandSlide}>
                         <DataCard>
                             {fields.value?.map((f: DataFieldRecord) => (
                                 <DataField

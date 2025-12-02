@@ -1,7 +1,7 @@
 /* TreeNode component styles */
 
 .node {
-    position: relative; /* Required for z-index to work */
+    position: relative;
     width: 100%;
     max-width: 650px;
     min-width: 275px;
@@ -67,34 +67,6 @@ input.nodeSubtitle {
     background: none;
     border: none;
     font-family: inherit;
-}
-
-/* Expansion wrapper right after .node */
-.nodeExpand {
-    transform: translateY(-3px);
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 220ms ease;
-    z-index: 1;
-    /* behind .node (z-index: 2) for the slide-from-behind effect */
-}
-
-.nodeExpandOpen {
-    grid-template-rows: 1fr;
-}
-
-.nodeExpandClip {
-    overflow: hidden;
-}
-
-.nodeExpandSlide {
-    transform: translateY(-100%);
-    transition: transform 220ms ease;
-}
-
-/* When open, slide the inner card into view */
-.nodeExpandOpen .nodeExpandSlide {
-    transform: translateY(0);
 }
 
 /* Under-construction mode action buttons */

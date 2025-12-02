@@ -6,6 +6,7 @@
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { DataCard } from '../DataCard/DataCard';
 import styles from './TreeNode.module.css';
+import cardStyles from '../DataCard/DataCard.module.css';
 import fieldStyles from '../DataField/DataField.module.css';
 
 export type ConstructionField = {
@@ -87,9 +88,9 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </button>
                 </div>
             </article>
-            <div class={[styles.nodeExpand, styles.nodeExpandOpen]}>
-                <div class={styles.nodeExpandClip}>
-                    <div class={styles.nodeExpandSlide}>
+            <div class={[cardStyles.expand, cardStyles.expandOpen]}>
+                <div class={cardStyles.expandClip}>
+                    <div class={cardStyles.expandSlide}>
                         <DataCard>
                             {fields.value.map((f, idx) => (
                                 <div class={fieldStyles.datafield} key={`${f.fieldName}-${idx}`}>
