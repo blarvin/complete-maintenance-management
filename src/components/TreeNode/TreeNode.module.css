@@ -1,6 +1,7 @@
 /* TreeNode component styles */
 
 .node {
+    position: relative; /* Required for z-index to work */
     width: 100%;
     max-width: 650px;
     min-width: 275px;
