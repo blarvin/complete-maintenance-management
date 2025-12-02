@@ -120,7 +120,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     const labelId = `field-label-${props.id}`;
 
     return (
-        <div class={styles.datafieldWrapper} ref={rootEl}>
+        <div class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded]} ref={rootEl}>
             <div class={styles.datafield}>
                 <button
                     type="button"

@@ -3,6 +3,27 @@
 .datafieldWrapper {
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+/* When details are expanded, show light grey background via pseudo-element */
+.datafieldWrapperExpanded::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 18px;   /* Start after chevron column */
+    right: 0;
+    background: #e3e3e3;
+    border-radius: 2px;
+    z-index: 0;
+}
+
+/* Ensure content sits above the background */
+.datafieldWrapperExpanded .datafield,
+.datafieldWrapperExpanded > div:last-child {
+    position: relative;
+    z-index: 1;
 }
 
 .datafield {
