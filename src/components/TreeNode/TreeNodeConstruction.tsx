@@ -87,7 +87,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </button>
                 </div>
             </article>
-            <DataCard isOpen={true}>
+            <DataCard nodeId={props.id} isOpen={true}>
                 {fields.value.map((f, idx) => (
                     <div class={fieldStyles.datafield} key={`${f.fieldName}-${idx}`}>
                         <div class={fieldStyles.datafieldLabel}>{f.fieldName}:</div>
