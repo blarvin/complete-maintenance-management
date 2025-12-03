@@ -47,7 +47,8 @@
 
 .datacardOpen {
     /* End position: natural location */
-    transform: translateY(0);
+    /* Use none to prevent creating a containing block for fixed descendants */
+    transform: none;
 }
 
 .datacardAdd {
