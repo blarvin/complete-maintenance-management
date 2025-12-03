@@ -1,0 +1,160 @@
+/* DataFieldHistory component styles - inline accordion pattern */
+
+.historyWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Control row with Cancel, Revert, and Chevron */
+.controlRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Action buttons (Cancel, Revert) */
+.actionButton {
+    font-size: 9px;
+    font-weight: 600;
+    background: none;
+    border: 1px solid #222;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-family: inherit;
+    border-radius: 2px;
+    transition: background-color 0.15s, opacity 0.15s;
+}
+
+.actionButton:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.actionButton:not(:disabled):hover {
+    background: #f0f0f0;
+}
+
+.actionButton:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 1px;
+}
+
+.cancelButton {
+    border-color: #999;
+    color: #666;
+}
+
+.cancelButton:not(:disabled):hover {
+    background: #f5f5f5;
+}
+
+.revertButton {
+    border-color: #0066cc;
+    color: #0066cc;
+}
+
+.revertButton:not(:disabled):hover {
+    background: #e8f0ff;
+}
+
+/* Chevron button */
+.chevronButton {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chevronButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.chevronButton:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 1px;
+}
+
+/* CSS triangle - hollow style */
+.chevron {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid #666;
+    border-bottom: 1.5px solid #666;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+/* Rotate when open - points down */
+.chevronOpen {
+    transform: rotate(45deg);
+}
+
+.chevronButton:not(:disabled):hover .chevron {
+    border-color: #333;
+}
+
+/* Inline history list - fixed max-height, scrollable */
+.historyList {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(8 * 24px); /* ~8 rows at 24px each */
+    overflow-y: auto;
+    margin-top: 4px;
+    border-top: 1px solid #ccc;
+    padding-top: 4px;
+}
+
+/* Individual history row */
+.historyRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: baseline;
+    padding: 4px 6px;
+    font-size: 10px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+    border-radius: 2px;
+}
+
+.historyRow:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.historyRow:focus-visible {
+    background: rgba(0, 0, 0, 0.08);
+    outline: none;
+}
+
+.historyRowSelected {
+    background: #d4e8ff;
+}
+
+.historyRowSelected:hover {
+    background: #c0dcff;
+}
+
+.historyValue {
+    color: #222;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.historyMeta {
+    color: #666;
+    font-size: 9px;
+    white-space: nowrap;
+}

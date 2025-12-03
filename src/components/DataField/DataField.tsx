@@ -1,7 +1,8 @@
 /**
  * DataField - Editable field row with label:value pairs.
  * Uses FSM state for editing (only one field can edit at a time per SPEC).
- * Includes expandable DataFieldDetails section with metadata and delete.
+ * Includes expandable DataFieldDetails section with metadata, history, and delete.
+ * Supports preview mode when user selects a historical value from DataFieldHistory.
  */
 
 import { component$, useSignal, $, useVisibleTask$, useOnDocument, PropFunction } from '@builder.io/qwik';
@@ -16,6 +17,7 @@ export type DataFieldProps = {
     fieldName: string;
     fieldValue: string | null;
     onDeleted$?: PropFunction<() => void>;
+    onUpdated$?: PropFunction<() => void>;
 };
 
 export const DataField = component$<DataFieldProps>((props) => {
@@ -33,6 +35,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     const rootEl = useSignal<HTMLElement>();
     const currentValue = useSignal<string>(props.fieldValue ?? '');
     const editValue = useSignal<string>('');
+    const previewValue = useSignal<string | null>(null);
     const suppressCancelUntil = useSignal<number>(0);
 
     // Double-tap detection hook
@@ -46,6 +49,8 @@ export const DataField = component$<DataFieldProps>((props) => {
         if (isEditing) return;
         startFieldEdit$(props.id);
         editValue.value = currentValue.value;
+        // Clear preview when entering edit mode
+        previewValue.value = null;
     });
 
     const save$ = $(async () => {
@@ -54,6 +59,9 @@ export const DataField = component$<DataFieldProps>((props) => {
         await fieldService.updateFieldValue(props.id, newVal);
         currentValue.value = newVal ?? '';
         stopFieldEdit$();
+        if (props.onUpdated$) {
+            props.onUpdated$();
+        }
     });
 
     const cancel$ = $(() => {
@@ -63,6 +71,10 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const toggleDetails$ = $(() => {
         toggleFieldDetailsExpanded$(props.id);
+        // Clear preview when collapsing details
+        if (isDetailsExpanded) {
+            previewValue.value = null;
+        }
     });
 
     const handleDelete$ = $(async () => {
@@ -73,7 +85,23 @@ export const DataField = component$<DataFieldProps>((props) => {
         }
     });
 
-    const hasValue = !!currentValue.value;
+    const handlePreviewChange$ = $((value: string | null) => {
+        previewValue.value = value;
+    });
+
+    const handleRevert$ = $(async (value: string | null) => {
+        await fieldService.updateFieldValue(props.id, value);
+        currentValue.value = value ?? '';
+        previewValue.value = null;
+        if (props.onUpdated$) {
+            props.onUpdated$();
+        }
+    });
+
+    // Display value: preview takes precedence if set
+    const displayValue = previewValue.value !== null ? previewValue.value : currentValue.value;
+    const hasValue = !!displayValue;
+    const isPreviewActive = previewValue.value !== null;
 
     const valuePointerDown$ = $(async (ev: any) => {
         if (isEditing) return;
@@ -158,7 +186,12 @@ export const DataField = component$<DataFieldProps>((props) => {
                     />
                 ) : (
                     <div 
-                        class={[styles.datafieldValue, hasValue && styles.datafieldValueUnderlined, styles.datafieldValueEditable]} 
+                        class={[
+                            styles.datafieldValue, 
+                            hasValue && styles.datafieldValueUnderlined, 
+                            styles.datafieldValueEditable,
+                            isPreviewActive && styles.datafieldValuePreview,
+                        ]} 
                         onPointerDown$={valuePointerDown$}
                         onKeyDown$={valueKeyDown$}
                         tabIndex={0}
@@ -166,14 +199,18 @@ export const DataField = component$<DataFieldProps>((props) => {
                         aria-labelledby={labelId}
                         aria-description="Press Enter to edit"
                     >
-                        {currentValue.value || <span class={styles.datafieldPlaceholder}>Empty</span>}
+                        {displayValue || <span class={styles.datafieldPlaceholder}>Empty</span>}
                     </div>
                 )}
             </div>
             {isDetailsExpanded && (
                 <DataFieldDetails
                     fieldId={props.id}
+                    fieldName={props.fieldName}
+                    currentValue={currentValue.value}
                     onDelete$={handleDelete$}
+                    onPreviewChange$={handlePreviewChange$}
+                    onRevert$={handleRevert$}
                 />
             )}
         </div>

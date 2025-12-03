@@ -95,3 +95,11 @@ input.datafieldValue {
     font-style: italic;
 }
 
+/* Preview state - when showing a historical value before revert */
+.datafieldValuePreview {
+    background: #fff8dc;
+    padding: 0 2px;
+    margin: 0 -2px;
+    border-radius: 2px;
+}
+

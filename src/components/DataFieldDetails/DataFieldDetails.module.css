@@ -14,11 +14,21 @@
     font-style: italic;
 }
 
+/* Row containing edit info and history controls */
+.editInfoRow {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
 .editInfo {
     display: flex;
     flex-direction: row;
     gap: 0;
     flex-wrap: wrap;
+    flex: 1;
 }
 
 .editText {
@@ -28,6 +38,11 @@
 .editCreated {
     color: #555;
     margin-left: 4px;
+}
+
+/* Spacer when history is open to push controls to the right */
+.spacer {
+    flex: 1;
 }
 
 .deleteButton {
@@ -52,4 +67,3 @@
     outline: 2px solid #c00;
     outline-offset: 2px;
 }
-
