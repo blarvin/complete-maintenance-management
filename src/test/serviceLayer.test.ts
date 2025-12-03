@@ -8,7 +8,7 @@ import { testId, cleanupTestNode, settle } from './testUtils';
 import { nodeService } from '../data/services/nodeService';
 import { fieldService } from '../data/services/fieldService';
 import { createNodeWithDefaultFields } from '../data/services/createNode';
-import { DEFAULT_DATAFIELD_NAMES } from '../data/fieldLibrary';
+import { DEFAULT_DATAFIELD_NAMES } from '../constants';
 
 describe('nodeService', () => {
     const createdNodeIds: string[] = [];

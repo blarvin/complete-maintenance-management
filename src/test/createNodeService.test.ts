@@ -11,7 +11,7 @@ import {
     createRootNodeWithDefaultFields,
     createChildNodeWithDefaultFields,
 } from '../data/services/createNode';
-import { DEFAULT_DATAFIELD_NAMES } from '../data/fieldLibrary';
+import { DEFAULT_DATAFIELD_NAMES } from '../constants';
 
 describe('Node Creation Service', () => {
     const createdNodeIds: string[] = [];

@@ -10,7 +10,7 @@ import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { nodeService } from '../../data/services/nodeService';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { generateId } from '../../utils/id';
-import { DEFAULT_DATAFIELD_NAMES } from '../../data/fieldLibrary';
+import { DEFAULT_DATAFIELD_NAMES } from '../../constants';
 import { createNodeWithDefaultFields } from '../../data/services/createNode';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
 

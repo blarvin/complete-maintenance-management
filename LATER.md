@@ -157,6 +157,11 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 
 - newDataField custom entry + automatic add to library
 
+### CreateDataField Combo Box Enhancements
+
+- **Typeahead filtering**: As user types in Field Name input, auto-filter dropdown to show matching prefab names. Currently chevron must be clicked to open dropdown.
+- **Dropdown flip behavior**: Detect viewport space below the Field Name input; if insufficient room, flip the dropdown to open upward instead of downward. Standard "flip" positioning pattern.
+
 - **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned. THIS SHOULD BE IN NODE TOOLS, NOT A DATAFIELD
 
 - Note to self: What is "Keys must exist in TreeNode table" on line 160??

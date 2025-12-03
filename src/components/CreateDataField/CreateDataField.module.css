@@ -22,22 +22,87 @@
     outline-offset: 2px;
 }
 
-/* Construction mode - matches DataField grid layout */
+/* Construction mode wrapper */
+.constructionWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Construction mode - grid layout: chevron | field name | value */
 .construction {
     display: grid;
-    grid-template-columns: 18px 60px 1.5fr;
+    grid-template-columns: 18px minmax(100px, 1fr) minmax(80px, 1fr);
     font-size: 10px;
     gap: 4px;
     align-items: baseline;
 }
 
-/* Placeholder for chevron column alignment */
-.chevronPlaceholder {
+/* Hollow chevron button */
+.chevronButton {
     width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Input fields - match DataField value styling */
-.input {
+.chevronButton:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 1px;
+}
+
+/* CSS triangle - hollow style using stroke-only border trick */
+.chevron {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid #666;
+    border-bottom: 1.5px solid #666;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+/* Rotate when open - points down */
+.chevronOpen {
+    transform: rotate(45deg);
+}
+
+.chevronButton:hover .chevron {
+    border-color: #333;
+}
+
+/* Combo box wrapper for dropdown positioning */
+.comboBoxWrapper {
+    position: relative;
+}
+
+/* Field name input - wider */
+.inputName {
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: #111;
+    border-bottom: 1px solid #222;
+}
+
+.inputName:focus {
+    border-bottom-color: #0066cc;
+}
+
+/* Value input */
+.inputValue {
+    width: 100%;
     appearance: none;
     -webkit-appearance: none;
     border: 0;
@@ -50,24 +115,54 @@
     border-bottom: 1px solid #222;
 }
 
-.input:focus {
+.inputValue:focus {
     border-bottom-color: #0066cc;
 }
 
-.inputLabel {
-    color: #111;
+/* Dropdown menu */
+.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 2px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 9999; /* High z-index to appear above other page elements */
+    max-height: 150px;
+    overflow-y: auto;
 }
 
-.inputValue {
-    /* inherits from .input */
+.dropdownItem {
+    display: block;
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    font-size: 10px;
+    color: #222;
+    cursor: pointer;
 }
 
-/* Action row with Save/Cancel buttons */
+.dropdownItem:hover {
+    background: #f0f0f0;
+}
+
+.dropdownItem:focus-visible {
+    background: #e0e0e0;
+    outline: none;
+}
+
+/* Action row with Save/Cancel buttons - right aligned */
 .actions {
     display: flex;
     gap: 8px;
-    margin-top: 4px;
-    margin-left: 22px; /* Align with inputs (18px chevron + 4px gap) */
+    justify-content: flex-end;
+    margin-top: 2px;
 }
 
 .actionButton {
@@ -97,4 +192,3 @@
 .cancelButton:hover {
     background: #f5f5f5;
 }
-
