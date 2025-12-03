@@ -22,6 +22,8 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     const isDropdownOpen = useSignal(false);
     const rootEl = useSignal<HTMLElement>();
     const nameInputRef = useSignal<HTMLInputElement>();
+    const comboBoxRef = useSignal<HTMLDivElement>();
+    const dropdownPosition = useSignal({ top: 0, left: 0, width: 0 });
 
     const { checkDoubleTap$ } = useDoubleTap();
 
@@ -58,6 +60,15 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     });
 
     const toggleDropdown$ = $(() => {
+        if (!isDropdownOpen.value && comboBoxRef.value) {
+            // Calculate position before opening
+            const rect = comboBoxRef.value.getBoundingClientRect();
+            dropdownPosition.value = {
+                top: rect.bottom + 2,
+                left: rect.left,
+                width: rect.width,
+            };
+        }
         isDropdownOpen.value = !isDropdownOpen.value;
     });
 
@@ -153,7 +164,7 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                 </button>
                 
                 {/* Field Name combo box wrapper */}
-                <div class={styles.comboBoxWrapper}>
+                <div class={styles.comboBoxWrapper} ref={comboBoxRef}>
                     <input
                         ref={nameInputRef}
                         type="text"
@@ -167,9 +178,18 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                         autoFocus
                     />
                     
-                    {/* Dropdown menu */}
+                    {/* Dropdown menu - position:fixed to escape all parent containers */}
                     {isDropdownOpen.value && (
-                        <div class={styles.dropdown} role="listbox" aria-label="Prefab field names">
+                        <div 
+                            class={styles.dropdown} 
+                            role="listbox" 
+                            aria-label="Prefab field names"
+                            style={{
+                                top: `${dropdownPosition.value.top}px`,
+                                left: `${dropdownPosition.value.left}px`,
+                                width: `${dropdownPosition.value.width}px`,
+                            }}
+                        >
                             {DATAFIELD_LIBRARY.map((name) => (
                                 <button
                                     key={name}

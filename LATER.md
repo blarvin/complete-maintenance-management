@@ -162,6 +162,10 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 - **Typeahead filtering**: As user types in Field Name input, auto-filter dropdown to show matching prefab names. Currently chevron must be clicked to open dropdown.
 - **Dropdown flip behavior**: Detect viewport space below the Field Name input; if insufficient room, flip the dropdown to open upward instead of downward. Standard "flip" positioning pattern.
 
+### DataCard Animation & Layout
+
+- **Physical push vs. layout reflow**: Currently, when a DataCard expands, elements below reposition due to layout reflow rather than being physically "pushed" by the card. This works now because of how the grid/flex containers are structured, but if page structure changes significantly, this animation behavior may need revisiting. Consider a more robust approach where the card expansion explicitly affects sibling positioning if layout issues arise.
+
 - **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned. THIS SHOULD BE IN NODE TOOLS, NOT A DATAFIELD
 
 - Note to self: What is "Keys must exist in TreeNode table" on line 160??

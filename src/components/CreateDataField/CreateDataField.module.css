@@ -119,18 +119,15 @@
     border-bottom-color: #0066cc;
 }
 
-/* Dropdown menu */
+/* Dropdown menu - position:fixed escapes all parent containers */
 .dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    margin-top: 2px;
+    position: fixed;
+    /* top, left, width set via inline style */
     background: #fff;
     border: 1px solid #ccc;
     border-radius: 2px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 9999; /* High z-index to appear above other page elements */
+    z-index: 9999;
     max-height: 150px;
     overflow-y: auto;
 }

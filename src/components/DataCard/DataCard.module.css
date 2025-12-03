@@ -19,10 +19,7 @@
 
 .wrapperOpen {
     grid-template-rows: 1fr;
-    /* Allow dropdown menus to overflow when open */
-    overflow: visible;
-    /* Higher z-index so open card appears above other nodes */
-    z-index: 10;
+    /* Keep overflow hidden - dropdowns use position:fixed to escape */
 }
 
 .inner {
@@ -50,9 +47,7 @@
 
 .datacardOpen {
     /* End position: natural location */
-    /* Use 'none' instead of translateY(0) to avoid creating a stacking context */
-    /* that would trap dropdowns behind other elements */
-    transform: none;
+    transform: translateY(0);
 }
 
 .datacardAdd {
