@@ -3,8 +3,9 @@
  * Abstracts the repo layer so components don't depend on Firestore directly.
  */
 
-import { listFieldsForNode, updateFieldValue as repoUpdateFieldValue, deleteField as repoDeleteField, getFieldHistory as repoGetFieldHistory } from '../repo/dataFields';
+import { listFieldsForNode, updateFieldValue as repoUpdateFieldValue, deleteField as repoDeleteField, getFieldHistory as repoGetFieldHistory, addField as repoAddField } from '../repo/dataFields';
 import type { DataField, DataFieldHistory } from '../models';
+import { generateId } from '../../utils/id';
 
 export const fieldService = {
     /**
@@ -12,6 +13,18 @@ export const fieldService = {
      * Used by TreeNode to load DataCard fields.
      */
     getFieldsForNode: (nodeId: string): Promise<DataField[]> => listFieldsForNode(nodeId),
+
+    /**
+     * Add a new field to a node.
+     * Used by CreateDataField component for in-place field creation.
+     */
+    addField: (nodeId: string, fieldName: string, fieldValue: string | null): Promise<DataField> =>
+        repoAddField({
+            id: generateId(),
+            parentNodeId: nodeId,
+            fieldName,
+            fieldValue,
+        }),
 
     /**
      * Update a field's value. Writes history entry automatically.

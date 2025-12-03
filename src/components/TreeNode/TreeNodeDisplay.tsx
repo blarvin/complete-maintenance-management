@@ -106,7 +106,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     </button>
                 </div>
             </article>
-            <DataCard isOpen={isExpanded}>
+            <DataCard isOpen={isExpanded} nodeId={props.id} onFieldCreated$={reload$}>
                 {fields.value?.map((f: DataFieldRecord) => (
                     <DataField
                         key={f.id}

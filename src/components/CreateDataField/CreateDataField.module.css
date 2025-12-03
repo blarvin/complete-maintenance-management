@@ -1,0 +1,100 @@
+/* CreateDataField component styles */
+
+.addButton {
+    font-size: 10px;
+    font-weight: 600;
+    color: #222;
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.addButton:hover {
+    text-decoration: underline;
+}
+
+.addButton:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 2px;
+}
+
+/* Construction mode - matches DataField grid layout */
+.construction {
+    display: grid;
+    grid-template-columns: 18px 60px 1.5fr;
+    font-size: 10px;
+    gap: 4px;
+    align-items: baseline;
+}
+
+/* Placeholder for chevron column alignment */
+.chevronPlaceholder {
+    width: 18px;
+}
+
+/* Input fields - match DataField value styling */
+.input {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: #222;
+    border-bottom: 1px solid #222;
+}
+
+.input:focus {
+    border-bottom-color: #0066cc;
+}
+
+.inputLabel {
+    color: #111;
+}
+
+.inputValue {
+    /* inherits from .input */
+}
+
+/* Action row with Save/Cancel buttons */
+.actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    margin-left: 22px; /* Align with inputs (18px chevron + 4px gap) */
+}
+
+.actionButton {
+    font-size: 10px;
+    font-weight: 600;
+    background: none;
+    border: 1px solid #222;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.actionButton:hover {
+    background: #f0f0f0;
+}
+
+.actionButton:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 1px;
+}
+
+.cancelButton {
+    border-color: #999;
+    color: #666;
+}
+
+.cancelButton:hover {
+    background: #f5f5f5;
+}
+

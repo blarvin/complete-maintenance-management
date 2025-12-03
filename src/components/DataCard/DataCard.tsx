@@ -1,8 +1,11 @@
-import { Slot, component$ } from '@builder.io/qwik';
+import { Slot, component$, PropFunction } from '@builder.io/qwik';
+import { CreateDataField } from '../CreateDataField/CreateDataField';
 import styles from './DataCard.module.css';
 
 export type DataCardProps = {
     isOpen?: boolean;
+    nodeId: string;
+    onFieldCreated$?: PropFunction<() => void>;
     children?: any;
 };
 
@@ -16,9 +19,7 @@ export const DataCard = component$<DataCardProps>((props) => {
                 aria-label="Node details"
             >
                 <Slot />
-                <button type="button" class={styles.datacardAdd} aria-label="Add new field">
-                    + Add Field
-                </button>
+                <CreateDataField nodeId={props.nodeId} onCreated$={props.onFieldCreated$} />
                 </div>
             </div>
         </div>
