@@ -7,46 +7,35 @@
  * - PARENT: Current node at top of BRANCH view
  * - CHILD: Child node in BRANCH view
  * - UNDER_CONSTRUCTION: New node being created
+ * 
+ * Props use a discriminated union based on nodeState (ISP compliance).
  */
 
-import { component$, PropFunction } from '@builder.io/qwik';
+import { component$ } from '@builder.io/qwik';
 import { TreeNodeDisplay } from './TreeNodeDisplay';
 import { TreeNodeConstruction } from './TreeNodeConstruction';
-import type { TreeNodeState } from '../../state/appState';
+import { isConstructionProps, type TreeNodeProps } from './types';
 
-export type TreeNodeProps = {
-    id: string;
-    nodeName: string;
-    nodeSubtitle: string;
-    nodeState: TreeNodeState;
-    parentId?: string | null;
-    ucDefaults?: { fieldName: string; fieldValue: string | null }[];
-    onCancel$?: PropFunction<() => void>;
-    onCreate$?: PropFunction<(payload: {
-        nodeName: string;
-        nodeSubtitle: string;
-        fields: { fieldName: string; fieldValue: string | null }[];
-    }) => void>;
-    onNodeClick$?: PropFunction<() => void>;
-    onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
-};
+// Re-export types for convenience
+export type { TreeNodeProps, TreeNodeDisplayProps, TreeNodeConstructionProps } from './types';
+export type { TreeNodeState, DisplayNodeState, ConstructionField, CreateNodePayload } from './types';
 
 export const TreeNode = component$((props: TreeNodeProps) => {
-    // Under-construction state: delegate to TreeNodeConstruction
-    if (props.nodeState === 'UNDER_CONSTRUCTION') {
+    // Use type guard to narrow the discriminated union
+    if (isConstructionProps(props)) {
         return (
             <TreeNodeConstruction
                 id={props.id}
                 initialName={props.nodeName}
                 initialSubtitle={props.nodeSubtitle}
-                defaultFields={props.ucDefaults ?? []}
+                defaultFields={props.ucDefaults}
                 onCancel$={props.onCancel$}
                 onCreate$={props.onCreate$}
             />
         );
     }
 
-    // Display states (ROOT, PARENT, CHILD): delegate to TreeNodeDisplay
+    // TypeScript now knows props is TreeNodeDisplayProps
     return (
         <TreeNodeDisplay
             id={props.id}

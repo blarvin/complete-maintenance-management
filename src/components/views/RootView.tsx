@@ -39,7 +39,7 @@ export const RootView = component$(() => {
                     id={n.id}
                     nodeName={n.nodeName}
                     nodeSubtitle={n.nodeSubtitle ?? ''}
-                    nodeState={selectors.getTreeNodeState(appState, n.id, n.parentId)}
+                    nodeState={selectors.getDisplayNodeState(appState, n.id)}
                     onNodeClick$={() => navigateToNode$(n.id)}
                 />
             ))}

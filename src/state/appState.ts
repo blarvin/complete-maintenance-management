@@ -8,6 +8,12 @@
 import { createContextId, useContext, useContextProvider, useStore, $ } from '@builder.io/qwik';
 import { loadUIPrefs, saveUIPrefs } from './uiPrefs';
 
+// Import TreeNode state types from the canonical source
+import type { TreeNodeState, DisplayNodeState } from '../components/TreeNode/types';
+
+// Re-export for convenience (many modules import from appState)
+export type { TreeNodeState, DisplayNodeState } from '../components/TreeNode/types';
+
 // ============================================================================
 // STATE DEFINITIONS
 // ============================================================================
@@ -18,16 +24,6 @@ import { loadUIPrefs, saveUIPrefs } from './uiPrefs';
 export type ViewState = 
     | { state: 'ROOT' }
     | { state: 'BRANCH'; nodeId: string };
-
-/**
- * TreeNode States - Per SPEC state machine
- * Note: These are computed from ViewState + node position, not stored directly
- */
-export type TreeNodeState = 
-    | 'ROOT'              // Top-level node in ROOT view
-    | 'PARENT'            // Current node at top of BRANCH view
-    | 'CHILD'             // Child node in BRANCH view
-    | 'UNDER_CONSTRUCTION'; // New node being created
 
 /**
  * DataCard States
@@ -263,7 +259,7 @@ export const transitions = {
 
 export const selectors = {
     /**
-     * Get the TreeNode state for a given node
+     * Get the TreeNode state for a given node (includes UNDER_CONSTRUCTION)
      */
     getTreeNodeState: (
         appState: AppState,
@@ -275,6 +271,27 @@ export const selectors = {
             return 'UNDER_CONSTRUCTION';
         }
         
+        // In ROOT view, all nodes are ROOT state
+        if (appState.view.state === 'ROOT') {
+            return 'ROOT';
+        }
+        
+        // In BRANCH view
+        if (appState.view.nodeId === nodeId) {
+            return 'PARENT';
+        }
+        
+        return 'CHILD';
+    },
+
+    /**
+     * Get the display state for a persisted node (never UNDER_CONSTRUCTION)
+     * Use this for nodes from the data layer that can't be under construction.
+     */
+    getDisplayNodeState: (
+        appState: AppState,
+        nodeId: string,
+    ): DisplayNodeState => {
         // In ROOT view, all nodes are ROOT state
         if (appState.view.state === 'ROOT') {
             return 'ROOT';

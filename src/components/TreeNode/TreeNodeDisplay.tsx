@@ -13,14 +13,14 @@ import { UpButton } from '../UpButton/UpButton';
 import { useTreeNodeFields } from './useTreeNodeFields';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { DataField as DataFieldRecord } from '../../data/models';
-import type { TreeNodeState } from '../../state/appState';
+import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
     nodeName: string;
     nodeSubtitle: string;
-    nodeState: TreeNodeState;
+    nodeState: DisplayNodeState;
     parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
     onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
