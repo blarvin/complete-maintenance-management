@@ -6,7 +6,7 @@
  */
 
 import { component$, useSignal, $, useVisibleTask$, useOnDocument, PropFunction } from '@builder.io/qwik';
-import { fieldService } from '../../data/services/fieldService';
+import { getFieldService } from '../../data/services';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
@@ -56,7 +56,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     const save$ = $(async () => {
         if (!isEditing) return;
         const newVal = editValue.value.trim() === '' ? null : editValue.value;
-        await fieldService.updateFieldValue(props.id, newVal);
+        await getFieldService().updateFieldValue(props.id, newVal);
         currentValue.value = newVal ?? '';
         stopFieldEdit$();
         if (props.onUpdated$) {
@@ -78,7 +78,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const handleDelete$ = $(async () => {
-        await fieldService.deleteField(props.id);
+        await getFieldService().deleteField(props.id);
         // Notify parent to refresh the field list
         if (props.onDeleted$) {
             props.onDeleted$();
@@ -90,7 +90,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const handleRevert$ = $(async (value: string | null) => {
-        await fieldService.updateFieldValue(props.id, value);
+        await getFieldService().updateFieldValue(props.id, value);
         currentValue.value = value ?? '';
         previewValue.value = null;
         if (props.onUpdated$) {

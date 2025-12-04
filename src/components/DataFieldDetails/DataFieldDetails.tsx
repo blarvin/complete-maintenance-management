@@ -5,7 +5,7 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, PropFunction } from '@builder.io/qwik';
-import { fieldService } from '../../data/services/fieldService';
+import { getFieldService } from '../../data/services';
 import { formatTimestampShort } from '../../utils/time';
 import type { DataFieldHistory as HistoryEntry } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
@@ -28,7 +28,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     // Load history on mount
     useVisibleTask$(async () => {
         try {
-            const h = await fieldService.getFieldHistory(props.fieldId);
+            const h = await getFieldService().getFieldHistory(props.fieldId);
             history.value = h;
         } catch (e) {
             console.error('Failed to load field history:', e);
@@ -49,7 +49,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         await props.onRevert$(value);
         // Reload history after revert
         try {
-            const h = await fieldService.getFieldHistory(props.fieldId);
+            const h = await getFieldService().getFieldHistory(props.fieldId);
             history.value = h;
         } catch (e) {
             console.error('Failed to reload field history:', e);

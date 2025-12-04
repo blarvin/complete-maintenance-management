@@ -4,11 +4,12 @@
  * 
  * Satisfies OCP: Views are now closed for modification when creation logic changes.
  * Satisfies SRP: Views only handle rendering, this hook handles creation orchestration.
+ * Satisfies DIP: Uses service abstraction (can be swapped via setNodeService).
  */
 
 import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
-import { createNodeWithDefaultFields } from '../data/services/createNode';
+import { getNodeService } from '../data/services';
 import { generateId } from '../utils/id';
 import { DEFAULT_DATAFIELD_NAMES } from '../constants';
 
@@ -74,7 +75,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         const ucData = appState.underConstruction;
         if (!ucData) return;
 
-        await createNodeWithDefaultFields({
+        await getNodeService().createWithFields({
             id: ucData.id,
             parentId: options.parentId,
             nodeName: payload.nodeName,

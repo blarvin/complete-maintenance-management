@@ -7,8 +7,8 @@
  * during navigation.
  */
 
-import { useSignal, useTask$, useVisibleTask$, $, type QRL } from '@builder.io/qwik';
-import { fieldService } from '../../data/services/fieldService';
+import { useSignal, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
+import { getFieldService } from '../../data/services';
 import type { DataField } from '../../data/models';
 
 export type UseTreeNodeFieldsOptions = {
@@ -54,7 +54,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         }
 
         isLoading.value = true;
-        fields.value = await fieldService.getFieldsForNode(nodeId);
+        fields.value = await getFieldService().getFieldsForNode(nodeId);
         isLoading.value = false;
     });
 
@@ -62,7 +62,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     const reload$ = $(async () => {
         if (!currentEnabled.value) return;
         isLoading.value = true;
-        fields.value = await fieldService.getFieldsForNode(currentNodeId.value);
+        fields.value = await getFieldService().getFieldsForNode(currentNodeId.value);
         isLoading.value = false;
     });
 

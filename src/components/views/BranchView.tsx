@@ -6,7 +6,7 @@
 import { component$, $, useSignal, useTask$ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { nodeService } from '../../data/services/nodeService';
+import { getNodeService } from '../../data/services';
 import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
@@ -23,7 +23,7 @@ export const BranchView = component$((props: BranchViewProps) => {
     const children = useSignal<TreeNodeRecord[]>([]);
 
     const loadData$ = $(async (parentId: string) => {
-        const result = await nodeService.getNodeWithChildren(parentId);
+        const result = await getNodeService().getNodeWithChildren(parentId);
         parentNode.value = result.node;
         children.value = result.children;
     });

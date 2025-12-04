@@ -6,7 +6,7 @@
 
 import { component$, useSignal, $, PropFunction, useOnDocument } from '@builder.io/qwik';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
-import { fieldService } from '../../data/services/fieldService';
+import { getFieldService } from '../../data/services';
 import { DATAFIELD_LIBRARY } from '../../constants';
 import styles from './CreateDataField.module.css';
 
@@ -49,7 +49,7 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
             return;
         }
         const value = fieldValue.value.trim() || null;
-        await fieldService.addField(props.nodeId, name, value);
+        await getFieldService().addField(props.nodeId, name, value);
         isConstructing.value = false;
         fieldName.value = '';
         fieldValue.value = '';
