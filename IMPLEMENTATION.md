@@ -656,3 +656,49 @@ const [parent, kids] = await Promise.all([...]);
 5. **Short Functions**: Target < 20 lines per function, < 100 lines per component
 6. **Constants over Magic Values**: Named, centralized, documented
 7. **Fail Loud**: Explicit error handling, no silent failures
+
+---
+
+## Refactoring Phase 2: SOLID & DIP Compliance
+
+Additional refactoring focused on Interface Segregation Principle (ISP) and Dependency Inversion Principle (DIP).
+
+### Checklist
+
+| Done | ID  | Goal                         | Implementation Notes                                                                                                                      |
+| ---- | --- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅   | 1a  | Extract useNodeCreation hook | Created `src/hooks/useNodeCreation.ts`. RootView and BranchView now use shared hook. Satisfies OCP/SRP.                                   |
+| ✅   | 1b  | Split TreeNodeProps (ISP)    | Created `types.ts` with discriminated union (`TreeNodeDisplayProps` \| `TreeNodeConstructionProps`) and type guards.                      |
+| ✅   | 2a  | Create DataContext / DIP     | **Changed approach**: Module-level service registry instead of context (see below). Created `src/data/services/index.ts` with interfaces. |
+| ⬜   | 2b  | Extract FieldRow component   | Not started. Would reduce duplication between DataField and TreeNodeConstruction field rows.                                              |
+| ⬜   | 3   | Consolidate callback props   | Not started. DataField, DataFieldDetails, DataFieldHistory share similar callback patterns.                                               |
+| ⬜   | 4   | Make components "dumb"       | Longer-term. Move data fetching up, pass data via props. Improves testability.                                                            |
+
+### Why Module-Level Registry Instead of Context?
+
+Qwik's resumability model serializes closures (QRLs) to HTML so they can "resume" on the client without re-running all JS. When a `$()` closure captures a variable, Qwik tries to serialize it.
+
+**Problem:**
+
+```typescript
+const { nodes } = useContext(DataContext); // service object with functions
+const load$ = $(async () => {
+  await nodes.getRootNodes(); // 💥 nodes captured, can't serialize functions
+});
+```
+
+**Solution:**
+
+```typescript
+const load$ = $(async () => {
+  await getNodeService().getRootNodes(); // ✅ nothing captured, looked up at runtime
+});
+```
+
+The service registry lives at module scope (outside components), so it's available when the closure executes but not captured/serialized.
+
+### Files Changed
+
+- `src/data/services/index.ts` — New service registry with interfaces and getters
+- `src/components/TreeNode/types.ts` — Discriminated union props for ISP
+- All components/hooks using services — Changed from direct imports to `getNodeService()` / `getFieldService()`
