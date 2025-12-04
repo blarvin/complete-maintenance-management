@@ -5,13 +5,10 @@
 
 import { component$, $, useSignal, useTask$ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
-import { UpButton } from '../UpButton/UpButton';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { nodeService } from '../../data/services/nodeService';
-import { useAppState, useAppTransitions, selectors } from '../../state/appState';
-import { generateId } from '../../utils/id';
-import { DEFAULT_DATAFIELD_NAMES } from '../../constants';
-import { createNodeWithDefaultFields } from '../../data/services/createNode';
+import { useAppState, useAppTransitions } from '../../state/appState';
+import { useNodeCreation } from '../../hooks/useNodeCreation';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
 
 export type BranchViewProps = {
@@ -20,13 +17,7 @@ export type BranchViewProps = {
 
 export const BranchView = component$((props: BranchViewProps) => {
     const appState = useAppState();
-    const { 
-        navigateToNode$, 
-        navigateUp$, 
-        startConstruction$, 
-        cancelConstruction$, 
-        completeConstruction$ 
-    } = useAppTransitions();
+    const { navigateToNode$, navigateUp$, cancelConstruction$ } = useAppTransitions();
     
     const parentNode = useSignal<TreeNodeRecord | null>(null);
     const children = useSignal<TreeNodeRecord[]>([]);
@@ -50,37 +41,12 @@ export const BranchView = component$((props: BranchViewProps) => {
         await loadData$(parentId);
     });
 
-    const handleStartCreate$ = $(() => {
-        startConstruction$({
-            id: generateId(),
-            parentId: props.parentId,
-            nodeName: '',
-            nodeSubtitle: '',
-            defaultFields: DEFAULT_DATAFIELD_NAMES.map((n) => ({
-                fieldName: n,
-                fieldValue: null,
-            })),
-        });
-    });
-
-    const handleCompleteCreate$ = $(async (payload: {
-        nodeName: string;
-        nodeSubtitle: string;
-        fields: { fieldName: string; fieldValue: string | null }[];
-    }) => {
-        const ucData = appState.underConstruction;
-        if (!ucData) return;
-
-        await createNodeWithDefaultFields({
-            id: ucData.id,
-            parentId: props.parentId,
-            nodeName: payload.nodeName,
-            nodeSubtitle: payload.nodeSubtitle,
-            defaults: payload.fields,
-        });
-
-        completeConstruction$();
-        await loadData$(props.parentId);
+    // Use the extracted hook for creation flow
+    const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
+        parentId: props.parentId,
+        onCreated$: $(async () => {
+            await loadData$(props.parentId);
+        }),
     });
 
     if (!parentNode.value) {
@@ -118,22 +84,22 @@ export const BranchView = component$((props: BranchViewProps) => {
                 ))}
 
                 {/* Under construction node */}
-                {appState.underConstruction ? (
+                {ucNode ? (
                     <div class="branch-child-row">
                         <TreeNode
-                            key={appState.underConstruction.id}
-                            id={appState.underConstruction.id}
-                            nodeName={appState.underConstruction.nodeName}
-                            nodeSubtitle={appState.underConstruction.nodeSubtitle}
+                            key={ucNode.id}
+                            id={ucNode.id}
+                            nodeName={ucNode.nodeName}
+                            nodeSubtitle={ucNode.nodeSubtitle}
                             nodeState="UNDER_CONSTRUCTION"
-                            ucDefaults={appState.underConstruction.defaultFields}
-                            onCancel$={cancelConstruction$}
-                            onCreate$={handleCompleteCreate$}
+                            ucDefaults={ucNode.defaultFields}
+                            onCancel$={cancel$}
+                            onCreate$={complete$}
                         />
                     </div>
                 ) : null}
 
-                <CreateNodeButton variant="child" onClick$={handleStartCreate$} />
+                <CreateNodeButton variant="child" onClick$={start$} />
             </div>
         </main>
     );

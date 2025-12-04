@@ -8,14 +8,12 @@ import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { nodeService } from '../../data/services/nodeService';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
-import { generateId } from '../../utils/id';
-import { DEFAULT_DATAFIELD_NAMES } from '../../constants';
-import { createNodeWithDefaultFields } from '../../data/services/createNode';
+import { useNodeCreation } from '../../hooks/useNodeCreation';
 import type { TreeNode as TreeNodeRecord } from '../../data/models';
 
 export const RootView = component$(() => {
     const appState = useAppState();
-    const { navigateToNode$, startConstruction$, cancelConstruction$, completeConstruction$ } = useAppTransitions();
+    const { navigateToNode$ } = useAppTransitions();
     
     const nodes = useSignal<TreeNodeRecord[]>([]);
 
@@ -27,37 +25,10 @@ export const RootView = component$(() => {
         await loadNodes$();
     });
 
-    const handleStartCreate$ = $(() => {
-        startConstruction$({
-            id: generateId(),
-            parentId: null,
-            nodeName: '',
-            nodeSubtitle: '',
-            defaultFields: DEFAULT_DATAFIELD_NAMES.map((n) => ({
-                fieldName: n,
-                fieldValue: null,
-            })),
-        });
-    });
-
-    const handleCompleteCreate$ = $(async (payload: {
-        nodeName: string;
-        nodeSubtitle: string;
-        fields: { fieldName: string; fieldValue: string | null }[];
-    }) => {
-        const ucData = appState.underConstruction;
-        if (!ucData) return;
-
-        await createNodeWithDefaultFields({
-            id: ucData.id,
-            parentId: null,
-            nodeName: payload.nodeName,
-            nodeSubtitle: payload.nodeSubtitle,
-            defaults: payload.fields,
-        });
-
-        completeConstruction$();
-        await loadNodes$();
+    // Use the extracted hook for creation flow
+    const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
+        parentId: null,
+        onCreated$: loadNodes$,
     });
 
     return (
@@ -72,19 +43,19 @@ export const RootView = component$(() => {
                     onNodeClick$={() => navigateToNode$(n.id)}
                 />
             ))}
-            {appState.underConstruction ? (
+            {ucNode ? (
                 <TreeNode
-                    key={appState.underConstruction.id}
-                    id={appState.underConstruction.id}
-                    nodeName={appState.underConstruction.nodeName}
-                    nodeSubtitle={appState.underConstruction.nodeSubtitle}
+                    key={ucNode.id}
+                    id={ucNode.id}
+                    nodeName={ucNode.nodeName}
+                    nodeSubtitle={ucNode.nodeSubtitle}
                     nodeState="UNDER_CONSTRUCTION"
-                    ucDefaults={appState.underConstruction.defaultFields}
-                    onCancel$={cancelConstruction$}
-                    onCreate$={handleCompleteCreate$}
+                    ucDefaults={ucNode.defaultFields}
+                    onCancel$={cancel$}
+                    onCreate$={complete$}
                 />
             ) : null}
-            <CreateNodeButton variant="root" onClick$={handleStartCreate$} />
+            <CreateNodeButton variant="root" onClick$={start$} />
         </main>
     );
 });
