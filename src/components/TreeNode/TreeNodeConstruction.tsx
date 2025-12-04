@@ -5,25 +5,20 @@
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { DataCard } from '../DataCard/DataCard';
+import type { ConstructionField, CreateNodePayload } from './types';
 import styles from './TreeNode.module.css';
 import fieldStyles from '../DataField/DataField.module.css';
 
-export type ConstructionField = {
-    fieldName: string;
-    fieldValue: string | null;
-};
+// Re-export for backwards compatibility
+export type { ConstructionField } from './types';
 
 export type TreeNodeConstructionProps = {
     id: string;
     initialName?: string;
     initialSubtitle?: string;
     defaultFields: ConstructionField[];
-    onCancel$?: PropFunction<() => void>;
-    onCreate$?: PropFunction<(payload: {
-        nodeName: string;
-        nodeSubtitle: string;
-        fields: ConstructionField[];
-    }) => void>;
+    onCancel$: PropFunction<() => void>;
+    onCreate$: PropFunction<(payload: CreateNodePayload) => void>;
 };
 
 export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps) => {
@@ -38,7 +33,6 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     });
 
     const handleCreate$ = $(async () => {
-        if (!props.onCreate$) return;
         await props.onCreate$({
             nodeName: nameValue.value,
             nodeSubtitle: subtitleValue.value,
