@@ -1,6 +1,8 @@
 /**
  * Tests for the Data Access Service Layer.
  * These services abstract the repo layer so components don't depend on Firestore directly.
+ * 
+ * Includes smoke test to verify Firestore connectivity.
  */
 
 import { describe, it, expect, afterAll } from 'vitest';
@@ -8,7 +10,40 @@ import { testId, cleanupTestNode, settle } from './testUtils';
 import { nodeService } from '../data/services/nodeService';
 import { fieldService } from '../data/services/fieldService';
 import { createNodeWithDefaultFields } from '../data/services/createNode';
+import { deleteLeafNode, createNode } from '../data/repo/treeNodes';
+import { updateFieldValue } from '../data/repo/dataFields';
 import { DEFAULT_DATAFIELD_NAMES } from '../constants';
+import { getCurrentUserId } from '../context/userContext';
+
+/**
+ * Smoke test - verifies the test framework and Firestore connection work.
+ */
+describe('Smoke Test', () => {
+    const createdNodeIds: string[] = [];
+
+    afterAll(async () => {
+        for (const nodeId of createdNodeIds) {
+            await cleanupTestNode(nodeId);
+        }
+    });
+
+    it('connects to Firestore and can create/read data', async () => {
+        const id = testId();
+        createdNodeIds.push(id);
+
+        const node = await createNode({
+            id,
+            nodeName: 'Smoke Test Node',
+            nodeSubtitle: 'Created by test',
+            parentId: null,
+        });
+
+        expect(node.id).toBe(id);
+        expect(node.nodeName).toBe('Smoke Test Node');
+        expect(node.updatedBy).toBe(getCurrentUserId());
+        expect(node.updatedAt).toBeTypeOf('number');
+    });
+});
 
 describe('nodeService', () => {
     const createdNodeIds: string[] = [];
@@ -262,6 +297,58 @@ describe('fieldService', () => {
             expect(updatedField?.fieldValue).toBeNull();
         });
     });
+
+    describe('deleteField', () => {
+        it('deletes a field from the node', async () => {
+            const nodeId = testId();
+            createdNodeIds.push(nodeId);
+
+            await createNodeWithDefaultFields({
+                id: nodeId,
+                parentId: null,
+                nodeName: 'Node for delete field test',
+                nodeSubtitle: '',
+                defaults: [{ fieldName: 'Deletable Field', fieldValue: 'Will be deleted' }],
+            });
+
+            await settle();
+            let fields = await fieldService.getFieldsForNode(nodeId);
+            expect(fields.length).toBe(1);
+
+            await fieldService.deleteField(fields[0].id);
+            await settle();
+
+            fields = await fieldService.getFieldsForNode(nodeId);
+            expect(fields.length).toBe(0);
+        });
+    });
+
+    describe('addField', () => {
+        it('adds a new field to an existing node', async () => {
+            const nodeId = testId();
+            createdNodeIds.push(nodeId);
+
+            await createNodeWithDefaultFields({
+                id: nodeId,
+                parentId: null,
+                nodeName: 'Node for add field test',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await settle();
+            const newField = await fieldService.addField(nodeId, 'New Field', 'New Value');
+            await settle();
+
+            expect(newField.fieldName).toBe('New Field');
+            expect(newField.fieldValue).toBe('New Value');
+            expect(newField.parentNodeId).toBe(nodeId);
+
+            const fields = await fieldService.getFieldsForNode(nodeId);
+            expect(fields.length).toBe(1);
+            expect(fields[0].fieldName).toBe('New Field');
+        });
+    });
 });
 
 /**
@@ -421,6 +508,215 @@ describe('Navigation data isolation', () => {
         // Descriptions should also be isolated
         expect(fieldsA1.find(f => f.fieldName === 'Description')?.fieldValue).toBe('DescA');
         expect(fieldsB1.find(f => f.fieldName === 'Description')?.fieldValue).toBe('DescB');
+    });
+});
+
+/**
+ * Regression tests for edge cases and error handling.
+ * These tests prevent regressions in critical paths.
+ */
+describe('Regression: deleteLeafNode guard', () => {
+    const createdNodeIds: string[] = [];
+
+    afterAll(async () => {
+        for (const nodeId of createdNodeIds) {
+            await cleanupTestNode(nodeId);
+        }
+    });
+
+    it('successfully deletes a leaf node', async () => {
+        const id = testId();
+        createdNodeIds.push(id);
+
+        await createNodeWithDefaultFields({
+            id,
+            parentId: null,
+            nodeName: 'Leaf to delete',
+            nodeSubtitle: '',
+            defaults: [],
+        });
+
+        await settle();
+        await deleteLeafNode(id);
+
+        const node = await nodeService.getNodeById(id);
+        expect(node).toBeNull();
+    });
+
+    it('throws when trying to delete a node with children', async () => {
+        const parentId = testId();
+        const childId = testId();
+        createdNodeIds.push(parentId, childId);
+
+        await createNodeWithDefaultFields({
+            id: parentId,
+            parentId: null,
+            nodeName: 'Parent with child',
+            nodeSubtitle: '',
+            defaults: [],
+        });
+
+        await createNodeWithDefaultFields({
+            id: childId,
+            parentId,
+            nodeName: 'Child node',
+            nodeSubtitle: '',
+            defaults: [],
+        });
+
+        await settle();
+        
+        await expect(deleteLeafNode(parentId)).rejects.toThrow('Only leaf nodes can be deleted');
+    });
+});
+
+describe('Regression: updateFieldValue error handling', () => {
+    it('throws when updating a non-existent field', async () => {
+        await expect(updateFieldValue('nonexistent-field-id-12345', 'value'))
+            .rejects.toThrow('Field not found');
+    });
+});
+
+/**
+ * DataFieldHistory tests - verify history is recorded correctly.
+ */
+describe('DataFieldHistory', () => {
+    const createdNodeIds: string[] = [];
+
+    afterAll(async () => {
+        for (const nodeId of createdNodeIds) {
+            await cleanupTestNode(nodeId);
+        }
+    });
+
+    it('records create history when adding a field', async () => {
+        const nodeId = testId();
+        createdNodeIds.push(nodeId);
+
+        await createNodeWithDefaultFields({
+            id: nodeId,
+            parentId: null,
+            nodeName: 'Node for history test',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Type Of', fieldValue: 'Initial' }],
+        });
+
+        await settle();
+        const fields = await fieldService.getFieldsForNode(nodeId);
+        const field = fields[0];
+
+        const history = await fieldService.getFieldHistory(field.id);
+        
+        expect(history.length).toBe(1);
+        expect(history[0].action).toBe('create');
+        expect(history[0].prevValue).toBeNull();
+        expect(history[0].newValue).toBe('Initial');
+        expect(history[0].rev).toBe(0);
+    });
+
+    it('records update history with previous and new values', async () => {
+        const nodeId = testId();
+        createdNodeIds.push(nodeId);
+
+        await createNodeWithDefaultFields({
+            id: nodeId,
+            parentId: null,
+            nodeName: 'Node for update history',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Description', fieldValue: 'Before' }],
+        });
+
+        await settle();
+        const fields = await fieldService.getFieldsForNode(nodeId);
+        const field = fields[0];
+
+        await fieldService.updateFieldValue(field.id, 'After');
+        await settle();
+
+        const history = await fieldService.getFieldHistory(field.id);
+        
+        expect(history.length).toBe(2);
+        
+        // First entry is create
+        expect(history[0].action).toBe('create');
+        expect(history[0].rev).toBe(0);
+        
+        // Second entry is update
+        expect(history[1].action).toBe('update');
+        expect(history[1].prevValue).toBe('Before');
+        expect(history[1].newValue).toBe('After');
+        expect(history[1].rev).toBe(1);
+    });
+
+    it('records delete history', async () => {
+        const nodeId = testId();
+        createdNodeIds.push(nodeId);
+
+        await createNodeWithDefaultFields({
+            id: nodeId,
+            parentId: null,
+            nodeName: 'Node for delete history',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Tags', fieldValue: 'test-value' }],
+        });
+
+        await settle();
+        const fields = await fieldService.getFieldsForNode(nodeId);
+        const field = fields[0];
+        const fieldId = field.id;
+
+        await fieldService.deleteField(fieldId);
+        await settle();
+
+        const history = await fieldService.getFieldHistory(fieldId);
+        
+        expect(history.length).toBe(2);
+        
+        // Last entry should be delete
+        const deleteEntry = history[history.length - 1];
+        expect(deleteEntry.action).toBe('delete');
+        expect(deleteEntry.prevValue).toBe('test-value');
+        expect(deleteEntry.newValue).toBeNull();
+    });
+
+    it('returns history sorted by rev ascending', async () => {
+        const nodeId = testId();
+        createdNodeIds.push(nodeId);
+
+        await createNodeWithDefaultFields({
+            id: nodeId,
+            parentId: null,
+            nodeName: 'Node for history order',
+            nodeSubtitle: '',
+            defaults: [{ fieldName: 'Note', fieldValue: 'v0' }],
+        });
+
+        await settle();
+        const fields = await fieldService.getFieldsForNode(nodeId);
+        const field = fields[0];
+
+        // Make several updates
+        await fieldService.updateFieldValue(field.id, 'v1');
+        await settle();
+        await fieldService.updateFieldValue(field.id, 'v2');
+        await settle();
+        await fieldService.updateFieldValue(field.id, 'v3');
+        await settle();
+
+        const history = await fieldService.getFieldHistory(field.id);
+        
+        expect(history.length).toBe(4);
+        
+        // Verify sorted by rev
+        for (let i = 1; i < history.length; i++) {
+            expect(history[i].rev).toBeGreaterThan(history[i - 1].rev);
+        }
+        
+        // Verify values track correctly
+        expect(history[0].newValue).toBe('v0');
+        expect(history[1].newValue).toBe('v1');
+        expect(history[2].newValue).toBe('v2');
+        expect(history[3].newValue).toBe('v3');
     });
 });
 

@@ -10,6 +10,42 @@ export type UseDoubleTapOptions = {
 };
 
 /**
+ * Tap state for detection algorithm
+ */
+export type TapState = {
+    lastDownAt: number;
+    lastDownX: number;
+    lastDownY: number;
+};
+
+/**
+ * Pure function for double-tap detection.
+ * Exported for testing. Returns [isDouble, newState].
+ */
+export function detectDoubleTap(
+    state: TapState,
+    x: number,
+    y: number,
+    now: number,
+    thresholdMs = DOUBLE_TAP_THRESHOLD_MS,
+    slopPx = DOUBLE_TAP_SLOP_PX
+): [boolean, TapState] {
+    const withinTime = now - state.lastDownAt <= thresholdMs;
+    const dx = Math.abs(x - state.lastDownX);
+    const dy = Math.abs(y - state.lastDownY);
+    const withinSlop = dx <= slopPx && dy <= slopPx;
+    const isDouble = withinTime && withinSlop;
+
+    const newState: TapState = {
+        lastDownAt: now,
+        lastDownX: x,
+        lastDownY: y,
+    };
+
+    return [isDouble, newState];
+}
+
+/**
  * Hook for detecting double-tap/double-click gestures.
  * Handles time-based detection (two taps within threshold)
  * and position-based detection (taps within slop distance).

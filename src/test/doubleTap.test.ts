@@ -1,54 +1,28 @@
 /**
- * Double-tap detection tests - validates the detection algorithm before extraction.
- * These tests ensure the refactoring to useDoubleTap hook doesn't break:
- * 1. Time-based detection (within threshold)
- * 2. Position-based detection (within slop)
- * 3. Combined time + position detection
+ * Double-tap detection tests - validates the actual detection algorithm.
+ * Tests the pure function exported from useDoubleTap.ts.
  */
 
 import { describe, it, expect } from 'vitest';
-
-// Test the pure detection logic - this mirrors what's in DataField.tsx
-// After refactoring, these tests will import from useDoubleTap.ts
-
-const DOUBLE_CLICK_MS = 280;
-const DOUBLE_CLICK_SLOP = 6; // px
-
-type TapState = {
-    lastDownAt: number;
-    lastDownX: number;
-    lastDownY: number;
-};
-
-/**
- * Pure function version of the double-tap detection algorithm.
- * Returns [isDouble, newState]
- */
-function detectDoubleTap(
-    state: TapState,
-    x: number,
-    y: number,
-    now: number,
-    thresholdMs = DOUBLE_CLICK_MS,
-    slopPx = DOUBLE_CLICK_SLOP
-): [boolean, TapState] {
-    const withinTime = now - state.lastDownAt <= thresholdMs;
-    const dx = Math.abs(x - state.lastDownX);
-    const dy = Math.abs(y - state.lastDownY);
-    const withinSlop = dx <= slopPx && dy <= slopPx;
-    const isDouble = withinTime && withinSlop;
-
-    const newState: TapState = {
-        lastDownAt: now,
-        lastDownX: x,
-        lastDownY: y,
-    };
-
-    return [isDouble, newState];
-}
+import {
+    detectDoubleTap,
+    DOUBLE_TAP_THRESHOLD_MS,
+    DOUBLE_TAP_SLOP_PX,
+    type TapState,
+} from '../hooks/useDoubleTap';
 
 describe('Double-Tap Detection Algorithm', () => {
     const initialState: TapState = { lastDownAt: 0, lastDownX: 0, lastDownY: 0 };
+
+    describe('exported constants', () => {
+        it('has expected default threshold', () => {
+            expect(DOUBLE_TAP_THRESHOLD_MS).toBe(280);
+        });
+
+        it('has expected default slop', () => {
+            expect(DOUBLE_TAP_SLOP_PX).toBe(6);
+        });
+    });
 
     describe('time-based detection', () => {
         it('detects double-tap when second tap is within threshold', () => {

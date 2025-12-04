@@ -5,8 +5,8 @@
 
 import { describe, it, expect, afterAll } from 'vitest';
 import { testId, cleanupTestNode, settle } from './testUtils';
-import { getNodeById, listRootNodes, listChildren } from '../data/repo/treeNodes';
-import { listFieldsForNode } from '../data/repo/dataFields';
+import { getNodeById, listRootNodes, listChildren, createNode } from '../data/repo/treeNodes';
+import { listFieldsForNode, addField } from '../data/repo/dataFields';
 import {
     createRootNodeWithDefaultFields,
     createChildNodeWithDefaultFields,
@@ -221,6 +221,164 @@ describe('Node Creation Service', () => {
             const fields = await listFieldsForNode(id);
 
             expect(fields.length).toBe(0);
+        });
+    });
+
+    /**
+     * Field listing behavior (merged from treeNode.test.ts)
+     */
+    describe('listFieldsForNode behavior', () => {
+        it('returns fields sorted by updatedAt ascending', async () => {
+            const id = testId();
+            createdNodeIds.push(id);
+
+            // Create node without fields first
+            await createNode({
+                id,
+                nodeName: 'Sorted Fields Node',
+                nodeSubtitle: '',
+                parentId: null,
+            });
+
+            // Create fields sequentially with delays to ensure different timestamps
+            await addField({ id: testId(), fieldName: 'First', parentNodeId: id, fieldValue: '1' });
+            await settle(50);
+            await addField({ id: testId(), fieldName: 'Second', parentNodeId: id, fieldValue: '2' });
+            await settle(50);
+            await addField({ id: testId(), fieldName: 'Third', parentNodeId: id, fieldValue: '3' });
+
+            await settle();
+            const fields = await listFieldsForNode(id);
+
+            // Fields should be in creation order (by updatedAt)
+            expect(fields.length).toBe(3);
+            expect(fields[0].fieldName).toBe('First');
+            expect(fields[1].fieldName).toBe('Second');
+            expect(fields[2].fieldName).toBe('Third');
+        });
+
+        it('only returns fields for the specified node', async () => {
+            const nodeA = testId();
+            const nodeB = testId();
+            createdNodeIds.push(nodeA, nodeB);
+
+            await createRootNodeWithDefaultFields({
+                id: nodeA,
+                nodeName: 'Node A',
+                nodeSubtitle: '',
+                defaults: [{ fieldName: 'Field A', fieldValue: 'A' }],
+            });
+
+            await createRootNodeWithDefaultFields({
+                id: nodeB,
+                nodeName: 'Node B',
+                nodeSubtitle: '',
+                defaults: [{ fieldName: 'Field B', fieldValue: 'B' }],
+            });
+
+            await settle();
+            const fieldsA = await listFieldsForNode(nodeA);
+            const fieldsB = await listFieldsForNode(nodeB);
+
+            expect(fieldsA.length).toBe(1);
+            expect(fieldsA[0].fieldName).toBe('Field A');
+
+            expect(fieldsB.length).toBe(1);
+            expect(fieldsB[0].fieldName).toBe('Field B');
+        });
+    });
+
+    /**
+     * Navigation hierarchy tests (merged from treeNode.test.ts)
+     */
+    describe('Navigation hierarchy', () => {
+        it('can traverse from root to child via listChildren', async () => {
+            const rootId = testId();
+            const childId = testId();
+            const grandchildId = testId();
+            createdNodeIds.push(rootId, childId, grandchildId);
+
+            // Create 3-level hierarchy
+            await createRootNodeWithDefaultFields({
+                id: rootId,
+                nodeName: 'Level 0',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await createChildNodeWithDefaultFields({
+                id: childId,
+                parentId: rootId,
+                nodeName: 'Level 1',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await createChildNodeWithDefaultFields({
+                id: grandchildId,
+                parentId: childId,
+                nodeName: 'Level 2',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await settle();
+
+            // Navigate down
+            const level1 = await listChildren(rootId);
+            expect(level1.length).toBe(1);
+            expect(level1[0].id).toBe(childId);
+
+            const level2 = await listChildren(childId);
+            expect(level2.length).toBe(1);
+            expect(level2[0].id).toBe(grandchildId);
+
+            // Verify parentId chain for navigation back up
+            const grandchild = await getNodeById(grandchildId);
+            expect(grandchild?.parentId).toBe(childId);
+
+            const child = await getNodeById(childId);
+            expect(child?.parentId).toBe(rootId);
+
+            const root = await getNodeById(rootId);
+            expect(root?.parentId).toBeNull();
+        });
+
+        it('child appears in listChildren of parent', async () => {
+            const parentId = testId();
+            const childId1 = testId();
+            const childId2 = testId();
+            createdNodeIds.push(parentId, childId1, childId2);
+
+            await createRootNodeWithDefaultFields({
+                id: parentId,
+                nodeName: 'Parent',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await createChildNodeWithDefaultFields({
+                id: childId1,
+                parentId,
+                nodeName: 'Child One',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await createChildNodeWithDefaultFields({
+                id: childId2,
+                parentId,
+                nodeName: 'Child Two',
+                nodeSubtitle: '',
+                defaults: [],
+            });
+
+            await settle();
+            const children = await listChildren(parentId);
+
+            expect(children.length).toBe(2);
+            expect(children.map(c => c.nodeName)).toContain('Child One');
+            expect(children.map(c => c.nodeName)).toContain('Child Two');
         });
     });
 });
