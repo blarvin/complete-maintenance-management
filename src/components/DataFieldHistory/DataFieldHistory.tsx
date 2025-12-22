@@ -2,6 +2,7 @@
  * DataFieldHistory - Inline expandable history showing previous field values.
  * Expands in-place within DataFieldDetails (accordion pattern, not a popover).
  * Shows historical entries in a scrollable list, max ~8 rows.
+ * Selection is cancelled by closing history (chevron) or collapsing field details.
  */
 
 import { component$, useSignal, $, PropFunction } from '@builder.io/qwik';
@@ -14,7 +15,6 @@ export type DataFieldHistoryProps = {
     isOpen: boolean;
     onToggle$: PropFunction<() => void>;
     onPreviewChange$: PropFunction<(value: string | null) => void>;
-    onRevert$: PropFunction<(value: string | null) => void>;
 };
 
 export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
@@ -23,61 +23,29 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     // All entries in reverse chronological order (most recent first)
     const allEntries = [...props.history].reverse();
 
-    const hasSelection = selectedRev.value !== null;
-
     const selectEntry$ = $((entry: HistoryEntry) => {
         selectedRev.value = entry.rev;
         // Preview the newValue from that history entry
         props.onPreviewChange$(entry.newValue);
     });
 
-    const handleCancel$ = $(() => {
-        selectedRev.value = null;
-        props.onPreviewChange$(null);
-    });
-
-    const handleRevert$ = $(async () => {
-        if (selectedRev.value === null) return;
-        const entry = props.history.find(h => h.rev === selectedRev.value);
-        if (entry) {
-            await props.onRevert$(entry.newValue);
-        }
-        selectedRev.value = null;
-    });
-
-    const handleToggle$ = $(() => {
-        // Clear selection when closing
-        if (props.isOpen) {
-            selectedRev.value = null;
-            props.onPreviewChange$(null);
-        }
-        props.onToggle$();
-    });
-
-    const handleChevronKeyDown$ = $((e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleToggle$();
-        }
-    });
-
-    // Format date as mm/dd/yyyy
-    const formatDate = (ts: number): string => {
+    // Format date as dd/mm/yyyy, hh:mm
+    const formatDateTime = (ts: number): string => {
         const d = new Date(ts);
-        return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`;
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear();
+        const hours = d.getHours().toString().padStart(2, '0');
+        const mins = d.getMinutes().toString().padStart(2, '0');
+        return `${day}/${month}/${year}, ${hours}:${mins}`;
     };
 
-    // Check if we have any history to show (more than just the create entry)
+    // Check if we have any history to show
     const hasHistory = props.history.length > 0;
-
-    // Keep handlers for future use but don't render Cancel/Revert buttons for now
-    void handleCancel$;
-    void handleRevert$;
-    void hasSelection;
 
     return (
         <div class={styles.historyWrapper}>
-            {/* Inline expandable history list */}
+            {/* Scrollable history list */}
             {props.isOpen && hasHistory && (
                 <div class={styles.historyList} role="listbox" aria-label="Field value history">
                     {allEntries.map((entry) => (
@@ -96,7 +64,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                                 {entry.newValue || <em>Empty</em>}
                             </span>
                             <span class={styles.historyMeta}>
-                                {formatDate(entry.updatedAt)} {entry.updatedBy}
+                                {formatDateTime(entry.updatedAt)}  by {entry.updatedBy}
                             </span>
                         </button>
                     ))}

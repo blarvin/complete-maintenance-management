@@ -1,6 +1,6 @@
 /**
  * DataFieldDetails - Inline metadata and actions displayed when DataField is expanded.
- * Renders as grid items: metadata text, spacer, history chevron, and actions row.
+ * Renders as grid items: metadata text, spacer/revert, history chevron, and actions row.
  * Uses display:contents so items become direct children of parent grid.
  */
 
@@ -24,6 +24,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     const history = useSignal<HistoryEntry[]>([]);
     const isLoaded = useSignal(false);
     const isHistoryOpen = useSignal(false);
+    const selectedValue = useSignal<string | null>(null);
 
     // Load history on mount
     useVisibleTask$(async () => {
@@ -42,11 +43,13 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     });
 
     const handlePreviewChange$ = $((value: string | null) => {
+        selectedValue.value = value;
         props.onPreviewChange$(value);
     });
 
-    const handleRevert$ = $(async (value: string | null) => {
-        await props.onRevert$(value);
+    const handleRevert$ = $(async () => {
+        if (selectedValue.value === null) return;
+        await props.onRevert$(selectedValue.value);
         // Reload history after revert
         try {
             const h = await getFieldService().getFieldHistory(props.fieldId);
@@ -54,6 +57,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         } catch (e) {
             console.error('Failed to reload field history:', e);
         }
+        selectedValue.value = null;
         isHistoryOpen.value = false;
     });
 
@@ -61,6 +65,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         isHistoryOpen.value = !isHistoryOpen.value;
         // Clear preview when closing
         if (!isHistoryOpen.value) {
+            selectedValue.value = null;
             props.onPreviewChange$(null);
         }
     });
@@ -80,6 +85,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         : '...';
 
     const hasHistory = history.value.length > 0;
+    const hasSelection = selectedValue.value !== null;
 
     // Render as grid items using display:contents wrapper
     // Items become direct children of parent 6-column grid
@@ -88,8 +94,19 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
             {/* Column 4: Metadata (date/time/user) */}
             <span class={styles.metadata}>{metadataText}</span>
             
-            {/* Column 5: Spacer */}
-            <span class={styles.spacer}></span>
+            {/* Column 5: REVERT button (when selection) or Spacer */}
+            {hasSelection ? (
+                <button
+                    type="button"
+                    class={styles.revertButton}
+                    onClick$={handleRevert$}
+                    aria-label="Revert to selected value"
+                >
+                    REVERT
+                </button>
+            ) : (
+                <span class={styles.spacer}></span>
+            )}
             
             {/* Column 6: History chevron */}
             <button
@@ -104,6 +121,19 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
                 {isHistoryOpen.value ? '▾' : '◂'}
             </button>
 
+            {/* History list - spans all 6 columns, expands below */}
+            {isHistoryOpen.value && hasHistory && (
+                <div class={styles.historyRow}>
+                    <DataFieldHistory
+                        fieldId={props.fieldId}
+                        history={history.value}
+                        isOpen={isHistoryOpen.value}
+                        onToggle$={toggleHistory$}
+                        onPreviewChange$={handlePreviewChange$}
+                    />
+                </div>
+            )}
+
             {/* Actions row - spans all 6 columns, flows to new row */}
             <div class={styles.actionsRow}>
                 <button 
@@ -114,18 +144,6 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
                 >
                     Delete Field
                 </button>
-            </div>
-
-            {/* Hidden controls - keep components but don't display */}
-            <div class={styles.hiddenControls}>
-                <DataFieldHistory
-                    fieldId={props.fieldId}
-                    history={history.value}
-                    isOpen={isHistoryOpen.value}
-                    onToggle$={toggleHistory$}
-                    onPreviewChange$={handlePreviewChange$}
-                    onRevert$={handleRevert$}
-                />
             </div>
         </div>
     );

@@ -1,48 +1,53 @@
 /* DataFieldHistory component styles - inline accordion pattern */
 
 .historyWrapper {
-    /* Empty wrapper - history list renders directly inside */
+    /* Wrapper for the history list */
 }
 
-/* Inline history list - fixed max-height, scrollable */
+/* Scrollable history list - max ~8 rows visible */
 .historyList {
     display: flex;
     flex-direction: column;
     max-height: calc(8 * 24px); /* ~8 rows at 24px each */
     overflow-y: auto;
-    margin-top: 4px;
-    border-top: 1px solid #ccc;
-    padding-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    background: #fff;
 }
 
 /* Individual history row */
 .historyRow {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 8px;
+    gap: 16px;
     align-items: baseline;
-    padding: 4px 6px;
+    padding: 4px 8px;
     font-size: 10px;
     border: none;
+    border-bottom: 1px solid #eee;
     background: transparent;
     text-align: left;
     cursor: pointer;
     font-family: inherit;
     width: 100%;
-    border-radius: 2px;
+}
+
+.historyRow:last-child {
+    border-bottom: none;
 }
 
 .historyRow:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.03);
 }
 
 .historyRow:focus-visible {
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.05);
     outline: none;
 }
 
 .historyRowSelected {
     background: #d4e8ff;
+    border-color: #b0d4ff;
 }
 
 .historyRowSelected:hover {
