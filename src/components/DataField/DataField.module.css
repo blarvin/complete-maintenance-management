@@ -11,7 +11,8 @@
     content: '';
     position: absolute;
     top: 0;
-    bottom: 0;
+    /* Only cover the main row, not the delete button area */
+    height: 18px;
     left: 18px;   /* Start after chevron column */
     right: 0;
     background: #e3e3e3;
@@ -26,9 +27,19 @@
     z-index: 1;
 }
 
+/* 6-column grid layout:
+   Col 1: Details chevron (18px)
+   Col 2: Field name (60px) 
+   Col 3: Field value (1fr - flexible)
+   Col 4: Date/Time/User metadata (auto - content width)
+   Col 5: Spacer (1fr - flexible)
+   Col 6: History chevron (18px)
+   
+   Columns 4-6 only have content when expanded.
+*/
 .datafield {
     display: grid;
-    grid-template-columns: 18px 60px 1.5fr;
+    grid-template-columns: 18px 60px 1fr auto 1fr 18px;
     font-size: 10px;
     gap: 4px;
     align-items: baseline;

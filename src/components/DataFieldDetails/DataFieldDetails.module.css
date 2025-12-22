@@ -1,52 +1,60 @@
-/* DataFieldDetails component styles */
+/* DataFieldDetails component styles - inline grid items */
 
-.details {
-    padding: 4px 8px 6px 22px;  /* left: align with label column (skip chevron) */
-    font-size: 11px;
-    color: #000;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+/* Use display:contents so children become grid items in parent */
+.inlineWrapper {
+    display: contents;
 }
 
-.loading {
-    color: #666;
-    font-style: italic;
-}
-
-/* Row containing edit info and history controls */
-.editInfoRow {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.editInfo {
-    display: flex;
-    flex-direction: row;
-    gap: 0;
-    flex-wrap: wrap;
-    flex: 1;
-}
-
-.editText {
-    color: #000;
-}
-
-.editCreated {
+/* Column 4: Metadata (date/time/user) */
+.metadata {
+    font-size: 10px;
     color: #555;
-    margin-left: 4px;
+    white-space: nowrap;
+    align-self: baseline;
 }
 
-/* Spacer when history is open to push controls to the right */
+/* Column 5: Spacer - flexible empty space */
 .spacer {
-    flex: 1;
+    /* Empty spacer column */
+}
+
+/* Column 6: History chevron button */
+.historyChevron {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    color: #000;
+    cursor: pointer;
+    width: 18px;
+    text-align: center;
+    line-height: 1;
+    font-family: inherit;
+    align-self: baseline;
+}
+
+.historyChevron:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.historyChevron:not(:disabled):hover {
+    color: #444;
+}
+
+.historyChevron:focus-visible {
+    outline: 2px solid #0066cc;
+    outline-offset: 1px;
+}
+
+/* Actions row - spans all 6 columns, creating a new row */
+.actionsRow {
+    grid-column: 1 / -1;
+    padding: 4px 0 4px 22px; /* Align with label column (skip chevron) */
 }
 
 .deleteButton {
-    align-self: flex-start;
     background: none;
     border: 1px solid #c00;
     color: #c00;
@@ -66,4 +74,9 @@
 .deleteButton:focus-visible {
     outline: 2px solid #c00;
     outline-offset: 2px;
+}
+
+/* Hidden controls - keep components but don't display */
+.hiddenControls {
+    display: none;
 }

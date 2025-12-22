@@ -1,7 +1,7 @@
 /**
- * DataFieldDetails - Expandable details section for a DataField.
- * Shows "Last Edit" info (who, when, "created" if first entry) and delete button.
- * Includes inline DataFieldHistory accordion for viewing and reverting to previous values.
+ * DataFieldDetails - Inline metadata and actions displayed when DataField is expanded.
+ * Renders as grid items: metadata text, spacer, history chevron, and actions row.
+ * Uses display:contents so items become direct children of parent grid.
  */
 
 import { component$, useSignal, useVisibleTask$, $, PropFunction } from '@builder.io/qwik';
@@ -22,7 +22,7 @@ export type DataFieldDetailsProps = {
 
 export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     const history = useSignal<HistoryEntry[]>([]);
-    const isLoading = useSignal(true);
+    const isLoaded = useSignal(false);
     const isHistoryOpen = useSignal(false);
 
     // Load history on mount
@@ -33,7 +33,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         } catch (e) {
             console.error('Failed to load field history:', e);
         } finally {
-            isLoading.value = false;
+            isLoaded.value = true;
         }
     });
 
@@ -65,59 +65,68 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         }
     });
 
-    // Get the creation entry (rev 0) and the latest entry for "Last Edit"
-    const creationEntry = history.value.find(h => h.action === 'create');
+    // Get the latest entry for metadata display
     const latestEntry = history.value.length > 0 
         ? history.value[history.value.length - 1] 
         : null;
-
-    // Determine if this is the original creation (only one entry)
-    const isCreatedOnly = history.value.length === 1 && creationEntry;
     
     const displayEntry = latestEntry;
-    const editAt = displayEntry?.updatedAt ? formatTimestampShort(displayEntry.updatedAt) : 'unknown';
-    const editBy = displayEntry?.updatedBy ?? 'unknown';
+    const editAt = displayEntry?.updatedAt ? formatTimestampShort(displayEntry.updatedAt) : '';
+    const editBy = displayEntry?.updatedBy ?? '';
 
+    // Format the metadata text - show placeholder while loading
+    const metadataText = isLoaded.value && editAt 
+        ? `${editAt}  ${editBy}`
+        : '...';
+
+    const hasHistory = history.value.length > 0;
+
+    // Render as grid items using display:contents wrapper
+    // Items become direct children of parent 6-column grid
     return (
-        <div class={styles.details}>
-            {isLoading.value ? (
-                <span class={styles.loading}>Loading...</span>
-            ) : (
-                <>
-                    {/* Edit info row with history controls on the right */}
-                    <div class={styles.editInfoRow}>
-                        {/* Only show "Last Edit" text when history is collapsed */}
-                        {!isHistoryOpen.value && (
-                            <div class={styles.editInfo}>
-                                <span class={styles.editText}>
-                                    Last Edit {editAt} by {editBy}
-                                </span>
-                                {isCreatedOnly && (
-                                    <span class={styles.editCreated}>(created)</span>
-                                )}
-                            </div>
-                        )}
-                        {/* When history is open, let it take the full width */}
-                        {isHistoryOpen.value && <div class={styles.spacer} />}
-                        <DataFieldHistory
-                            fieldId={props.fieldId}
-                            history={history.value}
-                            isOpen={isHistoryOpen.value}
-                            onToggle$={toggleHistory$}
-                            onPreviewChange$={handlePreviewChange$}
-                            onRevert$={handleRevert$}
-                        />
-                    </div>
-                    <button 
-                        type="button" 
-                        class={styles.deleteButton}
-                        onClick$={handleDelete$}
-                        aria-label="Delete this field"
-                    >
-                        Delete Field
-                    </button>
-                </>
-            )}
+        <div class={styles.inlineWrapper}>
+            {/* Column 4: Metadata (date/time/user) */}
+            <span class={styles.metadata}>{metadataText}</span>
+            
+            {/* Column 5: Spacer */}
+            <span class={styles.spacer}></span>
+            
+            {/* Column 6: History chevron */}
+            <button
+                type="button"
+                class={styles.historyChevron}
+                onClick$={toggleHistory$}
+                aria-expanded={isHistoryOpen.value}
+                aria-label={isHistoryOpen.value ? 'Close field history' : 'Open field history'}
+                disabled={!hasHistory}
+                title={!hasHistory ? 'No history available' : 'View field history'}
+            >
+                {isHistoryOpen.value ? '▾' : '◂'}
+            </button>
+
+            {/* Actions row - spans all 6 columns, flows to new row */}
+            <div class={styles.actionsRow}>
+                <button 
+                    type="button" 
+                    class={styles.deleteButton}
+                    onClick$={handleDelete$}
+                    aria-label="Delete this field"
+                >
+                    Delete Field
+                </button>
+            </div>
+
+            {/* Hidden controls - keep components but don't display */}
+            <div class={styles.hiddenControls}>
+                <DataFieldHistory
+                    fieldId={props.fieldId}
+                    history={history.value}
+                    isOpen={isHistoryOpen.value}
+                    onToggle$={toggleHistory$}
+                    onPreviewChange$={handlePreviewChange$}
+                    onRevert$={handleRevert$}
+                />
+            </div>
         </div>
     );
 });

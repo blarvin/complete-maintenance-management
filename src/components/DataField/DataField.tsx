@@ -149,7 +149,9 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     return (
         <div class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded]} ref={rootEl}>
+            {/* Main row: 6-column grid with columns 4-6 filled when expanded */}
             <div class={styles.datafield}>
+                {/* Column 1: Details chevron */}
                 <button
                     type="button"
                     class={styles.datafieldChevron}
@@ -159,7 +161,9 @@ export const DataField = component$<DataFieldProps>((props) => {
                 >
                     {isDetailsExpanded ? '▾' : '▸'}
                 </button>
+                {/* Column 2: Field name */}
                 <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
+                {/* Column 3: Field value */}
                 {isEditing ? (
                     <input
                         class={[styles.datafieldValue, editValue.value && styles.datafieldValueUnderlined]}
@@ -202,17 +206,18 @@ export const DataField = component$<DataFieldProps>((props) => {
                         {displayValue || <span class={styles.datafieldPlaceholder}>Empty</span>}
                     </div>
                 )}
+                {/* Columns 4-6: Filled by DataFieldDetails when expanded (using display:contents) */}
+                {isDetailsExpanded && (
+                    <DataFieldDetails
+                        fieldId={props.id}
+                        fieldName={props.fieldName}
+                        currentValue={currentValue.value}
+                        onDelete$={handleDelete$}
+                        onPreviewChange$={handlePreviewChange$}
+                        onRevert$={handleRevert$}
+                    />
+                )}
             </div>
-            {isDetailsExpanded && (
-                <DataFieldDetails
-                    fieldId={props.id}
-                    fieldName={props.fieldName}
-                    currentValue={currentValue.value}
-                    onDelete$={handleDelete$}
-                    onPreviewChange$={handlePreviewChange$}
-                    onRevert$={handleRevert$}
-                />
-            )}
         </div>
     );
 });

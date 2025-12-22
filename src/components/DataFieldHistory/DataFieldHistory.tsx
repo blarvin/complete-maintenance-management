@@ -70,40 +70,13 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     // Check if we have any history to show (more than just the create entry)
     const hasHistory = props.history.length > 0;
 
+    // Keep handlers for future use but don't render Cancel/Revert buttons for now
+    void handleCancel$;
+    void handleRevert$;
+    void hasSelection;
+
     return (
         <div class={styles.historyWrapper}>
-            {/* Control row: Cancel, Revert, Chevron */}
-            <div class={styles.controlRow}>
-                <button
-                    type="button"
-                    class={[styles.actionButton, styles.cancelButton]}
-                    disabled={!hasSelection}
-                    onClick$={handleCancel$}
-                >
-                    Cancel
-                </button>
-                <button
-                    type="button"
-                    class={[styles.actionButton, styles.revertButton]}
-                    disabled={!hasSelection}
-                    onClick$={handleRevert$}
-                >
-                    REVERT
-                </button>
-                <button
-                    type="button"
-                    class={styles.chevronButton}
-                    onClick$={handleToggle$}
-                    onKeyDown$={handleChevronKeyDown$}
-                    aria-expanded={props.isOpen}
-                    aria-label={props.isOpen ? 'Close field history' : 'Open field history'}
-                    disabled={!hasHistory}
-                    title={!hasHistory ? 'No history available' : 'View field history'}
-                >
-                    <span class={[styles.chevron, props.isOpen && styles.chevronOpen]}></span>
-                </button>
-            </div>
-
             {/* Inline expandable history list */}
             {props.isOpen && hasHistory && (
                 <div class={styles.historyList} role="listbox" aria-label="Field value history">
