@@ -702,3 +702,273 @@ The service registry lives at module scope (outside components), so it's availab
 - `src/data/services/index.ts` — New service registry with interfaces and getters
 - `src/components/TreeNode/types.ts` — Discriminated union props for ISP
 - All components/hooks using services — Changed from direct imports to `getNodeService()` / `getFieldService()`
+
+---
+
+## Phase 1 Implementation Checklist
+
+### ✅ Core Framework & Build Setup
+
+#### Runtime & Tooling
+
+- **Node.js 20.x LTS**: Chosen for stability and long-term support
+- **npm package manager**: Simple, reliable, no additional complexity
+- **TypeScript strict mode**: All exported APIs use strict typing, no `any` types
+- **ESLint + Prettier**: Default configurations, local-only (CI integration deferred)
+- **Qwik + Qwik City**: Chosen for resumability, static site generation (SSG) for Netlify deployment
+- **Static site adapter**: No server runtime code in Phase 1
+- **Single route `/`**: No URL changes for navigation (per SPEC), in-app state drives view switching
+
+#### Development Workflow
+
+- **Local development**: `npm run dev` (SSR mode) + `npm run preview` for production-like behavior
+- **Build process**: `npm run build` produces static assets for Netlify
+- **Type checking**: `npm run typecheck` available for CI/pre-commit hooks
+- **Testing**: Vitest with comprehensive test coverage for FSM state, services, and hooks
+
+### ✅ State Management Architecture
+
+#### FSM-Patterned Centralized State
+
+- **Finite State Machine design**: Explicit states, guarded transitions, impossible invalid states
+- **Centralized store**: `src/state/appState.ts` with Qwik `useStore` + context providers
+- **No external state library**: Qwik's built-in state management sufficient for Phase 1 complexity
+- **Guarded transitions**: Navigation blocked during construction, single-field editing guarantee
+
+#### State Types & Transitions
+
+- **ViewState**: `ROOT | BRANCH(nodeId)` - controls which view is rendered
+- **TreeNodeState**: `ROOT | PARENT | CHILD | UNDER_CONSTRUCTION` - node positioning/rendering modes
+- **DataCardState**: `COLLAPSED | EXPANDED | UNDER_CONSTRUCTION` - card expansion states
+- **DataFieldState**: `DISPLAY | EDITING` - single-field editing guarantee
+- **DataFieldDetailsState**: `COLLAPSED | EXPANDED` - field metadata expansion
+
+#### Navigation Flow
+
+- **Down-tree navigation**: `navigateToNode()` with history tracking
+- **Up-tree navigation**: `navigateUp()` with parent resolution and history popping
+- **Root navigation**: `navigateToRoot()` direct transition
+- **Construction guards**: All navigation blocked during node/field creation
+
+#### UI Preferences Persistence
+
+- **localStorage keys**: `treeview:ui:prefs` for card/field expansion states
+- **Automatic persistence**: Every toggle operation saves immediately
+- **Load on init**: UI state restored from localStorage on app startup
+- **Browser session survival**: Preferences persist across page reloads
+
+### ✅ Data Layer & Persistence
+
+#### Firebase Firestore Integration
+
+- **Web SDK**: Direct integration with IndexedDB offline persistence enabled
+- **Client-generated IDs**: `crypto.randomUUID()` for all entity IDs
+- **Client-assigned timestamps**: `Date.now()` for `updatedAt` fields (server assignment deferred)
+- **User identity**: Constant `"localUser"` (authentication deferred to Phase 2)
+- **Debounced mutations**: ~300ms debounce to reduce write churn
+- **Integrity helpers**: Maintain `childNodes`/`dataFields` mirrors before writes
+
+#### Data Models & Relationships
+
+- **TreeNode entity**: Hierarchical asset representation with `parentId: string | null`
+- **DataField entity**: Configurable attributes with `parentNodeId` references
+- **DataFieldHistory entity**: Append-only audit log for value changes (Phase 1 minimal)
+- **Entity relationships**: TreeNode has N DataFields, DataField belongs to 1 TreeNode
+- **Sorting**: Children by `updatedAt` ascending, DataFields by `updatedAt` ascending
+
+#### Service Layer Architecture
+
+- **Dependency Inversion**: Components depend on interfaces, not concrete Firestore implementations
+- **Service interfaces**: `INodeService`, `IFieldService` for testability and backend swapping
+- **Module-level registry**: `getNodeService()`, `getFieldService()` avoid Qwik serialization issues
+- **Safe async operations**: `safeAsync()` wrapper with error logging and fallback handling
+- **Parallel data loading**: `getNodeWithChildren()` fetches node + children simultaneously
+
+#### Data Operations
+
+- **CRUD operations**: Full create/read/update/delete for nodes and fields
+- **Batch field creation**: New nodes created with default fields in parallel
+- **Field value updates**: With history tracking and optimistic UI updates
+- **Field deletion**: With history entries and parent refresh
+- **Node cascading**: Delete operations remove node + all descendants + fields (Phase 1: leaf-only UI)
+
+### ✅ Component Architecture
+
+#### View Components
+
+- **RootView**: Grid layout of top-level nodes + "Create New Asset" button
+- **BranchView**: Parent node at top + indented children grid + multiple child creation buttons
+- **Single route rendering**: `/` renders either view based on FSM state
+
+#### TreeNode Component System
+
+- **TreeNode orchestrator**: Delegates to display/construction subcomponents based on state
+- **Discriminated unions**: ISP compliance with type-safe props (`TreeNodeDisplayProps | TreeNodeConstructionProps`)
+- **State-driven rendering**: Component adapts to `ROOT | PARENT | CHILD | UNDER_CONSTRUCTION` states
+- **Accessibility first**: Full keyboard navigation, ARIA attributes, semantic HTML
+
+#### DataCard & DataField System
+
+- **Expandable DataCard**: Grid-based layout with smooth CSS transitions (0fr → 1fr)
+- **DataField editing**: Double-tap (280ms threshold, 6px slop) or Enter key activation
+- **Single-field editing**: Only one field can be edited at a time (per SPEC)
+- **Field details expansion**: Metadata, history, and delete actions in expandable section
+- **Field creation**: Double-tap "+ Add Field" → combo box with prefab library selection
+
+#### Creation & Construction Flows
+
+- **Node creation**: Double-tap buttons → in-situ form with Name (required) + Subtitle + default fields
+- **Field creation**: Prefab library selection from hardcoded list (15 field types)
+- **Construction cancellation**: Click outside or Escape key cancels active construction
+- **Save completion**: Enter key or double-tap input saves and completes construction
+
+#### Button & Control Components
+
+- **CreateNodeButton**: Contextual variants (`root` large button, `child` inline buttons)
+- **UpButton**: Navigation with parent context in aria-label
+- **Shared double-tap hook**: Reusable `useDoubleTap` with configurable thresholds
+- **Shared node creation hook**: `useNodeCreation` extracts common construction flow
+
+### ✅ Styling & UI/UX
+
+#### CSS Modules Architecture
+
+- **Component-colocated styles**: Each component has matching `.module.css` file
+- **Plain CSS**: No CSS-in-JS, no Tailwind (kept simple per prototyping principles)
+- **Design tokens**: Centralized `tokens.css` with CSS custom properties
+- **Global styles**: Reset, base styles, and view-level layout in `global.css`
+
+#### Mobile-First Design
+
+- **Vertical scrolling**: Optimized for mobile, single-column layouts
+- **Touch interactions**: Double-tap editing, pointer events with slop detection
+- **Keyboard support**: Full navigation with Tab, Enter, Space, Escape
+- **Focus management**: `:focus-visible` styles for keyboard users
+
+#### Animation & Transitions
+
+- **Card expansion**: CSS grid `grid-template-rows: 0fr → 1fr` with simultaneous transforms
+- **Chevron rotation**: Smooth 180° rotation on expand/collapse
+- **No layout thrashing**: Content-aware expansion without reflow issues
+
+### ✅ User Experience Features
+
+#### Navigation & Interaction
+
+- **In-app navigation**: No URL changes, state-driven view switching
+- **History tracking**: Browser back/forward support through navigation history
+- **Construction blocking**: No navigation during node/field creation
+- **Single-field editing**: Guaranteed mutual exclusion of editing states
+
+#### DataField Library
+
+- **Hardcoded prefabs**: 15 field types from SPEC (Description, Type Of, Tags, etc.)
+- **Combo box interface**: Chevron opens dropdown, typeahead filtering (deferred)
+- **Default fields**: "Type Of", "Description", "Tags" added to new nodes
+- **Field naming**: User selects from library (no custom field creation in Phase 1)
+
+#### Accessibility & Keyboard Support
+
+- **Semantic HTML**: `<article>`, `<h2>`, `<button>`, proper heading hierarchy
+- **ARIA attributes**: `aria-expanded`, `aria-label`, `aria-labelledby`, `role="region"`
+- **Keyboard navigation**: Tab order, Enter/Space activation, Escape cancellation
+- **Screen reader support**: All interactive elements in accessibility tree
+- **AI agent compatibility**: Descriptive labels for programmatic interaction
+
+### ✅ Testing & Quality Assurance
+
+#### Test Coverage
+
+- **FSM state testing**: Comprehensive transition and selector testing (`appState.test.ts`)
+- **Service layer testing**: Mocked Firestore operations with interface compliance
+- **Hook testing**: Double-tap detection, node creation flows
+- **UI preference testing**: localStorage persistence and loading
+- **Error handling testing**: Fallback behavior and logging verification
+
+#### Manual Testing Flows
+
+- **Smoke tests**: Node creation, navigation up/down, field editing, persistence across reloads
+- **Edge case testing**: Construction cancellation, multiple field interactions
+- **Accessibility testing**: Keyboard-only navigation, screen reader compatibility
+
+#### Code Quality
+
+- **TypeScript strict**: No `any` types, full type safety
+- **ESLint compliance**: Code style consistency
+- **Refactoring audit**: 12 major improvements completed (constants, hooks, services, etc.)
+- **Single responsibility**: Components < 100 lines, functions < 20 lines
+
+### ✅ Error Handling & Resilience
+
+#### Service Layer Safety
+
+- **safeAsync wrapper**: Catches errors, logs with context, returns fallbacks
+- **Graceful degradation**: Empty arrays for missing data, logged errors for debugging
+- **Context-aware logging**: Service and operation names in error messages
+- **No silent failures**: All async operations have explicit error handling
+
+#### User Experience Continuity
+
+- **Optimistic updates**: UI updates immediately, syncs in background
+- **Offline persistence**: Firestore IndexedDB handles network failures gracefully
+- **State consistency**: FSM prevents invalid state combinations
+- **Construction safety**: Cancel on outside click, blocked navigation during creation
+
+### ✅ Refactoring Achievements
+
+#### Code Organization
+
+- **Constants centralization**: Magic values moved to `src/constants.ts`
+- **Hook extraction**: `useDoubleTap`, `useNodeCreation` for reusable logic
+- **Service layer**: DIP compliance with interface-based data access
+- **Component splitting**: TreeNode divided into focused subcomponents
+- **CSS Modules migration**: Component-colocated styles, removed global CSS bloat
+
+#### Architecture Improvements
+
+- **Interface Segregation**: Discriminated unions prevent invalid prop combinations
+- **Dependency Inversion**: Components depend on abstractions, not implementations
+- **Single Responsibility**: Each function/component has one clear purpose
+- **Composition over inheritance**: Hooks and composed components
+- **Error boundaries**: Service layer catches and handles data layer failures
+
+### 🚧 Deferred to Later Phases
+
+#### Advanced Features (Phase 2+)
+
+- **Authentication**: Real user identity instead of `"localUser"`
+- **Server timestamps**: Server-assigned `updatedAt` with conflict resolution
+- **Multi-user features**: User attribution, collaboration, permissions
+- **Rich field types**: Images, dates, enums beyond text fields
+- **Advanced navigation**: Breadcrumbs, search, filtering
+- **Export/import**: Collection backup and restore
+- **Audit enhancements**: Full history with field renames, multi-user provenance
+
+#### UI/UX Enhancements
+
+- **Tree line decorations**: Visual guides between parent-child relationships
+- **Drag & drop**: Reordering fields within DataCards
+- **Typeahead filtering**: Real-time field name filtering in combo boxes
+- **Context menus**: Right-click actions for advanced operations
+- **Bulk operations**: Multi-select, batch actions
+- **Advanced editing**: Rich text, validation, auto-complete
+
+#### Performance & Scalability
+
+- **Progressive loading**: Breadth-first data fetching with virtualization
+- **Background sync**: Automatic cloud reconciliation with conflict resolution
+- **Caching strategies**: Service worker caching for offline resilience
+- **Database optimization**: Indexes, partitioning, query optimization
+- **Bundle optimization**: Code splitting, lazy loading, tree shaking
+
+#### Development Experience
+
+- **Visual testing**: Screenshot comparisons, visual regression testing
+- **E2E testing**: Playwright/Cypress for full user journey testing
+- **Performance monitoring**: Bundle analysis, runtime performance tracking
+- **Error monitoring**: Sentry/DataDog integration for production error tracking
+- **CI/CD pipeline**: Automated testing, deployment, and release management
+
+---
+
+This comprehensive checklist captures all implemented features, architectural decisions, and deferred work for Phase 1. The implementation follows prototyping principles: simple, working solutions that can evolve into richer features in later phases.
