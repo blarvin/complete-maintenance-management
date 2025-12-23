@@ -40,8 +40,11 @@
     padding: 0 6px 0 0; /* Space between button and title */
 }
 
+/* Non-button focusable element - needs explicit cursor hiding */
 .nodeBodyClickable {
     cursor: pointer;
+    user-select: none;
+    caret-color: transparent;
 }
 
 .nodeTitle {
@@ -49,6 +52,8 @@
     font-size: 12px;
     line-height: 1;
     margin: 0 0 6px 0;
+    user-select: none; /* Prevent text cursor on click */
+    cursor: default;
 }
 
 /* Reset h2 defaults when used as node title */
@@ -57,12 +62,16 @@ h2.nodeTitle {
     font-size: 12px;
     line-height: 1;
     margin: 0 0 6px 0;
+    user-select: none;
+    cursor: default;
 }
 
 .nodeSubtitle {
     font-size: 9px;
     color: #666;
     line-height: 1;
+    user-select: none; /* Prevent text cursor on click */
+    cursor: default;
 }
 
 /* Under-construction: ensure header inputs stack vertically and fill width */
@@ -75,6 +84,8 @@ input.nodeSubtitle {
     outline: none;
     background: transparent;
     font: inherit;
+    user-select: text; /* Allow text selection in inputs */
+    cursor: text;
 }
 
 .nodeChevron {

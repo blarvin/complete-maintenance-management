@@ -1,10 +1,12 @@
 /**
  * TreeNodeConstruction - Under-construction mode UI for TreeNode.
  * Renders input fields for name/subtitle and default field inputs.
+ * Matches the visual layout of TreeNodeDisplay for consistency.
  */
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { DataCard } from '../DataCard/DataCard';
+import { CreateDataField } from '../CreateDataField/CreateDataField';
 import type { ConstructionField, CreateNodePayload } from './types';
 import styles from './TreeNode.module.css';
 import fieldStyles from '../DataField/DataField.module.css';
@@ -40,16 +42,32 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
         });
     });
 
+    const handleKeyDown$ = $((e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleCreate$();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            props.onCancel$();
+        }
+    });
+
     const updateFieldValue$ = $((index: number, value: string) => {
         fields.value = fields.value.map((f, i) =>
             i === index ? { ...f, fieldValue: value || null } : f
         );
     });
 
+    const addField$ = $((fieldName: string, fieldValue: string | null) => {
+        fields.value = [...fields.value, { fieldName, fieldValue }];
+    });
+
     const titleId = `node-title-${props.id}`;
+    // Match the DataCard indent of normal child nodes
+    const indentVar = '50px';
 
     return (
-        <div class={styles.nodeWrapper}>
+        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
             <article class={[styles.node, styles.nodeExpanded]} aria-labelledby={titleId}>
                 <div class={styles.nodeBody}>
                     <div>
@@ -59,6 +77,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                             placeholder="Name"
                             value={nameValue.value}
                             onInput$={(e) => (nameValue.value = (e.target as HTMLInputElement).value)}
+                            onKeyDown$={handleKeyDown$}
                             aria-label="Node name"
                             id={titleId}
                         />
@@ -67,6 +86,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                             placeholder="Subtitle / Location / Short description"
                             value={subtitleValue.value}
                             onInput$={(e) => (subtitleValue.value = (e.target as HTMLInputElement).value)}
+                            onKeyDown$={handleKeyDown$}
                             aria-label="Node subtitle"
                         />
                     </div>
@@ -81,19 +101,29 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </button>
                 </div>
             </article>
-            <DataCard nodeId={props.id} isOpen={true}>
+            <DataCard nodeId={props.id} isOpen={true} hideAddField>
                 {fields.value.map((f, idx) => (
-                    <div class={fieldStyles.datafield} key={`${f.fieldName}-${idx}`}>
-                        <div class={fieldStyles.datafieldLabel}>{f.fieldName}:</div>
+                    <div class={fieldStyles.constructionField} key={`${f.fieldName}-${idx}`}>
+                        <span class={fieldStyles.datafieldLabel}>{f.fieldName}:</span>
                         <input
                             class={[fieldStyles.datafieldValue, f.fieldValue && fieldStyles.datafieldValueUnderlined]}
                             value={f.fieldValue ?? ''}
                             onInput$={(e) => updateFieldValue$(idx, (e.target as HTMLInputElement).value)}
+                            onKeyDown$={handleKeyDown$}
                             aria-label={`${f.fieldName} value`}
                         />
                     </div>
                 ))}
-                <div class={styles.constructionActions}>
+                {/* + Add Field inline with default fields */}
+                <CreateDataField 
+                    nodeId={props.id} 
+                    onCreated$={$(() => {
+                        // In construction mode, we handle field creation locally
+                        // This shouldn't trigger since we're not in DB yet
+                    })}
+                />
+                {/* Cancel/Create buttons at the very bottom */}
+                <div q:slot="actions" class={styles.constructionActions}>
                     <button type="button" onClick$={props.onCancel$}>Cancel</button>
                     <button type="button" onClick$={handleCreate$}>Create</button>
                 </div>

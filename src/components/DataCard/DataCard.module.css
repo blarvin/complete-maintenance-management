@@ -43,6 +43,10 @@
     
     /* Match the wrapper transition exactly to prevent "pop-in" */
     transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Prevent text cursor in gaps */
+    user-select: none;
+    cursor: default;
 }
 
 .datacardOpen {

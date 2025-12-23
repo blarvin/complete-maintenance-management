@@ -6,6 +6,8 @@ export type DataCardProps = {
     isOpen?: boolean;
     nodeId: string;
     onFieldCreated$?: PropFunction<() => void>;
+    /** Hide the "+ Add Field" button (used in construction mode where it's shown inline) */
+    hideAddField?: boolean;
     children?: any;
 };
 
@@ -19,7 +21,10 @@ export const DataCard = component$<DataCardProps>((props) => {
                 aria-label="Node details"
             >
                 <Slot />
-                <CreateDataField nodeId={props.nodeId} onCreated$={props.onFieldCreated$} />
+                {!props.hideAddField && (
+                    <CreateDataField nodeId={props.nodeId} onCreated$={props.onFieldCreated$} />
+                )}
+                <Slot name="actions" />
                 </div>
             </div>
         </div>

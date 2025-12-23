@@ -35,6 +35,33 @@ Moved from SPECIFICATION.md → Example DataFields:
 
 Note: Media upload, preview, storage, and caching are out of scope for Phase 1. All fields treated as text in Phase 1.
 
+### DataField Component Library Architecture
+
+Current `DataField.tsx` is a proto-component handling text values. Future phases need:
+
+**Component Types:**
+- TextDataField (current) - simple text values
+- ImageDataField - single image with preview/upload
+- ImageCarouselDataField - multiple images with carousel
+- NumberDataField - numerical values with units
+- DateDataField - date/datetime picker
+- SelectDataField - dropdown from predefined options
+- LinkDataField - URL with preview
+
+**Refactoring Strategy:**
+1. Extract shared layout/grid into `FieldRow` wrapper component
+2. Extract edit state management into `useFieldEdit` hook  
+3. Create `FieldValue` interface for pluggable value renderers
+4. Each component type implements: display mode, edit mode, validation
+5. Field type registry maps `componentType` → renderer component
+
+**Current Pain Points to Address:**
+- Edit state FSM tightly coupled to DataField component
+- Double-tap detection could be a shared hook (already is: `useDoubleTap`)
+- Grid layout repeated in TreeNodeConstruction
+
+Note: Phase 1 text-only is sufficient. Refactor when adding second component type.
+
 ### Data Fetching and Sync Strategy
 
 Moved from SPECIFICATION.md → Data Fetching Strategy:

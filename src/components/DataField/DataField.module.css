@@ -4,6 +4,8 @@
     display: flex;
     flex-direction: column;
     position: relative;
+    user-select: none; /* Prevent text cursor anywhere in the field row */
+    cursor: default;
 }
 
 /* When details are expanded, show light grey background via pseudo-element */
@@ -43,6 +45,19 @@
     font-size: 10px;
     gap: 4px;
     align-items: baseline;
+    user-select: none; /* Prevent text cursor in grid gaps */
+    cursor: default;
+}
+
+/* Construction mode field - same as datafield but without the chevron column */
+.constructionField {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    font-size: 10px;
+    gap: 4px;
+    align-items: baseline;
+    user-select: none;
+    cursor: default;
 }
 
 .datafieldChevron {
@@ -72,6 +87,7 @@
     color: #111;
     font-weight: normal;
     cursor: default;
+    user-select: none; /* Prevent text cursor on click */
 }
 
 .datafieldValue {
@@ -82,8 +98,11 @@
     text-decoration: underline;
 }
 
+/* Non-button focusable element - needs explicit cursor hiding */
 .datafieldValueEditable {
     cursor: pointer;
+    user-select: none;
+    caret-color: transparent;
 }
 
 /* Under-construction: value inputs mimic final text appearance */
@@ -99,6 +118,8 @@ input.datafieldValue {
     color: inherit;
     border-bottom: 1px solid #222;
     /* show underline even when empty */
+    user-select: text; /* Allow text selection in edit inputs */
+    cursor: text;
 }
 
 .datafieldPlaceholder {

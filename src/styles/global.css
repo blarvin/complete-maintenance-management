@@ -52,6 +52,23 @@ body {
 }
 
 /* ========================= */
+/* INTERACTIVE ELEMENT RESET */
+/* ========================= */
+
+/* Prevent text cursor on all buttons (they're interactive, not text) */
+button {
+    user-select: none;
+    caret-color: transparent;
+}
+
+/* Utility class for non-button focusable elements (divs with tabIndex, etc.) */
+.interactive {
+    user-select: none;
+    cursor: default;
+    caret-color: transparent;
+}
+
+/* ========================= */
 /* ROOT VIEW                 */
 /* ========================= */
 
