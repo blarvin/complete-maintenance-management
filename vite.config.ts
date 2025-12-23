@@ -5,6 +5,9 @@ import { qwikVite } from '@builder.io/qwik/optimizer';
 export default defineConfig(() => {
     return {
         plugins: [qwikCity(), qwikVite()],
+        server: {
+            allowedHosts: ['host.docker.internal'],
+        },
     };
 });
 
