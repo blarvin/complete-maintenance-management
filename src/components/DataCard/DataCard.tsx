@@ -8,12 +8,14 @@ export type DataCardProps = {
     onFieldCreated$?: PropFunction<() => void>;
     /** Hide the "+ Add Field" button (used in construction mode where it's shown inline) */
     hideAddField?: boolean;
+    /** Extend width to compensate for branch indent (child construction mode) */
+    extendWidth?: boolean;
     children?: any;
 };
 
 export const DataCard = component$<DataCardProps>((props) => {
     return (
-        <div class={[styles.wrapper, props.isOpen && styles.wrapperOpen]}>
+        <div class={[styles.wrapper, props.isOpen && styles.wrapperOpen, props.extendWidth && styles.wrapperExtended]}>
             <div class={styles.inner}>
             <div
                 class={[styles.datacard, props.isOpen && styles.datacardOpen]}

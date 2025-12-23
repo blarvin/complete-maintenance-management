@@ -65,13 +65,11 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     });
 
     const titleId = `node-title-${props.id}`;
-    // Match the DataCard indent of normal child nodes
-    const indentVar = '50px';
-    // Branch indent to compensate for when child construction needs wider DataCard
-    const branchIndent = props.isChildConstruction ? '32px' : '0px';
+    // Match the DataCard indent: 18px for child construction, 50px for root construction
+    const indentVar = props.isChildConstruction ? '18px' : '50px';
 
     return (
-        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar, '--branch-indent': branchIndent }}>
+        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
             <article class={[styles.node, styles.nodeExpanded]} aria-labelledby={titleId}>
                 <div class={styles.nodeBody}>
                     <div>

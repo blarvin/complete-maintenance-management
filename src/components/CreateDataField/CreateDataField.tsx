@@ -47,6 +47,10 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     });
 
     const cancel$ = $(() => {
+        // Blur any focused element to prevent caret appearing elsewhere
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
         isConstructing.value = false;
         fieldName.value = '';
         fieldValue.value = '';

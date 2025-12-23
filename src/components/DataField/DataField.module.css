@@ -6,6 +6,7 @@
     position: relative;
     user-select: none; /* Prevent text cursor anywhere in the field row */
     cursor: default;
+    caret-color: transparent; /* Prevent blinking caret */
 }
 
 /* When details are expanded, show light grey background via pseudo-element */
@@ -47,6 +48,7 @@
     align-items: baseline;
     user-select: none; /* Prevent text cursor in grid gaps */
     cursor: default;
+    caret-color: transparent; /* Prevent blinking caret */
 }
 
 /* Construction mode field - same as datafield but without the chevron column */

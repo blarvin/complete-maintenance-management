@@ -2,6 +2,9 @@
 
 .historyWrapper {
     /* Wrapper for the history list */
+    /* Prevent text cursor */
+    user-select: none;
+    caret-color: transparent;
 }
 
 /* Scrollable history list - max ~8 rows visible */
@@ -13,6 +16,9 @@
     border: 1px solid #ccc;
     border-radius: 2px;
     background: #fff;
+    /* Prevent text cursor */
+    user-select: none;
+    caret-color: transparent;
 }
 
 /* Individual history row */

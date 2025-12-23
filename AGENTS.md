@@ -8,33 +8,26 @@ This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get sta
 bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
+bd comment <id> "msg" # Add implementation notes
+bd sync               # Sync beads data
+# NOTE: Only user runs bd close, git commit, git push
 ```
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, complete all steps below.
 
 **MANDATORY WORKFLOW:**
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
+1. **File issues for remaining work** - Create issues for anything that needs follow-up, and tell the User about them.
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+3. **Update issue status** - Add comments to issues explaining work done; leave open for user to close
+4. **Sync beads** - Run `bd sync` to sync issue data
+5. **Hand off** - Provide context for next session
+6. **Suggest commit message** - Provide a commit message (10 words or less)
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- Only the USER commits and pushes code (`git commit`, `git push`)
+- Agent can run `bd sync` but NOT `git commit` or `git push`
+- Agent leaves issues open; only user closes after verification
 
