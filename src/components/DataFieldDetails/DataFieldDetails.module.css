@@ -5,20 +5,43 @@
     display: contents;
 }
 
-/* Column 4: Metadata (date/time/user) */
-.metadata {
-    font-size: 10px;
-    color: #555;
-    white-space: nowrap;
-    align-self: baseline;
-}
-
-/* Column 5: Spacer - flexible empty space */
+/* Column 4: Spacer - flexible empty space (or button group) */
 .spacer {
     /* Empty spacer column */
 }
 
-/* Column 5: REVERT button (when selection is active) */
+/* Button group containing CANCEL + REVERT */
+.buttonGroup {
+    display: flex;
+    gap: 4px;
+    align-self: baseline;
+}
+
+/* CANCEL button - muted style */
+.cancelButton {
+    background: none;
+    border: 1px solid #999;
+    color: #666;
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 2px;
+    white-space: nowrap;
+}
+
+.cancelButton:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.cancelButton:focus-visible {
+    outline: 2px solid #666;
+    outline-offset: 2px;
+}
+
+/* Column 4: REVERT button (when selection is active, in button group) */
 .revertButton {
     background: none;
     border: 1px solid #0066cc;
@@ -41,6 +64,15 @@
 .revertButton:focus-visible {
     outline: 2px solid #0066cc;
     outline-offset: 2px;
+}
+
+/* Column 5: Metadata (date/time/user) - aligns with history entries */
+.metadata {
+    font-size: 10px;
+    color: #555;
+    white-space: nowrap;
+    align-self: baseline;
+    text-align: right;
 }
 
 /* Column 6: History chevron button */
@@ -104,5 +136,7 @@
 /* History list row - spans all 6 columns */
 .historyRow {
     grid-column: 1 / -1;
-    padding: 0 0 0 78px; /* Align with Field Value column (18 + 60 = 78px) */
+    /* Left: align with Field Value column (18px chevron + 60px label = 78px) */
+    /* Right: leave 18px for chevron column so metadata aligns with col 5 above */
+    padding: 0 18px 0 78px;
 }

@@ -87,26 +87,43 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     const hasHistory = history.value.length > 0;
     const hasSelection = selectedValue.value !== null;
 
+    const handleCancel$ = $(() => {
+        selectedValue.value = null;
+        props.onPreviewChange$(null);
+        isHistoryOpen.value = false;
+    });
+
     // Render as grid items using display:contents wrapper
     // Items become direct children of parent 6-column grid
+    // Layout: Col 4 = CANCEL+REVERT buttons/Spacer, Col 5 = Metadata (aligns with history), Col 6 = History chevron
     return (
         <div class={styles.inlineWrapper}>
-            {/* Column 4: Metadata (date/time/user) */}
-            <span class={styles.metadata}>{metadataText}</span>
-            
-            {/* Column 5: REVERT button (when selection) or Spacer */}
+            {/* Column 4: CANCEL + REVERT buttons (when selection) or Spacer */}
             {hasSelection ? (
-                <button
-                    type="button"
-                    class={styles.revertButton}
-                    onClick$={handleRevert$}
-                    aria-label="Revert to selected value"
-                >
-                    REVERT
-                </button>
+                <span class={styles.buttonGroup}>
+                    <button
+                        type="button"
+                        class={styles.cancelButton}
+                        onClick$={handleCancel$}
+                        aria-label="Cancel selection"
+                    >
+                        CANCEL
+                    </button>
+                    <button
+                        type="button"
+                        class={styles.revertButton}
+                        onClick$={handleRevert$}
+                        aria-label="Revert to selected value"
+                    >
+                        REVERT
+                    </button>
+                </span>
             ) : (
                 <span class={styles.spacer}></span>
             )}
+            
+            {/* Column 5: Metadata (date/time/user) - aligns with history entries */}
+            <span class={styles.metadata}>{metadataText}</span>
             
             {/* Column 6: History chevron */}
             <button

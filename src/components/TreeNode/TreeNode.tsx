@@ -29,6 +29,7 @@ export const TreeNode = component$((props: TreeNodeProps) => {
                 initialName={props.nodeName}
                 initialSubtitle={props.nodeSubtitle}
                 defaultFields={props.ucDefaults}
+                isChildConstruction={props.isChildConstruction}
                 onCancel$={props.onCancel$}
                 onCreate$={props.onCreate$}
             />

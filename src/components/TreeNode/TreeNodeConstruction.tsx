@@ -19,6 +19,8 @@ export type TreeNodeConstructionProps = {
     initialName?: string;
     initialSubtitle?: string;
     defaultFields: ConstructionField[];
+    /** When true, this is a child construction (inside branch-children, DataCard extends wider) */
+    isChildConstruction?: boolean;
     onCancel$: PropFunction<() => void>;
     onCreate$: PropFunction<(payload: CreateNodePayload) => void>;
 };
@@ -65,9 +67,11 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     const titleId = `node-title-${props.id}`;
     // Match the DataCard indent of normal child nodes
     const indentVar = '50px';
+    // Branch indent to compensate for when child construction needs wider DataCard
+    const branchIndent = props.isChildConstruction ? '32px' : '0px';
 
     return (
-        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
+        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar, '--branch-indent': branchIndent }}>
             <article class={[styles.node, styles.nodeExpanded]} aria-labelledby={titleId}>
                 <div class={styles.nodeBody}>
                     <div>

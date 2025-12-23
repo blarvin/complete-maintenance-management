@@ -115,5 +115,11 @@ button {
     flex-direction: column;
     gap: 4px;
     margin-left: 32px;
-    
+}
+
+/* Child under-construction row - DataCard should extend to match parent width */
+.branch-child-row {
+    /* Allow the DataCard to extend beyond this container's right boundary */
+    /* The DataCard wrapper will use negative margin to compensate for the indent */
+    --branch-indent: 32px;
 }

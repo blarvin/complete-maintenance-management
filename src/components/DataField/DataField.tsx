@@ -110,9 +110,11 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const toggleDetails$ = $(() => {
+        // Check current state BEFORE toggling to know if we're collapsing
+        const wasExpanded = selectors.getDataFieldDetailsState(appState, props.id) === 'EXPANDED';
         toggleFieldDetailsExpanded$(props.id);
-        // Clear preview when collapsing details
-        if (isDetailsExpanded) {
+        // Clear preview when collapsing details (same as closing history)
+        if (wasExpanded) {
             previewValue.value = null;
         }
     });

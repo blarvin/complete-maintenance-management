@@ -4,7 +4,7 @@
  * Enter field name (or select from prefab library) and value, then Save or Cancel.
  */
 
-import { component$, useSignal, $, PropFunction, useOnDocument } from '@builder.io/qwik';
+import { component$, useSignal, $, PropFunction, useOnDocument, useTask$ } from '@builder.io/qwik';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { getFieldService } from '../../data/services';
 import { DATAFIELD_LIBRARY } from '../../constants';
@@ -22,10 +22,22 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     const isDropdownOpen = useSignal(false);
     const rootEl = useSignal<HTMLElement>();
     const nameInputRef = useSignal<HTMLInputElement>();
+    const valueInputRef = useSignal<HTMLInputElement>();
     const comboBoxRef = useSignal<HTMLDivElement>();
     const dropdownPosition = useSignal({ top: 0, left: 0, width: 0 });
 
     const { checkDoubleTap$ } = useDoubleTap();
+
+    // Auto-focus name input when construction mode starts
+    useTask$(({ track }) => {
+        const constructing = track(() => isConstructing.value);
+        if (constructing) {
+            // Schedule focus after render
+            setTimeout(() => {
+                nameInputRef.value?.focus();
+            }, 10);
+        }
+    });
 
     const startConstruction$ = $(() => {
         isConstructing.value = true;
@@ -76,7 +88,9 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
         fieldName.value = name;
         isDropdownOpen.value = false;
         // Focus the value input after selecting a prefab
-        // (nameInputRef is the name input, but we want to move to value)
+        setTimeout(() => {
+            valueInputRef.value?.focus();
+        }, 10);
     });
 
     const handleButtonPointerDown$ = $(async (ev: any) => {
@@ -96,7 +110,8 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
         }
     });
 
-    const handleInputKeyDown$ = $((e: KeyboardEvent) => {
+    // Key handler for name input - includes down arrow to open picklist and tab to move to value
+    const handleNameKeyDown$ = $((e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             save$();
@@ -107,6 +122,28 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
             } else {
                 cancel$();
             }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            toggleDropdown$();
+        } else if (e.key === 'Tab' && !e.shiftKey) {
+            // Tab forward: move to value input
+            e.preventDefault();
+            valueInputRef.value?.focus();
+        }
+    });
+
+    // Key handler for value input
+    const handleValueKeyDown$ = $((e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            save$();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel$();
+        } else if (e.key === 'Tab' && e.shiftKey) {
+            // Shift+Tab: move back to name input
+            e.preventDefault();
+            nameInputRef.value?.focus();
         }
     });
 
@@ -151,7 +188,7 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     return (
         <div class={styles.constructionWrapper} ref={rootEl}>
             <div class={styles.construction}>
-                {/* Hollow chevron button for dropdown */}
+                {/* Hollow chevron button for dropdown - tabindex=-1 to keep it out of tab flow */}
                 <button
                     type="button"
                     class={styles.chevronButton}
@@ -159,6 +196,7 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                     onKeyDown$={handleChevronKeyDown$}
                     aria-expanded={isDropdownOpen.value}
                     aria-label={isDropdownOpen.value ? 'Close field name picker' : 'Open field name picker'}
+                    tabIndex={-1}
                 >
                     <span class={[styles.chevron, isDropdownOpen.value && styles.chevronOpen]}></span>
                 </button>
@@ -171,11 +209,10 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                         class={styles.inputName}
                         value={fieldName.value}
                         onInput$={(e) => (fieldName.value = (e.target as HTMLInputElement).value)}
-                        onKeyDown$={handleInputKeyDown$}
+                        onKeyDown$={handleNameKeyDown$}
                         onFocus$={() => { isDropdownOpen.value = false; }}
                         placeholder="Field Name"
-                        aria-label="Field name"
-                        autoFocus
+                        aria-label="Field name (press Down Arrow for library)"
                     />
                     
                     {/* Dropdown menu - position:fixed to escape all parent containers */}
@@ -207,11 +244,12 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                 
                 {/* Value input */}
                 <input
+                    ref={valueInputRef}
                     type="text"
                     class={styles.inputValue}
                     value={fieldValue.value}
                     onInput$={(e) => (fieldValue.value = (e.target as HTMLInputElement).value)}
-                    onKeyDown$={handleInputKeyDown$}
+                    onKeyDown$={handleValueKeyDown$}
                     placeholder="Value (optional)"
                     aria-label="Field value"
                 />

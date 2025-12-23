@@ -15,6 +15,10 @@
     
     /* Ensure content doesn't spill during animation */
     overflow: hidden;
+    
+    /* When --branch-indent is set (child construction), extend width to compensate */
+    /* This allows DataCard to match parent node's DataCard width */
+    width: calc(100% + var(--branch-indent, 0px));
 }
 
 .wrapperOpen {

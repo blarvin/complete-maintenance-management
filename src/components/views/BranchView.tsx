@@ -93,6 +93,7 @@ export const BranchView = component$((props: BranchViewProps) => {
                             nodeSubtitle={ucNode.nodeSubtitle}
                             nodeState="UNDER_CONSTRUCTION"
                             ucDefaults={ucNode.defaultFields}
+                            isChildConstruction={true}
                             onCancel$={cancel$}
                             onCreate$={complete$}
                         />

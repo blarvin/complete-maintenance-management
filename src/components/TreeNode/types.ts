@@ -66,6 +66,8 @@ export type TreeNodeDisplayProps = TreeNodeBaseProps & {
 export type TreeNodeConstructionProps = TreeNodeBaseProps & {
     nodeState: 'UNDER_CONSTRUCTION';
     ucDefaults: ConstructionField[];
+    /** When true, this is a child construction (inside branch-children) */
+    isChildConstruction?: boolean;
     onCancel$: PropFunction<() => void>;
     onCreate$: PropFunction<(payload: CreateNodePayload) => void>;
 };
