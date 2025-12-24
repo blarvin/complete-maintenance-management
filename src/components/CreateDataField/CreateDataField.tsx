@@ -6,9 +6,7 @@
  * When isConstructionMode=true:
  * - Calls onFieldAdded$ instead of saving to DB (node doesn't exist yet)
  * - Used during UNDER_CONSTRUCTION for TreeNode creation
- * 
- * When startOpen=true:
- * - Starts in form mode immediately (for additional forms in construction mode)
+ * - After saving, form resets to button mode for adding more fields
  */
 
 import { component$, useSignal, $, PropFunction, useOnDocument, useTask$ } from '@builder.io/qwik';
@@ -24,17 +22,10 @@ export type CreateDataFieldProps = {
     isConstructionMode?: boolean;
     /** Callback when a field is added in construction mode */
     onFieldAdded$?: PropFunction<(fieldName: string, fieldValue: string | null) => void>;
-    /** Start in form mode immediately (for multiple concurrent forms) */
-    startOpen?: boolean;
-    /** Callback when form is cancelled (for multiple concurrent forms) */
-    onCancelled$?: PropFunction<() => void>;
-    /** If set, button activations call this instead of opening the form (for managing external form list) */
-    onActivate$?: PropFunction<() => void>;
 };
 
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
-    // Start in form mode if startOpen is true
-    const isConstructing = useSignal(props.startOpen ?? false);
+    const isConstructing = useSignal(false);
     const fieldName = useSignal('');
     const fieldValue = useSignal('');
     const isDropdownOpen = useSignal(false);
@@ -58,11 +49,6 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     });
 
     const startConstruction$ = $(() => {
-        // If onActivate$ is provided, delegate to parent (for managing external form list)
-        if (props.onActivate$) {
-            props.onActivate$();
-            return;
-        }
         isConstructing.value = true;
         fieldName.value = '';
         fieldValue.value = '';
@@ -78,10 +64,6 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
         fieldName.value = '';
         fieldValue.value = '';
         isDropdownOpen.value = false;
-        // Notify parent if this was a startOpen form (for removal from list)
-        if (props.onCancelled$) {
-            props.onCancelled$();
-        }
     });
 
     const save$ = $(async () => {

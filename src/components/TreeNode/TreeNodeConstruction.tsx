@@ -3,10 +3,10 @@
  * Renders input fields for name/subtitle and default field inputs.
  * Matches the visual layout of TreeNodeDisplay for consistency.
  * 
- * Supports multiple concurrent CreateDataField forms:
- * - User can open multiple "+ Add Field" forms
- * - Each form's Save adds to the saved fields list
- * - CREATE button also collects any pending forms with fieldName entered
+ * DataField creation during construction:
+ * - Single CreateDataField handles its own form state
+ * - When saved, field is added to local state and form resets to button
+ * - Button is always visible (as button or form) for adding more fields
  */
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
@@ -30,16 +30,11 @@ export type TreeNodeConstructionProps = {
     onCreate$: PropFunction<(payload: CreateNodePayload) => void>;
 };
 
-/** Counter for generating unique form IDs */
-let formIdCounter = 0;
-
 export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps) => {
     const nameValue = useSignal<string>(props.initialName || '');
     const subtitleValue = useSignal<string>(props.initialSubtitle || '');
     // Saved fields (default fields + fields saved from forms)
     const fields = useSignal<ConstructionField[]>(props.defaultFields);
-    // Active form IDs for multiple concurrent CreateDataField forms
-    const activeFormIds = useSignal<string[]>([]);
     const nameInputRef = useSignal<HTMLInputElement>();
 
     // Auto-focus name input on mount
@@ -71,21 +66,9 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
         );
     });
 
-    // Add a new active form (opens a new CreateDataField in form mode)
-    const openNewForm$ = $(() => {
-        const newFormId = `form-${++formIdCounter}`;
-        activeFormIds.value = [...activeFormIds.value, newFormId];
-    });
-
-    // When a form saves, add the field to saved fields and remove the form
-    const handleFormFieldAdded$ = $((formId: string, fieldName: string, fieldValue: string | null) => {
+    // When CreateDataField saves, add field to local state
+    const handleFieldAdded$ = $((fieldName: string, fieldValue: string | null) => {
         fields.value = [...fields.value, { fieldName, fieldValue }];
-        activeFormIds.value = activeFormIds.value.filter(id => id !== formId);
-    });
-
-    // When a form is cancelled, just remove it from active list
-    const handleFormCancelled$ = $((formId: string) => {
-        activeFormIds.value = activeFormIds.value.filter(id => id !== formId);
     });
 
     const titleId = `node-title-${props.id}`;
@@ -144,26 +127,11 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </div>
                 ))}
                 
-                {/* Active CreateDataField forms (open for input) */}
-                {activeFormIds.value.map((formId) => (
-                    <CreateDataField
-                        key={formId}
-                        nodeId={props.id}
-                        isConstructionMode={true}
-                        startOpen={true}
-                        onFieldAdded$={$((fieldName: string, fieldValue: string | null) => {
-                            handleFormFieldAdded$(formId, fieldName, fieldValue);
-                        })}
-                        onCancelled$={$(() => {
-                            handleFormCancelled$(formId);
-                        })}
-                    />
-                ))}
-                
-                {/* + Add Field button - always visible at bottom, opens new forms above */}
+                {/* + Add Field - manages its own form state, resets to button after save */}
                 <CreateDataField 
                     nodeId={props.id}
-                    onActivate$={openNewForm$}
+                    isConstructionMode={true}
+                    onFieldAdded$={handleFieldAdded$}
                 />
                 
                 {/* Cancel/Create buttons at the very bottom */}
