@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:cleanup": "npx tsx src/test/cleanup.ts"
+    "test:cleanup": "npx tsx src/test/cleanup.ts",
+    "db:scrub": "npx tsx scripts/scrub-db.ts"
   },
   "repository": {
     "type": "git",
