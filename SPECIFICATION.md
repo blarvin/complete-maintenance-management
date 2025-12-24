@@ -17,6 +17,11 @@ This structure enables users to construct, explore, and understand detailed hier
 - **Self-Construction**: Users are fully enabled to create and edit assets, structure, and attributes.
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
+- **Stateless Visual Appearance (In-Situ)**: Components must look visually identical regardless of their mode (construction, editing, display). This means:
+  - Layout alignment (columns, spacing, indents) must match exactly between modes
+  - If display mode has a 18px chevron column, construction mode needs a matching 18px placeholder
+  - Users should not perceive a visual "shift" between modes - the UI feels stateless
+  - Future affordances (e.g., delete button, drag handle) reserve space in all modes, even if hidden
 - **Mobile-First**: Vertical scrolling, single/double-tap interactions
 - **Offline-First**: Full UI and any data created locally or already loaded is available indefinitely pending cloud sync. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile. (phase 1 is local-only persistence)
 

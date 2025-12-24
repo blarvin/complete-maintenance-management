@@ -2,6 +2,13 @@
  * CreateDataField - Button that activates into a combo box for creating a new field.
  * Double-tap the "+ Add Field" button to activate construction mode.
  * Enter field name (or select from prefab library) and value, then Save or Cancel.
+ * 
+ * When isConstructionMode=true:
+ * - Calls onFieldAdded$ instead of saving to DB (node doesn't exist yet)
+ * - Used during UNDER_CONSTRUCTION for TreeNode creation
+ * 
+ * When startOpen=true:
+ * - Starts in form mode immediately (for additional forms in construction mode)
  */
 
 import { component$, useSignal, $, PropFunction, useOnDocument, useTask$ } from '@builder.io/qwik';
@@ -13,10 +20,21 @@ import styles from './CreateDataField.module.css';
 export type CreateDataFieldProps = {
     nodeId: string;
     onCreated$?: PropFunction<() => void>;
+    /** In construction mode, calls onFieldAdded$ instead of saving to DB */
+    isConstructionMode?: boolean;
+    /** Callback when a field is added in construction mode */
+    onFieldAdded$?: PropFunction<(fieldName: string, fieldValue: string | null) => void>;
+    /** Start in form mode immediately (for multiple concurrent forms) */
+    startOpen?: boolean;
+    /** Callback when form is cancelled (for multiple concurrent forms) */
+    onCancelled$?: PropFunction<() => void>;
+    /** If set, button activations call this instead of opening the form (for managing external form list) */
+    onActivate$?: PropFunction<() => void>;
 };
 
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
-    const isConstructing = useSignal(false);
+    // Start in form mode if startOpen is true
+    const isConstructing = useSignal(props.startOpen ?? false);
     const fieldName = useSignal('');
     const fieldValue = useSignal('');
     const isDropdownOpen = useSignal(false);
@@ -40,6 +58,11 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     });
 
     const startConstruction$ = $(() => {
+        // If onActivate$ is provided, delegate to parent (for managing external form list)
+        if (props.onActivate$) {
+            props.onActivate$();
+            return;
+        }
         isConstructing.value = true;
         fieldName.value = '';
         fieldValue.value = '';
@@ -55,6 +78,10 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
         fieldName.value = '';
         fieldValue.value = '';
         isDropdownOpen.value = false;
+        // Notify parent if this was a startOpen form (for removal from list)
+        if (props.onCancelled$) {
+            props.onCancelled$();
+        }
     });
 
     const save$ = $(async () => {
@@ -65,11 +92,20 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
             return;
         }
         const value = fieldValue.value.trim() || null;
-        await getFieldService().addField(props.nodeId, name, value);
+        
+        if (props.isConstructionMode && props.onFieldAdded$) {
+            // In construction mode, add to local state instead of DB
+            await props.onFieldAdded$(name, value);
+        } else {
+            // Normal mode: save to DB
+            await getFieldService().addField(props.nodeId, name, value);
+        }
+        
         isConstructing.value = false;
         fieldName.value = '';
         fieldValue.value = '';
         isDropdownOpen.value = false;
+        
         if (props.onCreated$) {
             props.onCreated$();
         }

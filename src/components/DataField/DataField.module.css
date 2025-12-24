@@ -51,10 +51,12 @@
     caret-color: transparent; /* Prevent blinking caret */
 }
 
-/* Construction mode field - same as datafield but without the chevron column */
+/* Construction mode field - matches datafield layout (18px placeholder + 60px label + 1fr value)
+   The 18px column is a placeholder where the chevron would be in display mode.
+   This ensures in-situ editing: fields look identical in construction vs display. */
 .constructionField {
     display: grid;
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 18px 60px 1fr;
     font-size: 10px;
     gap: 4px;
     align-items: baseline;
