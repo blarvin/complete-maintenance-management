@@ -40,17 +40,30 @@ export type TreeNodeProps = TreeNodeDisplayProps | TreeNodeConstructionProps;
 
 // Type guard narrows in component
 if (isConstructionProps(props)) {
-  // TypeScript knows: props.ucDefaults, props.onCancel$, props.onCreate$ exist
+  // TypeScript knows: props.onCancel$, props.onCreate$ exist
 }
 ```
 
 **Component Split Strategy**: TreeNode orchestrates, delegates to:
 
-- `TreeNodeDisplay.tsx` — renders persisted nodes (ROOT/PARENT/CHILD)
-- `TreeNodeConstruction.tsx` — renders in-situ creation form
+- `TreeNodeDisplay.tsx` — renders persisted nodes (ROOT/PARENT/CHILD), manages pending field forms with LS
+- `TreeNodeConstruction.tsx` — renders in-situ creation form, uses CreateDataField for all fields
+- `CreateDataField.tsx` — pure form component for field name/value entry
 - `useTreeNodeFields.ts` — hook for loading DataFields
 
-Each file < 100 lines. Orchestrator just picks which sub-component based on state.
+Orchestrator just picks sub-component based on state.
+
+### Field Creation (CreateDataField)
+
+**Pure Form Component**: CreateDataField is purely UI—handles inputs, dropdown picker, Save/Cancel buttons. Does not persist. Parent decides what to do with `onSave$(id, fieldName, fieldValue)`.
+
+**Parent Manages Pending Forms**:
+- `TreeNodeDisplay`: Manages `pendingForms` signal with localStorage persistence. On Save → persists to DB, removes form, refreshes field list.
+- `TreeNodeConstruction`: Manages `fieldForms` signal (memory only). Initializes with 3 default forms. On CREATE → filters empties, passes all to service.
+
+**UX Parity**: UC mode uses same CreateDataField component for defaults and user-added fields. "Type Of", "Description", "Tags" are just pre-populated forms—user can edit, cancel, or add more. Empty forms are discarded on CREATE.
+
+**30-Form Limit**: DataCard enforces via `pendingCount` prop. Button disables at limit.
 
 ### DataCard Animation
 
@@ -111,10 +124,12 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 ```
 src/
 ├── components/
+│   ├── CreateDataField/
+│   │   └── CreateDataField.tsx   # Pure form: name/value inputs + Save/Cancel
 │   └── TreeNode/
 │       ├── TreeNode.tsx          # Orchestrator (picks display vs construction)
-│       ├── TreeNodeDisplay.tsx   # Persisted node rendering
-│       ├── TreeNodeConstruction.tsx  # In-situ creation form
+│       ├── TreeNodeDisplay.tsx   # Persisted node + pending forms (LS)
+│       ├── TreeNodeConstruction.tsx  # UC form, uses CreateDataField for all fields
 │       ├── TreeNode.module.css   # Styles
 │       ├── types.ts              # Discriminated union props + type guards
 │       └── useTreeNodeFields.ts  # Field loading hook

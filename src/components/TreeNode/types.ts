@@ -61,11 +61,10 @@ export type TreeNodeDisplayProps = TreeNodeBaseProps & {
 /**
  * Props for construction mode (UNDER_CONSTRUCTION)
  * - Used for new nodes being created
- * - Requires default fields and creation callbacks
+ * - Defaults are handled internally by TreeNodeConstruction
  */
 export type TreeNodeConstructionProps = TreeNodeBaseProps & {
     nodeState: 'UNDER_CONSTRUCTION';
-    ucDefaults: ConstructionField[];
     /** When true, this is a child construction (inside branch-children) */
     isChildConstruction?: boolean;
     onCancel$: PropFunction<() => void>;
@@ -76,7 +75,7 @@ export type TreeNodeConstructionProps = TreeNodeBaseProps & {
  * Discriminated union of TreeNode props
  * 
  * TypeScript will narrow the type based on `nodeState`:
- * - If nodeState is 'UNDER_CONSTRUCTION' → ucDefaults, onCancel$, onCreate$ are available
+ * - If nodeState is 'UNDER_CONSTRUCTION' → onCancel$, onCreate$ are available
  * - If nodeState is 'ROOT'|'PARENT'|'CHILD' → parentId, onNodeClick$, onNavigateUp$ are available
  */
 export type TreeNodeProps = TreeNodeDisplayProps | TreeNodeConstructionProps;
@@ -94,4 +93,3 @@ export function isConstructionProps(props: TreeNodeProps): props is TreeNodeCons
 export function isDisplayProps(props: TreeNodeProps): props is TreeNodeDisplayProps {
     return props.nodeState !== 'UNDER_CONSTRUCTION';
 }
-

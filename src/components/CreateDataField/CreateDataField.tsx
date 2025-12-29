@@ -1,83 +1,71 @@
 /**
- * CreateDataField - Button that activates into a combo box for creating a new field.
- * Double-tap the "+ Add Field" button to activate construction mode.
- * Enter field name (or select from prefab library) and value, then Save or Cancel.
+ * CreateDataField - Form for creating a new field.
+ * Purely UI component: handles name/value inputs, library picker, Save/Cancel.
+ * Does NOT handle persistence - parent decides what to do with onSave$.
+ * 
+ * Used in both UC mode (defaults + added fields) and Display mode (added fields).
  */
 
-import { component$, useSignal, $, PropFunction, useOnDocument, useTask$ } from '@builder.io/qwik';
-import { useDoubleTap } from '../../hooks/useDoubleTap';
-import { getFieldService } from '../../data/services';
+import { component$, useSignal, $, PropFunction, useTask$ } from '@builder.io/qwik';
 import { DATAFIELD_LIBRARY } from '../../constants';
 import styles from './CreateDataField.module.css';
 
 export type CreateDataFieldProps = {
-    nodeId: string;
-    onCreated$?: PropFunction<() => void>;
+    /** Unique ID for this form instance (used for keying, LS tracking) */
+    id: string;
+    /** Initial field name (for defaults like "Type Of") */
+    initialName?: string;
+    /** Initial field value */
+    initialValue?: string | null;
+    /** Called when user saves the field */
+    onSave$: PropFunction<(id: string, fieldName: string, fieldValue: string | null) => void>;
+    /** Called when user cancels */
+    onCancel$: PropFunction<(id: string) => void>;
+    /** Called when form values change (for LS persistence in display mode) */
+    onChange$?: PropFunction<(id: string, fieldName: string, fieldValue: string | null) => void>;
 };
 
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
-    const isConstructing = useSignal(false);
-    const fieldName = useSignal('');
-    const fieldValue = useSignal('');
+    const fieldName = useSignal(props.initialName ?? '');
+    const fieldValue = useSignal(props.initialValue ?? '');
     const isDropdownOpen = useSignal(false);
-    const rootEl = useSignal<HTMLElement>();
     const nameInputRef = useSignal<HTMLInputElement>();
     const valueInputRef = useSignal<HTMLInputElement>();
     const comboBoxRef = useSignal<HTMLDivElement>();
     const dropdownPosition = useSignal({ top: 0, left: 0, width: 0 });
 
-    const { checkDoubleTap$ } = useDoubleTap();
-
-    // Auto-focus name input when construction mode starts
-    useTask$(({ track }) => {
-        const constructing = track(() => isConstructing.value);
-        if (constructing) {
-            // Schedule focus after render
+    // Auto-focus name input on mount (if no initial name)
+    useTask$(() => {
+        if (!props.initialName) {
             setTimeout(() => {
                 nameInputRef.value?.focus();
             }, 10);
         }
     });
 
-    const startConstruction$ = $(() => {
-        isConstructing.value = true;
-        fieldName.value = '';
-        fieldValue.value = '';
-        isDropdownOpen.value = false;
+    // Notify parent of changes (for LS persistence)
+    const notifyChange$ = $(() => {
+        if (props.onChange$) {
+            props.onChange$(props.id, fieldName.value, fieldValue.value || null);
+        }
+    });
+
+    const save$ = $(() => {
+        const name = fieldName.value.trim();
+        const value = fieldValue.value.trim() || null;
+        props.onSave$(props.id, name, value);
     });
 
     const cancel$ = $(() => {
-        // Blur any focused element to prevent caret appearing elsewhere
+        // Blur any focused element
         if (document.activeElement instanceof HTMLElement) {
             document.activeElement.blur();
         }
-        isConstructing.value = false;
-        fieldName.value = '';
-        fieldValue.value = '';
-        isDropdownOpen.value = false;
-    });
-
-    const save$ = $(async () => {
-        const name = fieldName.value.trim();
-        if (!name) {
-            // Field name is required - just cancel if empty
-            cancel$();
-            return;
-        }
-        const value = fieldValue.value.trim() || null;
-        await getFieldService().addField(props.nodeId, name, value);
-        isConstructing.value = false;
-        fieldName.value = '';
-        fieldValue.value = '';
-        isDropdownOpen.value = false;
-        if (props.onCreated$) {
-            props.onCreated$();
-        }
+        props.onCancel$(props.id);
     });
 
     const toggleDropdown$ = $(() => {
         if (!isDropdownOpen.value && comboBoxRef.value) {
-            // Calculate position before opening
             const rect = comboBoxRef.value.getBoundingClientRect();
             dropdownPosition.value = {
                 top: rect.bottom + 2,
@@ -91,30 +79,22 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     const selectPrefab$ = $((name: string) => {
         fieldName.value = name;
         isDropdownOpen.value = false;
-        // Focus the value input after selecting a prefab
+        notifyChange$();
         setTimeout(() => {
             valueInputRef.value?.focus();
         }, 10);
     });
 
-    const handleButtonPointerDown$ = $(async (ev: any) => {
-        const e = ev as PointerEvent | MouseEvent;
-        const x = e.clientX ?? 0;
-        const y = e.clientY ?? 0;
-        const isDouble = await checkDoubleTap$(x, y);
-        if (isDouble) {
-            await startConstruction$();
-        }
+    const handleNameInput$ = $((e: Event) => {
+        fieldName.value = (e.target as HTMLInputElement).value;
+        notifyChange$();
     });
 
-    const handleButtonKeyDown$ = $((e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            startConstruction$();
-        }
+    const handleValueInput$ = $((e: Event) => {
+        fieldValue.value = (e.target as HTMLInputElement).value;
+        notifyChange$();
     });
 
-    // Key handler for name input - includes down arrow to open picklist and tab to move to value
     const handleNameKeyDown$ = $((e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -130,13 +110,11 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
             e.preventDefault();
             toggleDropdown$();
         } else if (e.key === 'Tab' && !e.shiftKey) {
-            // Tab forward: move to value input
             e.preventDefault();
             valueInputRef.value?.focus();
         }
     });
 
-    // Key handler for value input
     const handleValueKeyDown$ = $((e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -145,7 +123,6 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
             e.preventDefault();
             cancel$();
         } else if (e.key === 'Tab' && e.shiftKey) {
-            // Shift+Tab: move back to name input
             e.preventDefault();
             nameInputRef.value?.focus();
         }
@@ -165,34 +142,10 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
         }
     });
 
-    // Cancel on outside click
-    useOnDocument('pointerdown', $((ev: Event) => {
-        if (!isConstructing.value) return;
-        const container = rootEl.value;
-        const target = ev.target as Node | null;
-        if (container && target && !container.contains(target)) {
-            cancel$();
-        }
-    }));
-
-    if (!isConstructing.value) {
-        return (
-            <button
-                type="button"
-                class={styles.addButton}
-                onPointerDown$={handleButtonPointerDown$}
-                onKeyDown$={handleButtonKeyDown$}
-                aria-label="Add new field (double-tap to activate)"
-            >
-                + Add Field
-            </button>
-        );
-    }
-
     return (
-        <div class={styles.constructionWrapper} ref={rootEl}>
+        <div class={styles.constructionWrapper}>
             <div class={styles.construction}>
-                {/* Hollow chevron button for dropdown - tabindex=-1 to keep it out of tab flow */}
+                {/* Chevron button for dropdown */}
                 <button
                     type="button"
                     class={styles.chevronButton}
@@ -205,21 +158,21 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                     <span class={[styles.chevron, isDropdownOpen.value && styles.chevronOpen]}></span>
                 </button>
                 
-                {/* Field Name combo box wrapper */}
+                {/* Field Name combo box */}
                 <div class={styles.comboBoxWrapper} ref={comboBoxRef}>
                     <input
                         ref={nameInputRef}
                         type="text"
                         class={styles.inputName}
                         value={fieldName.value}
-                        onInput$={(e) => (fieldName.value = (e.target as HTMLInputElement).value)}
+                        onInput$={handleNameInput$}
                         onKeyDown$={handleNameKeyDown$}
                         onFocus$={() => { isDropdownOpen.value = false; }}
                         placeholder="Field Name"
                         aria-label="Field name (press Down Arrow for library)"
                     />
                     
-                    {/* Dropdown menu - position:fixed to escape all parent containers */}
+                    {/* Dropdown menu */}
                     {isDropdownOpen.value && (
                         <div 
                             class={styles.dropdown} 
@@ -252,14 +205,14 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                     type="text"
                     class={styles.inputValue}
                     value={fieldValue.value}
-                    onInput$={(e) => (fieldValue.value = (e.target as HTMLInputElement).value)}
+                    onInput$={handleValueInput$}
                     onKeyDown$={handleValueKeyDown$}
                     placeholder="Value (optional)"
                     aria-label="Field value"
                 />
             </div>
             
-            {/* Action buttons - right aligned */}
+            {/* Save/Cancel buttons */}
             <div class={styles.actions}>
                 <button
                     type="button"

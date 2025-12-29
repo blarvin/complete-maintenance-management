@@ -11,7 +11,6 @@ import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getNodeService } from '../data/services';
 import { generateId } from '../utils/id';
-import { DEFAULT_DATAFIELD_NAMES } from '../constants';
 
 /**
  * Payload for completing node creation.
@@ -47,6 +46,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
 
     /**
      * Start creating a new node. Opens the under-construction UI.
+     * Default fields are handled internally by TreeNodeConstruction.
      */
     const start$ = $(() => {
         startConstruction$({
@@ -54,10 +54,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             parentId: options.parentId,
             nodeName: '',
             nodeSubtitle: '',
-            defaultFields: DEFAULT_DATAFIELD_NAMES.map((name) => ({
-                fieldName: name,
-                fieldValue: null,
-            })),
+            defaultFields: [], // No longer used - TreeNodeConstruction handles defaults
         });
     });
 
@@ -69,7 +66,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
     });
 
     /**
-     * Complete node creation. Saves the node and its default fields.
+     * Complete node creation. Saves the node and its fields.
      */
     const complete$ = $(async (payload: CreateNodePayload) => {
         const ucData = appState.underConstruction;
@@ -98,4 +95,3 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         complete$,
     };
 }
-
