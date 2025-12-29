@@ -61,7 +61,7 @@ Orchestrator just picks sub-component based on state.
 - `TreeNodeDisplay`: Manages `pendingForms` signal with localStorage persistence. On Save → persists to DB, removes form, refreshes field list.
 - `TreeNodeConstruction`: Manages `fieldForms` signal (memory only). Initializes with 3 default forms. On CREATE → filters empties, passes all to service.
 
-**UX Parity**: UC mode uses same CreateDataField component for defaults and user-added fields. "Type Of", "Description", "Tags" are just pre-populated forms—user can edit, cancel, or add more. Empty forms are discarded on CREATE.
+**UX Parity**: UNDER_CONSTRUCTION mode uses same CreateDataField component for defaults and user-added fields. "Type Of", "Description", "Tags" are just pre-populated forms—user can edit, cancel, or add more. Empty forms are discarded on CREATE.
 
 **30-Form Limit**: DataCard enforces via `pendingCount` prop. Button disables at limit.
 
