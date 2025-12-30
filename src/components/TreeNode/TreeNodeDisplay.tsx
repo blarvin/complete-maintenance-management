@@ -163,6 +163,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
             <article
                 class={[styles.node, isExpanded && styles.nodeExpanded, isParent && styles.nodeParent]}
                 aria-labelledby={titleId}
+                data-node-id={props.id}
             >
                 <div
                     class={[styles.nodeBody, isClickable && styles.nodeBodyClickable]}

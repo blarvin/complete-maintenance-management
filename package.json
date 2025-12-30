@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:cleanup": "npx tsx src/test/cleanup.ts"
+    "test:cleanup": "npx tsx src/test/cleanup.ts",
+    "cypress": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:cleanup": "npx tsx cypress/support/cleanup-firestore.ts"
   },
   "repository": {
     "type": "git",
@@ -33,6 +36,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "cypress": "^15.8.1",
     "eslint": "^9.34.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
