@@ -46,10 +46,11 @@ if (isConstructionProps(props)) {
 
 **Component Split Strategy**: TreeNode orchestrates, delegates to:
 
-- `TreeNodeDisplay.tsx` — renders persisted nodes (ROOT/PARENT/CHILD), manages pending field forms with LS
+- `TreeNodeDisplay.tsx` — renders persisted nodes (ROOT/PARENT/CHILD), delegates all field logic to FieldList
 - `TreeNodeConstruction.tsx` — renders in-situ creation form, uses CreateDataField for all fields
+- `FieldList.tsx` — orchestrates persisted fields + pending forms, owns add/save/cancel logic
 - `CreateDataField.tsx` — pure form component for field name/value entry
-- `useTreeNodeFields.ts` — hook for loading DataFields
+- `useTreeNodeFields.ts` — hook for loading DataFields from DB
 
 Orchestrator just picks sub-component based on state.
 
@@ -58,7 +59,7 @@ Orchestrator just picks sub-component based on state.
 **Pure Form Component**: CreateDataField is purely UI—handles inputs, dropdown picker, Save/Cancel buttons. Does not persist. Parent decides what to do with `onSave$(id, fieldName, fieldValue)`.
 
 **Parent Manages Pending Forms**:
-- `TreeNodeDisplay`: Manages `pendingForms` signal with localStorage persistence. On Save → persists to DB, removes form, refreshes field list.
+- `FieldList` (via `usePendingForms` hook): Manages pending forms with localStorage persistence. On Save → persists to DB, removes form, refreshes field list.
 - `TreeNodeConstruction`: Manages `fieldForms` signal (memory only). Initializes with 3 default forms. On CREATE → filters empties, passes all to service.
 
 **UX Parity**: UNDER_CONSTRUCTION mode uses same CreateDataField component for defaults and user-added fields. "Type Of", "Description", "Tags" are just pre-populated forms—user can edit, cancel, or add more. Empty forms are discarded on CREATE.
@@ -113,26 +114,56 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **useDoubleTap**: Returns `{ checkDoubleTap$ }` which takes `(x, y)` and returns boolean. Caller handles what to do on double-tap. Internal state (`lastDownAt`, `lastDownX`, `lastDownY`) persists across taps via Qwik signals.
 
+**usePendingForms**: Extracts pending form management from TreeNodeDisplay. Handles localStorage persistence of in-progress field creation forms. Returns `{ forms, add$, save$, cancel$, change$ }`.
+
+**useFieldEdit**: Extracts all edit state/interaction logic from DataField. Handles FSM integration, double-tap detection, focus management, outside-click cancellation, preview mode. Returns refs, state, and handlers. Reduced DataField from 274 to 141 lines.
+
 ### Accessibility
 
 **Keyboard Editing Path**: DataField value has `tabIndex={0}` and `role="button"` with `onKeyDown$` handling Enter/Space to begin edit. Input handles Enter (save) and Escape (cancel). Focus management via `autoFocus` on input when entering edit mode.
 
 **ARIA on Expansion**: Chevron buttons use `aria-expanded={isExpanded}` and descriptive `aria-label` ("Expand field details" / "Collapse field details"). Changes based on state, not just static labels.
 
+### CSS Architecture
+
+**Three-Layer Token System** (`tokens.css`):
+1. Primitives — raw color palette (`--color-gray-600: #666`)
+2. Semantic tokens — purpose-mapped (`--text-muted: var(--color-gray-600)`)
+3. Component tokens — specific overrides in CSS modules
+
+Semantic tokens used throughout; primitives never referenced directly in components. Enables future theming by overriding semantic layer.
+
+**Utility Classes** (`global.css`):
+- `.no-caret` — prevents text cursor on interactive non-input elements
+- `.btn-reset` — strips button defaults (background, border, padding)
+- `.input-reset` — strips input defaults for inline editing
+- `.input-underline` — common underline pattern with focus color change
+
+**Deliberate Non-Abstractions**: Evaluated and skipped these components:
+
+- **ActionButtons component** — Cancel/Save patterns vary enough (different labels, sizing, slot usage, conditional rendering) that abstraction would be more complex than duplication.
+- **Input component** — Utility classes (`.input-reset`, `.input-underline`) cover the patterns. A component would just wrap these without meaningful benefit.
+- **Service context pattern** — Module-level registry with `setNodeService()`/`setFieldService()` already enables test mocking. Context pattern deferred until multiple service implementations exist (online/offline).
+
 ### File Organization
 
 ```
 src/
 ├── components/
-│   ├── CreateDataField/
-│   │   └── CreateDataField.tsx   # Pure form: name/value inputs + Save/Cancel
+│   ├── CreateDataField/      # Pure form: name/value inputs + Save/Cancel
+│   ├── DataField/            # Editable field row, uses useFieldEdit hook
+│   ├── DataFieldDetails/     # Inline metadata, history, delete (display:contents grid items)
+│   ├── DataFieldHistory/     # Scrollable historical values list
+│   ├── FieldList/            # Orchestrates persisted + pending fields for a node
 │   └── TreeNode/
 │       ├── TreeNode.tsx          # Orchestrator (picks display vs construction)
-│       ├── TreeNodeDisplay.tsx   # Persisted node + pending forms (LS)
+│       ├── TreeNodeDisplay.tsx   # Persisted node, delegates fields to FieldList
 │       ├── TreeNodeConstruction.tsx  # UC form, uses CreateDataField for all fields
-│       ├── TreeNode.module.css   # Styles
 │       ├── types.ts              # Discriminated union props + type guards
 │       └── useTreeNodeFields.ts  # Field loading hook
+├── styles/
+│   ├── tokens.css    # Design tokens (primitives, semantic, layout)
+│   └── global.css    # Reset, focus styles, utility classes, view layouts
 ├── state/
 │   ├── appState.ts   # FSM state, transitions, selectors, context
 │   └── uiPrefs.ts    # localStorage persistence (Sets ↔ JSON arrays)
@@ -145,7 +176,9 @@ src/
 │   └── repo/                 # Low-level Firestore CRUD
 ├── hooks/
 │   ├── useDoubleTap.ts       # Gesture detection (pure + hook)
-│   └── useNodeCreation.ts    # Creation flow orchestration
+│   ├── useFieldEdit.ts       # Field edit state/interactions
+│   ├── useNodeCreation.ts    # Creation flow orchestration
+│   └── usePendingForms.ts    # Pending form management with LS persistence
 └── constants.ts              # USER_ID, COLLECTIONS, DEFAULT_DATAFIELD_NAMES
 ```
 
