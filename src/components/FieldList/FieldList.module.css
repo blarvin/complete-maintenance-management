@@ -1,0 +1,29 @@
+/* FieldList component styles */
+
+.fieldList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.addButton {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.addButton:hover:not(:disabled) {
+    text-decoration: underline;
+}
+
+.addButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

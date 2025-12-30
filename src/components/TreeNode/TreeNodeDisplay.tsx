@@ -1,19 +1,17 @@
 /**
  * TreeNodeDisplay - Read-only display mode for TreeNode.
- * Shows NodeTitle, NodeSubtitle, expandable DataCard with DataFields.
+ * 
+ * Orchestrates the node body (title, subtitle, navigation) and DataCard.
+ * Field logic is delegated to FieldList component.
  */
 
 import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
-import { DataField } from '../DataField/DataField';
-import { CreateDataField } from '../CreateDataField/CreateDataField';
+import { FieldList } from '../FieldList/FieldList';
 import { UpButton } from '../UpButton/UpButton';
-import { useTreeNodeFields } from './useTreeNodeFields';
-import { usePendingForms } from '../../hooks/usePendingForms';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
-import type { DataField as DataFieldRecord } from '../../data/models';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
 
@@ -34,15 +32,6 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     // Get card state from FSM (persisted)
     const cardState = selectors.getDataCardState(appState, props.id);
     const isExpanded = cardState === 'EXPANDED';
-    
-    // Persisted fields from DB
-    const { fields, reload$ } = useTreeNodeFields({ nodeId: props.id, enabled: true });
-
-    // Pending forms (forms being added, not yet saved)
-    const { forms: pendingForms, add$, save$, cancel$, change$ } = usePendingForms({
-        nodeId: props.id,
-        onSaved$: reload$,
-    });
 
     const toggleExpand$ = $((e?: Event) => {
         e?.stopPropagation();
@@ -62,10 +51,6 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
             e.stopPropagation();
             toggleExpand$();
         }
-    });
-
-    const handleFieldDeleted$ = $(() => {
-        reload$();
     });
 
     const titleId = `node-title-${props.id}`;
@@ -113,34 +98,8 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                     </button>
                 </div>
             </article>
-            <DataCard 
-                isOpen={isExpanded} 
-                nodeId={props.id} 
-                pendingCount={pendingForms.value.length}
-                onAddField$={add$}
-            >
-                {/* Persisted fields from DB */}
-                {fields.value?.map((f: DataFieldRecord) => (
-                    <DataField
-                        key={f.id}
-                        id={f.id}
-                        fieldName={f.fieldName}
-                        fieldValue={f.fieldValue}
-                        onDeleted$={handleFieldDeleted$}
-                    />
-                ))}
-                {/* Pending forms being added */}
-                {pendingForms.value.map((form) => (
-                    <CreateDataField
-                        key={form.id}
-                        id={form.id}
-                        initialName={form.fieldName}
-                        initialValue={form.fieldValue}
-                        onSave$={save$}
-                        onCancel$={cancel$}
-                        onChange$={change$}
-                    />
-                ))}
+            <DataCard isOpen={isExpanded} nodeId={props.id}>
+                <FieldList nodeId={props.id} />
             </DataCard>
         </div>
     );

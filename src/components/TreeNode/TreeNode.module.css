@@ -92,6 +92,29 @@ input.nodeSubtitle {
     font-family: inherit;
 }
 
+/* Under-construction mode add field button */
+.addFieldButton {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.addFieldButton:hover:not(:disabled) {
+    text-decoration: underline;
+}
+
+.addFieldButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Under-construction mode action buttons */
 .constructionActions {
     display: flex;

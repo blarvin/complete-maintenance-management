@@ -129,6 +129,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     const titleId = `node-title-${props.id}`;
     // Match the DataCard indent: 18px for child construction, 50px for root construction
     const indentVar = props.isChildConstruction ? '18px' : '50px';
+    const canAddMore = fieldForms.value.length < MAX_PENDING_FORMS;
 
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
@@ -165,12 +166,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     </button>
                 </div>
             </article>
-            <DataCard 
-                nodeId={props.id} 
-                isOpen={true} 
-                pendingCount={fieldForms.value.length}
-                onAddField$={handleAddField$}
-            >
+            <DataCard nodeId={props.id} isOpen={true}>
                 {/* All fields as CreateDataField forms */}
                 {fieldForms.value.map((form) => (
                     <CreateDataField
@@ -183,6 +179,18 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                         onChange$={handleFormChange$}
                     />
                 ))}
+                
+                {/* Add Field button */}
+                <button
+                    type="button"
+                    class={styles.addFieldButton}
+                    onClick$={handleAddField$}
+                    disabled={!canAddMore}
+                    aria-label={canAddMore ? "Add new field" : "Maximum fields reached"}
+                >
+                    + Add Field
+                </button>
+                
                 {/* Cancel/Create buttons at the very bottom */}
                 <div q:slot="actions" class={styles.constructionActions}>
                     <button type="button" onClick$={props.onCancel$}>Cancel</button>

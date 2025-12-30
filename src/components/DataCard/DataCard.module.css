@@ -1,4 +1,4 @@
-/* DataCard component styles */
+/* DataCard component styles - Pure animation container */
 
 /* ─── Expansion wrapper ─── */
 .wrapper {
@@ -7,8 +7,7 @@
     /* Use a specific cubic-bezier to ensure tight sync between height and transform */
     transition: grid-template-rows var(--duration-fast) var(--ease-default);
     
-    /* Move layout properties here from .datacard */
-    /* Variable indent driven by parent node state: 35px for parent, 15px for child */
+    /* Variable indent driven by parent node state */
     margin-left: var(--datacard-indent, 40px);
     margin-top: -1.5px; /* Tuck under node border */
     z-index: var(--z-base); /* Behind parent node */
@@ -54,21 +53,4 @@
     /* End position: natural location */
     /* Use none to prevent creating a containing block for fixed descendants */
     transform: none;
-}
-
-.datacardAdd {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--text-secondary);
-    /* Reset button defaults */
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
-}
-
-.datacardAdd:hover {
-    text-decoration: underline;
 }
