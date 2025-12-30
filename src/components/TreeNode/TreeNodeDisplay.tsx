@@ -1,10 +1,9 @@
 /**
  * TreeNodeDisplay - Read-only display mode for TreeNode.
  * Shows NodeTitle, NodeSubtitle, expandable DataCard with DataFields.
- * Manages pending field forms with localStorage persistence.
  */
 
-import { component$, $, PropFunction, useSignal, useVisibleTask$, useTask$ } from '@builder.io/qwik';
+import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { DataCard } from '../DataCard/DataCard';
@@ -12,45 +11,11 @@ import { DataField } from '../DataField/DataField';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { UpButton } from '../UpButton/UpButton';
 import { useTreeNodeFields } from './useTreeNodeFields';
+import { usePendingForms } from '../../hooks/usePendingForms';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
-import { getFieldService } from '../../data/services';
-import { generateId } from '../../utils/id';
 import type { DataField as DataFieldRecord } from '../../data/models';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
-
-/** Pending form state for localStorage */
-type PendingForm = {
-    id: string;
-    fieldName: string;
-    fieldValue: string | null;
-};
-
-/** LS key for pending forms */
-const getPendingFormsKey = (nodeId: string) => `pendingFields:${nodeId}`;
-
-/** Load pending forms from localStorage */
-const loadPendingForms = (nodeId: string): PendingForm[] => {
-    try {
-        const stored = localStorage.getItem(getPendingFormsKey(nodeId));
-        return stored ? JSON.parse(stored) : [];
-    } catch {
-        return [];
-    }
-};
-
-/** Save pending forms to localStorage */
-const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
-    try {
-        if (forms.length === 0) {
-            localStorage.removeItem(getPendingFormsKey(nodeId));
-        } else {
-            localStorage.setItem(getPendingFormsKey(nodeId), JSON.stringify(forms));
-        }
-    } catch {
-        // Ignore storage errors
-    }
-};
 
 export type TreeNodeDisplayProps = {
     id: string;
@@ -74,20 +39,9 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const { fields, reload$ } = useTreeNodeFields({ nodeId: props.id, enabled: true });
 
     // Pending forms (forms being added, not yet saved)
-    const pendingForms = useSignal<PendingForm[]>([]);
-
-    // Load pending forms from LS on mount
-    useVisibleTask$(() => {
-        pendingForms.value = loadPendingForms(props.id);
-    });
-
-    // Save pending forms to LS when they change
-    useTask$(({ track }) => {
-        const forms = track(() => pendingForms.value);
-        // Only save to LS on client side
-        if (typeof localStorage !== 'undefined') {
-            savePendingForms(props.id, forms);
-        }
+    const { forms: pendingForms, add$, save$, cancel$, change$ } = usePendingForms({
+        nodeId: props.id,
+        onSaved$: reload$,
     });
 
     const toggleExpand$ = $((e?: Event) => {
@@ -112,44 +66,6 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
 
     const handleFieldDeleted$ = $(() => {
         reload$();
-    });
-
-    // Add a new pending form
-    const handleAddField$ = $(() => {
-        const newForm: PendingForm = {
-            id: generateId(),
-            fieldName: '',
-            fieldValue: null,
-        };
-        pendingForms.value = [...pendingForms.value, newForm];
-    });
-
-    // Save a pending form (persist to DB)
-    const handleFormSave$ = $(async (formId: string, fieldName: string, fieldValue: string | null) => {
-        const name = fieldName.trim();
-        if (!name) {
-            // Empty name - just cancel the form
-            pendingForms.value = pendingForms.value.filter(f => f.id !== formId);
-            return;
-        }
-        // Persist to DB
-        await getFieldService().addField(props.id, name, fieldValue);
-        // Remove from pending
-        pendingForms.value = pendingForms.value.filter(f => f.id !== formId);
-        // Refresh persisted fields
-        reload$();
-    });
-
-    // Cancel a pending form
-    const handleFormCancel$ = $((formId: string) => {
-        pendingForms.value = pendingForms.value.filter(f => f.id !== formId);
-    });
-
-    // Update pending form values (for LS tracking)
-    const handleFormChange$ = $((formId: string, fieldName: string, fieldValue: string | null) => {
-        pendingForms.value = pendingForms.value.map(f =>
-            f.id === formId ? { ...f, fieldName, fieldValue } : f
-        );
     });
 
     const titleId = `node-title-${props.id}`;
@@ -201,7 +117,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                 isOpen={isExpanded} 
                 nodeId={props.id} 
                 pendingCount={pendingForms.value.length}
-                onAddField$={handleAddField$}
+                onAddField$={add$}
             >
                 {/* Persisted fields from DB */}
                 {fields.value?.map((f: DataFieldRecord) => (
@@ -220,9 +136,9 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                         id={form.id}
                         initialName={form.fieldName}
                         initialValue={form.fieldValue}
-                        onSave$={handleFormSave$}
-                        onCancel$={handleFormCancel$}
-                        onChange$={handleFormChange$}
+                        onSave$={save$}
+                        onCancel$={cancel$}
+                        onChange$={change$}
                     />
                 ))}
             </DataCard>
