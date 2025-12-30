@@ -1,5 +1,6 @@
 import { component$ } from '@builder.io/qwik';
 import { QwikCityProvider, RouterOutlet } from '@builder.io/qwik-city';
+import './styles/tokens.css';
 import './styles/global.css';
 import { useProvideAppState } from './state/appState';
 

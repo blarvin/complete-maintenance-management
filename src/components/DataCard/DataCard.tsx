@@ -43,7 +43,7 @@ export const DataCard = component$<DataCardProps>((props) => {
         <div class={[styles.wrapper, props.isOpen && styles.wrapperOpen]}>
             <div class={styles.inner}>
                 <div
-                    class={[styles.datacard, props.isOpen && styles.datacardOpen]}
+                    class={[styles.datacard, props.isOpen && styles.datacardOpen, 'no-caret']}
                     role="region"
                     aria-label="Node details"
                 >

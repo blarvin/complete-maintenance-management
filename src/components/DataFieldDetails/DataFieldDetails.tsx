@@ -97,7 +97,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     // Items become direct children of parent 6-column grid
     // Layout: Col 4 = CANCEL+REVERT buttons/Spacer, Col 5 = Metadata (aligns with history), Col 6 = History chevron
     return (
-        <div class={styles.inlineWrapper}>
+        <div class={[styles.inlineWrapper, 'no-caret']}>
             {/* Column 4: CANCEL + REVERT buttons (when selection) or Spacer */}
             {hasSelection ? (
                 <span class={styles.buttonGroup}>
@@ -119,11 +119,11 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
                     </button>
                 </span>
             ) : (
-                <span class={styles.spacer}></span>
+                <span class={[styles.spacer, 'no-caret']}></span>
             )}
             
             {/* Column 5: Metadata (date/time/user) - aligns with history entries */}
-            <span class={styles.metadata}>{metadataText}</span>
+            <span class={[styles.metadata, 'no-caret']}>{metadataText}</span>
             
             {/* Column 6: History chevron */}
             <button
@@ -140,7 +140,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
 
             {/* History list - spans all 6 columns, expands below */}
             {isHistoryOpen.value && hasHistory && (
-                <div class={styles.historyRow}>
+                <div class={[styles.historyRow, 'no-caret']}>
                     <DataFieldHistory
                         fieldId={props.fieldId}
                         history={history.value}
@@ -152,7 +152,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
             )}
 
             {/* Actions row - spans all 6 columns, flows to new row */}
-            <div class={styles.actionsRow}>
+            <div class={[styles.actionsRow, 'no-caret']}>
                 <button 
                     type="button" 
                     class={styles.deleteButton}

@@ -44,10 +44,10 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     const hasHistory = props.history.length > 0;
 
     return (
-        <div class={styles.historyWrapper}>
+        <div class={[styles.historyWrapper, 'no-caret']}>
             {/* Scrollable history list */}
             {props.isOpen && hasHistory && (
-                <div class={styles.historyList} role="listbox" aria-label="Field value history">
+                <div class={[styles.historyList, 'no-caret']} role="listbox" aria-label="Field value history">
                     {allEntries.map((entry) => (
                         <button
                             key={entry.id}

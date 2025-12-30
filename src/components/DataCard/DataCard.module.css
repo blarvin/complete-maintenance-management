@@ -5,13 +5,13 @@
     display: grid;
     grid-template-rows: 0fr;
     /* Use a specific cubic-bezier to ensure tight sync between height and transform */
-    transition: grid-template-rows 100ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: grid-template-rows var(--duration-fast) var(--ease-default);
     
     /* Move layout properties here from .datacard */
     /* Variable indent driven by parent node state: 35px for parent, 15px for child */
     margin-left: var(--datacard-indent, 40px);
     margin-top: -1.5px; /* Tuck under node border */
-    z-index: 1; /* Behind parent node */
+    z-index: var(--z-base); /* Behind parent node */
     
     /* Ensure content doesn't spill during animation */
     overflow: hidden;
@@ -35,23 +35,19 @@
 /* ─── DataCard itself ─── */
 
 .datacard {
-    border: 1.5px solid #000;
+    border: var(--border-width) solid var(--border-default);
     border-top: 0;
-    background: #fff;
-    padding: 6px;
+    background: var(--bg-surface);
+    padding: var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: var(--space-3);
 
     /* Start position: shifted up by 100% of its own height */
     transform: translateY(-100%);
     
     /* Match the wrapper transition exactly to prevent "pop-in" */
-    transition: transform 100ms cubic-bezier(0.4, 0, 0.2, 1);
-    
-    /* Prevent text cursor in gaps */
-    user-select: none;
-    cursor: default;
+    transition: transform var(--duration-fast) var(--ease-default);
 }
 
 .datacardOpen {
@@ -61,9 +57,9 @@
 }
 
 .datacardAdd {
-    font-size: 10px;
+    font-size: var(--text-sm);
     font-weight: 600;
-    color: #222;
+    color: var(--text-secondary);
     /* Reset button defaults */
     background: none;
     border: none;

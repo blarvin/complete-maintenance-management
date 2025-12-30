@@ -2,37 +2,34 @@
 
 .createNode {
     width: 100%;
-    max-width: 650px;
-    min-width: 275px;
-    border: 1.5px solid #000;
-    background: #fff;
-    height: 35px;
+    max-width: var(--container-max);
+    min-width: var(--container-min);
+    border: var(--border-width) solid var(--border-default);
+    background: var(--bg-surface);
+    height: var(--node-min-height);
     display: grid;
     place-items: center;
-    font-size: 16px;
-    color: #000;
+    font-size: var(--text-xl);
+    color: var(--border-default);
     cursor: pointer;
     font-family: inherit;
     padding: 0;
-    /* Prevent text cursor from appearing */
-    user-select: none;
-    caret-color: transparent;
+    /* Caret handling via .no-caret class in JSX */
 }
 
 .createNode:hover {
-    background: #f9f9f9;
+    background: var(--bg-muted);
 }
 
 /* Child variant */
 .createNodeChild {
-    height: 28px;
-    font-size: 12px;
+    height: var(--node-child-height);
+    font-size: var(--text-base);
     border-style: dashed;
-    color: #666;
+    color: var(--text-muted);
 }
 
 .createNodeChild:hover {
-    background: #f9f9f9;
-    color: #000;
+    background: var(--bg-muted);
+    color: var(--border-default);
 }
-

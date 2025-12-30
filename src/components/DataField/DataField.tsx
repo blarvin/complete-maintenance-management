@@ -194,9 +194,9 @@ export const DataField = component$<DataFieldProps>((props) => {
     const labelId = `field-label-${props.id}`;
 
     return (
-        <div class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded]} ref={rootEl}>
+        <div class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded, 'no-caret']} ref={rootEl}>
             {/* Main row: 6-column grid with columns 4-6 filled when expanded */}
-            <div class={styles.datafield}>
+            <div class={[styles.datafield, 'no-caret']}>
                 {/* Column 1: Details chevron */}
                 <button
                     type="button"
@@ -245,6 +245,7 @@ export const DataField = component$<DataFieldProps>((props) => {
                             hasValue && styles.datafieldValueUnderlined, 
                             styles.datafieldValueEditable,
                             isPreviewActive && styles.datafieldValuePreview,
+                            'no-caret',
                         ]} 
                         onPointerDown$={valuePointerDown$}
                         onKeyDown$={valueKeyDown$}

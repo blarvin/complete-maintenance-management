@@ -2,9 +2,7 @@
 
 .historyWrapper {
     /* Wrapper for the history list */
-    /* Prevent text cursor */
-    user-select: none;
-    caret-color: transparent;
+    /* Caret handling via .no-caret class in JSX */
 }
 
 /* Scrollable history list - max ~8 rows visible */
@@ -13,24 +11,22 @@
     flex-direction: column;
     max-height: calc(8 * 24px); /* ~8 rows at 24px each */
     overflow-y: auto;
-    border: 1px solid #ccc;
-    border-radius: 2px;
-    background: #fff;
-    /* Prevent text cursor */
-    user-select: none;
-    caret-color: transparent;
+    border: var(--border-width-thin) solid var(--border-muted);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    /* Caret handling via .no-caret class in JSX */
 }
 
 /* Individual history row */
 .historyRow {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 16px;
+    gap: var(--space-8);
     align-items: baseline;
-    padding: 4px 8px;
-    font-size: 10px;
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
     border: none;
-    border-bottom: 1px solid #eee;
+    border-bottom: var(--border-width-thin) solid var(--border-subtle);
     background: transparent;
     text-align: left;
     cursor: pointer;
@@ -43,32 +39,32 @@
 }
 
 .historyRow:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--bg-hover-subtle);
 }
 
 .historyRow:focus-visible {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--bg-active);
     outline: none;
 }
 
 .historyRowSelected {
-    background: #d4e8ff;
-    border-color: #b0d4ff;
+    background: var(--bg-selected);
+    border-color: var(--color-blue-300);
 }
 
 .historyRowSelected:hover {
-    background: #c0dcff;
+    background: var(--bg-selected-hover);
 }
 
 .historyValue {
-    color: #222;
+    color: var(--text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .historyMeta {
-    color: #666;
-    font-size: 9px;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
     white-space: nowrap;
 }

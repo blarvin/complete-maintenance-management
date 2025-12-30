@@ -3,6 +3,7 @@
  * Contains only:
  * - Reset/base styles
  * - Focus styles
+ * - Utility classes
  * - View-level layout (.view-root, .view-branch)
  * 
  * Component-specific styles are colocated in CSS modules:
@@ -25,9 +26,9 @@ html,
 body {
     margin: 0;
     padding: 0;
-    background: #fff;
-    color: #111;
-    font-family: Inter, Arial, sans-serif;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-family: var(--font-family);
 }
 
 /* Center the main container from the parent (body) instead of using child margins */
@@ -42,8 +43,8 @@ body {
 
 /* Clear, visible focus indicator for keyboard navigation */
 :focus-visible {
-    outline: 2px solid #0066cc;
-    outline-offset: 2px;
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
 }
 
 /* Remove default focus ring for mouse users */
@@ -61,7 +62,51 @@ button {
     caret-color: transparent;
 }
 
-/* Utility class for non-button focusable elements (divs with tabIndex, etc.) */
+/* ========================= */
+/* UTILITY CLASSES           */
+/* ========================= */
+
+/* Caret fix - apply to interactive non-input elements */
+.no-caret {
+    user-select: none;
+    cursor: default;
+    caret-color: transparent;
+}
+
+/* Button reset - strips all default button styling */
+.btn-reset {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Input reset - strips all default input styling */
+.input-reset {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+}
+
+/* Underline input - common pattern for inline editing */
+.input-underline {
+    border-bottom: var(--border-width-thin) solid var(--border-input);
+}
+
+.input-underline:focus {
+    border-bottom-color: var(--accent);
+}
+
+/* Legacy utility class - kept for backwards compatibility */
 .interactive {
     user-select: none;
     cursor: default;
@@ -74,14 +119,14 @@ button {
 
 .view-root {
     width: 100%;
-    max-width: 650px;
-    min-width: 275px;
+    max-width: var(--container-max);
+    min-width: var(--container-min);
     min-height: 560px;
-    padding: 6px 6px 6px;
+    padding: var(--space-3) var(--space-3) var(--space-3);
     /* Parent-only vertical spacing between children */
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-2);
 }
 
 /* ========================= */
@@ -90,10 +135,10 @@ button {
 
 .view-branch {
     width: 100%;
-    max-width: 650px;
-    min-width: 275px;
+    max-width: var(--container-max);
+    min-width: var(--container-min);
     min-height: 560px;
-    padding: 6px 6px 6px;
+    padding: var(--space-3) var(--space-3) var(--space-3);
     display: flex;
     flex-direction: column;
     gap: 3px;
@@ -101,7 +146,7 @@ button {
 
 .branch-parent-row {
     display: flex;
-    gap: 6px;
+    gap: var(--space-3);
     align-items: flex-start;
 }
 
@@ -113,13 +158,13 @@ button {
 .branch-children {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-left: 32px;
+    gap: var(--space-2);
+    margin-left: var(--child-indent);
 }
 
 /* Child under-construction row - DataCard should extend to match parent width */
 .branch-child-row {
     /* Allow the DataCard to extend beyond this container's right boundary */
     /* The DataCard wrapper will use negative margin to compensate for the indent */
-    --branch-indent: 32px;
+    --branch-indent: var(--child-indent);
 }

@@ -15,7 +15,7 @@ export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
         return (
             <button
                 type="button"
-                class={styles.createNode}
+                class={[styles.createNode, 'no-caret']}
                 onClick$={handleClick$}
                 aria-label="Create New Asset"
             >
@@ -28,7 +28,7 @@ export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
         return (
             <button
                 type="button"
-                class={[styles.createNode, styles.createNodeChild]}
+                class={[styles.createNode, styles.createNodeChild, 'no-caret']}
                 onClick$={handleClick$}
                 aria-label="Add Sub-Asset"
             >

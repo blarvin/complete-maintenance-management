@@ -1,32 +1,20 @@
 /* UpButton component styles */
 
 .upButton {
-    width: 32px;
-    height: 35px;
-    min-width: 32px;
-    border: 1.5px solid #000;
-    /* Remove border-right to merge visually with node if desired, 
-       but standard styling is discrete button inside node */
-    border-left: 0; /* Remove left border since it sits on the left edge of node? 
-                       Actually, node has border. UpButton inside node.
-                       If UpButton is inside nodeBody, it's just a button.
-                       Let's keep borders standard but maybe remove background. */
-    background: #fff;
-    font-size: 16px;
+    width: var(--child-indent);
+    height: var(--node-min-height);
+    min-width: var(--child-indent);
+    background: var(--bg-surface);
+    font-size: var(--text-xl);
     cursor: pointer;
     display: grid;
     place-items: center;
-    /* Reset from absolute positioning */
     border-radius: 0;
-}
-
-/* Specific styling when inside node (optional, but cleaner) */
-.upButton {
-    border: none; /* Let node border handle it, or separating border? */
-    border-right: 1.5px solid #000;
+    /* Inside node, only needs right border */
+    border: none;
+    border-right: var(--border-width) solid var(--border-default);
 }
 
 .upButton:hover {
-    background: #f0f0f0;
+    background: var(--bg-hover);
 }
-

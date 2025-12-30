@@ -1,0 +1,106 @@
+/**
+ * Design Tokens
+ * 
+ * Three-layer architecture:
+ * 1. Primitives - raw color/size values
+ * 2. Semantic tokens - purpose-mapped references to primitives
+ * 3. Component tokens - specific overrides (defined in component CSS)
+ * 
+ * Future theming: Override semantic tokens in media query or .dark class
+ */
+
+:root {
+  /* === PRIMITIVES (raw palette) === */
+  --color-black: #000;
+  --color-white: #fff;
+  --color-gray-100: #f9f9f9;
+  --color-gray-200: #f0f0f0;
+  --color-gray-300: #e3e3e3;
+  --color-gray-400: #ccc;
+  --color-gray-500: #999;
+  --color-gray-600: #666;
+  --color-gray-700: #555;
+  --color-gray-800: #222;
+  --color-gray-900: #111;
+  --color-blue-500: #0066cc;
+  --color-blue-100: #d4e8ff;
+  --color-blue-200: #c0dcff;
+  --color-blue-300: #b0d4ff;
+  --color-red-500: #c00;
+  --color-yellow-100: #fff8dc;
+
+  /* === SEMANTIC TOKENS (purpose-mapped) === */
+  --text-primary: var(--color-gray-900);
+  --text-secondary: var(--color-gray-800);
+  --text-muted: var(--color-gray-600);
+  --text-disabled: var(--color-gray-500);
+  --text-placeholder: var(--color-gray-500);
+
+  --bg-surface: var(--color-white);
+  --bg-muted: var(--color-gray-100);
+  --bg-hover: var(--color-gray-200);
+  --bg-hover-subtle: rgba(0, 0, 0, 0.03);
+  --bg-active: rgba(0, 0, 0, 0.05);
+  --bg-preview: var(--color-yellow-100);
+  --bg-selected: var(--color-blue-100);
+  --bg-selected-hover: var(--color-blue-200);
+  --bg-expanded: var(--color-gray-300);
+
+  --border-default: var(--color-black);
+  --border-muted: var(--color-gray-400);
+  --border-subtle: var(--color-gray-300);
+  --border-input: var(--color-gray-800);
+
+  --accent: var(--color-blue-500);
+  --destructive: var(--color-red-500);
+
+  /* === SPACING SCALE (4px base) === */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-6: 12px;
+  --space-8: 16px;
+
+  /* === BORDER === */
+  --border-width: 1.5px;
+  --border-width-thin: 1px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+
+  /* === TYPOGRAPHY === */
+  --font-family: Inter, Arial, sans-serif;
+  --text-xs: 9px;
+  --text-sm: 10px;
+  --text-base: 12px;
+  --text-lg: 14px;
+  --text-xl: 16px;
+  --text-2xl: 18px;
+
+  /* === LAYOUT CONSTANTS === */
+  --container-max: 650px;
+  --container-min: 275px;
+  --chevron-size: 18px;
+  --label-width: 60px;
+  --child-indent: 32px;
+  --datacard-indent: 40px;
+  --node-min-height: 35px;
+  --node-child-height: 28px;
+
+  /* === FOCUS === */
+  --focus-ring: 2px solid var(--accent);
+  --focus-offset: 2px;
+
+  /* === ANIMATION === */
+  --duration-fast: 100ms;
+  --duration-normal: 150ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* === SHADOWS === */
+  --shadow-dropdown: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  /* === Z-INDEX SCALE === */
+  --z-base: 1;
+  --z-node: 2;
+  --z-dropdown: 9999;
+}

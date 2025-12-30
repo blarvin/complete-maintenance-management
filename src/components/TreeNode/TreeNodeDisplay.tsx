@@ -166,7 +166,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                 data-node-id={props.id}
             >
                 <div
-                    class={[styles.nodeBody, isClickable && styles.nodeBodyClickable]}
+                    class={[styles.nodeBody, isClickable && styles.nodeBodyClickable, isClickable && 'no-caret']}
                     onClick$={props.onNodeClick$}
                     onKeyDown$={handleBodyKeyDown$}
                     role={isClickable ? 'button' : undefined}

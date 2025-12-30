@@ -1,9 +1,9 @@
 /* CreateDataField component styles */
 
 .addButton {
-    font-size: 10px;
+    font-size: var(--text-sm);
     font-weight: 600;
-    color: #222;
+    color: var(--text-secondary);
     /* Reset button defaults */
     background: none;
     border: none;
@@ -18,30 +18,30 @@
 }
 
 .addButton:focus-visible {
-    outline: 2px solid #0066cc;
-    outline-offset: 2px;
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
 }
 
 /* Construction mode wrapper */
 .constructionWrapper {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-2);
 }
 
 /* Construction mode - grid layout: chevron | field name | value */
 .construction {
     display: grid;
-    grid-template-columns: 18px minmax(100px, 1fr) minmax(80px, 1fr);
-    font-size: 10px;
-    gap: 4px;
+    grid-template-columns: var(--chevron-size) minmax(100px, 1fr) minmax(80px, 1fr);
+    font-size: var(--text-sm);
+    gap: var(--space-2);
     align-items: baseline;
 }
 
 /* Hollow chevron button */
 .chevronButton {
-    width: 18px;
-    height: 18px;
+    width: var(--chevron-size);
+    height: var(--chevron-size);
     padding: 0;
     border: none;
     background: transparent;
@@ -52,7 +52,7 @@
 }
 
 .chevronButton:focus-visible {
-    outline: 2px solid #0066cc;
+    outline: var(--focus-ring);
     outline-offset: 1px;
 }
 
@@ -61,10 +61,10 @@
     display: inline-block;
     width: 6px;
     height: 6px;
-    border-right: 1.5px solid #666;
-    border-bottom: 1.5px solid #666;
+    border-right: var(--border-width) solid var(--text-muted);
+    border-bottom: var(--border-width) solid var(--text-muted);
     transform: rotate(-45deg);
-    transition: transform 0.15s ease;
+    transition: transform var(--duration-normal) ease;
 }
 
 /* Rotate when open - points down */
@@ -73,7 +73,7 @@
 }
 
 .chevronButton:hover .chevron {
-    border-color: #333;
+    border-color: var(--text-secondary);
 }
 
 /* Combo box wrapper for dropdown positioning */
@@ -92,12 +92,12 @@
     padding: 0;
     margin: 0;
     font: inherit;
-    color: #111;
-    border-bottom: 1px solid #222;
+    color: var(--text-primary);
+    border-bottom: var(--border-width-thin) solid var(--border-input);
 }
 
 .inputName:focus {
-    border-bottom-color: #0066cc;
+    border-bottom-color: var(--accent);
 }
 
 /* Value input */
@@ -111,23 +111,23 @@
     padding: 0;
     margin: 0;
     font: inherit;
-    color: #222;
-    border-bottom: 1px solid #222;
+    color: var(--text-secondary);
+    border-bottom: var(--border-width-thin) solid var(--border-input);
 }
 
 .inputValue:focus {
-    border-bottom-color: #0066cc;
+    border-bottom-color: var(--accent);
 }
 
 /* Dropdown menu - position:fixed escapes all parent containers */
 .dropdown {
     position: fixed;
     /* top, left, width set via inline style */
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 2px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 9999;
+    background: var(--bg-surface);
+    border: var(--border-width-thin) solid var(--border-muted);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-dropdown);
+    z-index: var(--z-dropdown);
     max-height: 150px;
     overflow-y: auto;
 }
@@ -135,57 +135,57 @@
 .dropdownItem {
     display: block;
     width: 100%;
-    padding: 6px 8px;
+    padding: var(--space-3) var(--space-4);
     border: none;
     background: transparent;
     text-align: left;
     font: inherit;
-    font-size: 10px;
-    color: #222;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     cursor: pointer;
 }
 
 .dropdownItem:hover {
-    background: #f0f0f0;
+    background: var(--bg-hover);
 }
 
 .dropdownItem:focus-visible {
-    background: #e0e0e0;
+    background: var(--bg-active);
     outline: none;
 }
 
 /* Action row with Save/Cancel buttons - right aligned */
 .actions {
     display: flex;
-    gap: 8px;
+    gap: var(--space-4);
     justify-content: flex-end;
-    margin-top: 2px;
+    margin-top: var(--space-1);
 }
 
 .actionButton {
-    font-size: 10px;
+    font-size: var(--text-sm);
     font-weight: 600;
     background: none;
-    border: 1px solid #222;
-    padding: 2px 8px;
+    border: var(--border-width-thin) solid var(--border-input);
+    padding: var(--space-1) var(--space-4);
     cursor: pointer;
     font-family: inherit;
 }
 
 .actionButton:hover {
-    background: #f0f0f0;
+    background: var(--bg-hover);
 }
 
 .actionButton:focus-visible {
-    outline: 2px solid #0066cc;
+    outline: var(--focus-ring);
     outline-offset: 1px;
 }
 
 .cancelButton {
-    border-color: #999;
-    color: #666;
+    border-color: var(--text-disabled);
+    color: var(--text-muted);
 }
 
 .cancelButton:hover {
-    background: #f5f5f5;
+    background: var(--bg-muted);
 }
