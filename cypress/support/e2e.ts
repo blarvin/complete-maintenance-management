@@ -17,7 +17,8 @@ beforeEach(() => {
 });
 
 // Override cy.visit to always include emulator param when USE_EMULATOR is true
-Cypress.Commands.overwrite('visit', (originalFn, url, options) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+Cypress.Commands.overwrite('visit', (originalFn: any, url: string, options?: any) => {
     if (Cypress.env('USE_EMULATOR')) {
         // Add emulator=true query param
         const separator = url.includes('?') ? '&' : '?';
