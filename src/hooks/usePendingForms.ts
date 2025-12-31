@@ -4,6 +4,8 @@
  * Extracted from TreeNodeDisplay to enable reuse and testing.
  * Pending forms are field creation forms that haven't been saved to the database yet.
  * They persist to localStorage so users don't lose work on navigation/refresh.
+ * 
+ * Now includes cardOrder for proper field ordering.
  */
 
 import { useSignal, useVisibleTask$, useTask$, $, type QRL } from '@builder.io/qwik';
@@ -15,6 +17,7 @@ export type PendingForm = {
     id: string;
     fieldName: string;
     fieldValue: string | null;
+    cardOrder: number;
 };
 
 /** LS key for pending forms */
@@ -47,6 +50,10 @@ export type UsePendingFormsOptions = {
     nodeId: string;
     /** Called after a form is successfully saved to DB. Typically reloads the field list. */
     onSaved$: QRL<() => void | Promise<void>>;
+    /** Default field names to initialize with if no persisted fields and no LS forms */
+    initialFieldNames?: string[];
+    /** Current max cardOrder from persisted fields (for calculating next cardOrder) */
+    maxPersistedCardOrder: number;
 };
 
 /**
@@ -57,15 +64,43 @@ export type UsePendingFormsOptions = {
  * const { forms, add$, save$, cancel$, change$ } = usePendingForms({
  *     nodeId: props.id,
  *     onSaved$: reload$,
+ *     maxPersistedCardOrder: fields.value?.length ? Math.max(...fields.value.map(f => f.cardOrder)) : -1,
  * });
  * ```
  */
 export function usePendingForms(options: UsePendingFormsOptions) {
     const forms = useSignal<PendingForm[]>([]);
+    const initialized = useSignal(false);
 
-    // Load pending forms from LS on mount
-    useVisibleTask$(() => {
-        forms.value = loadPendingForms(options.nodeId);
+    // Load pending forms from LS on mount, or initialize with defaults
+    useVisibleTask$(({ track }) => {
+        // Track maxPersistedCardOrder to re-check initialization when fields load
+        const maxPersisted = track(() => options.maxPersistedCardOrder);
+        
+        if (initialized.value) return;
+        
+        const stored = loadPendingForms(options.nodeId);
+        if (stored.length > 0) {
+            // Migrate old forms without cardOrder
+            const migrated = stored.map((f, i) => ({
+                ...f,
+                cardOrder: f.cardOrder ?? (maxPersisted + 1 + i),
+            }));
+            forms.value = migrated;
+            initialized.value = true;
+        } else if (options.initialFieldNames && options.initialFieldNames.length > 0 && maxPersisted < 0) {
+            // No persisted fields and no LS forms - initialize with defaults
+            const defaults: PendingForm[] = options.initialFieldNames.map((name, i) => ({
+                id: generateId(),
+                fieldName: name,
+                fieldValue: null,
+                cardOrder: i,
+            }));
+            forms.value = defaults;
+            initialized.value = true;
+        } else {
+            initialized.value = true;
+        }
     });
 
     // Save pending forms to LS when they change
@@ -78,13 +113,20 @@ export function usePendingForms(options: UsePendingFormsOptions) {
     });
 
     /**
-     * Add a new empty pending form.
+     * Add a new empty pending form with next available cardOrder.
      */
-    const add$ = $(() => {
+    const add$ = $(async () => {
+        // Calculate next cardOrder from both persisted and pending
+        const maxPending = forms.value.length > 0 
+            ? Math.max(...forms.value.map(f => f.cardOrder)) 
+            : -1;
+        const nextOrder = Math.max(options.maxPersistedCardOrder, maxPending) + 1;
+        
         const newForm: PendingForm = {
             id: generateId(),
             fieldName: '',
             fieldValue: null,
+            cardOrder: nextOrder,
         };
         forms.value = [...forms.value, newForm];
     });
@@ -100,8 +142,12 @@ export function usePendingForms(options: UsePendingFormsOptions) {
             forms.value = forms.value.filter(f => f.id !== formId);
             return;
         }
-        // Persist to DB
-        await getFieldService().addField(options.nodeId, name, fieldValue);
+        // Get the cardOrder for this form
+        const form = forms.value.find(f => f.id === formId);
+        const cardOrder = form?.cardOrder;
+        
+        // Persist to DB with cardOrder
+        await getFieldService().addField(options.nodeId, name, fieldValue, cardOrder);
         // Remove from pending
         forms.value = forms.value.filter(f => f.id !== formId);
         // Notify parent to refresh persisted fields
@@ -124,6 +170,31 @@ export function usePendingForms(options: UsePendingFormsOptions) {
         );
     });
 
+    /**
+     * Save all pending forms with valid field names.
+     * Used by UC CREATE to save any unsaved fields before completing.
+     * Returns the number of forms saved.
+     */
+    const saveAllPending$ = $(async (): Promise<number> => {
+        const formsToSave = forms.value.filter(f => f.fieldName.trim());
+        if (formsToSave.length === 0) return 0;
+
+        const fieldService = getFieldService();
+        await Promise.all(
+            formsToSave.map(f => 
+                fieldService.addField(options.nodeId, f.fieldName.trim(), f.fieldValue, f.cardOrder)
+            )
+        );
+
+        // Clear all forms (saved ones are now persisted, empty ones are discarded)
+        forms.value = [];
+        
+        // Notify parent to refresh persisted fields
+        await options.onSaved$();
+        
+        return formsToSave.length;
+    });
+
     return {
         /** Current pending forms */
         forms,
@@ -135,5 +206,7 @@ export function usePendingForms(options: UsePendingFormsOptions) {
         cancel$,
         /** Update pending form values as user types */
         change$,
+        /** Save all pending forms with valid names (for UC CREATE) */
+        saveAllPending$,
     };
 }

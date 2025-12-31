@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { collection, doc, setDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, getCountFromServer } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, getCountFromServer, updateDoc } from "firebase/firestore";
 import { TreeNode } from "../models";
 import { COLLECTIONS } from "../../constants";
 import { getCurrentUserId } from "../../context/userContext";
@@ -31,4 +31,9 @@ export async function deleteLeafNode(id: string) {
   const childCount = await getCountFromServer(query(collection(db, COLLECTIONS.NODES), where("parentId", "==", id)));
   if (childCount.data().count > 0) throw new Error("Only leaf nodes can be deleted in Phase 1");
   await deleteDoc(doc(db, COLLECTIONS.NODES, id));
+}
+
+export async function updateNode(id: string, updates: Partial<Pick<TreeNode, "nodeName" | "nodeSubtitle">>) {
+  const ref = doc(db, COLLECTIONS.NODES, id);
+  await updateDoc(ref, { ...updates, updatedBy: getCurrentUserId(), updatedAt: now() });
 }

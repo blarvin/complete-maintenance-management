@@ -3,28 +3,35 @@
  * Abstracts the repo layer so components don't depend on Firestore directly.
  */
 
-import { listFieldsForNode, updateFieldValue as repoUpdateFieldValue, deleteField as repoDeleteField, getFieldHistory as repoGetFieldHistory, addField as repoAddField } from '../repo/dataFields';
+import { listFieldsForNode, updateFieldValue as repoUpdateFieldValue, deleteField as repoDeleteField, getFieldHistory as repoGetFieldHistory, addField as repoAddField, nextCardOrder as repoNextCardOrder } from '../repo/dataFields';
 import type { DataField, DataFieldHistory } from '../models';
 import { generateId } from '../../utils/id';
 
 export const fieldService = {
     /**
-     * Get all fields for a node, sorted by updatedAt ascending.
+     * Get all fields for a node, sorted by cardOrder ascending.
      * Used by TreeNode to load DataCard fields.
      */
     getFieldsForNode: (nodeId: string): Promise<DataField[]> => listFieldsForNode(nodeId),
 
     /**
+     * Get the next available cardOrder for a node.
+     * Used when creating pending forms to reserve a position.
+     */
+    nextCardOrder: (nodeId: string): Promise<number> => repoNextCardOrder(nodeId),
+
+    /**
      * Add a new field to a node.
      * Used by CreateDataField component for in-place field creation.
+     * @param cardOrder - Optional explicit cardOrder. If not provided, appends to end.
      */
-    addField: (nodeId: string, fieldName: string, fieldValue: string | null): Promise<DataField> =>
+    addField: (nodeId: string, fieldName: string, fieldValue: string | null, cardOrder?: number): Promise<DataField> =>
         repoAddField({
             id: generateId(),
             parentNodeId: nodeId,
             fieldName,
             fieldValue,
-        }),
+        }, cardOrder),
 
     /**
      * Update a field's value. Writes history entry automatically.

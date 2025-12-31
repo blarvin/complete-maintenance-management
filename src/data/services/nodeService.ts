@@ -3,7 +3,7 @@
  * Abstracts the repo layer so components don't depend on Firestore directly.
  */
 
-import { getNodeById, listRootNodes, listChildren } from '../repo/treeNodes';
+import { getNodeById, listRootNodes, listChildren, createNode, updateNode as repoUpdateNode } from '../repo/treeNodes';
 import type { TreeNode } from '../models';
 
 export const nodeService = {
@@ -36,5 +36,24 @@ export const nodeService = {
      * Returns empty array if node has no children.
      */
     getChildren: (parentId: string): Promise<TreeNode[]> => listChildren(parentId),
+
+    /**
+     * Create an empty node (for immediate creation during UC).
+     * Node is created with empty name/subtitle, to be updated later.
+     */
+    createEmptyNode: (id: string, parentId: string | null): Promise<TreeNode> =>
+        createNode({
+            id,
+            nodeName: '',
+            nodeSubtitle: '',
+            parentId,
+        }),
+
+    /**
+     * Update node properties (name and/or subtitle).
+     * Used to finalize UC node after user enters data.
+     */
+    updateNode: (id: string, updates: { nodeName?: string; nodeSubtitle?: string }): Promise<void> =>
+        repoUpdateNode(id, updates),
 };
 

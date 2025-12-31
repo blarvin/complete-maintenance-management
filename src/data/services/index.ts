@@ -34,11 +34,14 @@ export interface INodeService {
     getNodeWithChildren(id: string): Promise<{ node: TreeNode | null; children: TreeNode[] }>;
     getChildren(parentId: string): Promise<TreeNode[]>;
     createWithFields(input: CreateNodeInput): Promise<void>;
+    createEmptyNode(id: string, parentId: string | null): Promise<TreeNode>;
+    updateNode(id: string, updates: { nodeName?: string; nodeSubtitle?: string }): Promise<void>;
 }
 
 export interface IFieldService {
     getFieldsForNode(nodeId: string): Promise<DataField[]>;
-    addField(nodeId: string, fieldName: string, fieldValue: string | null): Promise<DataField>;
+    nextCardOrder(nodeId: string): Promise<number>;
+    addField(nodeId: string, fieldName: string, fieldValue: string | null, cardOrder?: number): Promise<DataField>;
     updateFieldValue(fieldId: string, newValue: string | null): Promise<void>;
     deleteField(fieldId: string): Promise<void>;
     getFieldHistory(fieldId: string): Promise<DataFieldHistory[]>;
@@ -55,6 +58,8 @@ import { createNodeWithDefaultFields } from './createNode';
 const defaultNodeService: INodeService = {
     ...firestoreNodes,
     createWithFields: createNodeWithDefaultFields,
+    createEmptyNode: firestoreNodes.createEmptyNode,
+    updateNode: firestoreNodes.updateNode,
 };
 
 const defaultFieldService: IFieldService = firestoreFields;

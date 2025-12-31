@@ -19,6 +19,7 @@ export type DataField = {
   fieldName: string;
   parentNodeId: ID;
   fieldValue: string | null;
+  cardOrder: number;
   updatedBy: UserId;
   updatedAt: number;
 };

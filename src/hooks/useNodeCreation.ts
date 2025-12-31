@@ -5,11 +5,14 @@
  * Satisfies OCP: Views are now closed for modification when creation logic changes.
  * Satisfies SRP: Views only handle rendering, this hook handles creation orchestration.
  * Satisfies DIP: Uses service abstraction (can be swapped via setNodeService).
+ * 
+ * IMMEDIATE CREATION: Node is created in DB immediately when UC starts.
+ * This allows FieldList to work identically for UC and display modes.
  */
 
 import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
-import { getNodeService } from '../data/services';
+import { getNodeService, getFieldService } from '../data/services';
 import { generateId } from '../utils/id';
 
 /**
@@ -45,12 +48,23 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
     const { startConstruction$, cancelConstruction$, completeConstruction$ } = useAppTransitions();
 
     /**
-     * Start creating a new node. Opens the under-construction UI.
-     * Default fields are handled internally by TreeNodeConstruction.
+     * Start creating a new node.
+     * IMMEDIATELY creates an empty node in the database, then opens UC UI.
+     * This allows FieldList to work identically for UC and display modes.
+     * 
+     * Note: We don't reload the nodes list here. The node exists in DB (so FieldList works),
+     * but it only appears in the visual list after complete$(). This avoids dual-rendering
+     * where both the UC TreeNode and the list TreeNode would show.
      */
-    const start$ = $(() => {
+    const start$ = $(async () => {
+        const id = generateId();
+        
+        // Create empty node in DB immediately
+        await getNodeService().createEmptyNode(id, options.parentId);
+        
+        // Open UC UI (node won't appear in list until complete$)
         startConstruction$({
-            id: generateId(),
+            id,
             parentId: options.parentId,
             nodeName: '',
             nodeSubtitle: '',
@@ -59,26 +73,35 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
     });
 
     /**
-     * Cancel node creation. Closes the under-construction UI without saving.
+     * Cancel node creation. Closes the under-construction UI.
+     * Note: The orphan node remains in DB (cleanup deferred to Phase 2).
      */
     const cancel$ = $(() => {
         cancelConstruction$();
     });
 
     /**
-     * Complete node creation. Saves the node and its fields.
+     * Complete node creation. Updates the node name/subtitle and saves fields.
+     * The node already exists in DB (created in start$).
      */
     const complete$ = $(async (payload: CreateNodePayload) => {
         const ucData = appState.underConstruction;
         if (!ucData) return;
 
-        await getNodeService().createWithFields({
-            id: ucData.id,
-            parentId: options.parentId,
-            nodeName: payload.nodeName,
-            nodeSubtitle: payload.nodeSubtitle,
-            defaults: payload.fields,
+        // Update node with final name/subtitle
+        await getNodeService().updateNode(ucData.id, {
+            nodeName: payload.nodeName || 'Untitled',
+            nodeSubtitle: payload.nodeSubtitle || '',
         });
+
+        // Create fields from TreeNodeConstruction's local state
+        // (In Step 3, FieldList will handle this, and payload.fields will be empty)
+        if (payload.fields.length > 0) {
+            const fieldService = getFieldService();
+            await Promise.all(
+                payload.fields.map(f => fieldService.addField(ucData.id, f.fieldName, f.fieldValue))
+            );
+        }
 
         completeConstruction$();
         await options.onCreated$();

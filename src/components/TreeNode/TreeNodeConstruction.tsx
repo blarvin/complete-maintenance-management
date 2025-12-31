@@ -1,34 +1,26 @@
 /**
  * TreeNodeConstruction - Under-construction mode UI for TreeNode.
- * Renders input fields for name/subtitle and uses CreateDataField for all fields.
+ * 
+ * Renders input fields for name/subtitle and uses FieldList for all fields.
  * Matches the visual layout of TreeNodeDisplay for consistency.
  * 
- * All fields (defaults + user-added) are rendered as CreateDataField forms.
- * On CREATE: all forms with non-empty names are saved with the node.
+ * Fields are managed by FieldList (same as display mode). When the user
+ * clicks "Save" on a field, it persists to DB immediately. This provides
+ * immediate visual feedback and consistent behavior with existing nodes.
+ * 
+ * On CREATE: any unsaved pending fields are saved first, then node name/subtitle
+ * are updated in DB.
  */
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { DataCard } from '../DataCard/DataCard';
-import { CreateDataField } from '../CreateDataField/CreateDataField';
-import type { ConstructionField, CreateNodePayload } from './types';
-import { generateId } from '../../utils/id';
+import { FieldList, type FieldListHandle } from '../FieldList/FieldList';
+import type { CreateNodePayload } from './types';
 import { DEFAULT_DATAFIELD_NAMES } from '../../constants';
 import styles from './TreeNode.module.css';
 
 // Re-export for backwards compatibility
 export type { ConstructionField } from './types';
-
-/** Form state for a field being constructed */
-type FieldForm = {
-    id: string;
-    fieldName: string;
-    fieldValue: string | null;
-    /** Whether the user has clicked "Save" on this form (validated) */
-    confirmed: boolean;
-};
-
-/** Maximum pending forms allowed */
-const MAX_PENDING_FORMS = 30;
 
 export type TreeNodeConstructionProps = {
     id: string;
@@ -44,35 +36,24 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     const nameValue = useSignal<string>(props.initialName || '');
     const subtitleValue = useSignal<string>(props.initialSubtitle || '');
     const nameInputRef = useSignal<HTMLInputElement>();
+    const fieldListHandle = useSignal<FieldListHandle | null>(null);
 
-    // All field forms (defaults + user-added)
-    const fieldForms = useSignal<FieldForm[]>([]);
-
-    // Initialize with default fields on mount
+    // Focus name input on mount
     useVisibleTask$(() => {
-        const defaults: FieldForm[] = DEFAULT_DATAFIELD_NAMES.map(name => ({
-            id: generateId(),
-            fieldName: name,
-            fieldValue: null,
-            confirmed: false,
-        }));
-        fieldForms.value = defaults;
         nameInputRef.value?.focus();
     });
 
     const handleCreate$ = $(async () => {
-        // Filter: only include forms with non-empty field names
-        const validFields: ConstructionField[] = fieldForms.value
-            .filter(f => f.fieldName.trim())
-            .map(f => ({
-                fieldName: f.fieldName.trim(),
-                fieldValue: f.fieldValue,
-            }));
-
+        // Save any unsaved pending fields first
+        if (fieldListHandle.value) {
+            await fieldListHandle.value.saveAllPending$();
+        }
+        
+        // Update node name/subtitle
         await props.onCreate$({
             nodeName: nameValue.value,
             nodeSubtitle: subtitleValue.value,
-            fields: validFields,
+            fields: [], // Fields are handled by FieldList, not passed here
         });
     });
 
@@ -86,50 +67,9 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
         }
     });
 
-    // Add a new field form
-    const handleAddField$ = $(() => {
-        if (fieldForms.value.length >= MAX_PENDING_FORMS) return;
-        const newForm: FieldForm = {
-            id: generateId(),
-            fieldName: '',
-            fieldValue: null,
-            confirmed: false,
-        };
-        fieldForms.value = [...fieldForms.value, newForm];
-    });
-
-    // Save a field form (validate and mark as confirmed)
-    const handleFormSave$ = $((formId: string, fieldName: string, fieldValue: string | null) => {
-        const name = fieldName.trim();
-        if (!name) {
-            // Empty name - remove the form
-            fieldForms.value = fieldForms.value.filter(f => f.id !== formId);
-            return;
-        }
-        // Update and mark as confirmed
-        fieldForms.value = fieldForms.value.map(f =>
-            f.id === formId
-                ? { ...f, fieldName: name, fieldValue, confirmed: true }
-                : f
-        );
-    });
-
-    // Cancel a field form
-    const handleFormCancel$ = $((formId: string) => {
-        fieldForms.value = fieldForms.value.filter(f => f.id !== formId);
-    });
-
-    // Update form values (for tracking, not used for LS in UC mode)
-    const handleFormChange$ = $((formId: string, fieldName: string, fieldValue: string | null) => {
-        fieldForms.value = fieldForms.value.map(f =>
-            f.id === formId ? { ...f, fieldName, fieldValue } : f
-        );
-    });
-
     const titleId = `node-title-${props.id}`;
     // Match the DataCard indent: 18px for child construction, 50px for root construction
     const indentVar = props.isChildConstruction ? '18px' : '50px';
-    const canAddMore = fieldForms.value.length < MAX_PENDING_FORMS;
 
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
@@ -167,29 +107,12 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                 </div>
             </article>
             <DataCard nodeId={props.id} isOpen={true}>
-                {/* All fields as CreateDataField forms */}
-                {fieldForms.value.map((form) => (
-                    <CreateDataField
-                        key={form.id}
-                        id={form.id}
-                        initialName={form.fieldName}
-                        initialValue={form.fieldValue}
-                        onSave$={handleFormSave$}
-                        onCancel$={handleFormCancel$}
-                        onChange$={handleFormChange$}
-                    />
-                ))}
-                
-                {/* Add Field button */}
-                <button
-                    type="button"
-                    class={styles.addFieldButton}
-                    onClick$={handleAddField$}
-                    disabled={!canAddMore}
-                    aria-label={canAddMore ? "Add new field" : "Maximum fields reached"}
-                >
-                    + Add Field
-                </button>
+                {/* FieldList handles all field management - same as display mode */}
+                <FieldList 
+                    nodeId={props.id} 
+                    initialFieldNames={DEFAULT_DATAFIELD_NAMES}
+                    handleRef={fieldListHandle}
+                />
                 
                 {/* Cancel/Create buttons at the very bottom */}
                 <div q:slot="actions" class={styles.constructionActions}>
