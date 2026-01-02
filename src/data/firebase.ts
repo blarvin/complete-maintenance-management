@@ -65,6 +65,58 @@ function getDb() {
     }
 }
 
+/**
+ * Clear all Firebase IndexedDB databases.
+ * Use this if you encounter IndexedDB schema errors (e.g., missing object stores).
+ * 
+ * To use: Call `clearFirebaseIndexedDB()` in the browser console.
+ */
+export async function clearFirebaseIndexedDB(): Promise<void> {
+    if (!isBrowser || !indexedDB.databases) {
+        console.warn('IndexedDB not available or databases() not supported');
+        return;
+    }
+
+    try {
+        const databases = await indexedDB.databases();
+        const firebaseDbs = databases.filter(db => 
+            db.name?.includes('firebase') || db.name?.includes('firestore')
+        );
+
+        if (firebaseDbs.length === 0) {
+            console.log('No Firebase IndexedDB databases found');
+            return;
+        }
+
+        console.log(`Clearing ${firebaseDbs.length} Firebase IndexedDB database(s)...`);
+        
+        await Promise.all(
+            firebaseDbs.map(db => {
+                return new Promise<void>((resolve, reject) => {
+                    const request = indexedDB.deleteDatabase(db.name!);
+                    request.onsuccess = () => {
+                        console.log(`✅ Deleted: ${db.name}`);
+                        resolve();
+                    };
+                    request.onerror = () => {
+                        console.error(`❌ Failed to delete: ${db.name}`);
+                        reject(request.error);
+                    };
+                });
+            })
+        );
+
+        console.log('✅ All Firebase IndexedDB databases cleared. Please refresh the page.');
+    } catch (error) {
+        console.error('Failed to clear IndexedDB:', error);
+    }
+}
+
+// Expose to window for easy console access
+if (isBrowser) {
+    (window as any).clearFirebaseIndexedDB = clearFirebaseIndexedDB;
+}
+
 export const db = getDb();
 export const projectId = firebaseConfig.projectId;
 
