@@ -59,8 +59,8 @@ The codebase demonstrates **strong architectural foundations** with good separat
 3. **`RootView.tsx` & `BranchView.tsx`**
    - **Issue**: Both handle data loading, node creation, and rendering
    - **SRP Violation**: Views are doing too much orchestration
-   - **Recommendation**: Extract view-specific data loading hooks (`useRootViewData`, `useBranchViewData`)
-   - **Status**: ✅ Refactored—dedicated data loading hooks were extracted to separate orchestration from rendering.
+   - **Recommendation**: Extract view-specific data loading hooks (`useRootViewData`, `useBranchViewData`)—
+   - **Status**: ✅ Refactored dedicated data loading hooks were extracted to separate orchestration from rendering.
 
 4. **`appState.ts` (422 lines)**
    - **Issue**: Contains state definitions, transitions, selectors, context, AND hooks
