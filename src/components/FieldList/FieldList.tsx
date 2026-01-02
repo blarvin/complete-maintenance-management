@@ -37,7 +37,7 @@ export type FieldListHandle = {
 export type FieldListProps = {
     nodeId: string;
     /** Optional default field names to initialize with (for UC mode) */
-    initialFieldNames?: string[];
+    initialFieldNames?: readonly string[];
     /** Optional signal to receive the FieldList handle for external control */
     handleRef?: Signal<FieldListHandle | null>;
 };

@@ -51,7 +51,7 @@ export type UsePendingFormsOptions = {
     /** Called after a form is successfully saved to DB. Typically reloads the field list. */
     onSaved$: QRL<() => void | Promise<void>>;
     /** Default field names to initialize with if no persisted fields and no LS forms */
-    initialFieldNames?: string[];
+    initialFieldNames?: readonly string[];
     /** Current max cardOrder from persisted fields (for calculating next cardOrder) */
     maxPersistedCardOrder: number;
 };
