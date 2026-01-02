@@ -62,7 +62,7 @@ The codebase demonstrates **strong architectural foundations** with good separat
    - **Recommendation**: Extract view-specific data loading hooks (`useRootViewData`, `useBranchViewData`)—
    - **Status**: ✅ Refactored dedicated data loading hooks were extracted to separate orchestration from rendering.
 
-4. **`appState.ts` (422 lines)**
+4. **`appState.ts` (422 lines)** ✅ **COMPLETED**
    - **Issue**: Contains state definitions, transitions, selectors, context, AND hooks
    - **SRP Violation**: Single file doing too many things
    - **Recommendation**: Split into:
@@ -70,7 +70,9 @@ The codebase demonstrates **strong architectural foundations** with good separat
      - `appState.transitions.ts` - State transitions
      - `appState.selectors.ts` - Derived state selectors
      - `appState.context.ts` - Context provider/hooks
+     - `appState.ts` - Re-exports (main entry point)
    - **Impact**: Low - Works but harder to navigate
+   - **Status**: Refactored into separate modules as recommended
 
 ---
 
@@ -181,10 +183,9 @@ The codebase demonstrates **strong architectural foundations** with good separat
 
 ### High Priority
 
+#### 2. **Split `appState.ts` into Multiple Files** ✅
 
-#### 2. **Split `appState.ts` into Multiple Files**
-
-**File:** `state/appState.ts` (422 lines)
+**File:** `state/appState.ts` (422 lines) → **COMPLETED**
 
 **Recommendation:**
 
@@ -194,7 +195,7 @@ state/
   appState.transitions.ts - State transition functions
   appState.selectors.ts   - Derived state selectors
   appState.context.ts     - Context provider and hooks
-  appState.index.ts       - Re-exports
+  appState.ts            - Re-exports (main entry point)
 ```
 
 **Benefits:**
@@ -203,6 +204,8 @@ state/
 - Easier to navigate
 - Clearer separation of concerns
 - Reduces cognitive load
+
+**Status:** Refactored into separate modules as recommended. All imports continue to work through the main `appState.ts` entry point.
 
 ---
 
