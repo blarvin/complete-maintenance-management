@@ -23,15 +23,61 @@ describe('Node Creation', () => {
         });
 
         it('creates a new root node', () => {
-            cy.get('button').contains('Create New Asset').click();
-            cy.get('input[placeholder="Name"]').type('Electrical System');
-            cy.get('input[placeholder="Subtitle / Location / Short description"]').type('Main switchgear');
-            cy.get('button').contains('Create').click();
+            // Verify HVAC System exists (from seed data)
+            cy.contains('HVAC System').should('be.visible');
+            
+            // Get initial count of root nodes (may be more than 1 if previous tests created nodes)
+            cy.get('main.view-root').find('article[data-node-id]').then(($nodes) => {
+                const initialCount = $nodes.length;
+                
+                cy.get('button').contains('Create New Asset').click();
+                
+                // Type and verify the values are set (wait for Qwik signals to update)
+                cy.get('input[placeholder="Name"]')
+                    .clear()
+                    .type('Electrical System', { delay: 50 })
+                    .should('have.value', 'Electrical System');
+                
+                cy.get('input[placeholder="Subtitle / Location / Short description"]')
+                    .clear()
+                    .type('Main switchgear', { delay: 50 })
+                    .should('have.value', 'Main switchgear');
+                
+                // Wait to ensure Qwik has processed all input events and updated signals
+                cy.wait(300);
+                
+                // Double-check the values are still in the inputs before clicking Create
+                cy.get('input[placeholder="Name"]').should('have.value', 'Electrical System');
+                cy.get('input[placeholder="Subtitle / Location / Short description"]').should('have.value', 'Main switchgear');
+                
+                cy.get('button').contains('Create').click();
 
-            // New node should appear alongside HVAC System
-            cy.contains('Electrical System').should('be.visible');
-            cy.contains('Main switchgear').should('be.visible');
-            cy.contains('HVAC System').should('be.visible'); // Golden tree still there
+                // Wait for construction to complete (form disappears, Create button reappears)
+                cy.get('input[placeholder="Name"]').should('not.exist', { timeout: 5000 });
+                cy.get('button').contains('Create New Asset').should('be.visible', { timeout: 5000 });
+                
+                // Wait for the node count to increase (indicates nodes list has reloaded)
+                cy.get('main.view-root')
+                    .find('article[data-node-id]')
+                    .should('have.length.at.least', initialCount + 1, { timeout: 10000 });
+            });
+            
+            // Now verify the specific node text exists in one of the articles
+            cy.get('main.view-root')
+                .find('article[data-node-id]')
+                .then(($articles) => {
+                    // Check that at least one article contains "Electrical System"
+                    const hasElectricalSystem = Array.from($articles).some(article => 
+                        article.textContent?.includes('Electrical System')
+                    );
+                    expect(hasElectricalSystem).to.be.true;
+                });
+            
+            // Verify subtitle
+            cy.get('main.view-root').contains('Main switchgear').should('be.visible');
+            
+            // Verify HVAC System is still there
+            cy.contains('HVAC System').should('be.visible');
         });
 
         it('cancels creation without creating a node', () => {

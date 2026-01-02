@@ -28,6 +28,11 @@ export default defineConfig({
                     await mod.clearAllData();
                     return null;
                 },
+                async cleanupOrphanedNodes() {
+                    const mod = await import('./cypress/support/seed-data');
+                    await mod.cleanupOrphanedNodes();
+                    return null;
+                },
             });
             return config;
         },

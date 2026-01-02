@@ -14,6 +14,8 @@ before(() => {
 beforeEach(() => {
     cy.clearLocalStorage();
     cy.clearIndexedDB();
+    // Clean up orphaned nodes (nodes with empty names from canceled creations)
+    cy.task('cleanupOrphanedNodes');
 });
 
 // Override cy.visit to always include emulator param when USE_EMULATOR is true
