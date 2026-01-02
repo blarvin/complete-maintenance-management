@@ -60,7 +60,7 @@ The codebase demonstrates **strong architectural foundations** with good separat
    - **Issue**: Both handle data loading, node creation, and rendering
    - **SRP Violation**: Views are doing too much orchestration
    - **Recommendation**: Extract view-specific data loading hooks (`useRootViewData`, `useBranchViewData`)
-   - **Impact**: Medium - Duplication between views, harder to test
+   - **Status**: ✅ Refactored—dedicated data loading hooks were extracted to separate orchestration from rendering.
 
 4. **`appState.ts` (422 lines)**
    - **Issue**: Contains state definitions, transitions, selectors, context, AND hooks
@@ -181,58 +181,6 @@ The codebase demonstrates **strong architectural foundations** with good separat
 
 ### High Priority
 
-#### 1. **Extract View Data Loading Logic**
-
-**Files:** `RootView.tsx`, `BranchView.tsx`
-
-**Issue:** Duplication of data loading patterns
-
-**Current:**
-
-```tsx
-// RootView.tsx
-const nodes = useSignal<TreeNodeRecord[]>([]);
-const loadNodes$ = $(async () => {
-  nodes.value = await getNodeService().getRootNodes();
-});
-useVisibleTask$(async () => {
-  await loadNodes$();
-});
-```
-
-**Recommendation:**
-
-```tsx
-// hooks/useRootViewData.ts
-export function useRootViewData() {
-  const nodes = useSignal<TreeNodeRecord[]>([]);
-  const isLoading = useSignal(false);
-
-  const load$ = $(async () => {
-    isLoading.value = true;
-    nodes.value = await getNodeService().getRootNodes();
-    isLoading.value = false;
-  });
-
-  useVisibleTask$(async () => {
-    await load$();
-  });
-
-  return { nodes, isLoading, reload$: load$ };
-}
-
-// RootView.tsx
-const { nodes, reload$ } = useRootViewData();
-```
-
-**Benefits:**
-
-- Eliminates duplication
-- Adds loading state (currently missing)
-- Easier to test
-- Consistent pattern across views
-
----
 
 #### 2. **Split `appState.ts` into Multiple Files**
 

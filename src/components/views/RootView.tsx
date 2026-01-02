@@ -3,32 +3,24 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { component$, $, useSignal, useVisibleTask$ } from '@builder.io/qwik';
+import { component$ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { getNodeService } from '../../data/services';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
-import type { TreeNode as TreeNodeRecord } from '../../data/models';
+import { useRootViewData } from '../../hooks/useRootViewData';
 
 export const RootView = component$(() => {
     const appState = useAppState();
     const { navigateToNode$ } = useAppTransitions();
     
-    const nodes = useSignal<TreeNodeRecord[]>([]);
-
-    const loadNodes$ = $(async () => {
-        nodes.value = await getNodeService().getRootNodes();
-    });
-
-    useVisibleTask$(async () => {
-        await loadNodes$();
-    });
+    // Use the extracted hook for data loading
+    const { nodes, reload$ } = useRootViewData();
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
         parentId: null,
-        onCreated$: loadNodes$,
+        onCreated$: reload$,
     });
 
     return (
@@ -50,7 +42,6 @@ export const RootView = component$(() => {
                     nodeName={ucNode.nodeName}
                     nodeSubtitle={ucNode.nodeSubtitle}
                     nodeState="UNDER_CONSTRUCTION"
-                    ucDefaults={ucNode.defaultFields}
                     onCancel$={cancel$}
                     onCreate$={complete$}
                 />

@@ -3,53 +3,39 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { component$, $, useSignal, useTask$ } from '@builder.io/qwik';
+import { component$, useTask$, $ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { getNodeService } from '../../data/services';
 import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
-import type { TreeNode as TreeNodeRecord } from '../../data/models';
+import { useBranchViewData } from '../../hooks/useBranchViewData';
 
 export type BranchViewProps = {
     parentId: string;
 };
 
 export const BranchView = component$((props: BranchViewProps) => {
-    const appState = useAppState();
-    const { navigateToNode$, navigateUp$, cancelConstruction$ } = useAppTransitions();
+    const { navigateToNode$, navigateUp$ } = useAppTransitions();
     
-    const parentNode = useSignal<TreeNodeRecord | null>(null);
-    const children = useSignal<TreeNodeRecord[]>([]);
+    // Use the extracted hook for data loading
+    const { parentNode, children, isLoading, load$, reload$ } = useBranchViewData();
 
-    const loadData$ = $(async (parentId: string) => {
-        const result = await getNodeService().getNodeWithChildren(parentId);
-        parentNode.value = result.node;
-        children.value = result.children;
-    });
-
-    // Track parentId changes and reload data
+    // Track parentId changes and reload data (must be in component to track props)
     useTask$(async ({ track }) => {
         const parentId = track(() => props.parentId);
         if (!parentId) return;
-        
-        // Reset construction state when navigating
-        if (appState.underConstruction) {
-            cancelConstruction$();
-        }
-        
-        await loadData$(parentId);
+        await load$(parentId);
     });
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
         parentId: props.parentId,
         onCreated$: $(async () => {
-            await loadData$(props.parentId);
+            await reload$(props.parentId);
         }),
     });
 
-    if (!parentNode.value) {
+    if (isLoading.value || !parentNode.value) {
         return <main class="view-branch">Loading...</main>;
     }
 
@@ -92,7 +78,6 @@ export const BranchView = component$((props: BranchViewProps) => {
                             nodeName={ucNode.nodeName}
                             nodeSubtitle={ucNode.nodeSubtitle}
                             nodeState="UNDER_CONSTRUCTION"
-                            ucDefaults={ucNode.defaultFields}
                             isChildConstruction={true}
                             onCancel$={cancel$}
                             onCreate$={complete$}
