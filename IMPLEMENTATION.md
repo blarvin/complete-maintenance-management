@@ -31,6 +31,10 @@ Services live at module scope (`src/data/services/index.ts`), swapped via `setNo
 
 **Error Handling Pattern**: `safeAsync(operation, fallback, context)` wraps async calls with try/catch, logs with context string, returns fallback on error. Not currently applied everywhere—Firestore's offline persistence handles most failures. Becomes important when adding Snackbar error notifications.
 
+**Storage Adapter Abstraction**: Introduced a backend-agnostic `StorageAdapter` interface (domain-shaped methods: nodes, fields, history) plus lightweight `StorageResult` metadata (adapter id, optional cache flag, latency) to future-proof without overbuilding. Firestore remains the default implementation via existing repo/services; `useStorageAdapter(adapter)` swaps both node and field services to delegate through the adapter while keeping the component-facing service contracts unchanged. This enables dropping in alternative backends (IndexedDB/memory) without touching components.
+
+**Storage Error Contract**: Added `StorageError` shape with normalized codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers (`makeStorageError`, `toStorageError`, `describeForUser`). Intent is to map adapter-level failures to Snackbar-friendly messages later; no UI wiring yet.
+
 ### Component Props
 
 **Discriminated Union Props (ISP)**: TreeNode accepts `TreeNodeDisplayProps | TreeNodeConstructionProps`, discriminated on `nodeState`. Type guards (`isConstructionProps`, `isDisplayProps`) narrow the union. This prevents passing construction callbacks to display nodes or vice versa—TypeScript catches misuse at compile time.
@@ -59,6 +63,7 @@ Orchestrator just picks sub-component based on state.
 **Pure Form Component**: CreateDataField is purely UI—handles inputs, dropdown picker, Save/Cancel buttons. Does not persist. Parent decides what to do with `onSave$(id, fieldName, fieldValue)`.
 
 **Parent Manages Pending Forms**:
+
 - `FieldList` (via `usePendingForms` hook): Manages pending forms with localStorage persistence. On Save → persists to DB, removes form, refreshes field list.
 - `TreeNodeConstruction`: Manages `fieldForms` signal (memory only). Initializes with 3 default forms. On CREATE → filters empties, passes all to service.
 
@@ -127,6 +132,7 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 ### CSS Architecture
 
 **Three-Layer Token System** (`tokens.css`):
+
 1. Primitives — raw color palette (`--color-gray-600: #666`)
 2. Semantic tokens — purpose-mapped (`--text-muted: var(--color-gray-600)`)
 3. Component tokens — specific overrides in CSS modules
@@ -134,6 +140,7 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 Semantic tokens used throughout; primitives never referenced directly in components. Enables future theming by overriding semantic layer.
 
 **Utility Classes** (`global.css`):
+
 - `.no-caret` — prevents text cursor on interactive non-input elements
 - `.btn-reset` — strips button defaults (background, border, padding)
 - `.input-reset` — strips input defaults for inline editing
