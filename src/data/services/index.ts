@@ -15,6 +15,8 @@
  */
 
 import type { TreeNode, DataField, DataFieldHistory } from '../models';
+import type { StorageAdapter, StorageResult } from '../storage/storageAdapter';
+import { generateId } from '../../utils/id';
 
 // ============================================================================
 // SERVICE INTERFACES
@@ -64,6 +66,73 @@ const defaultNodeService: INodeService = {
 
 const defaultFieldService: IFieldService = firestoreFields;
 
+function unwrap<T>(result: StorageResult<T>): T {
+    return result.data;
+}
+
+function nodeServiceFromAdapter(adapter: StorageAdapter): INodeService {
+    return {
+        getRootNodes: async () => unwrap(await adapter.listRootNodes()),
+        getNodeById: async (id: string) => unwrap(await adapter.getNode(id)),
+        getNodeWithChildren: async (id: string) => {
+            const [nodeRes, childRes] = await Promise.all([
+                adapter.getNode(id),
+                adapter.listChildren(id),
+            ]);
+            return { node: unwrap(nodeRes), children: unwrap(childRes) };
+        },
+        getChildren: async (parentId: string) => unwrap(await adapter.listChildren(parentId)),
+        createWithFields: async (input) => {
+            // create node first, then fields; caller provides IDs and defaults
+            await adapter.createNode({
+                id: input.id,
+                parentId: input.parentId,
+                nodeName: input.nodeName,
+                nodeSubtitle: input.nodeSubtitle,
+            });
+            await Promise.all(
+                input.defaults.map((field, idx) =>
+                    adapter.createField({
+                        id: generateId(),
+                        parentNodeId: input.id,
+                        fieldName: field.fieldName,
+                        fieldValue: field.fieldValue,
+                    })
+                )
+            );
+        },
+        createEmptyNode: async (id: string, parentId: string | null) =>
+            unwrap(await adapter.createNode({ id, parentId, nodeName: "", nodeSubtitle: "" })),
+        updateNode: async (id: string, updates) => {
+            await adapter.updateNode(id, updates);
+        },
+    };
+}
+
+function fieldServiceFromAdapter(adapter: StorageAdapter): IFieldService {
+    return {
+        getFieldsForNode: async (nodeId: string) => unwrap(await adapter.listFields(nodeId)),
+        nextCardOrder: async (nodeId: string) => unwrap(await adapter.nextCardOrder(nodeId)),
+        addField: async (nodeId: string, fieldName: string, fieldValue: string | null, cardOrder?: number) =>
+            unwrap(
+                await adapter.createField({
+                    id: generateId(),
+                    parentNodeId: nodeId,
+                    fieldName,
+                    fieldValue,
+                    cardOrder,
+                })
+            ),
+        updateFieldValue: async (fieldId: string, newValue: string | null) => {
+            await adapter.updateFieldValue(fieldId, { fieldValue: newValue });
+        },
+        deleteField: async (fieldId: string) => {
+            await adapter.deleteField(fieldId);
+        },
+        getFieldHistory: async (fieldId: string) => unwrap(await adapter.getFieldHistory(fieldId)),
+    };
+}
+
 // ============================================================================
 // ACTIVE SERVICES (can be swapped for testing)
 // ============================================================================
@@ -109,6 +178,15 @@ export function setFieldService(service: IFieldService): void {
 export function resetServices(): void {
     activeNodeService = defaultNodeService;
     activeFieldService = defaultFieldService;
+}
+
+/**
+ * Swap services to use a storage adapter (backend-agnostic).
+ * Firestore stays as default until an adapter is provided.
+ */
+export function useStorageAdapter(adapter: StorageAdapter): void {
+    activeNodeService = nodeServiceFromAdapter(adapter);
+    activeFieldService = fieldServiceFromAdapter(adapter);
 }
 
 

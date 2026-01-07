@@ -4,16 +4,16 @@ overview: Define backend-agnostic storage adapter interface and outline migratio
 todos:
   - id: identify-ops
     content: Inventory current operations/query patterns to cover
-    status: pending
+    status: completed
   - id: design-interface
     content: Draft storage adapter interface and result metadata
-    status: pending
+    status: completed
   - id: error-contract
     content: Define shared error shape and mapping guidance
-    status: pending
+    status: completed
   - id: service-mapping
     content: Outline service delegation/bridge to adapter
-    status: pending
+    status: completed
 ---
 
 # Storage Adapter Abstraction
