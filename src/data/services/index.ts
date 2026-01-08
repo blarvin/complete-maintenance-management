@@ -50,21 +50,15 @@ export interface IFieldService {
 }
 
 // ============================================================================
-// DEFAULT IMPLEMENTATIONS (Firestore)
+// DEFAULT IMPLEMENTATIONS (Firestore via Adapter)
 // ============================================================================
 
-import { nodeService as firestoreNodes } from './nodeService';
-import { fieldService as firestoreFields } from './fieldService';
-import { createNodeWithDefaultFields } from './createNode';
+import { FirestoreAdapter } from '../storage/firestoreAdapter';
 
-const defaultNodeService: INodeService = {
-    ...firestoreNodes,
-    createWithFields: createNodeWithDefaultFields,
-    createEmptyNode: firestoreNodes.createEmptyNode,
-    updateNode: firestoreNodes.updateNode,
-};
-
-const defaultFieldService: IFieldService = firestoreFields;
+// Create FirestoreAdapter instance and use it as default
+const firestoreAdapter = new FirestoreAdapter();
+const defaultNodeService: INodeService = nodeServiceFromAdapter(firestoreAdapter);
+const defaultFieldService: IFieldService = fieldServiceFromAdapter(firestoreAdapter);
 
 function unwrap<T>(result: StorageResult<T>): T {
     return result.data;

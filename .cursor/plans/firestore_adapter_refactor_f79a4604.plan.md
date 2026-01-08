@@ -4,22 +4,22 @@ overview: Refactor all Firestore logic from repo/ into a concrete FirestoreAdapt
 todos:
   - id: create-firestore-adapter
     content: Create FirestoreAdapter class in src/data/storage/firestoreAdapter.ts implementing StorageAdapter interface with all node, field, and history operations
-    status: pending
+    status: completed
   - id: update-services-index
     content: Update src/data/services/index.ts to instantiate FirestoreAdapter and set it as default via useStorageAdapter()
-    status: pending
+    status: completed
   - id: update-service-files
     content: Delete nodeService.ts, fieldService.ts, and createNode.ts; rely on adapter-based services from services/index.ts
-    status: pending
+    status: completed
   - id: update-tests
     content: Update tests to use registry (getNodeService/getFieldService) with FirestoreAdapter; no direct repo or service-file imports
-    status: pending
+    status: completed
   - id: remove-repo-layer
     content: Delete src/data/repo/treeNodes.ts and src/data/repo/dataFields.ts after verifying no remaining imports
     status: pending
   - id: update-documentation
     content: Update IMPLEMENTATION.md to reflect adapter-based architecture and new file organization
-    status: pending
+    status: completed
 ---
 
 # Firestore Adapter Refactor Plan
@@ -89,6 +89,7 @@ Move all Firestore-specific logic from `src/data/repo/` into a concrete `Firesto
 - Return `StorageResult<T>` with `data` and optional `meta` (set `adapter: "firestore"`)
 - Handle user context: call `getCurrentUserId()` and `now()` internally for `updatedBy` and `updatedAt` fields
 - Maintain existing business logic (leaf-only deletion check, cardOrder recomputation, history creation)
+- Keep methods stateless and idempotent where possible.
 
 ### 2. Update Default Services to Use Adapter
 

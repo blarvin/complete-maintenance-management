@@ -31,7 +31,7 @@ Services live at module scope (`src/data/services/index.ts`), swapped via `setNo
 
 **Error Handling Pattern**: `safeAsync(operation, fallback, context)` wraps async calls with try/catch, logs with context string, returns fallback on error. Not currently applied everywhere—Firestore's offline persistence handles most failures. Becomes important when adding Snackbar error notifications.
 
-**Storage Adapter Abstraction**: Introduced a backend-agnostic `StorageAdapter` interface (domain-shaped methods: nodes, fields, history) plus lightweight `StorageResult` metadata (adapter id, optional cache flag, latency) to future-proof without overbuilding. Firestore remains the default implementation via existing repo/services; `useStorageAdapter(adapter)` swaps both node and field services to delegate through the adapter while keeping the component-facing service contracts unchanged. This enables dropping in alternative backends (IndexedDB/memory) without touching components.
+**Storage Adapter Abstraction**: All Firestore operations are encapsulated in `FirestoreAdapter`, a concrete implementation of the backend-agnostic `StorageAdapter` interface. The interface provides domain-shaped methods (nodes, fields, history) plus lightweight `StorageResult` metadata (adapter id, optional cache flag, latency). Services are created from adapters via `nodeServiceFromAdapter()` and `fieldServiceFromAdapter()` factories. The default services use `FirestoreAdapter`; `useStorageAdapter(adapter)` swaps both node and field services to delegate through any adapter while keeping the component-facing service contracts unchanged. This enables dropping in alternative backends (IndexedDB/memory) without touching components.
 
 **Storage Error Contract**: Added `StorageError` shape with normalized codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers (`makeStorageError`, `toStorageError`, `describeForUser`). Intent is to map adapter-level failures to Snackbar-friendly messages later; no UI wiring yet.
 
@@ -107,7 +107,7 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 ### Data Model
 
-**Root Nodes via `parentId: null`**: No sentinel value like `"ROOT"`. Repo functions use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.
+**Root Nodes via `parentId: null`**: No sentinel value like `"ROOT"`. Adapter queries use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.
 
 **History ID Scheme**: `${dataFieldId}:${rev}` composite key. `rev` is monotonic per field (0 on create, increments on update). Enables ordered history without timestamp collisions.
 
@@ -176,11 +176,12 @@ src/
 │   └── uiPrefs.ts    # localStorage persistence (Sets ↔ JSON arrays)
 ├── data/
 │   ├── services/
-│   │   ├── index.ts          # Service interfaces + registry
-│   │   ├── nodeService.ts    # Firestore node ops
-│   │   ├── fieldService.ts   # Firestore field ops
+│   │   ├── index.ts          # Service interfaces + registry (adapter-backed)
 │   │   └── withErrorHandling.ts  # safeAsync wrapper
-│   └── repo/                 # Low-level Firestore CRUD
+│   └── storage/
+│       ├── storageAdapter.ts     # StorageAdapter interface
+│       ├── storageErrors.ts       # StorageError types and helpers
+│       └── firestoreAdapter.ts    # FirestoreAdapter implementation
 ├── hooks/
 │   ├── useDoubleTap.ts       # Gesture detection (pure + hook)
 │   ├── useFieldEdit.ts       # Field edit state/interactions
@@ -191,7 +192,7 @@ src/
 
 ### Testing Notes
 
-**Service Mocking**: Tests use `setNodeService(mockService)` before running, `resetServices()` in cleanup. Mock implements `INodeService` interface—no Firestore dependency in unit tests.
+**Service Testing**: Tests use the same registry abstraction as components (`getNodeService()`/`getFieldService()`) with `FirestoreAdapter`. Tests can use `setNodeService()`/`setFieldService()` to swap implementations, or `useStorageAdapter()` to swap adapters. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
 
 **Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
 

@@ -20,17 +20,21 @@ export default defineConfig({
             on('task', {
                 async seedGoldenTree() {
                     const mod = await import('./cypress/support/seed-data');
-                    await mod.seedGoldenTree();
+                    // Handle both boolean false and string "false"
+                    const useEmulator = config.env.USE_EMULATOR !== false && config.env.USE_EMULATOR !== 'false';
+                    await mod.seedGoldenTree(useEmulator);
                     return null;
                 },
                 async clearAllData() {
                     const mod = await import('./cypress/support/seed-data');
-                    await mod.clearAllData();
+                    const useEmulator = config.env.USE_EMULATOR !== false && config.env.USE_EMULATOR !== 'false';
+                    await mod.clearAllData(useEmulator);
                     return null;
                 },
                 async cleanupOrphanedNodes() {
                     const mod = await import('./cypress/support/seed-data');
-                    await mod.cleanupOrphanedNodes();
+                    const useEmulator = config.env.USE_EMULATOR !== false && config.env.USE_EMULATOR !== 'false';
+                    await mod.cleanupOrphanedNodes(useEmulator);
                     return null;
                 },
             });

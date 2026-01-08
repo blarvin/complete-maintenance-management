@@ -46,7 +46,11 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 let db: ReturnType<typeof getFirestore>;
 let emulatorConnected = false;
 
-function getDb() {
+/**
+ * Get Firestore instance, connecting to emulator only if USE_EMULATOR is true.
+ * @param useEmulator - Whether to connect to emulator (from Cypress.env('USE_EMULATOR'))
+ */
+function getDb(useEmulator: boolean = true) {
     if (!db) {
         try {
             db = initializeFirestore(app, { localCache: memoryLocalCache() });
@@ -55,8 +59,8 @@ function getDb() {
         }
     }
     
-    // Connect to emulator (only once)
-    if (!emulatorConnected) {
+    // Connect to emulator only if useEmulator is true (only once)
+    if (useEmulator && !emulatorConnected) {
         try {
             connectFirestoreEmulator(db, 'localhost', 8080);
             emulatorConnected = true;
@@ -65,6 +69,8 @@ function getDb() {
             // Already connected
             emulatorConnected = true;
         }
+    } else if (!useEmulator) {
+        console.log('🌐 Seed script using production Firestore');
     }
     
     return db;
@@ -179,14 +185,15 @@ const GOLDEN_FIELDS = [
 ];
 
 /**
- * Seed the Golden Tree into Firestore Emulator.
+ * Seed the Golden Tree into Firestore.
  * Clears existing data first to ensure clean state.
+ * @param useEmulator - Whether to use emulator (default: true)
  */
-export async function seedGoldenTree(): Promise<void> {
-    const firestore = getDb();
+export async function seedGoldenTree(useEmulator: boolean = true): Promise<void> {
+    const firestore = getDb(useEmulator);
     
     // Clear first
-    await clearAllData();
+    await clearAllData(useEmulator);
     
     // Seed nodes
     const nodesRef = collection(firestore, 'treeNodes');
@@ -204,11 +211,12 @@ export async function seedGoldenTree(): Promise<void> {
 }
 
 /**
- * Clear all data from Firestore Emulator.
+ * Clear all data from Firestore.
  * Also removes orphaned nodes (nodes with empty names from canceled creations).
+ * @param useEmulator - Whether to use emulator (default: true)
  */
-export async function clearAllData(): Promise<void> {
-    const firestore = getDb();
+export async function clearAllData(useEmulator: boolean = true): Promise<void> {
+    const firestore = getDb(useEmulator);
     
     // Delete all nodes (including orphaned ones with empty names)
     const nodesSnap = await getDocs(collection(firestore, 'treeNodes'));
@@ -234,9 +242,10 @@ export async function clearAllData(): Promise<void> {
 /**
  * Clean up orphaned nodes (nodes with empty names from canceled creations).
  * Called before each test to ensure clean state.
+ * @param useEmulator - Whether to use emulator (default: true)
  */
-export async function cleanupOrphanedNodes(): Promise<void> {
-    const firestore = getDb();
+export async function cleanupOrphanedNodes(useEmulator: boolean = true): Promise<void> {
+    const firestore = getDb(useEmulator);
     
     // Get all nodes
     const nodesSnap = await getDocs(collection(firestore, 'treeNodes'));
