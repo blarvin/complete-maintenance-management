@@ -20,7 +20,7 @@ export const GOLDEN_IDS = {
  */
 Cypress.Commands.add('clearIndexedDB', () => {
     return cy.window().then((win) => {
-        return new Cypress.Promise((resolve) => {
+        return new Cypress.Promise<void>((resolve) => {
             if (win.indexedDB && win.indexedDB.databases) {
                 win.indexedDB.databases().then((databases: IDBDatabaseInfo[]) => {
                     const deletePromises = databases.map((db: IDBDatabaseInfo) => {
@@ -37,7 +37,7 @@ Cypress.Commands.add('clearIndexedDB', () => {
                 resolve();
             }
         });
-    });
+    }) as Cypress.Chainable<void>;
 });
 
 /**
