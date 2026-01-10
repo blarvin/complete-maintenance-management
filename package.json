@@ -32,12 +32,14 @@
   "dependencies": {
     "@builder.io/qwik": "^1.16.0",
     "@builder.io/qwik-city": "^1.16.0",
+    "dexie": "^4.2.1",
     "firebase": "^12.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
     "cypress": "^15.8.1",
     "eslint": "^9.34.0",
+    "fake-indexeddb": "^6.2.5",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",

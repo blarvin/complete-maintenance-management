@@ -1,13 +1,19 @@
 /**
  * Data Services - Unified export for all data operations.
- * 
+ *
  * This module provides the abstraction layer for data access.
  * Components import from here, not from concrete implementations.
- * 
+ *
+ * OFFLINE-FIRST ARCHITECTURE:
+ * - IDBAdapter (IndexedDB) is the PRIMARY storage
+ * - All reads/writes go to IDB first
+ * - SyncManager handles bidirectional sync with Firestore in background
+ * - App works fully offline, syncs when online
+ *
  * For swapping implementations (testing, different backends):
  * - Use setNodeService() and setFieldService() before app initialization
  * - Or use module mocking in tests
- * 
+ *
  * This pattern works with Qwik because:
  * - Services are imported, not passed through context
  * - No function objects need to be serialized in closures
@@ -50,15 +56,22 @@ export interface IFieldService {
 }
 
 // ============================================================================
-// DEFAULT IMPLEMENTATIONS (Firestore via Adapter)
+// DEFAULT IMPLEMENTATIONS (IDB as primary, Firestore for sync)
 // ============================================================================
 
+import { IDBAdapter } from '../storage/idbAdapter';
 import { FirestoreAdapter } from '../storage/firestoreAdapter';
 
-// Create FirestoreAdapter instance and use it as default
+// Create adapters
+const idbAdapter = new IDBAdapter();
 const firestoreAdapter = new FirestoreAdapter();
-const defaultNodeService: INodeService = nodeServiceFromAdapter(firestoreAdapter);
-const defaultFieldService: IFieldService = fieldServiceFromAdapter(firestoreAdapter);
+
+// Use IDBAdapter as primary storage (offline-first)
+const defaultNodeService: INodeService = nodeServiceFromAdapter(idbAdapter);
+const defaultFieldService: IFieldService = fieldServiceFromAdapter(idbAdapter);
+
+// Export adapters for SyncManager initialization
+export { idbAdapter, firestoreAdapter };
 
 function unwrap<T>(result: StorageResult<T>): T {
     return result.data;

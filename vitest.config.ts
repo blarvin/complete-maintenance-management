@@ -8,6 +8,8 @@ export default defineConfig({
         testTimeout: 15000,
         // Global setup/teardown
         globalSetup: './src/test/globalSetup.ts',
+        // Setup file for fake-indexeddb
+        setupFiles: ['./src/test/setup.ts'],
         // Include test files
         include: ['src/**/*.test.ts'],
         // Environment

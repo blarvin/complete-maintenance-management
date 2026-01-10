@@ -3,9 +3,11 @@ import { QwikCityProvider, RouterOutlet } from '@builder.io/qwik-city';
 import './styles/tokens.css';
 import './styles/global.css';
 import { useProvideAppState } from './state/appState';
+import { useInitStorage } from './hooks/useInitStorage';
 
 export default component$(() => {
     useProvideAppState();
+    useInitStorage(); // Initialize IDB storage and SyncManager on client
     return (
         <QwikCityProvider>
             <head>

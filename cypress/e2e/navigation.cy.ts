@@ -103,4 +103,56 @@ describe('Navigation', () => {
             cy.get('main.view-root').should('exist');
         });
     });
+
+    /**
+     * CRITICAL PERSISTENCE TEST: Create child, reload, verify hierarchy persists
+     */
+    describe('persistence verification', () => {
+        it('creates child node and verifies it persists after reload', () => {
+            const childName = `Persistent Child ${Date.now()}`;
+
+            // Navigate into HVAC System
+            cy.navigateIntoNode(GOLDEN_IDS.root);
+            cy.get('main.view-branch').should('exist');
+
+            // Create a child
+            cy.get('button').contains('Add Sub-Asset').click();
+            cy.get('input[placeholder="Name"]').type(childName);
+            cy.get('input[placeholder="Subtitle / Location / Short description"]').type('Test child node');
+            cy.get('button').contains('Create').click();
+
+            // Verify child appears
+            cy.contains(childName).should('be.visible');
+
+            // RELOAD page
+            cy.reload();
+
+            // Navigate back to same location
+            cy.navigateIntoNode(GOLDEN_IDS.root);
+
+            // Child should still exist (loaded from persistent storage)
+            cy.contains(childName, { timeout: 10000 }).should('be.visible');
+        });
+
+        it('navigates to newly created node after reload', () => {
+            const nodeName = `Nav Test Node ${Date.now()}`;
+
+            // Create node
+            cy.get('button').contains('Create New Asset').click();
+            cy.get('input[placeholder="Name"]').type(nodeName);
+            cy.get('button').contains('Create').click();
+            cy.contains(nodeName).should('be.visible');
+
+            // RELOAD
+            cy.reload();
+
+            // Find and navigate into the node
+            cy.contains(nodeName, { timeout: 10000 }).should('be.visible');
+            cy.contains(nodeName).closest('article').find('[role="button"]').click();
+
+            // Should be in BRANCH view with this node as parent
+            cy.get('main.view-branch').should('exist');
+            cy.get('.branch-parent-node').contains(nodeName);
+        });
+    });
 });
