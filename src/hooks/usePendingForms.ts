@@ -8,7 +8,7 @@
  * Now includes cardOrder for proper field ordering.
  */
 
-import { useSignal, useVisibleTask$, useTask$, $, type QRL } from '@builder.io/qwik';
+import { useSignal, useVisibleTask$, useTask$, $, type QRL, type Signal } from '@builder.io/qwik';
 import { getFieldService } from '../data/services';
 import { generateId } from '../utils/id';
 
@@ -52,19 +52,20 @@ export type UsePendingFormsOptions = {
     onSaved$: QRL<() => void | Promise<void>>;
     /** Default field names to initialize with if no persisted fields and no LS forms */
     initialFieldNames?: readonly string[];
-    /** Current max cardOrder from persisted fields (for calculating next cardOrder) */
-    maxPersistedCardOrder: number;
+    /** Signal containing current max cardOrder from persisted fields (for calculating next cardOrder) */
+    maxPersistedCardOrder$: Signal<number>;
 };
 
 /**
  * Hook that manages pending DataField forms.
- * 
+ *
  * Usage:
  * ```tsx
+ * const maxOrder = useComputed$(() => fields.value?.length ? Math.max(...fields.value.map(f => f.cardOrder)) : -1);
  * const { forms, add$, save$, cancel$, change$ } = usePendingForms({
  *     nodeId: props.id,
  *     onSaved$: reload$,
- *     maxPersistedCardOrder: fields.value?.length ? Math.max(...fields.value.map(f => f.cardOrder)) : -1,
+ *     maxPersistedCardOrder$: maxOrder,
  * });
  * ```
  */
@@ -74,11 +75,11 @@ export function usePendingForms(options: UsePendingFormsOptions) {
 
     // Load pending forms from LS on mount, or initialize with defaults
     useVisibleTask$(({ track }) => {
-        // Track maxPersistedCardOrder to re-check initialization when fields load
-        const maxPersisted = track(() => options.maxPersistedCardOrder);
-        
+        // Track maxPersistedCardOrder signal to re-check initialization when fields load
+        const maxPersisted = track(() => options.maxPersistedCardOrder$.value);
+
         if (initialized.value) return;
-        
+
         const stored = loadPendingForms(options.nodeId);
         if (stored.length > 0) {
             // Migrate old forms without cardOrder
@@ -117,11 +118,13 @@ export function usePendingForms(options: UsePendingFormsOptions) {
      */
     const add$ = $(async () => {
         // Calculate next cardOrder from both persisted and pending
-        const maxPending = forms.value.length > 0 
-            ? Math.max(...forms.value.map(f => f.cardOrder)) 
+        // Read current value from signal to get up-to-date max
+        const maxPersisted = options.maxPersistedCardOrder$.value;
+        const maxPending = forms.value.length > 0
+            ? Math.max(...forms.value.map(f => f.cardOrder))
             : -1;
-        const nextOrder = Math.max(options.maxPersistedCardOrder, maxPending) + 1;
-        
+        const nextOrder = Math.max(maxPersisted, maxPending) + 1;
+
         const newForm: PendingForm = {
             id: generateId(),
             fieldName: '',

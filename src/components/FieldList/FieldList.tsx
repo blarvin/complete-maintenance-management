@@ -56,11 +56,12 @@ export const FieldList = component$<FieldListProps>((props) => {
     });
 
     // Manage pending forms with localStorage persistence
+    // Pass the signal itself so add$() reads current value when called
     const { forms: pendingForms, add$, save$, cancel$, change$, saveAllPending$ } = usePendingForms({
         nodeId: props.nodeId,
         onSaved$: reload$,
         initialFieldNames: props.initialFieldNames,
-        maxPersistedCardOrder: maxPersistedCardOrder.value,
+        maxPersistedCardOrder$: maxPersistedCardOrder,
     });
 
     // Expose handle for external access (e.g., UC CREATE button)
