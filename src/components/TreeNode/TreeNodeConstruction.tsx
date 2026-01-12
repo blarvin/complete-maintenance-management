@@ -43,6 +43,15 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
         nameInputRef.value?.focus();
     });
 
+    // Explicit QRL handlers for each input - ensures proper signal binding in Qwik
+    const handleNameInput$ = $((event: InputEvent, element: HTMLInputElement) => {
+        nameValue.value = element.value;
+    });
+
+    const handleSubtitleInput$ = $((event: InputEvent, element: HTMLInputElement) => {
+        subtitleValue.value = element.value;
+    });
+
     const handleCreate$ = $(async () => {
         // Save any unsaved pending fields first
         if (fieldListHandle.value) {
@@ -81,7 +90,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                             ref={nameInputRef}
                             placeholder="Name"
                             value={nameValue.value}
-                            onInput$={(e) => (nameValue.value = (e.target as HTMLInputElement).value)}
+                            onInput$={handleNameInput$}
                             onKeyDown$={handleKeyDown$}
                             aria-label="Node name"
                             id={titleId}
@@ -90,7 +99,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                             class={styles.nodeSubtitle}
                             placeholder="Subtitle / Location / Short description"
                             value={subtitleValue.value}
-                            onInput$={(e) => (subtitleValue.value = (e.target as HTMLInputElement).value)}
+                            onInput$={handleSubtitleInput$}
                             onKeyDown$={handleKeyDown$}
                             aria-label="Node subtitle"
                         />

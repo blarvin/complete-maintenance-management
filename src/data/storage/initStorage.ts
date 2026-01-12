@@ -41,13 +41,18 @@ export async function initializeStorage(): Promise<void> {
     const nodeCount = await db.nodes.count();
 
     if (nodeCount === 0) {
-      console.log('[Storage] IDB is empty, checking for Firestore data...');
-
-      // Only migrate if online
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
-        await migrateFromFirestore();
+      // Check for Cypress test mode - IDB was seeded by Cypress, skip migration
+      if (typeof window !== 'undefined' && (window as any).__CYPRESS_SEED_MODE__) {
+        console.log('[Storage] Cypress test mode - skipping Firestore migration');
       } else {
-        console.log('[Storage] Offline, skipping migration');
+        console.log('[Storage] IDB is empty, checking for Firestore data...');
+
+        // Only migrate if online
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          await migrateFromFirestore();
+        } else {
+          console.log('[Storage] Offline, skipping migration');
+        }
       }
     } else {
       console.log('[Storage] IDB has', nodeCount, 'nodes, using existing data');

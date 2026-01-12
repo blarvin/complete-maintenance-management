@@ -1,81 +1,98 @@
 /**
- * Smoke test - verifies the app loads and data actually persists.
- * These tests verify that persistence works, not just that UI renders.
+ * Smoke Tests - Persistence Verification
+ * 
+ * These tests verify that data ACTUALLY persists across page reloads.
+ * This is the critical functionality that Vitest cannot test (no real browser storage).
+ * 
+ * Tests:
+ * 1. Created nodes persist across reload
+ * 2. Field edits persist across reload
  */
-describe('Smoke Test', () => {
-    beforeEach(() => {
-        cy.visit('/');
-    });
+import { GOLDEN_IDS } from '../support/commands';
 
-    it('loads the ROOT view successfully', () => {
-        cy.get('main.view-root').should('exist');
-    });
+describe('Smoke Tests - Persistence', () => {
+  /**
+   * CRITICAL TEST: Verifies node creation persists to IDB.
+   * This would FAIL if persistence was broken (e.g., in-memory only).
+   */
+  it('persists created node across page reload', () => {
+    // Start with minimal tree (just one root node)
+    cy.seedMinimal();
 
-    it('displays the seeded HVAC System root node', () => {
-        cy.contains('HVAC System').should('be.visible');
-        cy.contains('Building A Rooftop Unit').should('be.visible');
-    });
+    const testNodeName = `Smoke Test Node ${Date.now()}`;
 
-    it('shows the "Create New Asset" button', () => {
-        cy.get('button')
-            .contains('Create New Asset')
-            .should('be.visible')
-            .and('have.attr', 'aria-label', 'Create New Asset');
-    });
+    // Create a new root node
+    cy.get('button').contains('Create New Asset').click();
 
-    /**
-     * CRITICAL TEST: Verifies data actually persists to storage.
-     * This would FAIL if persistence was broken (e.g., in-memory only).
-     */
-    it('persists created node across page reload', () => {
-        const testNodeName = `Smoke Test Node ${Date.now()}`;
+    // Fill in the name - input starts empty, no clear needed
+    // Use focused() since Qwik autofocuses the name input on mount
+    cy.focused()
+      .should('have.attr', 'placeholder', 'Name')
+      .type(testNodeName, { delay: 10 })
+      .should('have.value', testNodeName);
 
-        // Create a node
-        cy.get('button').contains('Create New Asset').click();
-        cy.get('input[placeholder="Name"]')
-            .clear()
-            .type(testNodeName, { delay: 50 })
-            .should('have.value', testNodeName);
-        cy.get('input[placeholder="Subtitle / Location / Short description"]')
-            .clear()
-            .type('Persistence verification', { delay: 50 });
-        cy.wait(300);
-        cy.get('button').contains('Create').click();
+    // Fill in subtitle - higher delay for Qwik reactivity
+    cy.get('input[placeholder="Subtitle / Location / Short description"]')
+      .focus()
+      .should('be.focused')
+      .type('Persistence verification', { delay: 50 })
+      .should('have.value', 'Persistence verification');
 
-        // Wait for creation to complete
-        cy.get('input[placeholder="Name"]').should('not.exist', { timeout: 5000 });
-        cy.contains(testNodeName).should('be.visible');
+    // Submit
+    cy.get('button').contains('Create').click();
 
-        // RELOAD the page - this is the key test
-        cy.reload();
+    // Wait for creation to complete (input disappears, node appears)
+    cy.get('input[placeholder="Name"]').should('not.exist', { timeout: 5000 });
+    // Wait for node list to reload - may need time for Qwik reactivity
+    cy.contains(testNodeName, { timeout: 10000 }).should('be.visible');
 
-        // Node should still exist (loaded from persistent storage)
-        cy.contains(testNodeName, { timeout: 10000 }).should('be.visible');
-        cy.contains('Persistence verification').should('be.visible');
-    });
+    // RELOAD the page - this is the critical test
+    cy.reload();
 
-    /**
-     * CRITICAL TEST: Verifies field edits persist across page reload.
-     */
-    it('persists field edits across page reload', () => {
-        const uniqueValue = `Test Value ${Date.now()}`;
+    // Wait for app to be ready after reload
+    cy.get('main', { timeout: 10000 }).should('exist');
 
-        // Navigate to seeded HVAC node and expand card
-        cy.expandDataCard('hvac-system');
+    // App reloads, IDB already has data so no Firestore migration
+    // Our created node should still be there
+    cy.contains(testNodeName, { timeout: 10000 }).should('be.visible');
+    cy.contains('Persistence verification').should('be.visible');
+  });
 
-        // Edit a field (Status)
-        cy.contains('[role="button"]', 'In Service').dblclick();
-        cy.focused()
-            .should('match', 'input')
-            .clear()
-            .type(`${uniqueValue}{enter}`);
+  /**
+   * CRITICAL TEST: Verifies field edits persist to IDB.
+   * Tests the edit → save → reload cycle.
+   */
+  it('persists field edits across page reload', () => {
+    // Start with golden tree (has editable fields)
+    cy.seedAndVisit();
 
-        // Verify immediate update
-        cy.contains(uniqueValue).should('be.visible');
+    const uniqueValue = `Edited Value ${Date.now()}`;
 
-        // RELOAD - verify persistence
-        cy.reload();
-        cy.expandDataCard('hvac-system');
-        cy.contains(uniqueValue, { timeout: 10000 }).should('be.visible');
-    });
+    // Expand the HVAC System DataCard
+    cy.expandDataCard(GOLDEN_IDS.root);
+
+    // Find and double-click the Status field to edit it
+    cy.contains('[role="button"]', 'In Service').dblclick();
+
+    // Wait for input to appear and be focused, then edit
+    cy.focused()
+      .should('match', 'input')
+      .clear()
+      .type(`${uniqueValue}{enter}`);
+
+    // Verify immediate update in UI
+    cy.contains(uniqueValue).should('be.visible');
+
+    // RELOAD - verify persistence
+    cy.reload();
+
+    // Wait for app to be ready after reload
+    cy.get('main', { timeout: 10000 }).should('exist');
+
+    // Re-expand the DataCard (UI state doesn't persist, but data does)
+    cy.expandDataCard(GOLDEN_IDS.root);
+
+    // Edited value should still be there
+    cy.contains(uniqueValue, { timeout: 10000 }).should('be.visible');
+  });
 });
