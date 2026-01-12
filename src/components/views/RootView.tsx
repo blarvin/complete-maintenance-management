@@ -23,9 +23,15 @@ export const RootView = component$(() => {
         onCreated$: reload$,
     });
 
+    // Filter out the UC node from the list to prevent dual rendering
+    // (UC node is rendered separately below with UNDER_CONSTRUCTION state)
+    const displayNodes = ucNode
+        ? nodes.value.filter(n => n.id !== ucNode.id)
+        : nodes.value;
+
     return (
         <main class="view-root">
-            {nodes.value.map((n) => (
+            {displayNodes.map((n) => (
                 <TreeNode
                     key={n.id}
                     id={n.id}

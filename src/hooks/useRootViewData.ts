@@ -19,9 +19,19 @@ export function useRootViewData() {
     const isLoading = useSignal(false);
 
     const load$ = $(async () => {
+        console.log('[useRootViewData] load$ called');
         isLoading.value = true;
         try {
-            nodes.value = await getNodeService().getRootNodes();
+            const fetchedNodes = await getNodeService().getRootNodes();
+            // Log full details to debug the flaky test
+            console.log('[useRootViewData] Fetched nodes FULL:', JSON.stringify(fetchedNodes.map(n => ({
+                id: n.id.substring(0, 8),
+                nodeName: n.nodeName,
+                nodeSubtitle: n.nodeSubtitle,
+                updatedAt: n.updatedAt
+            })), null, 2));
+            nodes.value = fetchedNodes;
+            console.log('[useRootViewData] nodes.value set to', nodes.value.length, 'nodes');
         } finally {
             isLoading.value = false;
         }

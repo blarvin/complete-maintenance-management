@@ -63,7 +63,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         await getNodeService().createEmptyNode(id, options.parentId);
         
         // Open UC UI (node won't appear in list until complete$)
-        startConstruction$({
+        await startConstruction$({
             id,
             parentId: options.parentId,
             nodeName: '',
@@ -76,8 +76,8 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
      * Cancel node creation. Closes the under-construction UI.
      * Note: The orphan node remains in DB (cleanup deferred to Phase 2).
      */
-    const cancel$ = $(() => {
-        cancelConstruction$();
+    const cancel$ = $(async () => {
+        await cancelConstruction$();
     });
 
     /**
@@ -85,14 +85,27 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
      * The node already exists in DB (created in start$).
      */
     const complete$ = $(async (payload: CreateNodePayload) => {
+        console.log('[complete$] Received payload:', JSON.stringify(payload));
+
         const ucData = appState.underConstruction;
-        if (!ucData) return;
+        console.log('[complete$] ucData:', ucData);
+        if (!ucData) {
+            console.log('[complete$] No ucData, returning early!');
+            return;
+        }
+
+        console.log('[complete$] Updating node', ucData.id, 'with:', {
+            nodeName: payload.nodeName || 'Untitled',
+            nodeSubtitle: payload.nodeSubtitle || '',
+        });
 
         // Update node with final name/subtitle
         await getNodeService().updateNode(ucData.id, {
             nodeName: payload.nodeName || 'Untitled',
             nodeSubtitle: payload.nodeSubtitle || '',
         });
+
+        console.log('[complete$] Node updated, calling completeConstruction$');
 
         // Create fields from TreeNodeConstruction's local state
         // (In Step 3, FieldList will handle this, and payload.fields will be empty)
@@ -103,8 +116,10 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             );
         }
 
-        completeConstruction$();
+        await completeConstruction$();
+        console.log('[complete$] completeConstruction$ done, calling onCreated$');
         await options.onCreated$();
+        console.log('[complete$] onCreated$ done, complete$ finished');
     });
 
     return {

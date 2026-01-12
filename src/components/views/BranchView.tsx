@@ -58,7 +58,10 @@ export const BranchView = component$((props: BranchViewProps) => {
 
             {/* Children container with indent */}
             <div class="branch-children">
-                {children.value.map((child) => (
+                {/* Filter out UC node to prevent dual rendering */}
+                {children.value
+                    .filter(child => !ucNode || child.id !== ucNode.id)
+                    .map((child) => (
                     <TreeNode
                         key={child.id}
                         id={child.id}

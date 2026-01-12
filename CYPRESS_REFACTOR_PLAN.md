@@ -392,6 +392,62 @@ export const MINIMAL_TREE = {
 
 ---
 
+## Additional Test: UC State Transition
+
+**Bug discovered:** After clicking "Create" on an under-construction node, the DataFields transitioned to display state but the node remained in UC state (Create/Cancel buttons still visible, header not navigable). Refresh fixed it.
+
+**Root cause:** QRL calls in `useNodeCreation.ts` were not being awaited, causing state transitions to not complete before the UI updated.
+
+**Test strategy for smoke.cy.ts:**
+
+Add to the existing `persists created node across page reload` test:
+```typescript
+// After clicking Create, verify UC state fully transitions:
+// 1. Form inputs should disappear
+cy.get('input[placeholder="Name"]').should('not.exist', { timeout: 5000 });
+
+// 2. Create/Cancel buttons should disappear (UC state cleared)
+cy.contains('button', 'Create').should('not.exist');
+cy.contains('button', 'Cancel').should('not.exist');
+
+// 3. The new node should appear as a normal display node
+cy.contains(testNodeName).should('be.visible');
+
+// 4. The node should be clickable/navigable (not stuck in UC state)
+cy.contains(testNodeName).closest('article').find('[role="button"]').should('exist');
+```
+
+**Alternative: Dedicated UC transition test in node-creation.cy.ts:**
+```typescript
+it('fully transitions out of UC state after Create', () => {
+  cy.seedMinimal();
+
+  // Start creation
+  cy.get('button').contains('Create New Asset').click();
+
+  // Verify we're in UC state
+  cy.get('input[placeholder="Name"]').should('be.visible');
+  cy.contains('button', 'Create').should('be.visible');
+  cy.contains('button', 'Cancel').should('be.visible');
+
+  // Fill and submit
+  cy.focused().type('UC Transition Test');
+  cy.contains('button', 'Create').click();
+
+  // Verify FULL transition out of UC state
+  cy.get('input[placeholder="Name"]').should('not.exist');
+  cy.contains('button', 'Create').should('not.exist');
+  cy.contains('button', 'Cancel').should('not.exist');
+
+  // Node should be in display mode (navigable)
+  cy.contains('UC Transition Test')
+    .closest('article')
+    .should('not.have.class', 'nodeExpanded'); // UC nodes have expanded class
+});
+```
+
+---
+
 ## Verification Plan
 
 1. **Run Cypress tests**:

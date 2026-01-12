@@ -33,9 +33,9 @@ export type TreeNodeConstructionProps = {
 };
 
 export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps) => {
-    const nameValue = useSignal<string>(props.initialName || '');
-    const subtitleValue = useSignal<string>(props.initialSubtitle || '');
+    // Use refs to read input values directly - more reliable than signals with Qwik's serialization
     const nameInputRef = useSignal<HTMLInputElement>();
+    const subtitleInputRef = useSignal<HTMLInputElement>();
     const fieldListHandle = useSignal<FieldListHandle | null>(null);
 
     // Focus name input on mount
@@ -43,25 +43,37 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
         nameInputRef.value?.focus();
     });
 
-    // Explicit QRL handlers for each input - ensures proper signal binding in Qwik
-    const handleNameInput$ = $((event: InputEvent, element: HTMLInputElement) => {
-        nameValue.value = element.value;
-    });
-
-    const handleSubtitleInput$ = $((event: InputEvent, element: HTMLInputElement) => {
-        subtitleValue.value = element.value;
-    });
-
     const handleCreate$ = $(async () => {
         // Save any unsaved pending fields first
         if (fieldListHandle.value) {
             await fieldListHandle.value.saveAllPending$();
         }
-        
+
+        // Debug logging for Cypress test issue
+        console.log('[handleCreate$] nameInputRef.value:', nameInputRef.value);
+        console.log('[handleCreate$] subtitleInputRef.value:', subtitleInputRef.value);
+        console.log('[handleCreate$] nameInputRef placeholder:', nameInputRef.value?.placeholder);
+        console.log('[handleCreate$] subtitleInputRef placeholder:', subtitleInputRef.value?.placeholder);
+        console.log('[handleCreate$] nameInputRef.value.value:', nameInputRef.value?.value);
+        console.log('[handleCreate$] subtitleInputRef.value.value:', subtitleInputRef.value?.value);
+
+        // Also log all inputs on page for comparison
+        const allInputs = document.querySelectorAll('input');
+        console.log('[handleCreate$] All inputs on page:', allInputs.length);
+        allInputs.forEach((input, i) => {
+            console.log(`[handleCreate$] Input ${i}: placeholder="${input.placeholder}", value="${input.value}"`);
+        });
+
+        // Read values directly from DOM refs - avoids signal serialization issues
+        const nodeName = nameInputRef.value?.value || '';
+        const nodeSubtitle = subtitleInputRef.value?.value || '';
+
+        console.log('[handleCreate$] Final values - nodeName:', JSON.stringify(nodeName), 'nodeSubtitle:', JSON.stringify(nodeSubtitle));
+
         // Update node name/subtitle
         await props.onCreate$({
-            nodeName: nameValue.value,
-            nodeSubtitle: subtitleValue.value,
+            nodeName,
+            nodeSubtitle,
             fields: [], // Fields are handled by FieldList, not passed here
         });
     });
@@ -89,17 +101,14 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                             class={styles.nodeTitle}
                             ref={nameInputRef}
                             placeholder="Name"
-                            value={nameValue.value}
-                            onInput$={handleNameInput$}
                             onKeyDown$={handleKeyDown$}
                             aria-label="Node name"
                             id={titleId}
                         />
                         <input
                             class={styles.nodeSubtitle}
+                            ref={subtitleInputRef}
                             placeholder="Subtitle / Location / Short description"
-                            value={subtitleValue.value}
-                            onInput$={handleSubtitleInput$}
                             onKeyDown$={handleKeyDown$}
                             aria-label="Node subtitle"
                         />
