@@ -13,6 +13,19 @@ export default component$(() => {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+                {/* PWA Manifest */}
+                <link rel="manifest" href="/manifest.json" />
+
+                {/* PWA Meta Tags */}
+                <meta name="theme-color" content="#1a1a1a" />
+                <meta name="description" content="Hierarchical maintenance tracking for physical assets" />
+
+                {/* iOS Safari PWA Support */}
+                <meta name="apple-mobile-web-app-capable" content="yes" />
+                <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+                <meta name="apple-mobile-web-app-title" content="CMM" />
+                <link rel="apple-touch-icon" href="/icon-192.png" />
             </head>
             <body>
                 <RouterOutlet />
