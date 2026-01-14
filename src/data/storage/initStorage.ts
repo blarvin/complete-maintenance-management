@@ -42,6 +42,7 @@ export async function initializeStorage(): Promise<void> {
 
     if (nodeCount === 0) {
       // Check for Cypress test mode - IDB was seeded by Cypress, skip migration
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof window !== 'undefined' && (window as any).__CYPRESS_SEED_MODE__) {
         console.log('[Storage] Cypress test mode - skipping Firestore migration');
       } else {

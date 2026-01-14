@@ -15,7 +15,8 @@ import { initializeStorage } from '../data/storage/initStorage';
  * This hook should be called once in the root component.
  */
 export function useInitStorage() {
-  // eslint-disable-next-line qwik/no-use-visible-task
+  // Client-side initialization is intentional here
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   useVisibleTask$(async () => {
     await initializeStorage();
   }, { strategy: 'document-ready' });

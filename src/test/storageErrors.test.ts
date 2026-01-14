@@ -9,7 +9,6 @@ import {
     isStorageError,
     toStorageError,
     describeForUser,
-    type StorageError,
     type StorageErrorCode,
 } from '../data/storage/storageErrors';
 
@@ -264,6 +263,7 @@ describe('Storage Error Utilities', () => {
         it('returns generic message for unknown code', () => {
             // Force an unknown code to test default case
             const err = makeStorageError('internal', 'Test');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (err as any).code = 'unknown-code';
             expect(describeForUser(err)).toBe('Something went wrong. Please try again.');
         });

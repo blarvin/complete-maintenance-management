@@ -4,7 +4,7 @@
  */
 
 import { db } from '../data/firebase';
-import { collection, getDocs, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, query, where, writeBatch } from 'firebase/firestore';
 import { COLLECTIONS } from '../constants';
 
 // All test fixture IDs start with this prefix

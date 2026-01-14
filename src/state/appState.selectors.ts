@@ -14,7 +14,7 @@ export const selectors = {
     getTreeNodeState: (
         appState: AppState,
         nodeId: string,
-        nodeParentId: string | null
+        _nodeParentId: string | null
     ): TreeNodeState => {
         // Under construction check
         if (appState.underConstruction?.id === nodeId) {

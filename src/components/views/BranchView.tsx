@@ -6,7 +6,7 @@
 import { component$, useTask$, $ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { useAppState, useAppTransitions } from '../../state/appState';
+import { useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useBranchViewData } from '../../hooks/useBranchViewData';
 

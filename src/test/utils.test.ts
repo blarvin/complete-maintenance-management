@@ -3,7 +3,7 @@
  * Pure function tests - no Firestore or mocking required.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { generateId } from '../utils/id';
 import { now, formatTimestamp, formatTimestampShort } from '../utils/time';
 

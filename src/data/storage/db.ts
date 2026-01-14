@@ -21,7 +21,8 @@ export type SyncQueueItem = {
   operation: SyncOperation;
   entityType: 'node' | 'field' | 'field-history';
   entityId: string;
-  payload: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload: any; // Dynamic payload for different entity types
   timestamp: number;
   status: 'pending' | 'syncing' | 'synced' | 'failed';
   retryCount: number;
@@ -30,7 +31,8 @@ export type SyncQueueItem = {
 
 export type SyncMetadata = {
   key: string;
-  value: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  value: any; // Generic metadata value
 };
 
 export class AppDatabase extends Dexie {

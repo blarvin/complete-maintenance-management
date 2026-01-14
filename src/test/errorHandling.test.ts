@@ -138,7 +138,7 @@ describe('Error Handling Utilities', () => {
         });
 
         it('creates a wrapped function that returns fallback on error', async () => {
-            const originalFn = async (x: number): Promise<number> => {
+            const originalFn = async (_x: number): Promise<number> => {
                 throw new Error('Test error');
             };
             const safeFn = withSafeAsync(originalFn, -1);

@@ -111,7 +111,7 @@ export class IDBAdapter implements StorageAdapter {
     return createResult(undefined);
   }
 
-  async deleteNode(id: string, opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
+  async deleteNode(id: string, _opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
     // Phase 1: enforce leaf-only deletion
     const childCount = await db.nodes.where('parentId').equals(id).count();
     if (childCount > 0) {
@@ -310,6 +310,7 @@ export class IDBAdapter implements StorageAdapter {
     await db.syncQueue.delete(queueItemId);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async markFailed(queueItemId: string, error: any): Promise<void> {
     const item = await db.syncQueue.get(queueItemId);
     if (!item) return;
@@ -354,7 +355,8 @@ export class IDBAdapter implements StorageAdapter {
     operation: SyncOperation;
     entityType: 'node' | 'field' | 'field-history';
     entityId: string;
-    payload: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload: any; // Dynamic payload for different entity types
   }): Promise<void> {
     const item: SyncQueueItem = {
       id: generateId(),

@@ -1,8 +1,8 @@
 export function generateId(): string {
     try {
-        // @ts-ignore
+
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            // @ts-ignore
+
             return crypto.randomUUID();
         }
     } catch { }

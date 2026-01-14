@@ -98,7 +98,7 @@ function nodeServiceFromAdapter(adapter: StorageAdapter): INodeService {
                 nodeSubtitle: input.nodeSubtitle,
             });
             await Promise.all(
-                input.defaults.map((field, idx) =>
+                input.defaults.map((field) =>
                     adapter.createField({
                         id: generateId(),
                         parentNodeId: input.id,

@@ -5,13 +5,12 @@
  * Run BEFORE implementing SyncManager - they should all FAIL initially.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SyncManager } from '../data/sync/syncManager';
 import { IDBAdapter } from '../data/storage/idbAdapter';
 import { FirestoreAdapter } from '../data/storage/firestoreAdapter';
 import { db } from '../data/storage/db';
 import { testId, cleanupTestNode, settle } from './testUtils';
-import type { TreeNode, DataField } from '../data/models';
 
 describe('SyncManager - Bidirectional Sync', () => {
     let syncManager: SyncManager;
@@ -132,7 +131,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear queue
-            let queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.getSyncQueue();
             for (const item of queue) {
                 await idbAdapter.markSynced(item.id);
             }
@@ -465,7 +464,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear queue
-            let queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.getSyncQueue();
             for (const item of queue) {
                 await idbAdapter.markSynced(item.id);
             }
@@ -520,7 +519,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear queue
-            let queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.getSyncQueue();
             for (const item of queue) {
                 await idbAdapter.markSynced(item.id);
             }

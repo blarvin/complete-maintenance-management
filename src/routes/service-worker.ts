@@ -10,6 +10,7 @@
 import type { RequestHandler } from '@builder.io/qwik-city';
 import { setupServiceWorker } from '@builder.io/qwik-city/service-worker';
 
+/// <reference lib="webworker" />
 declare const self: ServiceWorkerGlobalScope;
 
 const CACHE_NAME = 'cmm-app-shell-v1';
@@ -26,14 +27,14 @@ setupServiceWorker();
 /**
  * Install Event: Precache critical assets
  */
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (event: ExtendableEvent) => {
   console.log('[SW] Installing service worker...');
 
   // Skip waiting to activate immediately (good for development)
   self.skipWaiting();
 
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then(() => {
       console.log('[SW] App shell cache opened');
       // Qwik City's setupServiceWorker handles most caching,
       // but you can add critical assets here if needed:
@@ -45,7 +46,7 @@ self.addEventListener('install', (event) => {
 /**
  * Activate Event: Clean up old caches
  */
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', (event: ExtendableEvent) => {
   console.log('[SW] Activating service worker...');
 
   event.waitUntil(
@@ -72,7 +73,7 @@ self.addEventListener('activate', (event) => {
  * Note: Qwik City's setupServiceWorker handles most fetch logic.
  * This handler only runs for requests not handled by Qwik's SW.
  */
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (event: FetchEvent) => {
   const { request } = event;
   const url = new URL(request.url);
 
@@ -114,7 +115,7 @@ self.addEventListener('fetch', (event) => {
 /**
  * Message handler for runtime commands
  */
-self.addEventListener('message', (event) => {
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }

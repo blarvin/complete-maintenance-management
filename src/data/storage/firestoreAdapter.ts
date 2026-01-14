@@ -156,7 +156,7 @@ export class FirestoreAdapter implements StorageAdapter {
     }
   }
 
-  async deleteNode(id: string, opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
+  async deleteNode(id: string, _opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
     try {
       // Phase 1: enforce leaf-only by checking child count.
       const childCount = await getCountFromServer(

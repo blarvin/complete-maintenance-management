@@ -114,6 +114,7 @@ export async function clearFirebaseIndexedDB(): Promise<void> {
 
 // Expose to window for easy console access
 if (isBrowser) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).clearFirebaseIndexedDB = clearFirebaseIndexedDB;
 }
 
@@ -126,7 +127,7 @@ if (isBrowser && shouldUseEmulator() && !emulatorConnected) {
         connectFirestoreEmulator(db, 'localhost', 8080);
         emulatorConnected = true;
         console.log('🔥 Connected to Firestore Emulator (localhost:8080)');
-    } catch (e) {
+    } catch {
         // Already connected (HMR scenario)
         emulatorConnected = true;
     }

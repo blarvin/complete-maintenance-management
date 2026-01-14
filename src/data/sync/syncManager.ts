@@ -17,7 +17,7 @@ import type { FirestoreAdapter } from '../storage/firestoreAdapter';
 import type { SyncQueueItem } from '../storage/db';
 import type { TreeNode, DataField } from '../models';
 import { db as firestoreDb } from '../firebase';
-import { collection, query, where, getDocs, setDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, setDoc, deleteDoc, doc } from 'firebase/firestore';
 import { COLLECTIONS } from '../../constants';
 import { now } from '../../utils/time';
 

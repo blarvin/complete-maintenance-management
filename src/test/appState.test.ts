@@ -3,8 +3,8 @@
  * Tests transitions, guards, and selectors as pure functions.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { transitions, selectors, type AppState, type ViewState } from '../state/appState';
+import { describe, it, expect, vi } from 'vitest';
+import { transitions, selectors, type AppState } from '../state/appState';
 
 // Mock uiPrefs to avoid localStorage in tests
 vi.mock('../state/uiPrefs', () => ({

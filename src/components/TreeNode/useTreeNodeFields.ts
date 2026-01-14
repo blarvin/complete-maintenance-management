@@ -29,11 +29,11 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
 
     // Sync props to signals during render (runs on every render)
     // This detects prop changes and bumps the version to trigger reload
-    useTask$(({ track }) => {
+    useTask$(() => {
         // These tracks ensure the task re-runs when the hook is called with new options
         const newNodeId = options.nodeId;
         const newEnabled = options.enabled;
-        
+
         if (currentNodeId.value !== newNodeId || currentEnabled.value !== newEnabled) {
             currentNodeId.value = newNodeId;
             currentEnabled.value = newEnabled;
@@ -44,7 +44,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     // Load fields when version changes (client-only for Firebase access)
     useVisibleTask$(async ({ track }) => {
         // Track the version to react to prop changes
-        const version = track(() => loadVersion.value);
+        track(() => loadVersion.value);
         const nodeId = currentNodeId.value;
         const enabled = currentEnabled.value;
 
