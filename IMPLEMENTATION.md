@@ -197,3 +197,136 @@ src/
 **Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
 
 **localStorage Mocking**: `uiPrefs.test.ts` uses a mock `localStorage` object. Tests verify Set↔Array conversion and persistence behavior.
+
+### PWA Configuration
+
+**Manifest & Icons**: `public/manifest.json` defines app metadata (name: "Complete Maintenance Management", short_name: "CMM", theme colors, display mode). Icons at `public/icon-192.png` and `public/icon-512.png` for home screen installation. Manifest linked in `root.tsx` via `<link rel="manifest">`.
+
+**Service Worker**: `src/routes/service-worker.ts` uses Qwik City's `setupServiceWorker()` for automatic build artifact precaching and smart cache invalidation. Custom handlers added for:
+
+- HTML requests: Network-first (fresh SSR when online, cache fallback)
+- Static assets: Handled by Qwik's built-in cache-first strategy
+- Message handler: Supports `SKIP_WAITING` for immediate activation
+
+Service worker must export `onGet: RequestHandler` despite being unused—Qwik City routing requirement.
+
+**Cache Strategy**: Two-tier caching via service worker (HTTP assets) + IndexedDB (application data). Service worker handles offline shell; app logic handles offline data persistence. No overlap—clear separation of concerns.
+
+### Build Pipeline
+
+**Three-Stage Build Process** (`package.json` scripts):
+
+1. **Type Check** (`build.types`): `tsc --incremental --noEmit` validates types without emitting files
+2. **Client Build** (`build.client`): `vite build` produces static assets in `dist/`
+   - Outputs: `/build/` directory (code-split chunks), `index.html`, `service-worker.js`, `manifest.json`, icons
+   - Base config: `vite.config.ts` (Qwik City + Qwik Vite plugins)
+3. **Server Build** (`build.server`): `vite build -c adapters/static/vite.config.ts`
+   - Generates SSR bundle in `server/` directory
+   - Uses `staticAdapter` from `@builder.io/qwik-city/adapters/static/vite`
+   - Runs Static Site Generation (SSG) to pre-render routes
+
+**Build Output Structure**:
+
+```
+dist/
+├── build/              # Code-split JS chunks (q-*.js)
+├── assets/             # CSS bundles
+├── index.html          # Pre-rendered HTML (SSG output)
+├── service-worker.js   # Generated service worker
+├── manifest.json       # PWA manifest
+├── icon-*.png          # App icons
+└── q-manifest.json     # Qwik chunk manifest
+
+server/
+├── entry.ssr.mjs       # SSR entry point
+├── @qwik-city-plan.mjs # Route config
+└── q-*.js              # Server chunks
+```
+
+**Static Adapter Configuration** (`adapters/static/vite.config.ts`):
+
+```typescript
+staticAdapter({
+  origin: 'http://localhost:4173', // Base URL for SSG
+})
+```
+
+Extends base `vite.config.ts` via `extendConfig()`. Uses `@qwik-city-plan` as SSR input.
+
+**Vite Base Config** (`vite.config.ts`):
+
+- Plugins: `qwikCity()` (routing, SSG), `qwikVite()` (optimizer)
+- Preview server headers: `Cache-Control: public, max-age=600` (10 min cache)
+- Allowed hosts: `host.docker.internal` for container dev
+
+### Development Workflow
+
+**Scripts** (`package.json`):
+
+```json
+{
+  "dev": "vite --mode ssr",           // Dev server with HMR
+  "build": "npm run build.types && npm run build.client && npm run build.server",
+  "preview:pwa": "npx serve dist -l 4173",  // Serve built PWA
+  "typecheck": "tsc --noEmit",
+  "lint": "eslint .",
+  "test": "vitest run",
+  "test:watch": "vitest"
+}
+```
+
+**Common Workflow**:
+
+1. Development: `npm run dev` (port 5173, SSR mode with HMR)
+2. Production build: `npm run build`
+3. Preview production: `npm run preview:pwa` (port 4173)
+
+**Windows Build Issue**: On Windows, stop preview server before rebuilding to avoid `EPERM` file lock errors:
+
+```bash
+# Kill server first
+taskkill /F /PID <pid>
+
+# Then rebuild
+rm -rf dist && npm run build
+```
+
+Or use sequential: `npm run build && npm run preview:pwa`
+
+**ESLint Configuration** (`eslint.config.mjs`):
+
+- Flat config format (ESLint 9+)
+- TypeScript ESLint integration (`typescript-eslint`)
+- Globals: browser, node
+- Custom rules:
+  - `@typescript-eslint/no-explicit-any`: off (pragmatic for Firebase SDK)
+  - `@typescript-eslint/no-unused-vars`: warn (non-blocking)
+
+**Package Management**:
+
+- Runtime: `@builder.io/qwik` (1.16.0), `dexie` (4.2.1), `firebase` (12.1.0)
+- Dev: Vite 6.4.1, TypeScript 5.9.2, Vitest 4.0.14, Cypress 15.8.1
+- No build-time PWA plugin—service worker manually configured for full control
+
+**TypeScript Config** (`tsconfig.json`):
+
+- Strict mode enabled
+- Module: ES2022 (top-level await, dynamic import)
+- Target: ES2021
+- Paths: `~/*` maps to `src/*`
+- Includes Qwik JSX types
+
+### Deployment Considerations
+
+**Static Hosting Requirements**:
+
+1. Serve `dist/` directory as root
+2. Configure cache headers per Qwik recommendations:
+   - `build/*`: `Cache-Control: public, max-age=31536000, immutable` (1 year, hashed filenames)
+   - `*.html`: `Cache-Control: no-cache` (validate on each request)
+   - `service-worker.js`: `Cache-Control: no-cache` (critical for updates)
+3. HTTPS required for service worker registration (except localhost)
+
+**Service Worker Updates**: On new deployments, browser checks `service-worker.js` for changes. Byte-level diff triggers new SW installation. Qwik's `setupServiceWorker()` invalidates old caches automatically. Users get updates on next page load (or via `SKIP_WAITING` message).
+
+**Bundle Size Notes**: Qwik's resumability enables aggressive code splitting. Initial bundle is minimal (~3KB); chunks load on interaction. Largest chunk (`q-CcMbo_mJ.js`: 538KB uncompressed, 143KB gzipped) contains Firebase SDK—lazy-loaded only when storage initializes. Consider dynamic imports if becomes problematic.
