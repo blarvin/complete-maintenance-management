@@ -7,7 +7,6 @@
  * - Data: IndexedDB (handled by application code, not SW)
  */
 
-import type { RequestHandler } from '@builder.io/qwik-city';
 import { setupServiceWorker } from '@builder.io/qwik-city/service-worker';
 
 /// <reference lib="webworker" />
@@ -120,8 +119,3 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
     self.skipWaiting();
   }
 });
-
-// Export for Qwik City (required even though it's a service worker)
-export const onGet: RequestHandler = () => {
-  // This route handler is not used - the service worker runs in its own context
-};

@@ -1,5 +1,5 @@
 import { component$ } from '@builder.io/qwik';
-import { QwikCityProvider, RouterOutlet } from '@builder.io/qwik-city';
+import { QwikCityProvider, RouterOutlet, ServiceWorkerRegister } from '@builder.io/qwik-city';
 import './styles/tokens.css';
 import './styles/global.css';
 import { useProvideAppState } from './state/appState';
@@ -26,6 +26,9 @@ export default component$(() => {
                 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
                 <meta name="apple-mobile-web-app-title" content="CMM" />
                 <link rel="apple-touch-icon" href="/icon-192.png" />
+
+                {/* Service Worker Registration */}
+                <ServiceWorkerRegister />
             </head>
             <body>
                 <RouterOutlet />
