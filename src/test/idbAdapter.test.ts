@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { IDBAdapter } from '../data/storage/idbAdapter';
+import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { db } from '../data/storage/db';
 import { testId } from './testUtils';
 

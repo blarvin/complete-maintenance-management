@@ -12,7 +12,7 @@
  * - Manual: syncOnce() can be called directly
  */
 
-import type { IDBAdapter } from '../storage/idbAdapter';
+import type { IDBAdapter } from '../storage/IDBAdapter';
 import type { FirestoreAdapter } from '../storage/firestoreAdapter';
 import type { SyncQueueItem } from '../storage/db';
 import type { TreeNode, DataField } from '../models';

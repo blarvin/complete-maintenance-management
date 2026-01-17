@@ -11,7 +11,7 @@
  */
 
 import { db } from './db';
-import { IDBAdapter } from './idbAdapter';
+import { IDBAdapter } from './IDBAdapter';
 import { FirestoreAdapter } from './firestoreAdapter';
 import { initializeSyncManager } from '../sync/syncManager';
 import type { TreeNode, DataField, DataFieldHistory } from '../models';

@@ -59,7 +59,7 @@ export interface IFieldService {
 // DEFAULT IMPLEMENTATIONS (IDB as primary, Firestore for sync)
 // ============================================================================
 
-import { IDBAdapter } from '../storage/idbAdapter';
+import { IDBAdapter } from '../storage/IDBAdapter';
 import { FirestoreAdapter } from '../storage/firestoreAdapter';
 
 // Create adapters

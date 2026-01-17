@@ -23,13 +23,8 @@ export function useRootViewData() {
         isLoading.value = true;
         try {
             const fetchedNodes = await getNodeService().getRootNodes();
-            // Log full details to debug the flaky test
-            console.log('[useRootViewData] Fetched nodes FULL:', JSON.stringify(fetchedNodes.map(n => ({
-                id: n.id.substring(0, 8),
-                nodeName: n.nodeName,
-                nodeSubtitle: n.nodeSubtitle,
-                updatedAt: n.updatedAt
-            })), null, 2));
+            // Log node count instead of full array to avoid console clutter
+            console.log('[useRootViewData] Fetched', fetchedNodes.length, 'root nodes');
             nodes.value = fetchedNodes;
             console.log('[useRootViewData] nodes.value set to', nodes.value.length, 'nodes');
         } finally {

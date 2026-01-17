@@ -82,6 +82,7 @@ export class IDBAdapter implements StorageAdapter {
       });
     });
 
+    console.log('[IDBAdapter] Node created in IDB:', node.id, node.nodeName);
     return createResult(node);
   }
 
@@ -108,9 +109,11 @@ export class IDBAdapter implements StorageAdapter {
       }
     });
 
+    console.log('[IDBAdapter] Node updated in IDB:', id);
     return createResult(undefined);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async deleteNode(id: string, _opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
     // Phase 1: enforce leaf-only deletion
     const childCount = await db.nodes.where('parentId').equals(id).count();
@@ -131,6 +134,7 @@ export class IDBAdapter implements StorageAdapter {
       });
     });
 
+    console.log('[IDBAdapter] Node deleted from IDB:', id);
     return createResult(undefined);
   }
 
@@ -196,6 +200,7 @@ export class IDBAdapter implements StorageAdapter {
       });
     });
 
+    console.log('[IDBAdapter] Field created in IDB:', field.id, field.fieldName);
     return createResult(field);
   }
 
@@ -243,6 +248,7 @@ export class IDBAdapter implements StorageAdapter {
       }
     });
 
+    console.log('[IDBAdapter] Field updated in IDB:', id, input.fieldValue);
     return createResult(undefined);
   }
 
@@ -280,6 +286,7 @@ export class IDBAdapter implements StorageAdapter {
       });
     });
 
+    console.log('[IDBAdapter] Field deleted from IDB:', id);
     return createResult(undefined);
   }
 

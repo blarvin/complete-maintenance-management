@@ -16,8 +16,33 @@ import { initializeStorage } from '../data/storage/initStorage';
  */
 export function useInitStorage() {
   // Client-side initialization is intentional here
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   useVisibleTask$(async () => {
+    // Initialize storage
     await initializeStorage();
+
+    // Log service worker registration status
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        console.log('[App] ServiceWorker registered:', registration.scope);
+      } catch (err) {
+        console.error('[App] ServiceWorker registration check failed:', err);
+      }
+    } else {
+      console.warn('[App] ServiceWorker not supported in this browser');
+    }
+
+    // Log initial network state and set up listeners
+    if (typeof navigator !== 'undefined') {
+      console.log('[App] Initial network state:', navigator.onLine ? 'ONLINE' : 'OFFLINE');
+
+      window.addEventListener('online', () => {
+        console.log('[App] Network: ONLINE');
+      });
+
+      window.addEventListener('offline', () => {
+        console.log('[App] Network: OFFLINE');
+      });
+    }
   }, { strategy: 'document-ready' });
 }

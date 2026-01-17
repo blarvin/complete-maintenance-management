@@ -168,10 +168,12 @@ async function cacheFirstWithNetwork(request: Request): Promise<Response> {
   const cachedResponse = await caches.match(request);
 
   if (cachedResponse) {
+    console.log('[SW] Cache HIT:', request.url);
     return cachedResponse;
   }
 
   // Not in cache, fetch from network and cache for next time
+  console.log('[SW] Cache MISS, fetching:', request.url);
   try {
     const networkResponse = await fetch(request);
 
@@ -179,6 +181,7 @@ async function cacheFirstWithNetwork(request: Request): Promise<Response> {
     if (networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
       cache.put(request, networkResponse.clone());
+      console.log('[SW] Cached for future use:', request.url);
     }
 
     return networkResponse;
@@ -199,6 +202,7 @@ async function cacheFirstWithNetwork(request: Request): Promise<Response> {
 async function networkFirstWithCache(request: Request): Promise<Response> {
   try {
     const networkResponse = await fetch(request);
+    console.log('[SW] Network SUCCESS:', request.url);
 
     // Cache the fresh response for offline use
     if (networkResponse.ok) {
@@ -209,10 +213,11 @@ async function networkFirstWithCache(request: Request): Promise<Response> {
     return networkResponse;
   } catch (error) {
     // Network failed, try cache
-    console.log('[SW] Network failed, trying cache:', request.url);
+    console.log('[SW] Network FAILED, trying cache:', request.url);
     const cachedResponse = await caches.match(request);
 
     if (cachedResponse) {
+      console.log('[SW] Cache HIT (fallback):', request.url);
       return cachedResponse;
     }
 

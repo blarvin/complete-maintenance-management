@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SyncManager } from '../data/sync/syncManager';
-import { IDBAdapter } from '../data/storage/idbAdapter';
+import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { FirestoreAdapter } from '../data/storage/firestoreAdapter';
 import { db } from '../data/storage/db';
 import { testId, cleanupTestNode, settle } from './testUtils';
