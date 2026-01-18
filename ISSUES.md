@@ -9,7 +9,7 @@ DataFieldDetails (and tools and functions):
 
    Full cascade delete should be implemented.
 
-   DataField deletion should persist to all clients on sync.
+   DataField deletion should persist to the database on sync and eventually to all clients .
 
 
 CreateDataField component:
@@ -18,7 +18,7 @@ CreateDataField component:
 
    CreateDataField picklist needs typeahead search functionality (and still allow creation of new DataFields).
 
-   CreateDataField dropdown picklist clickaway: it should closewhen user tabs or clicks to the value's input field. (It is covering the UC "cancel" and "save" buttons.)
+   CreateDataField dropdown picklist clickaway: it should close when user tabs or clicks to the value's input field. (It is covering the UC "cancel" and "save" buttons.)
 
 
 Tree Node Header:
