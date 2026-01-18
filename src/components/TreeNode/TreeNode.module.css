@@ -5,7 +5,7 @@
     /* Block element groups article + DataCard so parent's gap doesn't separate them */
 }
 
-.node {
+.nodeHeader {
     position: relative;
     width: 100%;
     max-width: var(--container-max);
@@ -15,9 +15,9 @@
     z-index: var(--z-node);
 }
 
-.nodeExpanded {}
+.nodeHeaderExpanded {}
 
-.nodeBody {
+.nodeHeaderContent {
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
@@ -26,7 +26,7 @@
 }
 
 /* Parent node specific layout */
-.nodeParent .nodeBody {
+.nodeHeaderParent .nodeHeaderContent {
     grid-template-columns: auto 1fr auto;
     /* Adjust padding if needed since UpButton is flush left */
     padding-left: 0; 
@@ -41,7 +41,7 @@
 }
 
 /* Non-button focusable element - caret handled via .no-caret class in JSX */
-.nodeBodyClickable {
+.nodeHeaderContentClickable {
     cursor: pointer;
 }
 

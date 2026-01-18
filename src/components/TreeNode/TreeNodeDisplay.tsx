@@ -1,16 +1,14 @@
 /**
  * TreeNodeDisplay - Read-only display mode for TreeNode.
  * 
- * Orchestrates the node body (title, subtitle, navigation) and DataCard.
+ * Orchestrates the NodeHeader and DataCard.
  * Field logic is delegated to FieldList component.
  */
 
 import { component$, $, PropFunction } from '@builder.io/qwik';
-import { NodeTitle } from '../NodeTitle/NodeTitle';
-import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
+import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
-import { UpButton } from '../UpButton/UpButton';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
@@ -38,21 +36,6 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
         toggleCardExpanded$(props.id);
     });
 
-    const handleBodyKeyDown$ = $((e: KeyboardEvent) => {
-        if (props.onNodeClick$ && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            props.onNodeClick$();
-        }
-    });
-
-    const handleExpandKeyDown$ = $((e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleExpand$();
-        }
-    });
-
     const titleId = `node-title-${props.id}`;
     const isClickable = !!props.onNodeClick$;
     const isParent = props.nodeState === 'PARENT';
@@ -61,43 +44,19 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
 
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
-            <article
-                class={[styles.node, isExpanded && styles.nodeExpanded, isParent && styles.nodeParent]}
-                aria-labelledby={titleId}
-                data-node-id={props.id}
-            >
-                <div
-                    class={[styles.nodeBody, isClickable && styles.nodeBodyClickable, isClickable && 'no-caret']}
-                    onClick$={props.onNodeClick$}
-                    onKeyDown$={handleBodyKeyDown$}
-                    role={isClickable ? 'button' : undefined}
-                    tabIndex={isClickable ? 0 : undefined}
-                    aria-label={isClickable ? `Open ${props.nodeName || 'node'}` : undefined}
-                >
-                    {isParent && props.onNavigateUp$ && (
-                        <div class={styles.upButtonWrapper}>
-                            <UpButton
-                                parentId={props.parentId ?? null}
-                                onNavigate$={props.onNavigateUp$}
-                            />
-                        </div>
-                    )}
-                    <div>
-                        <NodeTitle nodeName={props.nodeName} id={titleId} />
-                        <NodeSubtitle nodeSubtitle={props.nodeSubtitle} />
-                    </div>
-                    <button
-                        type="button"
-                        class={styles.nodeChevron}
-                        onClick$={toggleExpand$}
-                        onKeyDown$={handleExpandKeyDown$}
-                        aria-expanded={isExpanded}
-                        aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
-                    >
-                        {isExpanded ? '▾' : '◂'}
-                    </button>
-                </div>
-            </article>
+            <NodeHeader
+                id={props.id}
+                titleId={titleId}
+                isExpanded={isExpanded}
+                isParent={isParent}
+                isClickable={isClickable}
+                nodeName={props.nodeName}
+                nodeSubtitle={props.nodeSubtitle}
+                parentId={props.parentId}
+                onNodeClick$={props.onNodeClick$}
+                onNavigateUp$={props.onNavigateUp$}
+                onExpand$={toggleExpand$}
+            />
             <DataCard isOpen={isExpanded} nodeId={props.id}>
                 <FieldList nodeId={props.id} />
             </DataCard>

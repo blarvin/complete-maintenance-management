@@ -13,6 +13,7 @@
  */
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
+import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList, type FieldListHandle } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
@@ -94,36 +95,20 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
 
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
-            <article class={[styles.node, styles.nodeExpanded]} aria-labelledby={titleId}>
-                <div class={styles.nodeBody}>
-                    <div>
-                        <input
-                            class={styles.nodeTitle}
-                            ref={nameInputRef}
-                            placeholder="Name"
-                            onKeyDown$={handleKeyDown$}
-                            aria-label="Node name"
-                            id={titleId}
-                        />
-                        <input
-                            class={styles.nodeSubtitle}
-                            ref={subtitleInputRef}
-                            placeholder="Subtitle / Location / Short description"
-                            onKeyDown$={handleKeyDown$}
-                            aria-label="Node subtitle"
-                        />
-                    </div>
-                    <button
-                        type="button"
-                        class={styles.nodeChevron}
-                        aria-expanded={true}
-                        aria-label="Collapse details"
-                        disabled
-                    >
-                        ▾
-                    </button>
-                </div>
-            </article>
+            <NodeHeader
+                id={props.id}
+                titleId={titleId}
+                isExpanded={true}
+                isParent={false}
+                isClickable={false}
+                nodeName={props.initialName || ''}
+                nodeSubtitle={props.initialSubtitle || ''}
+                isConstruction={true}
+                nameInputRef={nameInputRef}
+                subtitleInputRef={subtitleInputRef}
+                onKeyDown$={handleKeyDown$}
+                chevronDisabled={true}
+            />
             <DataCard nodeId={props.id} isOpen={true}>
                 {/* FieldList handles all field management - same as display mode */}
                 <FieldList 

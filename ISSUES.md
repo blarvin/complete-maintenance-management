@@ -12,14 +12,21 @@ DataFieldDetails (and tools and functions):
    DataField deletion should persist to all clients on sync.
 
 
-CreateDataField:
+CreateDataField component:
 
    CreateDataField picklist should use up and down arrow keys for pick, enter for confirm. (But dont break touch interaction.)
+
+   CreateDataField picklist needs typeahead search functionality (and still allow creation of new DataFields).
+
+   CreateDataField dropdown picklist clickaway: it should closewhen user tabs or clicks to the value's input field. (It is covering the UC "cancel" and "save" buttons.)
 
 
 Tree Node Header:
 
    NodeName and NodeSubtitle should be editable. (UI/UX?)
+
+   Factor out NodeHeader from TreeNodeDisplay.
+
 
 
 General UI and UX:
@@ -35,7 +42,7 @@ DataField Component Type: Basic_Key_Value:
 
    DatField edit should create DataFieldHistory entries immediately. Right now they only appear after closing and re-opening DataFieldDetails.
 
-   Current DataFieldHistory entry should not be selectable for reversion.
+   Current DataFieldHistory entry should not be selectable for reversion. (It is already the current value.)
 
    [x] Empty DataFieldHistory entry (from original null value at creation) should not be selectable for reversion.
 
