@@ -32,8 +32,23 @@ export function useRootViewData() {
         }
     });
 
-    useVisibleTask$(async () => {
+    useVisibleTask$(async ({ track, cleanup }) => {
         await load$();
+        
+        // Listen for storage change events (triggered by sync or other storage operations)
+        if (typeof window !== 'undefined') {
+            const handleStorageChange = () => {
+                console.log('[useRootViewData] Storage change detected, reloading...');
+                load$();
+            };
+            
+            window.addEventListener('storage-change', handleStorageChange);
+            track(() => handleStorageChange); // Track for reactivity
+            
+            cleanup(() => {
+                window.removeEventListener('storage-change', handleStorageChange);
+            });
+        }
     });
 
     return { nodes, isLoading, reload$: load$ };

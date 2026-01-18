@@ -46,3 +46,11 @@ DataField Component Type: Basic_Key_Value:
 
    [x] Empty DataFieldHistory entry (from original null value at creation) should not be selectable for reversion.
 
+Future enhancements
+For Phase 2+, consider:
+IndexedDB observers - native browser API (limited support)
+Custom event system - what we have now (works everywhere)
+State management integration - emit events that update a global state store
+WebSocket listeners - for real-time sync across tabs
+The current custom event approach works for Phase 1 and is easy to extend later.   
+

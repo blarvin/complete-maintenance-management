@@ -17,6 +17,7 @@ import type { SyncQueueItem } from '../storage/db';
 import type { TreeNode, DataField } from '../models';
 import { now } from '../../utils/time';
 import { FullCollectionSync } from './fullCollectionSync';
+import { dispatchStorageChangeEvent } from '../storage/storageEvents';
 
 export class SyncManager {
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -113,6 +114,9 @@ export class SyncManager {
       await this.local.setLastSyncTimestamp(now());
 
       console.log('[SyncManager] Sync cycle complete');
+      
+      // Dispatch event to trigger UI updates (components listening for storage changes)
+      dispatchStorageChangeEvent();
     } catch (err) {
       console.error('[SyncManager] Sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app

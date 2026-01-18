@@ -14,6 +14,7 @@ import { db } from './db';
 import { IDBAdapter } from './IDBAdapter';
 import { FirestoreAdapter } from './firestoreAdapter';
 import { initializeSyncManager } from '../sync/syncManager';
+import { initializeDevTools } from '../sync/devTools';
 import type { TreeNode, DataField, DataFieldHistory } from '../models';
 import { COLLECTIONS } from '../../constants';
 import { db as firestoreDb } from '../firebase';
@@ -65,6 +66,9 @@ export async function initializeStorage(): Promise<void> {
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter);
+
+    // Initialize dev tools (exposes window.__sync() and window.__syncStatus())
+    initializeDevTools();
 
     // Trigger immediate sync on startup if online (to detect remote deletions, get latest changes)
     if (typeof navigator !== 'undefined' && navigator.onLine) {
