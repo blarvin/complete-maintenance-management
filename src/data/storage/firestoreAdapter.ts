@@ -22,7 +22,8 @@ import {
   FirestoreError,
 } from "firebase/firestore";
 import type { TreeNode, DataField, DataFieldHistory } from "../models";
-import type { StorageAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
+import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
+import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
 import { getCurrentUserId } from "../../context/userContext";
 import { now } from "../../utils/time";
@@ -63,7 +64,7 @@ function createResult<T>(data: T): StorageResult<T> {
   };
 }
 
-export class FirestoreAdapter implements StorageAdapter {
+export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   // ============================================================================
   // Node Operations
   // ============================================================================
@@ -374,6 +375,68 @@ export class FirestoreAdapter implements StorageAdapter {
         retryable: mapped.retryable,
       });
     }
+  }
+
+  // ============================================================================
+  // Remote Sync Operations (RemoteSyncAdapter)
+  // ============================================================================
+
+  /**
+   * Apply a sync queue item to Firestore.
+   * Handles create/update/delete operations for nodes and fields.
+   */
+  async applySyncItem(item: SyncQueueItem): Promise<void> {
+    switch (item.operation) {
+      case 'create-node': {
+        const node = item.payload as TreeNode;
+        await setDoc(doc(db, COLLECTIONS.NODES, node.id), node);
+        break;
+      }
+      case 'update-node': {
+        const node = item.payload as TreeNode;
+        await setDoc(doc(db, COLLECTIONS.NODES, node.id), node, { merge: true });
+        break;
+      }
+      case 'delete-node': {
+        await deleteDoc(doc(db, COLLECTIONS.NODES, item.entityId));
+        break;
+      }
+      case 'create-field': {
+        const field = item.payload as DataField;
+        await setDoc(doc(db, COLLECTIONS.FIELDS, field.id), field);
+        break;
+      }
+      case 'update-field': {
+        const field = item.payload as DataField;
+        await setDoc(doc(db, COLLECTIONS.FIELDS, field.id), field, { merge: true });
+        break;
+      }
+      case 'delete-field': {
+        await deleteDoc(doc(db, COLLECTIONS.FIELDS, item.entityId));
+        break;
+      }
+      default:
+        console.warn('[FirestoreAdapter] Unknown sync operation:', item.operation);
+    }
+  }
+
+  /**
+   * Pull entities updated since the given timestamp from Firestore.
+   * Returns an array of TreeNode or DataField entities.
+   */
+  async pullEntitiesSince(type: 'node' | 'field', since: number): Promise<Array<TreeNode | DataField>> {
+    const collectionName = type === 'node' ? COLLECTIONS.NODES : COLLECTIONS.FIELDS;
+    const q = query(
+      collection(db, collectionName),
+      where('updatedAt', '>', since)
+    );
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      return [];
+    }
+
+    return snap.docs.map((docSnap) => docSnap.data() as TreeNode | DataField);
   }
 
   // ============================================================================

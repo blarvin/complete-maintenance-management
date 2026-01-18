@@ -12,13 +12,9 @@
  * - Manual: syncOnce() can be called directly
  */
 
-import type { IDBAdapter } from '../storage/IDBAdapter';
-import type { FirestoreAdapter } from '../storage/firestoreAdapter';
+import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
 import type { SyncQueueItem } from '../storage/db';
 import type { TreeNode, DataField } from '../models';
-import { db as firestoreDb } from '../firebase';
-import { collection, query, where, getDocs, setDoc, deleteDoc, doc } from 'firebase/firestore';
-import { COLLECTIONS } from '../../constants';
 import { now } from '../../utils/time';
 
 export class SyncManager {
@@ -27,8 +23,8 @@ export class SyncManager {
   private _isSyncing: boolean = false;
 
   constructor(
-    private local: IDBAdapter,
-    private remote: FirestoreAdapter,
+    private local: SyncableStorageAdapter,
+    private remote: RemoteSyncAdapter,
     private pollIntervalMs: number = 600000 // 10 minutes
   ) {}
 
@@ -153,48 +149,13 @@ export class SyncManager {
 
     for (const item of queue) {
       try {
-        await this.processSyncItem(item);
+        await this.remote.applySyncItem(item);
         await this.local.markSynced(item.id);
         console.log('[SyncManager] Push: Synced', item.operation, item.entityId);
       } catch (err) {
         console.error('[SyncManager] Push: Failed', item.operation, item.entityId, err);
         await this.local.markFailed(item.id, err);
       }
-    }
-  }
-
-  private async processSyncItem(item: SyncQueueItem): Promise<void> {
-    switch (item.operation) {
-      case 'create-node': {
-        const node = item.payload as TreeNode;
-        await setDoc(doc(firestoreDb, COLLECTIONS.NODES, node.id), node);
-        break;
-      }
-      case 'update-node': {
-        const node = item.payload as TreeNode;
-        await setDoc(doc(firestoreDb, COLLECTIONS.NODES, node.id), node, { merge: true });
-        break;
-      }
-      case 'delete-node': {
-        await deleteDoc(doc(firestoreDb, COLLECTIONS.NODES, item.entityId));
-        break;
-      }
-      case 'create-field': {
-        const field = item.payload as DataField;
-        await setDoc(doc(firestoreDb, COLLECTIONS.FIELDS, field.id), field);
-        break;
-      }
-      case 'update-field': {
-        const field = item.payload as DataField;
-        await setDoc(doc(firestoreDb, COLLECTIONS.FIELDS, field.id), field, { merge: true });
-        break;
-      }
-      case 'delete-field': {
-        await deleteDoc(doc(firestoreDb, COLLECTIONS.FIELDS, item.entityId));
-        break;
-      }
-      default:
-        console.warn('[SyncManager] Unknown operation:', item.operation);
     }
   }
 
@@ -215,21 +176,17 @@ export class SyncManager {
 
   private async pullRemoteNodes(since: number): Promise<void> {
     try {
-      const q = query(
-        collection(firestoreDb, COLLECTIONS.NODES),
-        where('updatedAt', '>', since)
-      );
-      const snap = await getDocs(q);
+      const entities = await this.remote.pullEntitiesSince('node', since);
 
-      if (snap.empty) {
+      if (entities.length === 0) {
         console.log('[SyncManager] Pull: No new nodes');
         return;
       }
 
-      console.log('[SyncManager] Pull: Found', snap.size, 'updated nodes');
+      console.log('[SyncManager] Pull: Found', entities.length, 'updated nodes');
 
-      for (const docSnap of snap.docs) {
-        const remote = docSnap.data() as TreeNode;
+      for (const entity of entities) {
+        const remote = entity as TreeNode;
         await this.applyRemoteNode(remote);
       }
     } catch (err) {
@@ -239,21 +196,17 @@ export class SyncManager {
 
   private async pullRemoteFields(since: number): Promise<void> {
     try {
-      const q = query(
-        collection(firestoreDb, COLLECTIONS.FIELDS),
-        where('updatedAt', '>', since)
-      );
-      const snap = await getDocs(q);
+      const entities = await this.remote.pullEntitiesSince('field', since);
 
-      if (snap.empty) {
+      if (entities.length === 0) {
         console.log('[SyncManager] Pull: No new fields');
         return;
       }
 
-      console.log('[SyncManager] Pull: Found', snap.size, 'updated fields');
+      console.log('[SyncManager] Pull: Found', entities.length, 'updated fields');
 
-      for (const docSnap of snap.docs) {
-        const remote = docSnap.data() as DataField;
+      for (const entity of entities) {
+        const remote = entity as DataField;
         await this.applyRemoteField(remote);
       }
     } catch (err) {
@@ -331,7 +284,7 @@ let syncManagerInstance: SyncManager | null = null;
  * Get the global SyncManager instance.
  * Creates one if it doesn't exist.
  */
-export function getSyncManager(local?: IDBAdapter, remote?: FirestoreAdapter): SyncManager {
+export function getSyncManager(local?: SyncableStorageAdapter, remote?: RemoteSyncAdapter): SyncManager {
   if (!syncManagerInstance && local && remote) {
     syncManagerInstance = new SyncManager(local, remote);
   }
@@ -345,7 +298,7 @@ export function getSyncManager(local?: IDBAdapter, remote?: FirestoreAdapter): S
  * Initialize and start the SyncManager.
  * Call this during app initialization.
  */
-export function initializeSyncManager(local: IDBAdapter, remote: FirestoreAdapter): SyncManager {
+export function initializeSyncManager(local: SyncableStorageAdapter, remote: RemoteSyncAdapter): SyncManager {
   if (syncManagerInstance) {
     syncManagerInstance.stop();
   }

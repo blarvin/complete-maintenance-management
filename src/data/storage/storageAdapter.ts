@@ -1,4 +1,5 @@
 import type { DataField, DataFieldHistory, TreeNode } from "../models";
+import type { SyncQueueItem } from "./db";
 
 /**
  * Lightweight metadata returned with adapter results.
@@ -64,4 +65,26 @@ export interface StorageAdapter {
 
   // History
   getFieldHistory(dataFieldId: string): Promise<StorageResult<DataFieldHistory[]>>;
+}
+
+/**
+ * Storage adapter with sync queue capabilities.
+ * Extends StorageAdapter with methods for managing sync state and queue.
+ */
+export interface SyncableStorageAdapter extends StorageAdapter {
+  getSyncQueue(): Promise<SyncQueueItem[]>;
+  markSynced(queueItemId: string): Promise<void>;
+  markFailed(queueItemId: string, error: any): Promise<void>;
+  getLastSyncTimestamp(): Promise<number>;
+  setLastSyncTimestamp(timestamp: number): Promise<void>;
+  applyRemoteUpdate(entityType: 'node' | 'field', entity: TreeNode | DataField): Promise<void>;
+}
+
+/**
+ * Remote storage adapter interface for sync operations.
+ * Handles applying sync items and pulling changes from remote storage.
+ */
+export interface RemoteSyncAdapter {
+  applySyncItem(item: SyncQueueItem): Promise<void>;
+  pullEntitiesSince(type: 'node' | 'field', since: number): Promise<Array<TreeNode | DataField>>;
 }

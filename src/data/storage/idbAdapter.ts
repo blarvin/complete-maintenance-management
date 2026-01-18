@@ -8,7 +8,7 @@
 
 import { db } from './db';
 import type {
-  StorageAdapter,
+  SyncableStorageAdapter,
   StorageResult,
   StorageNodeCreate,
   StorageNodeUpdate,
@@ -32,7 +32,7 @@ function createResult<T>(data: T, fromCache = true): StorageResult<T> {
   };
 }
 
-export class IDBAdapter implements StorageAdapter {
+export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
   // Node Operations
   // ============================================================================
