@@ -78,6 +78,14 @@ export interface SyncableStorageAdapter extends StorageAdapter {
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
   applyRemoteUpdate(entityType: 'node' | 'field', entity: TreeNode | DataField): Promise<void>;
+  
+  // Full collection retrieval methods
+  getAllNodes(): Promise<TreeNode[]>;
+  getAllFields(): Promise<DataField[]>;
+  
+  // Silent delete methods (no sync queue entry)
+  deleteNodeLocal(id: string): Promise<void>;
+  deleteFieldLocal(id: string): Promise<void>;
 }
 
 /**
@@ -87,4 +95,8 @@ export interface SyncableStorageAdapter extends StorageAdapter {
 export interface RemoteSyncAdapter {
   applySyncItem(item: SyncQueueItem): Promise<void>;
   pullEntitiesSince(type: 'node' | 'field', since: number): Promise<Array<TreeNode | DataField>>;
+  
+  // Full collection pull methods
+  pullAllNodes(): Promise<TreeNode[]>;
+  pullAllFields(): Promise<DataField[]>;
 }

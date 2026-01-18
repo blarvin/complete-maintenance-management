@@ -16,17 +16,27 @@ import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/stora
 import type { SyncQueueItem } from '../storage/db';
 import type { TreeNode, DataField } from '../models';
 import { now } from '../../utils/time';
+import { FullCollectionSync } from './fullCollectionSync';
 
 export class SyncManager {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private _enabled: boolean = true;
   private _isSyncing: boolean = false;
+  private fullSync: FullCollectionSync;
 
   constructor(
     private local: SyncableStorageAdapter,
     private remote: RemoteSyncAdapter,
     private pollIntervalMs: number = 600000 // 10 minutes
-  ) {}
+  ) {
+    // Initialize full collection sync strategy
+    this.fullSync = new FullCollectionSync(
+      this.local,
+      this.remote,
+      (node) => this.applyRemoteNode(node),
+      (field) => this.applyRemoteField(field)
+    );
+  }
 
   /**
    * Start the sync manager.
@@ -164,54 +174,9 @@ export class SyncManager {
   // ============================================================================
 
   private async pullRemoteChanges(): Promise<void> {
-    const lastSync = await this.local.getLastSyncTimestamp();
-    console.log('[SyncManager] Pull: Fetching changes since', new Date(lastSync).toISOString());
-
-    // Pull nodes
-    await this.pullRemoteNodes(lastSync);
-
-    // Pull fields
-    await this.pullRemoteFields(lastSync);
-  }
-
-  private async pullRemoteNodes(since: number): Promise<void> {
-    try {
-      const entities = await this.remote.pullEntitiesSince('node', since);
-
-      if (entities.length === 0) {
-        console.log('[SyncManager] Pull: No new nodes');
-        return;
-      }
-
-      console.log('[SyncManager] Pull: Found', entities.length, 'updated nodes');
-
-      for (const entity of entities) {
-        const remote = entity as TreeNode;
-        await this.applyRemoteNode(remote);
-      }
-    } catch (err) {
-      console.error('[SyncManager] Pull nodes failed:', err);
-    }
-  }
-
-  private async pullRemoteFields(since: number): Promise<void> {
-    try {
-      const entities = await this.remote.pullEntitiesSince('field', since);
-
-      if (entities.length === 0) {
-        console.log('[SyncManager] Pull: No new fields');
-        return;
-      }
-
-      console.log('[SyncManager] Pull: Found', entities.length, 'updated fields');
-
-      for (const entity of entities) {
-        const remote = entity as DataField;
-        await this.applyRemoteField(remote);
-      }
-    } catch (err) {
-      console.error('[SyncManager] Pull fields failed:', err);
-    }
+    console.log('[SyncManager] Pull: Starting full collection sync');
+    // Delegate to full collection sync strategy
+    await this.fullSync.sync();
   }
 
   // ============================================================================

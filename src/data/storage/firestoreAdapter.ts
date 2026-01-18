@@ -439,6 +439,24 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
     return snap.docs.map((docSnap) => docSnap.data() as TreeNode | DataField);
   }
 
+  /**
+   * Pull all nodes from Firestore (full collection).
+   * Used for full collection sync to detect deletions.
+   */
+  async pullAllNodes(): Promise<TreeNode[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.NODES));
+    return snap.docs.map(d => d.data() as TreeNode);
+  }
+
+  /**
+   * Pull all fields from Firestore (full collection).
+   * Used for full collection sync to detect deletions.
+   */
+  async pullAllFields(): Promise<DataField[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.FIELDS));
+    return snap.docs.map(d => d.data() as DataField);
+  }
+
   // ============================================================================
   // Internal Helpers
   // ============================================================================

@@ -64,7 +64,16 @@ export async function initializeStorage(): Promise<void> {
     const firestoreAdapter = new FirestoreAdapter();
 
     // Start the sync manager
-    initializeSyncManager(idbAdapter, firestoreAdapter);
+    const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter);
+
+    // Trigger immediate sync on startup if online (to detect remote deletions, get latest changes)
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      console.log('[Storage] Triggering initial sync on startup...');
+      syncManager.syncOnce().catch(err => {
+        console.error('[Storage] Initial sync failed:', err);
+        // Don't throw - app should still work even if initial sync fails
+      });
+    }
 
     initialized = true;
     console.log('[Storage] Initialization complete');

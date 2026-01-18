@@ -347,6 +347,28 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   // ============================================================================
+  // Full Collection Sync Operations
+  // ============================================================================
+
+  async getAllNodes(): Promise<TreeNode[]> {
+    return await db.nodes.toArray();
+  }
+
+  async getAllFields(): Promise<DataField[]> {
+    return await db.fields.toArray();
+  }
+
+  async deleteNodeLocal(id: string): Promise<void> {
+    // Silent delete - no sync queue entry, no transaction needed
+    await db.nodes.delete(id);
+  }
+
+  async deleteFieldLocal(id: string): Promise<void> {
+    // Silent delete - no sync queue entry, no history entry, no transaction needed
+    await db.fields.delete(id);
+  }
+
+  // ============================================================================
   // Internal Helpers
   // ============================================================================
 
