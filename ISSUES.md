@@ -51,6 +51,17 @@
 - [ ] Extract SyncManager responsibilities (SRP violation - too many concerns)
 - [ ] Use FirestoreAdapter instead of direct Firestore SDK calls (DIP violation)
 - [ ] Extract shared history creation logic (DRY - duplicated in adapters)
+- [ ] Create new node should trigger sync to cloud DB.
+- [ ] Create new field should trigger sync to cloud DB.
+- [ ] Delete node should trigger sync to cloud DB.
+- [ ] Delete field should trigger sync to cloud DB.
+- [ ] Update node should trigger sync to cloud DB.
+- [ ] Update field should trigger sync to cloud DB.
+- [ ] Update field value should trigger sync to cloud DB.
+- [ ] Update field metadata should trigger sync to cloud DB.
+- [ ] Update field history should trigger sync to cloud DB.
+- [ ] Update field history value should trigger sync to cloud DB.
+- [ ] Update field history metadata should trigger sync to cloud DB.
 
 ## Views
 - [x] ROOT view (listview of root nodes + CreateNodeButton)
@@ -80,12 +91,14 @@
 - [x] ARIA attributes (role, tabIndex, aria-label, aria-expanded)
 - [x] Conditional styling (isExpanded, isParent, isClickable)
 
+## TreeNode CRUD
+- [ ] Deletion of a TreeNode cascade deletes the associated DataFields and DataFieldHistory entries.
+
 ## DataCard Component
-- [x] Dual-transition animation (grid 0fr→1fr + translateY -100%→none)
+- [x] Dual-transition animation (grid 0fr→1fr + translateY -100%→none). 100ms cubic-bezier timing, synchronized.
 - [x] Expand/collapse chevron button (right of NodeSubtitle)
-- [x] isExpanded state persisted to localStorage
+- [x] isExpanded state, persisted to localStorage
 - [x] isUnderConstruction state (default fields, no NodeTools)
-- [x] 100ms cubic-bezier timing (synchronized transitions)
 - [x] Content-aware without ref (no explicit height)
 - [ ] Remove unused nodeId prop
 
@@ -107,18 +120,26 @@
 - [x] DELETE button deletes the field
 - [ ] DELETE button confirmation dialog
 - [ ] DELETE button triggers Snackbar with undo
-- [x] CANCEL button (collapses details)
 - [x] display:contents grid layout (inline grid items)
 - [ ] Full cascade delete implementation (currently minimal)
 - [ ] DataField deletion persist to DB on sync to all clients
+
+## Data Field CRUD
+- [ ] Deletion of Data Field cascade deletes the associated DataFieldHistory entries.
 
 ## DataFieldHistory Component
 - [x] Scrollable historical values list
 - [x] Append-only audit log (action, property, prevValue, newValue)
 - [x] Rev counter (monotonic per field)
-- [x] Revert button for historical entries
+- [x] REVERT button only active when a historical value is selected
+- [ ] REVERT button should not be active/available when current value or original empty value is selected
+- [x] CANCEL button cancels the edit and closes history list
 - [x] Current entry not selectable for reversion
 - [x] Empty entry (original null) not selectable for reversion
+
+## DataFieldHistory CRUD
+- [ ] Create DataFieldHistory entry immediately (not just on re-open)
+- [ ] Deletion of a Data Field cascade deletes the associated DataFieldHistory entries.
 
 ## CreateDataField Component
 - [x] Pure form component (name/value inputs + Save/Cancel)
@@ -146,16 +167,15 @@
 ## CreateNodeButton Component
 - [x] Contextual variants (root, child)
 - [x] Root variant: large button mimics ROOT node at bottom
-- [x] Child variant: small inline buttons (n+1 between children)
+- [x] Child variant: small inline buttons (n+1)
 - [x] Normal document flow (no absolute positioning)
 - [x] Creates TreeNode in isUnderConstruction state
 
 ## NodeTools Component
 - [ ] Expandable section (chevron + "Tools" label)
-- [ ] DELETE button with confirmation
+- [ ] DELETE button with confirmation (shows counts)
 - [ ] Cascade delete (node + descendants + fields + history)
 - [ ] Snackbar with 5s undo (in-memory snapshot)
-- [ ] Confirmation dialog (shows counts)
 - [ ] Undo survives navigation (not page reload)
 
 ## Snackbar Component
@@ -190,7 +210,7 @@
 - [x] ARIA attributes (aria-expanded, aria-label, aria-labelledby)
 - [x] Semantic HTML (article, button, h2, label)
 - [x] AI agent compatibility (descriptive accessibility tree)
-- [ ] Focus X/Y movement around app after Tab key activation
+- [ ] Move Focus X/Y around app after Tab key activation
 
 ## CSS & Styling
 - [x] Three-layer token system (primitives, semantic, component)
@@ -234,8 +254,7 @@
 - [x] Test utils (shared utilities)
 
 ## Dev Tools & Utilities
-- [x] Dev tools (window.__sync(), window.__syncStatus())
-- [x] Manual sync triggering via browser console
+- [x] Dev tools (window.__sync(), window.__syncStatus()): manual sync triggering via browser console.
 - [x] Sync status inspection (enabled, isSyncing)
 - [x] initializeDevTools() called from initStorage
 - [x] ID generation utility (generateId with crypto.randomUUID fallback)
