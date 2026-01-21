@@ -27,7 +27,7 @@ isProject: false
 
 ## Current Problem
 
-- `FullCollectionSync` only syncs nodes and fields (no history)
+- `FullCollectionSync` only syncs nodes and fields - no DataFieldHistory
 - History entries created on other clients are never pulled
 - When fields are deleted via sync, their history entries remain as orphans
 - `initStorage.ts` uses direct Firestore SDK calls instead of adapter (DIP violation)
@@ -64,6 +64,8 @@ graph TD
     FCS --> SSA
     FCS --> RSA
 ```
+
+
 
 ## Changes Required
 
@@ -195,3 +197,4 @@ Remove unused imports: `collection`, `getDocs`, `query`, `orderBy` from firebase
 - Verify cascade deletion works when field is deleted via sync
 - Verify orphaned history is cleaned up
 - Verify new history entries from remote are pulled
+
