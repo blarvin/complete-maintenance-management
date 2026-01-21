@@ -41,6 +41,15 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         }
     });
 
+    // Reload function to refresh fields (e.g., after deletion)
+    // Defined before useVisibleTask$ so it can be referenced in the event handler
+    const reload$ = $(async () => {
+        if (!currentEnabled.value) return;
+        isLoading.value = true;
+        fields.value = await getFieldService().getFieldsForNode(currentNodeId.value);
+        isLoading.value = false;
+    });
+
     // Load fields when version changes (client-only for Firebase access)
     useVisibleTask$(async ({ track, cleanup }) => {
         // Track the version to react to prop changes
@@ -67,20 +76,11 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
             };
             
             window.addEventListener('storage-change', handleStorageChange);
-            track(() => handleStorageChange); // Track for reactivity
             
             cleanup(() => {
                 window.removeEventListener('storage-change', handleStorageChange);
             });
         }
-    });
-
-    // Reload function to refresh fields (e.g., after deletion)
-    const reload$ = $(async () => {
-        if (!currentEnabled.value) return;
-        isLoading.value = true;
-        fields.value = await getFieldService().getFieldsForNode(currentNodeId.value);
-        isLoading.value = false;
     });
 
     return { fields, isLoading, reload$ };

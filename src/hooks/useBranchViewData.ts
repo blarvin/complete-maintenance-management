@@ -32,12 +32,12 @@ export function useBranchViewData() {
 
     const load$ = $(async (id: string) => {
         if (!id) return;
-        
+
         // Cancel construction when navigating (maintain existing behavior)
         if (appState.underConstruction) {
             cancelConstruction$();
         }
-        
+
         isLoading.value = true;
         try {
             const result = await getNodeService().getNodeWithChildren(id);
