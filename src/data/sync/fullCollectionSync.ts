@@ -19,6 +19,7 @@ export class FullCollectionSync {
   async sync(): Promise<void> {
     await this.syncNodes();
     await this.syncFields();
+    await this.syncHistory();
   }
 
   private async syncNodes(): Promise<void> {
@@ -71,5 +72,17 @@ export class FullCollectionSync {
     for (const remoteField of remoteFields) {
       await this.applyRemoteField(remoteField);
     }
+  }
+
+  private async syncHistory(): Promise<void> {
+    const remoteHistory = await this.remote.pullAllHistory();
+
+    // Upsert all remote history entries (no deletion detection)
+    // Orphaned history entries are intentional - they will be handled by soft delete
+    for (const hist of remoteHistory) {
+      await this.local.applyRemoteHistory(hist);
+    }
+
+    console.log('[FullCollectionSync] Synced', remoteHistory.length, 'history entries');
   }
 }

@@ -457,6 +457,15 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
     return snap.docs.map(d => d.data() as DataField);
   }
 
+  /**
+   * Pull all history from Firestore (full collection).
+   * Used for history sync across devices.
+   */
+  async pullAllHistory(): Promise<DataFieldHistory[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.HISTORY));
+    return snap.docs.map(d => d.data() as DataFieldHistory);
+  }
+
   // ============================================================================
   // Internal Helpers
   // ============================================================================

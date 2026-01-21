@@ -82,6 +82,10 @@ export interface SyncableStorageAdapter extends StorageAdapter {
   // Full collection retrieval methods
   getAllNodes(): Promise<TreeNode[]>;
   getAllFields(): Promise<DataField[]>;
+  getAllHistory(): Promise<DataFieldHistory[]>;
+  
+  // History sync methods
+  applyRemoteHistory(history: DataFieldHistory): Promise<void>;
   
   // Silent delete methods (no sync queue entry)
   deleteNodeLocal(id: string): Promise<void>;
@@ -99,4 +103,5 @@ export interface RemoteSyncAdapter {
   // Full collection pull methods
   pullAllNodes(): Promise<TreeNode[]>;
   pullAllFields(): Promise<DataField[]>;
+  pullAllHistory(): Promise<DataFieldHistory[]>;
 }

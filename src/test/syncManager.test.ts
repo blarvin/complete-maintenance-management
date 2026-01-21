@@ -536,4 +536,118 @@ describe('SyncManager - Bidirectional Sync', () => {
             expect(field?.fieldValue).toBe('Updated');
         });
     });
+
+    describe('History Sync', () => {
+        it('pulls remote history entries into IDB', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+            createdNodeIds.push(nodeId);
+
+            // Create node and field directly in Firestore (bypasses IDB)
+            await firestoreAdapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await firestoreAdapter.createField({
+                id: fieldId,
+                parentNodeId: nodeId,
+                fieldName: 'Remote Field',
+                fieldValue: 'Remote Value',
+            });
+
+            await settle(100);
+
+            // Trigger sync - should pull history from Firestore
+            await syncManager.syncOnce();
+
+            // Verify history was pulled into IDB
+            const localHistory = await idbAdapter.getAllHistory();
+            const remoteFieldHistory = localHistory.filter(h => h.dataFieldId === fieldId);
+
+            expect(remoteFieldHistory.length).toBeGreaterThan(0);
+            expect(remoteFieldHistory[0].action).toBe('create');
+        });
+
+        it('preserves existing local history when syncing remote history (upsert)', async () => {
+            const localNodeId = testId();
+            const localFieldId = testId();
+            const remoteNodeId = testId();
+            const remoteFieldId = testId();
+            createdNodeIds.push(localNodeId, remoteNodeId);
+
+            // Create local node and field (creates local history)
+            await idbAdapter.createNode({ id: localNodeId, parentId: null, nodeName: 'Local Node', nodeSubtitle: '' });
+            await idbAdapter.createField({
+                id: localFieldId,
+                parentNodeId: localNodeId,
+                fieldName: 'Local Field',
+                fieldValue: 'Local Value',
+            });
+
+            // Get local history count before sync
+            const localHistoryBefore = await idbAdapter.getAllHistory();
+            const localCount = localHistoryBefore.length;
+            expect(localCount).toBeGreaterThan(0);
+
+            // Clear sync queue to avoid pushing local data
+            const queue = await idbAdapter.getSyncQueue();
+            for (const item of queue) {
+                await idbAdapter.markSynced(item.id);
+            }
+
+            // Create remote node and field directly in Firestore
+            await firestoreAdapter.createNode({ id: remoteNodeId, parentId: null, nodeName: 'Remote Node', nodeSubtitle: '' });
+            await firestoreAdapter.createField({
+                id: remoteFieldId,
+                parentNodeId: remoteNodeId,
+                fieldName: 'Remote Field',
+                fieldValue: 'Remote Value',
+            });
+
+            await settle(100);
+
+            // Trigger sync
+            await syncManager.syncOnce();
+
+            // Verify both local and remote history exist
+            const allHistory = await idbAdapter.getAllHistory();
+            const localFieldHistory = allHistory.filter(h => h.dataFieldId === localFieldId);
+            const remoteFieldHistory = allHistory.filter(h => h.dataFieldId === remoteFieldId);
+
+            expect(localFieldHistory.length).toBeGreaterThan(0); // Local preserved
+            expect(remoteFieldHistory.length).toBeGreaterThan(0); // Remote added
+            expect(allHistory.length).toBeGreaterThan(localCount); // Total increased
+        });
+
+        it('syncs history entries created on other devices', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+            createdNodeIds.push(nodeId);
+
+            // Simulate "other device" scenario:
+            // Create node/field in Firestore, then update field value multiple times
+            await firestoreAdapter.createNode({ id: nodeId, parentId: null, nodeName: 'Shared Node', nodeSubtitle: '' });
+            await firestoreAdapter.createField({
+                id: fieldId,
+                parentNodeId: nodeId,
+                fieldName: 'Shared Field',
+                fieldValue: 'Value v1',
+            });
+
+            // Update field value (creates more history)
+            await firestoreAdapter.updateFieldValue(fieldId, { fieldValue: 'Value v2' });
+            await firestoreAdapter.updateFieldValue(fieldId, { fieldValue: 'Value v3' });
+
+            await settle(100);
+
+            // Sync to pull all history
+            await syncManager.syncOnce();
+
+            // Verify all history entries were pulled
+            const localHistory = await idbAdapter.getAllHistory();
+            const fieldHistory = localHistory.filter(h => h.dataFieldId === fieldId);
+
+            // Should have: create + 2 updates = 3 history entries
+            expect(fieldHistory.length).toBe(3);
+            expect(fieldHistory.some(h => h.action === 'create')).toBe(true);
+            expect(fieldHistory.filter(h => h.action === 'update').length).toBe(2);
+        });
+    });
 });

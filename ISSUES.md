@@ -43,13 +43,14 @@
 
 ## SyncManager
 - [x] Full collection sync (FullCollectionSync strategy)
+- [x] History sync (syncHistory in FullCollectionSync)
 - [x] Post-sync UI refresh (dispatchStorageChangeEvent in storageEvents.ts)
 - [x] Bidirectional sync (push-first, pull-second)
 - [x] LWW conflict resolution (last-write-wins)
 - [x] Protect pending items (don't delete local items pending push)
 - [x] Online/offline event handling
 - [ ] Extract SyncManager responsibilities (SRP violation - too many concerns)
-- [ ] Use FirestoreAdapter instead of direct Firestore SDK calls (DIP violation)
+- [x] Use FirestoreAdapter instead of direct Firestore SDK calls (DIP violation)
 - [ ] Extract shared history creation logic (DRY - duplicated in adapters)
 - [ ] Create new node should trigger sync to cloud DB.
 - [ ] Create new field should trigger sync to cloud DB.
@@ -93,6 +94,7 @@
 
 ## TreeNode CRUD
 - [ ] Deletion of a TreeNode cascade deletes the associated DataFields and DataFieldHistory entries.
+- [ ] Soft deletion: set deleted at on TreeNode, and rely on implicit hiding of children.
 
 ## DataCard Component
 - [x] Dual-transition animation (grid 0fr→1fr + translateY -100%→none). 100ms cubic-bezier timing, synchronized.

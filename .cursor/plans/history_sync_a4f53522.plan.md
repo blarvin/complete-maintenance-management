@@ -4,25 +4,25 @@ overview: Add DataFieldHistory sync across devices via adapter abstraction. Pull
 todos:
   - id: interface-syncable-history
     content: Add getAllHistory() and applyRemoteHistory() to SyncableStorageAdapter interface
-    status: pending
+    status: completed
   - id: interface-remote-history
     content: Add pullAllHistory() to RemoteSyncAdapter interface
-    status: pending
+    status: completed
   - id: idb-history-methods
     content: Implement getAllHistory() and applyRemoteHistory() in IDBAdapter
-    status: pending
+    status: completed
   - id: firestore-pull-history
     content: Implement pullAllHistory() in FirestoreAdapter
-    status: pending
+    status: completed
   - id: sync-history-method
     content: Add syncHistory() to FullCollectionSync.sync()
-    status: pending
+    status: completed
   - id: fix-init-storage
     content: Update migrateFromFirestore() to use FirestoreAdapter instead of direct SDK calls
-    status: pending
+    status: completed
   - id: update-issues
     content: Mark ISSUES.md line 52 as resolved
-    status: pending
+    status: completed
 isProject: false
 ---
 

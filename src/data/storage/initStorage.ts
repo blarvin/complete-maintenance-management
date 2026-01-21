@@ -15,10 +15,6 @@ import { IDBAdapter } from './IDBAdapter';
 import { FirestoreAdapter } from './firestoreAdapter';
 import { initializeSyncManager } from '../sync/syncManager';
 import { initializeDevTools } from '../sync/devTools';
-import type { TreeNode, DataField, DataFieldHistory } from '../models';
-import { COLLECTIONS } from '../../constants';
-import { db as firestoreDb } from '../firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 
 let initialized = false;
 
@@ -91,30 +87,22 @@ export async function initializeStorage(): Promise<void> {
 /**
  * Migrate all data from Firestore to IDB.
  * This is a one-time operation on first load.
+ * Uses FirestoreAdapter for clean abstraction (DIP compliance).
  */
 async function migrateFromFirestore(): Promise<void> {
   console.log('[Migration] Starting migration from Firestore...');
 
   try {
-    // Fetch all nodes
-    const nodesSnap = await getDocs(
-      query(collection(firestoreDb, COLLECTIONS.NODES), orderBy('updatedAt', 'asc'))
-    );
-    const nodes = nodesSnap.docs.map(d => d.data() as TreeNode);
+    const firestoreAdapter = new FirestoreAdapter();
+
+    // Fetch all data via adapter methods
+    const nodes = await firestoreAdapter.pullAllNodes();
     console.log('[Migration] Found', nodes.length, 'nodes');
 
-    // Fetch all fields
-    const fieldsSnap = await getDocs(
-      query(collection(firestoreDb, COLLECTIONS.FIELDS), orderBy('updatedAt', 'asc'))
-    );
-    const fields = fieldsSnap.docs.map(d => d.data() as DataField);
+    const fields = await firestoreAdapter.pullAllFields();
     console.log('[Migration] Found', fields.length, 'fields');
 
-    // Fetch all history
-    const historySnap = await getDocs(
-      query(collection(firestoreDb, COLLECTIONS.HISTORY), orderBy('updatedAt', 'asc'))
-    );
-    const history = historySnap.docs.map(d => d.data() as DataFieldHistory);
+    const history = await firestoreAdapter.pullAllHistory();
     console.log('[Migration] Found', history.length, 'history entries');
 
     // Bulk insert into IDB

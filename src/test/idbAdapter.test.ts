@@ -499,4 +499,117 @@ describe('IDBAdapter - Core Storage Operations', () => {
             expect(retrieved?.fieldValue).toBe('From Server');
         });
     });
+
+    describe('History Sync Operations', () => {
+        it('getAllHistory returns all history entries', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+
+            // Create node and field (field creation creates history)
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({
+                id: fieldId,
+                parentNodeId: nodeId,
+                fieldName: 'Field',
+                fieldValue: 'Initial',
+            });
+
+            // Update field (creates another history entry)
+            await adapter.updateFieldValue(fieldId, { fieldValue: 'Updated' });
+
+            const allHistory = await adapter.getAllHistory();
+
+            expect(allHistory.length).toBe(2);
+            expect(allHistory.some(h => h.action === 'create')).toBe(true);
+            expect(allHistory.some(h => h.action === 'update')).toBe(true);
+        });
+
+        it('getAllHistory returns empty array when no history exists', async () => {
+            const allHistory = await adapter.getAllHistory();
+            expect(allHistory).toEqual([]);
+        });
+
+        it('applyRemoteHistory inserts new history entry', async () => {
+            const historyEntry = {
+                id: 'field123:0',
+                dataFieldId: 'field123',
+                parentNodeId: 'node123',
+                action: 'create' as const,
+                property: 'fieldValue' as const,
+                prevValue: null,
+                newValue: 'test value',
+                updatedBy: 'remoteUser',
+                updatedAt: Date.now(),
+                rev: 0,
+            };
+
+            await adapter.applyRemoteHistory(historyEntry);
+
+            const allHistory = await adapter.getAllHistory();
+            expect(allHistory.length).toBe(1);
+            expect(allHistory[0].id).toBe('field123:0');
+            expect(allHistory[0].newValue).toBe('test value');
+        });
+
+        it('applyRemoteHistory upserts existing history entry', async () => {
+            const historyEntry = {
+                id: 'field123:0',
+                dataFieldId: 'field123',
+                parentNodeId: 'node123',
+                action: 'create' as const,
+                property: 'fieldValue' as const,
+                prevValue: null,
+                newValue: 'original',
+                updatedBy: 'remoteUser',
+                updatedAt: Date.now(),
+                rev: 0,
+            };
+
+            // Insert first
+            await adapter.applyRemoteHistory(historyEntry);
+
+            // Upsert with updated value (simulating remote update)
+            const updatedEntry = { ...historyEntry, newValue: 'updated from remote' };
+            await adapter.applyRemoteHistory(updatedEntry);
+
+            const allHistory = await adapter.getAllHistory();
+            expect(allHistory.length).toBe(1); // Still just one entry
+            expect(allHistory[0].newValue).toBe('updated from remote');
+        });
+
+        it('applyRemoteHistory preserves existing local history when adding remote', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+
+            // Create local history by creating a field
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({
+                id: fieldId,
+                parentNodeId: nodeId,
+                fieldName: 'Local Field',
+                fieldValue: 'Local Value',
+            });
+
+            // Add remote history for a different field
+            const remoteHistory = {
+                id: 'remote-field:0',
+                dataFieldId: 'remote-field',
+                parentNodeId: 'remote-node',
+                action: 'create' as const,
+                property: 'fieldValue' as const,
+                prevValue: null,
+                newValue: 'remote value',
+                updatedBy: 'remoteUser',
+                updatedAt: Date.now(),
+                rev: 0,
+            };
+
+            await adapter.applyRemoteHistory(remoteHistory);
+
+            const allHistory = await adapter.getAllHistory();
+            expect(allHistory.length).toBe(2); // Local + remote
+            expect(allHistory.some(h => h.dataFieldId === fieldId)).toBe(true);
+            expect(allHistory.some(h => h.dataFieldId === 'remote-field')).toBe(true);
+        });
+    });
 });

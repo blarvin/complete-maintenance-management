@@ -358,6 +358,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
     return await db.fields.toArray();
   }
 
+  async getAllHistory(): Promise<DataFieldHistory[]> {
+    return await db.history.toArray();
+  }
+
+  async applyRemoteHistory(history: DataFieldHistory): Promise<void> {
+    await db.history.put(history);
+  }
+
   async deleteNodeLocal(id: string): Promise<void> {
     // Silent delete - no sync queue entry, no transaction needed
     await db.nodes.delete(id);
