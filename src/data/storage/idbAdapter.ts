@@ -16,6 +16,7 @@ import type {
   StorageFieldUpdate,
 } from './storageAdapter';
 import type { TreeNode, DataField, DataFieldHistory } from '../models';
+import { filterActive, filterDeleted } from '../models';
 import type { SyncQueueItem, SyncOperation } from './db';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
@@ -39,9 +40,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async listRootNodes(): Promise<StorageResult<TreeNode[]>> {
     // Dexie doesn't support querying for null values with .equals()
-    // So we get all nodes and filter for null parentId
+    // So we get all nodes and filter for null parentId and active (not soft-deleted)
     const allNodes = await db.nodes.toArray();
-    const nodes = allNodes.filter(n => n.parentId === null);
+    const nodes = allNodes.filter(n => n.parentId === null && n.deletedAt === null);
     // Sort by updatedAt descending (most recent first)
     nodes.sort((a, b) => b.updatedAt - a.updatedAt);
     return createResult(nodes);
@@ -54,9 +55,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async listChildren(parentId: string): Promise<StorageResult<TreeNode[]>> {
     const children = await db.nodes.where('parentId').equals(parentId).toArray();
+    // Filter out soft-deleted children
+    const activeChildren = filterActive(children);
     // Sort by updatedAt descending
-    children.sort((a, b) => b.updatedAt - a.updatedAt);
-    return createResult(children);
+    activeChildren.sort((a, b) => b.updatedAt - a.updatedAt);
+    return createResult(activeChildren);
   }
 
   async createNode(input: StorageNodeCreate): Promise<StorageResult<TreeNode>> {
@@ -70,6 +73,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       parentId: input.parentId,
       updatedBy: userId,
       updatedAt: timestamp,
+      deletedAt: null, // Initialize as active (not soft-deleted)
     };
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
@@ -115,26 +119,31 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async deleteNode(id: string, _opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
-    // Phase 1: enforce leaf-only deletion
-    const childCount = await db.nodes.where('parentId').equals(id).count();
-    if (childCount > 0) {
-      throw makeStorageError('validation', 'Only leaf nodes can be deleted', {
-        retryable: false,
-      });
-    }
+    // Soft delete: set deletedAt timestamp instead of hard delete
+    // Note: Children are implicitly hidden (not cascade soft-deleted)
+    const timestamp = now();
+    const userId = getCurrentUserId();
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
-      await db.nodes.delete(id);
-
-      await this.enqueueSyncOperation({
-        operation: 'delete-node',
-        entityType: 'node',
-        entityId: id,
-        payload: { id },
+      await db.nodes.update(id, {
+        deletedAt: timestamp,
+        updatedAt: timestamp,
+        updatedBy: userId,
       });
+
+      // Get the updated node for the sync payload
+      const updated = await db.nodes.get(id);
+      if (updated) {
+        await this.enqueueSyncOperation({
+          operation: 'update-node', // Sync as update, not delete
+          entityType: 'node',
+          entityId: id,
+          payload: updated,
+        });
+      }
     });
 
-    console.log('[IDBAdapter] Node deleted from IDB:', id);
+    console.log('[IDBAdapter] Node soft-deleted in IDB:', id);
     return createResult(undefined);
   }
 
@@ -144,9 +153,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async listFields(parentNodeId: string): Promise<StorageResult<DataField[]>> {
     const fields = await db.fields.where('parentNodeId').equals(parentNodeId).toArray();
+    // Filter out soft-deleted fields
+    const activeFields = filterActive(fields);
     // Sort by cardOrder ascending
-    fields.sort((a, b) => a.cardOrder - b.cardOrder);
-    return createResult(fields);
+    activeFields.sort((a, b) => a.cardOrder - b.cardOrder);
+    return createResult(activeFields);
   }
 
   async nextCardOrder(parentNodeId: string): Promise<StorageResult<number>> {
@@ -171,6 +182,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       cardOrder: order,
       updatedBy: userId,
       updatedAt: timestamp,
+      deletedAt: null, // Initialize as active (not soft-deleted)
     };
 
     await db.transaction('rw', db.fields, db.history, db.syncQueue, async () => {
@@ -259,10 +271,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
     const timestamp = now();
     const userId = getCurrentUserId();
 
+    // Soft delete: set deletedAt timestamp instead of hard delete
     await db.transaction('rw', db.fields, db.history, db.syncQueue, async () => {
-      await db.fields.delete(id);
+      await db.fields.update(id, {
+        deletedAt: timestamp,
+        updatedAt: timestamp,
+        updatedBy: userId,
+      });
 
-      // Create history entry
+      // Create history entry for the delete action
       const rev = await this.nextRev(id);
       const hist: DataFieldHistory = {
         id: `${id}:${rev}`,
@@ -278,15 +295,19 @@ export class IDBAdapter implements SyncableStorageAdapter {
       };
       await db.history.put(hist);
 
-      await this.enqueueSyncOperation({
-        operation: 'delete-field',
-        entityType: 'field',
-        entityId: id,
-        payload: { id },
-      });
+      // Get the updated field for the sync payload
+      const updated = await db.fields.get(id);
+      if (updated) {
+        await this.enqueueSyncOperation({
+          operation: 'update-field', // Sync as update, not delete
+          entityType: 'field',
+          entityId: id,
+          payload: updated,
+        });
+      }
     });
 
-    console.log('[IDBAdapter] Field deleted from IDB:', id);
+    console.log('[IDBAdapter] Field soft-deleted in IDB:', id);
     return createResult(undefined);
   }
 
@@ -299,6 +320,93 @@ export class IDBAdapter implements SyncableStorageAdapter {
     // Sort by rev ascending
     history.sort((a, b) => a.rev - b.rev);
     return createResult(history);
+  }
+
+  // ============================================================================
+  // Soft Delete Operations - Nodes
+  // ============================================================================
+
+  async listDeletedNodes(): Promise<StorageResult<TreeNode[]>> {
+    // Query for nodes where deletedAt is set (soft-deleted)
+    const allNodes = await db.nodes.toArray();
+    const deletedNodes = filterDeleted(allNodes);
+    // Sort by deletedAt descending (most recently deleted first)
+    deletedNodes.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+    return createResult(deletedNodes);
+  }
+
+  async listDeletedChildren(parentId: string): Promise<StorageResult<TreeNode[]>> {
+    const children = await db.nodes.where('parentId').equals(parentId).toArray();
+    const deletedChildren = filterDeleted(children);
+    // Sort by deletedAt descending
+    deletedChildren.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+    return createResult(deletedChildren);
+  }
+
+  async restoreNode(id: string): Promise<StorageResult<void>> {
+    const timestamp = now();
+    const userId = getCurrentUserId();
+
+    await db.transaction('rw', db.nodes, db.syncQueue, async () => {
+      await db.nodes.update(id, {
+        deletedAt: null, // Clear soft delete
+        updatedAt: timestamp,
+        updatedBy: userId,
+      });
+
+      // Get the updated node for the sync payload
+      const updated = await db.nodes.get(id);
+      if (updated) {
+        await this.enqueueSyncOperation({
+          operation: 'update-node',
+          entityType: 'node',
+          entityId: id,
+          payload: updated,
+        });
+      }
+    });
+
+    console.log('[IDBAdapter] Node restored in IDB:', id);
+    return createResult(undefined);
+  }
+
+  // ============================================================================
+  // Soft Delete Operations - Fields
+  // ============================================================================
+
+  async listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>> {
+    const fields = await db.fields.where('parentNodeId').equals(parentNodeId).toArray();
+    const deletedFields = filterDeleted(fields);
+    // Sort by deletedAt descending (most recently deleted first)
+    deletedFields.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+    return createResult(deletedFields);
+  }
+
+  async restoreField(id: string): Promise<StorageResult<void>> {
+    const timestamp = now();
+    const userId = getCurrentUserId();
+
+    await db.transaction('rw', db.fields, db.syncQueue, async () => {
+      await db.fields.update(id, {
+        deletedAt: null, // Clear soft delete
+        updatedAt: timestamp,
+        updatedBy: userId,
+      });
+
+      // Get the updated field for the sync payload
+      const updated = await db.fields.get(id);
+      if (updated) {
+        await this.enqueueSyncOperation({
+          operation: 'update-field',
+          entityType: 'field',
+          entityId: id,
+          payload: updated,
+        });
+      }
+    });
+
+    console.log('[IDBAdapter] Field restored in IDB:', id);
+    return createResult(undefined);
   }
 
   // ============================================================================

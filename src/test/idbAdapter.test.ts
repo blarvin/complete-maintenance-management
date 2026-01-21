@@ -128,24 +128,41 @@ describe('IDBAdapter - Core Storage Operations', () => {
             expect(retrieved.data?.nodeSubtitle).toBe('Original Sub'); // Unchanged
         });
 
-        it('deletes leaf node from IndexedDB', async () => {
+        it('soft deletes node (sets deletedAt instead of removing)', async () => {
             const id = testId();
             await adapter.createNode({ id, parentId: null, nodeName: 'To Delete', nodeSubtitle: '' });
 
             await adapter.deleteNode(id);
 
+            // Node still exists but has deletedAt set
             const retrieved = await adapter.getNode(id);
-            expect(retrieved.data).toBeNull();
+            expect(retrieved.data).not.toBeNull();
+            expect(retrieved.data?.deletedAt).not.toBeNull();
+            expect(retrieved.data?.deletedAt).toBeTypeOf('number');
         });
 
-        it('throws when deleting node with children', async () => {
+        it('soft deleted node is excluded from listRootNodes', async () => {
+            const id = testId();
+            await adapter.createNode({ id, parentId: null, nodeName: 'To Delete', nodeSubtitle: '' });
+
+            await adapter.deleteNode(id);
+
+            const result = await adapter.listRootNodes();
+            expect(result.data.find(n => n.id === id)).toBeUndefined();
+        });
+
+        it('soft deletes node with children (children implicitly hidden)', async () => {
             const parentId = testId();
             const childId = testId();
 
             await adapter.createNode({ id: parentId, parentId: null, nodeName: 'Parent', nodeSubtitle: '' });
             await adapter.createNode({ id: childId, parentId, nodeName: 'Child', nodeSubtitle: '' });
 
-            await expect(adapter.deleteNode(parentId)).rejects.toThrow('leaf');
+            // Soft delete should succeed (no leaf-only restriction)
+            await adapter.deleteNode(parentId);
+
+            const retrieved = await adapter.getNode(parentId);
+            expect(retrieved.data?.deletedAt).not.toBeNull();
         });
     });
 
@@ -468,6 +485,7 @@ describe('IDBAdapter - Core Storage Operations', () => {
                 nodeSubtitle: 'From Server',
                 updatedBy: 'remoteUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await adapter.applyRemoteUpdate('node', node);
@@ -489,6 +507,7 @@ describe('IDBAdapter - Core Storage Operations', () => {
                 cardOrder: 0,
                 updatedBy: 'remoteUser',
                 updatedAt: Date.now(),
+                deletedAt: null, // Include deletedAt for soft delete compatibility
             };
 
             await adapter.applyRemoteUpdate('field', field);
@@ -610,6 +629,135 @@ describe('IDBAdapter - Core Storage Operations', () => {
             expect(allHistory.length).toBe(2); // Local + remote
             expect(allHistory.some(h => h.dataFieldId === fieldId)).toBe(true);
             expect(allHistory.some(h => h.dataFieldId === 'remote-field')).toBe(true);
+        });
+    });
+
+    describe('Soft Delete Operations - Nodes', () => {
+        it('listDeletedNodes returns only soft-deleted nodes', async () => {
+            const activeId = testId();
+            const deletedId = testId();
+
+            await adapter.createNode({ id: activeId, parentId: null, nodeName: 'Active', nodeSubtitle: '' });
+            await adapter.createNode({ id: deletedId, parentId: null, nodeName: 'To Delete', nodeSubtitle: '' });
+
+            // Soft delete one node
+            await adapter.deleteNode(deletedId);
+
+            const deleted = await adapter.listDeletedNodes();
+            expect(deleted.data.length).toBe(1);
+            expect(deleted.data[0].id).toBe(deletedId);
+        });
+
+        it('listDeletedChildren returns only soft-deleted children', async () => {
+            const parentId = testId();
+            const activeChildId = testId();
+            const deletedChildId = testId();
+
+            await adapter.createNode({ id: parentId, parentId: null, nodeName: 'Parent', nodeSubtitle: '' });
+            await adapter.createNode({ id: activeChildId, parentId, nodeName: 'Active Child', nodeSubtitle: '' });
+            await adapter.createNode({ id: deletedChildId, parentId, nodeName: 'Deleted Child', nodeSubtitle: '' });
+
+            // Soft delete one child
+            await adapter.deleteNode(deletedChildId);
+
+            const activeChildren = await adapter.listChildren(parentId);
+            expect(activeChildren.data.length).toBe(1);
+            expect(activeChildren.data[0].id).toBe(activeChildId);
+
+            const deletedChildren = await adapter.listDeletedChildren(parentId);
+            expect(deletedChildren.data.length).toBe(1);
+            expect(deletedChildren.data[0].id).toBe(deletedChildId);
+        });
+
+        it('restoreNode clears deletedAt and makes node visible again', async () => {
+            const id = testId();
+
+            await adapter.createNode({ id, parentId: null, nodeName: 'To Restore', nodeSubtitle: '' });
+            await adapter.deleteNode(id);
+
+            // Verify deleted
+            const beforeRestore = await adapter.listRootNodes();
+            expect(beforeRestore.data.find(n => n.id === id)).toBeUndefined();
+
+            // Restore
+            await adapter.restoreNode(id);
+
+            // Verify restored
+            const afterRestore = await adapter.listRootNodes();
+            expect(afterRestore.data.find(n => n.id === id)).toBeDefined();
+
+            const retrieved = await adapter.getNode(id);
+            expect(retrieved.data?.deletedAt).toBeNull();
+        });
+    });
+
+    describe('Soft Delete Operations - Fields', () => {
+        it('soft deleted field is excluded from listFields', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({ id: fieldId, parentNodeId: nodeId, fieldName: 'Field', fieldValue: 'Value' });
+
+            // Soft delete
+            await adapter.deleteField(fieldId);
+
+            const fields = await adapter.listFields(nodeId);
+            expect(fields.data.find(f => f.id === fieldId)).toBeUndefined();
+        });
+
+        it('listDeletedFields returns only soft-deleted fields', async () => {
+            const nodeId = testId();
+            const activeFieldId = testId();
+            const deletedFieldId = testId();
+
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({ id: activeFieldId, parentNodeId: nodeId, fieldName: 'Active', fieldValue: 'V1' });
+            await adapter.createField({ id: deletedFieldId, parentNodeId: nodeId, fieldName: 'Deleted', fieldValue: 'V2' });
+
+            // Soft delete one field
+            await adapter.deleteField(deletedFieldId);
+
+            const deletedFields = await adapter.listDeletedFields(nodeId);
+            expect(deletedFields.data.length).toBe(1);
+            expect(deletedFields.data[0].id).toBe(deletedFieldId);
+        });
+
+        it('restoreField clears deletedAt and makes field visible again', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({ id: fieldId, parentNodeId: nodeId, fieldName: 'Field', fieldValue: 'Value' });
+            await adapter.deleteField(fieldId);
+
+            // Verify deleted
+            const beforeRestore = await adapter.listFields(nodeId);
+            expect(beforeRestore.data.find(f => f.id === fieldId)).toBeUndefined();
+
+            // Restore
+            await adapter.restoreField(fieldId);
+
+            // Verify restored
+            const afterRestore = await adapter.listFields(nodeId);
+            expect(afterRestore.data.find(f => f.id === fieldId)).toBeDefined();
+        });
+
+        it('soft delete field creates history entry with action delete', async () => {
+            const nodeId = testId();
+            const fieldId = testId();
+
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({ id: fieldId, parentNodeId: nodeId, fieldName: 'Field', fieldValue: 'Value' });
+
+            // Soft delete
+            await adapter.deleteField(fieldId);
+
+            const history = await adapter.getFieldHistory(fieldId);
+            const deleteEntry = history.data.find(h => h.action === 'delete');
+            expect(deleteEntry).toBeDefined();
+            expect(deleteEntry?.prevValue).toBe('Value');
+            expect(deleteEntry?.newValue).toBeNull();
         });
     });
 });

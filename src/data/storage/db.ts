@@ -52,6 +52,15 @@ export class AppDatabase extends Dexie {
       syncQueue: 'id, status, timestamp, entityType',
       syncMetadata: 'key',
     });
+
+    // Version 2: Add deletedAt indexes for soft delete support
+    this.version(2).stores({
+      nodes: 'id, parentId, updatedAt, deletedAt',
+      fields: 'id, parentNodeId, cardOrder, updatedAt, deletedAt',
+      history: 'id, dataFieldId, parentNodeId, updatedAt, rev',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    });
   }
 }
 

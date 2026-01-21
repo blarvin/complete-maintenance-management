@@ -10,8 +10,8 @@
 - [x] Transition functions (useAppTransitions hook)
 
 ## Data Layer
-- [x] TreeNode entity (id, nodeName, nodeSubtitle, parentId, updatedBy, updatedAt)
-- [x] DataField entity (id, fieldName, parentNodeId, fieldValue, updatedBy, updatedAt)
+- [x] TreeNode entity (id, nodeName, nodeSubtitle, parentId, updatedBy, updatedAt, deletedAt)
+- [x] DataField entity (id, fieldName, parentNodeId, fieldValue, updatedBy, updatedAt, deletedAt)
 - [x] DataFieldHistory entity (append-only audit with composite id)
 - [x] Root nodes via parentId: null (no sentinel value)
 - [x] History ID scheme (${dataFieldId}:${rev})
@@ -93,8 +93,10 @@
 - [x] Conditional styling (isExpanded, isParent, isClickable)
 
 ## TreeNode CRUD
+- [ ] TreeNode DELETE button in NodeTools component.
 - [ ] Deletion of a TreeNode cascade deletes the associated DataFields and DataFieldHistory entries.
-- [ ] Soft deletion: set deleted at on TreeNode, and rely on implicit hiding of children.
+- [x] Soft deletion: set deletedAt on TreeNode, and rely on implicit hiding of children.
+
 
 ## DataCard Component
 - [x] Dual-transition animation (grid 0fr→1fr + translateY -100%→none). 100ms cubic-bezier timing, synchronized.
@@ -128,6 +130,8 @@
 
 ## Data Field CRUD
 - [ ] Deletion of Data Field cascade deletes the associated DataFieldHistory entries.
+- [ ] DataField soft deletion with deletedAt timestamp. Set deletedAt timestamp on DataField, and rely on implicit hiding of history entries.
+- [ ] DataField restoration UI: 
 
 ## DataFieldHistory Component
 - [x] Scrollable historical values list

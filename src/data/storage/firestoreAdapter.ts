@@ -22,6 +22,7 @@ import {
   FirestoreError,
 } from "firebase/firestore";
 import type { TreeNode, DataField, DataFieldHistory } from "../models";
+import { filterActive, filterDeleted } from "../models";
 import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
@@ -74,6 +75,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const q = query(
         collection(db, COLLECTIONS.NODES),
         where("parentId", "==", null),
+        where("deletedAt", "==", null), // Filter out soft-deleted
         orderBy("updatedAt", "asc")
       );
       const snap = await getDocs(q);
@@ -107,6 +109,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const q = query(
         collection(db, COLLECTIONS.NODES),
         where("parentId", "==", parentId),
+        where("deletedAt", "==", null), // Filter out soft-deleted
         orderBy("updatedAt", "asc")
       );
       const snap = await getDocs(q);
@@ -127,6 +130,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         ...input,
         updatedBy: getCurrentUserId(),
         updatedAt: now(),
+        deletedAt: null, // Initialize as active (not soft-deleted)
       };
       await setDoc(doc(collection(db, COLLECTIONS.NODES), node.id), node);
       return createResult(node);
@@ -157,18 +161,21 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async deleteNode(id: string, _opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
     try {
-      // Phase 1: enforce leaf-only by checking child count.
-      const childCount = await getCountFromServer(
-        query(collection(db, COLLECTIONS.NODES), where("parentId", "==", id))
-      );
-      if (childCount.data().count > 0) {
-        throw makeStorageError("validation", "Only leaf nodes can be deleted in Phase 1", {
-          retryable: false,
-        });
-      }
-      await deleteDoc(doc(db, COLLECTIONS.NODES, id));
+      // Soft delete: set deletedAt timestamp instead of hard delete
+      // Note: Children are implicitly hidden (not cascade soft-deleted)
+      const ts = now();
+      const userId = getCurrentUserId();
+      const ref = doc(db, COLLECTIONS.NODES, id);
+      
+      await updateDoc(ref, {
+        deletedAt: ts,
+        updatedAt: ts,
+        updatedBy: userId,
+      });
+      
       return createResult(undefined);
     } catch (err) {
       if (isStorageError(err)) {
@@ -191,6 +198,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const q = query(
         collection(db, COLLECTIONS.FIELDS),
         where("parentNodeId", "==", parentNodeId),
+        where("deletedAt", "==", null), // Filter out soft-deleted
         orderBy("cardOrder", "asc")
       );
       const snap = await getDocs(q);
@@ -236,6 +244,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         cardOrder: order,
         updatedBy: userId,
         updatedAt: ts,
+        deletedAt: null, // Initialize as active (not soft-deleted)
       };
       
       await setDoc(doc(collection(db, COLLECTIONS.FIELDS), field.id), field);
@@ -322,10 +331,17 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       }
       
       const prev = snap.data() as DataField;
-      await deleteDoc(ref);
-
-      // Create history entry
       const ts = now();
+      const userId = getCurrentUserId();
+
+      // Soft delete: set deletedAt timestamp instead of hard delete
+      await updateDoc(ref, {
+        deletedAt: ts,
+        updatedAt: ts,
+        updatedBy: userId,
+      });
+
+      // Create history entry for the delete action
       const rev = await this.nextRev(id);
       const hist: DataFieldHistory = {
         id: `${id}:${rev}`,
@@ -335,14 +351,11 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         property: "fieldValue",
         prevValue: prev.fieldValue,
         newValue: null,
-        updatedBy: getCurrentUserId(),
+        updatedBy: userId,
         updatedAt: ts,
         rev,
       };
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
-
-      // Recompute cardOrder to close gaps
-      await this.recomputeCardOrder(prev.parentNodeId);
       
       return createResult(undefined);
     } catch (err) {
@@ -368,6 +381,123 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const snap = await getDocs(q);
       const history = snap.docs.map((d) => d.data() as DataFieldHistory);
       return createResult(history);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, {
+        code: mapped.code,
+        retryable: mapped.retryable,
+      });
+    }
+  }
+
+  // ============================================================================
+  // Soft Delete Operations - Nodes
+  // ============================================================================
+
+  async listDeletedNodes(): Promise<StorageResult<TreeNode[]>> {
+    try {
+      // Query for nodes where deletedAt is set (not null)
+      // Note: Firestore doesn't support "!= null", so we use > 0 for timestamp
+      const q = query(
+        collection(db, COLLECTIONS.NODES),
+        where("deletedAt", ">", 0),
+        orderBy("deletedAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const nodes = snap.docs.map((d) => d.data() as TreeNode);
+      return createResult(nodes);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, {
+        code: mapped.code,
+        retryable: mapped.retryable,
+      });
+    }
+  }
+
+  async listDeletedChildren(parentId: string): Promise<StorageResult<TreeNode[]>> {
+    try {
+      // Get all children and filter to deleted ones
+      const q = query(
+        collection(db, COLLECTIONS.NODES),
+        where("parentId", "==", parentId)
+      );
+      const snap = await getDocs(q);
+      const allChildren = snap.docs.map((d) => d.data() as TreeNode);
+      const deletedChildren = filterDeleted(allChildren);
+      // Sort by deletedAt descending
+      deletedChildren.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+      return createResult(deletedChildren);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, {
+        code: mapped.code,
+        retryable: mapped.retryable,
+      });
+    }
+  }
+
+  async restoreNode(id: string): Promise<StorageResult<void>> {
+    try {
+      const ts = now();
+      const userId = getCurrentUserId();
+      const ref = doc(db, COLLECTIONS.NODES, id);
+      
+      await updateDoc(ref, {
+        deletedAt: null, // Clear soft delete
+        updatedAt: ts,
+        updatedBy: userId,
+      });
+      
+      return createResult(undefined);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, {
+        code: mapped.code,
+        retryable: mapped.retryable,
+      });
+    }
+  }
+
+  // ============================================================================
+  // Soft Delete Operations - Fields
+  // ============================================================================
+
+  async listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>> {
+    try {
+      // Get all fields for this node and filter to deleted ones
+      const q = query(
+        collection(db, COLLECTIONS.FIELDS),
+        where("parentNodeId", "==", parentNodeId)
+      );
+      const snap = await getDocs(q);
+      const allFields = snap.docs.map((d) => d.data() as DataField);
+      const deletedFields = filterDeleted(allFields);
+      // Sort by deletedAt descending
+      deletedFields.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+      return createResult(deletedFields);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, {
+        code: mapped.code,
+        retryable: mapped.retryable,
+      });
+    }
+  }
+
+  async restoreField(id: string): Promise<StorageResult<void>> {
+    try {
+      const ts = now();
+      const userId = getCurrentUserId();
+      const ref = doc(db, COLLECTIONS.FIELDS, id);
+      
+      await updateDoc(ref, {
+        deletedAt: null, // Clear soft delete
+        updatedAt: ts,
+        updatedBy: userId,
+      });
+      
+      return createResult(undefined);
     } catch (err) {
       const mapped = mapFirestoreError(err);
       throw toStorageError(err, {

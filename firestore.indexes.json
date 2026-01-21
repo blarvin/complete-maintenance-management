@@ -9,9 +9,27 @@
       ]
     },
     {
+      "collectionGroup": "dataFields",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
+        { "fieldPath": "parentNodeId", "order": "ASCENDING" },
+        { "fieldPath": "cardOrder", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "treeNodes",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "parentId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "treeNodes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "deletedAt", "order": "ASCENDING" },
         { "fieldPath": "parentId", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "ASCENDING" }
       ]

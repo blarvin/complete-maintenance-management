@@ -4,40 +4,40 @@ overview: Add soft delete (deletedAt) to both TreeNode and DataField with shared
 todos:
   - id: schema-soft-deletable
     content: Add SoftDeletable type and helper functions (isSoftDeleted, filterActive, filterDeleted) to models.ts
-    status: pending
+    status: completed
   - id: schema-treenode
     content: "Add deletedAt: number | null to TreeNode type"
-    status: pending
+    status: completed
   - id: schema-datafield
     content: "Add deletedAt: number | null to DataField type"
-    status: pending
+    status: completed
   - id: schema-dexie
     content: Bump Dexie schema to version 2 with deletedAt indexes on nodes and fields
-    status: pending
+    status: completed
   - id: interface-soft-delete
     content: Add listDeletedFields, restoreField, listDeletedNodes, listDeletedChildren, restoreNode to StorageAdapter interface
-    status: pending
+    status: completed
   - id: idb-node-soft-delete
     content: "Update IDBAdapter node operations: listRootNodes/listChildren filter, deleteNode soft delete, add listDeletedNodes/listDeletedChildren/restoreNode"
-    status: pending
+    status: completed
   - id: idb-field-soft-delete
     content: "Update IDBAdapter field operations: listFields filter, deleteField soft delete, add listDeletedFields/restoreField"
-    status: pending
+    status: completed
   - id: idb-create-init
     content: "Update IDBAdapter createNode/createField to initialize deletedAt: null"
-    status: pending
+    status: completed
   - id: firestore-node-soft-delete
     content: "Update FirestoreAdapter node operations: filters, soft delete, new methods"
-    status: pending
+    status: completed
   - id: firestore-field-soft-delete
     content: "Update FirestoreAdapter field operations: filters, soft delete, new methods"
-    status: pending
+    status: completed
   - id: firestore-create-init
     content: "Update FirestoreAdapter createNode/createField to initialize deletedAt: null"
-    status: pending
+    status: completed
   - id: update-tests
     content: Update existing tests and add new tests for soft delete behavior
-    status: pending
+    status: completed
 isProject: false
 ---
 

@@ -26,8 +26,8 @@ describe('Database Schema', () => {
             expect(db).toBeInstanceOf(AppDatabase);
         });
 
-        it('has version 1', () => {
-            expect(db.verno).toBe(1);
+        it('has version 2', () => {
+            expect(db.verno).toBe(2);
         });
     });
 
@@ -88,6 +88,7 @@ describe('Database Schema', () => {
                 parentId: null,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.nodes.add(node);
@@ -103,6 +104,7 @@ describe('Database Schema', () => {
                 parentId: null,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
             const childNode: TreeNode = {
                 id: 'child-1',
@@ -110,6 +112,7 @@ describe('Database Schema', () => {
                 parentId: 'parent-1',
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.nodes.bulkAdd([parentNode, childNode]);
@@ -126,6 +129,7 @@ describe('Database Schema', () => {
                 parentId: null,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
             const childNode: TreeNode = {
                 id: 'child-1',
@@ -133,6 +137,7 @@ describe('Database Schema', () => {
                 parentId: 'root-1',
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.nodes.bulkAdd([rootNode, childNode]);
@@ -178,6 +183,7 @@ describe('Database Schema', () => {
                 cardOrder: 0,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.fields.add(field);
@@ -195,6 +201,7 @@ describe('Database Schema', () => {
                 cardOrder: 0,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
             const field2: DataField = {
                 id: 'field-2',
@@ -204,6 +211,7 @@ describe('Database Schema', () => {
                 cardOrder: 0,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.fields.bulkAdd([field1, field2]);
@@ -222,6 +230,7 @@ describe('Database Schema', () => {
                 cardOrder: 0,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.fields.add(field);
@@ -518,19 +527,19 @@ describe('Database Schema', () => {
     });
 
     describe('Index Integrity', () => {
-        it('nodes table has exactly 2 indexes (excluding primary key)', async () => {
+        it('nodes table has exactly 3 indexes (excluding primary key)', async () => {
             const schema = db.nodes.schema;
-            expect(schema.indexes.length).toBe(2); // parentId, updatedAt
+            expect(schema.indexes.length).toBe(3); // parentId, updatedAt, deletedAt
         });
 
-        it('fields table has exactly 3 indexes (excluding primary key)', async () => {
+        it('fields table has exactly 4 indexes (excluding primary key)', async () => {
             const schema = db.fields.schema;
-            expect(schema.indexes.length).toBe(3); // parentNodeId, cardOrder, updatedAt
+            expect(schema.indexes.length).toBe(4); // parentNodeId, cardOrder, updatedAt, deletedAt
         });
 
-        it('history table has exactly 3 indexes (excluding primary key)', async () => {
+        it('history table has exactly 4 indexes (excluding primary key)', async () => {
             const schema = db.history.schema;
-            expect(schema.indexes.length).toBe(3); // dataFieldId, updatedAt, rev
+            expect(schema.indexes.length).toBe(4); // dataFieldId, parentNodeId, updatedAt, rev
         });
 
         it('syncQueue table has exactly 3 indexes (excluding primary key)', async () => {
@@ -552,6 +561,7 @@ describe('Database Schema', () => {
                 parentId: null,
                 updatedBy: 'testUser',
                 updatedAt: Date.now() + i,
+                deletedAt: null,
             }));
 
             await db.nodes.bulkAdd(nodes);
@@ -567,6 +577,7 @@ describe('Database Schema', () => {
                 parentId: null,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             });
 
             await db.nodes.clear();
@@ -583,6 +594,7 @@ describe('Database Schema', () => {
                 parentId: null,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
             const field: DataField = {
                 id: 'ref-field',
@@ -592,6 +604,7 @@ describe('Database Schema', () => {
                 cardOrder: 0,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             };
 
             await db.nodes.add(node);

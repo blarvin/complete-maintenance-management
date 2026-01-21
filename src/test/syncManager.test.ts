@@ -95,6 +95,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 nodeSubtitle: '',
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             });
 
             // Clear sync queue (simulate already synced state)
@@ -128,6 +129,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 nodeSubtitle: '',
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             });
 
             // Clear queue
@@ -252,6 +254,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 nodeSubtitle: '',
                 updatedBy: 'localUser',
                 updatedAt: now - 1000, // 1 second ago
+                deletedAt: null,
             });
 
             // Create same node in Firestore with new timestamp
@@ -298,6 +301,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 nodeSubtitle: '',
                 updatedBy: 'localUser',
                 updatedAt: now, // Now (newer)
+                deletedAt: null,
             });
 
             // Set last sync before both
@@ -461,6 +465,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 nodeSubtitle: '',
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             });
 
             // Clear queue
@@ -507,6 +512,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 nodeSubtitle: '',
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             });
             await idbAdapter.applyRemoteUpdate('field', {
                 id: fieldId,
@@ -516,6 +522,7 @@ describe('SyncManager - Bidirectional Sync', () => {
                 cardOrder: 0,
                 updatedBy: 'testUser',
                 updatedAt: Date.now(),
+                deletedAt: null,
             });
 
             // Clear queue

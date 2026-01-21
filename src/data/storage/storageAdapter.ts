@@ -65,6 +65,15 @@ export interface StorageAdapter {
 
   // History
   getFieldHistory(dataFieldId: string): Promise<StorageResult<DataFieldHistory[]>>;
+
+  // Soft delete support - Nodes
+  listDeletedNodes(): Promise<StorageResult<TreeNode[]>>;
+  listDeletedChildren(parentId: string): Promise<StorageResult<TreeNode[]>>;
+  restoreNode(id: string): Promise<StorageResult<void>>;
+
+  // Soft delete support - Fields
+  listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
+  restoreField(id: string): Promise<StorageResult<void>>;
 }
 
 /**

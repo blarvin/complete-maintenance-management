@@ -5,6 +5,14 @@ export type ID = string;
  */
 export type UserId = string;
 
+/**
+ * Shared soft delete capability for entities that support soft deletion.
+ * When deletedAt is set (non-null), the entity is considered deleted.
+ */
+export type SoftDeletable = {
+  deletedAt: number | null;
+};
+
 export type TreeNode = {
   id: ID;
   nodeName: string;
@@ -12,6 +20,7 @@ export type TreeNode = {
   parentId: ID | null;
   updatedBy: UserId;
   updatedAt: number; // epoch ms
+  deletedAt: number | null; // soft delete timestamp, null = active
 };
 
 export type DataField = {
@@ -22,7 +31,33 @@ export type DataField = {
   cardOrder: number;
   updatedBy: UserId;
   updatedAt: number;
+  deletedAt: number | null; // soft delete timestamp, null = active
 };
+
+// ============================================================================
+// Soft Delete Helper Functions
+// ============================================================================
+
+/**
+ * Check if an entity has been soft deleted.
+ */
+export function isSoftDeleted(entity: SoftDeletable): boolean {
+  return entity.deletedAt !== null;
+}
+
+/**
+ * Filter to only active (non-deleted) entities.
+ */
+export function filterActive<T extends SoftDeletable>(entities: T[]): T[] {
+  return entities.filter(e => e.deletedAt === null);
+}
+
+/**
+ * Filter to only soft-deleted entities.
+ */
+export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
+  return entities.filter(e => e.deletedAt !== null);
+}
 
 export type DataFieldHistory = {
   id: string; // `${dataFieldId}:${rev}`
