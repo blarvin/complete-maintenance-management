@@ -169,6 +169,7 @@
 - [x] FieldListHandle for external control (saveAllPending$ method)
 - [x] Renders DataField for persisted, CreateDataField for pending
 - [x] "+ Add Field" button
+- [ ] cardOrder needs to recalculate when a DataField is "cancelled" on Under Construction Node. Currently showing wrong order in DB after creation.
 
 ## CreateNodeButton Component
 - [x] Contextual variants (root, child)
