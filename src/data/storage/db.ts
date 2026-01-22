@@ -14,7 +14,8 @@ export type SyncOperation =
   | 'delete-node'
   | 'create-field'
   | 'update-field'
-  | 'delete-field';
+  | 'delete-field'
+  | 'create-history';
 
 export type SyncQueueItem = {
   id: string;

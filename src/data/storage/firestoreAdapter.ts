@@ -545,6 +545,11 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         await deleteDoc(doc(db, COLLECTIONS.FIELDS, item.entityId));
         break;
       }
+      case 'create-history': {
+        const history = item.payload as DataFieldHistory;
+        await setDoc(doc(db, COLLECTIONS.HISTORY, history.id), history);
+        break;
+      }
       default:
         console.warn('[FirestoreAdapter] Unknown sync operation:', item.operation);
     }

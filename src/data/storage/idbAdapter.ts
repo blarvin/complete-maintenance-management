@@ -210,6 +210,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
         entityId: field.id,
         payload: field,
       });
+
+      // Enqueue history entry for sync
+      await this.enqueueSyncOperation({
+        operation: 'create-history',
+        entityType: 'field-history',
+        entityId: hist.id,
+        payload: hist,
+      });
     });
 
     console.log('[IDBAdapter] Field created in IDB:', field.id, field.fieldName);
@@ -258,6 +266,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
           payload: updated,
         });
       }
+
+      // Enqueue history entry for sync
+      await this.enqueueSyncOperation({
+        operation: 'create-history',
+        entityType: 'field-history',
+        entityId: hist.id,
+        payload: hist,
+      });
     });
 
     console.log('[IDBAdapter] Field updated in IDB:', id, input.fieldValue);
@@ -305,6 +321,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
           payload: updated,
         });
       }
+
+      // Enqueue history entry for sync
+      await this.enqueueSyncOperation({
+        operation: 'create-history',
+        entityType: 'field-history',
+        entityId: hist.id,
+        payload: hist,
+      });
     });
 
     console.log('[IDBAdapter] Field soft-deleted in IDB:', id);
