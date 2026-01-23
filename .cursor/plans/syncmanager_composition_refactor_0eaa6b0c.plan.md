@@ -4,25 +4,25 @@ overview: Refactor SyncManager from a monolithic class into a composition of foc
 todos:
   - id: lww-resolver
     content: Create LWWResolver class - extract applyRemoteNode/applyRemoteField
-    status: pending
+    status: completed
   - id: sync-strategy-interface
     content: Create SyncStrategy interface and strategies folder
-    status: pending
+    status: completed
   - id: move-full-collection-sync
     content: Move FullCollectionSync to strategies folder, inject LWWResolver
-    status: pending
+    status: completed
   - id: sync-pusher
     content: Create SyncPusher class - extract pushLocalChanges
-    status: pending
+    status: completed
   - id: sync-lifecycle
     content: Create SyncLifecycle class - extract start/stop/handleOnline
-    status: pending
+    status: completed
   - id: slim-sync-manager
     content: Refactor SyncManager to thin orchestrator composing collaborators
-    status: pending
+    status: completed
   - id: update-tests
     content: Update and add tests for each collaborator in isolation
-    status: pending
+    status: completed
 isProject: false
 ---
 

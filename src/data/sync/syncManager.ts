@@ -1,10 +1,11 @@
 /**
- * SyncManager - Bidirectional sync between IDB and Firestore
+ * SyncManager - Bidirectional sync orchestrator.
  *
- * Handles:
- * - Push: Local changes → Firestore (from sync queue)
- * - Pull: Remote changes → IDB (polling for updates)
- * - LWW conflict resolution based on updatedAt
+ * Thin orchestration layer that composes focused collaborators:
+ * - SyncPusher: Push local changes to remote
+ * - SyncStrategy: Pull remote changes (FullCollectionSync, etc.)
+ * - SyncLifecycle: Timer and online event management
+ * - LWWResolver: Conflict resolution
  *
  * Sync triggers:
  * - Timer: Every 10 minutes (configurable)
@@ -13,29 +14,35 @@
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
-import type { TreeNode, DataField } from '../models';
 import { now } from '../../utils/time';
-import { FullCollectionSync } from './fullCollectionSync';
 import { dispatchStorageChangeEvent } from '../storage/storageEvents';
+import { SyncPusher } from './SyncPusher';
+import { SyncLifecycle } from './SyncLifecycle';
+import { LWWResolver } from './LWWResolver';
+import { FullCollectionSync } from './strategies';
+import type { SyncStrategy } from './strategies';
 
 export class SyncManager {
-  private intervalId: ReturnType<typeof setInterval> | null = null;
   private _enabled: boolean = true;
   private _isSyncing: boolean = false;
-  private fullSync: FullCollectionSync;
+
+  private readonly pusher: SyncPusher;
+  private readonly strategy: SyncStrategy;
+  private readonly lifecycle: SyncLifecycle;
+  private readonly local: SyncableStorageAdapter;
 
   constructor(
-    private local: SyncableStorageAdapter,
-    private remote: RemoteSyncAdapter,
-    private pollIntervalMs: number = 600000 // 10 minutes
+    local: SyncableStorageAdapter,
+    remote: RemoteSyncAdapter,
+    pollIntervalMs: number = 600000 // 10 minutes
   ) {
-    // Initialize full collection sync strategy
-    this.fullSync = new FullCollectionSync(
-      this.local,
-      this.remote,
-      (node) => this.applyRemoteNode(node),
-      (field) => this.applyRemoteField(field)
-    );
+    this.local = local;
+
+    // Initialize collaborators
+    const resolver = new LWWResolver(local);
+    this.pusher = new SyncPusher(local, remote);
+    this.strategy = new FullCollectionSync(local, remote, resolver);
+    this.lifecycle = new SyncLifecycle(() => this.syncOnce(), pollIntervalMs);
   }
 
   /**
@@ -43,21 +50,8 @@ export class SyncManager {
    * Sets up periodic sync and online event listener.
    */
   start(): void {
-    if (this.intervalId) return; // Already running
-
-    // Start periodic sync
-    this.intervalId = setInterval(() => {
-      this.syncOnce().catch(err => {
-        console.error('[SyncManager] Periodic sync failed:', err);
-      });
-    }, this.pollIntervalMs);
-
-    // Listen for online events
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', this.handleOnline);
-    }
-
-    console.log('[SyncManager] Started with poll interval:', this.pollIntervalMs, 'ms');
+    this.lifecycle.start();
+    console.log('[SyncManager] Started');
   }
 
   /**
@@ -65,15 +59,7 @@ export class SyncManager {
    * Clears the timer and removes event listeners.
    */
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('online', this.handleOnline);
-    }
-
+    this.lifecycle.stop();
     console.log('[SyncManager] Stopped');
   }
 
@@ -81,40 +67,25 @@ export class SyncManager {
    * Perform one sync cycle: push local changes, then pull remote changes.
    */
   async syncOnce(): Promise<void> {
-    // Skip if disabled
-    if (!this._enabled) {
-      console.log('[SyncManager] Sync skipped (disabled)');
-      return;
-    }
-
-    // Skip if offline
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      console.log('[SyncManager] Sync skipped (offline)');
-      return;
-    }
-
-    // Skip if already syncing
-    if (this._isSyncing) {
-      console.log('[SyncManager] Sync skipped (already in progress)');
-      return;
-    }
+    if (!this.canSync()) return;
 
     this._isSyncing = true;
     console.log('[SyncManager] Starting sync cycle...');
 
     try {
       // Push local changes first
-      await this.pushLocalChanges();
+      await this.pusher.push();
 
       // Then pull remote changes
-      await this.pullRemoteChanges();
+      console.log('[SyncManager] Pull: Starting', this.strategy.name, 'sync');
+      await this.strategy.sync();
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
       console.log('[SyncManager] Sync cycle complete');
-      
-      // Dispatch event to trigger UI updates (components listening for storage changes)
+
+      // Dispatch event to trigger UI updates
       dispatchStorageChangeEvent();
     } catch (err) {
       console.error('[SyncManager] Sync cycle failed:', err);
@@ -147,99 +118,30 @@ export class SyncManager {
   }
 
   // ============================================================================
-  // Private: Push Logic
+  // Private
   // ============================================================================
 
-  private async pushLocalChanges(): Promise<void> {
-    const queue = await this.local.getSyncQueue();
-
-    if (queue.length === 0) {
-      console.log('[SyncManager] Push: No pending items');
-      return;
+  private canSync(): boolean {
+    // Skip if disabled
+    if (!this._enabled) {
+      console.log('[SyncManager] Sync skipped (disabled)');
+      return false;
     }
 
-    console.log('[SyncManager] Push: Processing', queue.length, 'items');
-
-    for (const item of queue) {
-      try {
-        await this.remote.applySyncItem(item);
-        await this.local.markSynced(item.id);
-        console.log('[SyncManager] Push: Synced', item.operation, item.entityId);
-      } catch (err) {
-        console.error('[SyncManager] Push: Failed', item.operation, item.entityId, err);
-        await this.local.markFailed(item.id, err);
-      }
+    // Skip if offline
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.log('[SyncManager] Sync skipped (offline)');
+      return false;
     }
+
+    // Skip if already syncing
+    if (this._isSyncing) {
+      console.log('[SyncManager] Sync skipped (already in progress)');
+      return false;
+    }
+
+    return true;
   }
-
-  // ============================================================================
-  // Private: Pull Logic
-  // ============================================================================
-
-  private async pullRemoteChanges(): Promise<void> {
-    console.log('[SyncManager] Pull: Starting full collection sync');
-    // Delegate to full collection sync strategy
-    await this.fullSync.sync();
-  }
-
-  // ============================================================================
-  // Private: LWW Conflict Resolution
-  // ============================================================================
-
-  private async applyRemoteNode(remote: TreeNode): Promise<void> {
-    const localResult = await this.local.getNode(remote.id);
-    const local = localResult.data;
-
-    if (!local) {
-      // New node from remote, apply it
-      await this.local.applyRemoteUpdate('node', remote);
-      console.log('[SyncManager] LWW: Applied new remote node', remote.id);
-      return;
-    }
-
-    // LWW: compare timestamps
-    if (remote.updatedAt > local.updatedAt) {
-      // Remote wins
-      await this.local.applyRemoteUpdate('node', remote);
-      console.log('[SyncManager] LWW: Remote node wins', remote.id);
-    } else {
-      // Local wins (or tie) - local is newer, it will be pushed in next sync
-      console.log('[SyncManager] LWW: Local node wins', remote.id);
-    }
-  }
-
-  private async applyRemoteField(remote: DataField): Promise<void> {
-    const localFieldsResult = await this.local.listFields(remote.parentNodeId);
-    const local = localFieldsResult.data.find(f => f.id === remote.id);
-
-    if (!local) {
-      // New field from remote, apply it
-      await this.local.applyRemoteUpdate('field', remote);
-      console.log('[SyncManager] LWW: Applied new remote field', remote.id);
-      return;
-    }
-
-    // LWW: compare timestamps
-    if (remote.updatedAt > local.updatedAt) {
-      // Remote wins
-      await this.local.applyRemoteUpdate('field', remote);
-      console.log('[SyncManager] LWW: Remote field wins', remote.id);
-    } else {
-      // Local wins (or tie)
-      console.log('[SyncManager] LWW: Local field wins', remote.id);
-    }
-  }
-
-  // ============================================================================
-  // Private: Event Handlers
-  // ============================================================================
-
-  private handleOnline = (): void => {
-    console.log('[SyncManager] Network online - triggering sync');
-    this.syncOnce().catch(err => {
-      console.error('[SyncManager] Online sync failed:', err);
-    });
-  };
 }
 
 // ============================================================================
@@ -273,4 +175,14 @@ export function initializeSyncManager(local: SyncableStorageAdapter, remote: Rem
   syncManagerInstance = new SyncManager(local, remote);
   syncManagerInstance.start();
   return syncManagerInstance;
+}
+
+/**
+ * Reset the singleton for testing purposes.
+ */
+export function resetSyncManager(): void {
+  if (syncManagerInstance) {
+    syncManagerInstance.stop();
+  }
+  syncManagerInstance = null;
 }

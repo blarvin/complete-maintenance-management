@@ -1,28 +1,33 @@
 /**
- * FullCollectionSync - Isolated full collection sync strategy.
+ * FullCollectionSync - Full collection sync strategy.
  *
- * Handles safe full collection sync with deletion detection protection.
- * This strategy can be easily replaced with different sync strategies in the future.
+ * Pulls all entities from remote and applies them locally using LWW resolution.
+ * Handles deletion detection: removes local entities not present in remote
+ * (unless they have pending local changes).
  */
 
-import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
-import type { TreeNode, DataField } from '../models';
+import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
+import type { SyncStrategy, SyncResult } from './SyncStrategy';
+import type { LWWResolver } from '../LWWResolver';
 
-export class FullCollectionSync {
+export class FullCollectionSync implements SyncStrategy {
+  readonly name = 'full-collection';
+
   constructor(
     private local: SyncableStorageAdapter,
     private remote: RemoteSyncAdapter,
-    private applyRemoteNode: (node: TreeNode) => Promise<void>,
-    private applyRemoteField: (field: DataField) => Promise<void>
+    private resolver: LWWResolver
   ) {}
 
-  async sync(): Promise<void> {
-    await this.syncNodes();
-    await this.syncFields();
-    await this.syncHistory();
+  async sync(): Promise<SyncResult> {
+    const nodesApplied = await this.syncNodes();
+    const fieldsApplied = await this.syncFields();
+    const historyApplied = await this.syncHistory();
+
+    return { nodesApplied, fieldsApplied, historyApplied };
   }
 
-  private async syncNodes(): Promise<void> {
+  private async syncNodes(): Promise<number> {
     const remoteNodes = await this.remote.pullAllNodes();
     const remoteIds = new Set(remoteNodes.map(n => n.id));
 
@@ -43,12 +48,16 @@ export class FullCollectionSync {
     }
 
     // Apply remote nodes (LWW)
+    let applied = 0;
     for (const remoteNode of remoteNodes) {
-      await this.applyRemoteNode(remoteNode);
+      const result = await this.resolver.resolveNode(remoteNode);
+      if (result === 'applied') applied++;
     }
+
+    return applied;
   }
 
-  private async syncFields(): Promise<void> {
+  private async syncFields(): Promise<number> {
     const remoteFields = await this.remote.pullAllFields();
     const remoteIds = new Set(remoteFields.map(f => f.id));
 
@@ -69,12 +78,16 @@ export class FullCollectionSync {
     }
 
     // Apply remote fields (LWW)
+    let applied = 0;
     for (const remoteField of remoteFields) {
-      await this.applyRemoteField(remoteField);
+      const result = await this.resolver.resolveField(remoteField);
+      if (result === 'applied') applied++;
     }
+
+    return applied;
   }
 
-  private async syncHistory(): Promise<void> {
+  private async syncHistory(): Promise<number> {
     const remoteHistory = await this.remote.pullAllHistory();
 
     // Upsert all remote history entries (no deletion detection)
@@ -84,5 +97,6 @@ export class FullCollectionSync {
     }
 
     console.log('[FullCollectionSync] Synced', remoteHistory.length, 'history entries');
+    return remoteHistory.length;
   }
 }
