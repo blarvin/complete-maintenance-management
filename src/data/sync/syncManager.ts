@@ -13,7 +13,6 @@
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
-import type { SyncQueueItem } from '../storage/db';
 import type { TreeNode, DataField } from '../models';
 import { now } from '../../utils/time';
 import { FullCollectionSync } from './fullCollectionSync';
