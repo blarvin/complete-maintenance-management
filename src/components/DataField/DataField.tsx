@@ -10,6 +10,7 @@ import { getFieldService } from '../../data/services';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
+import { triggerSync } from '../../hooks/useSyncTrigger';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
@@ -63,6 +64,7 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const handleDelete$ = $(async () => {
         await getFieldService().deleteField(props.id);
+        triggerSync();
         if (props.onDeleted$) {
             props.onDeleted$();
         }

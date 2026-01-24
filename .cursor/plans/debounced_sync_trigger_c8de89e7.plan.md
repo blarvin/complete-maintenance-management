@@ -4,25 +4,25 @@ overview: Create a debounced sync trigger helper and integrate it into all CUD o
 todos:
   - id: create-trigger
     content: Create src/hooks/useSyncTrigger.ts with debounced triggerSync() function
-    status: pending
+    status: completed
   - id: integrate-field-edit
     content: Add triggerSync() to useFieldEdit.ts save$ and revert$ functions
-    status: pending
+    status: completed
   - id: integrate-pending-forms
     content: Add triggerSync() to usePendingForms.ts save$ and saveAllPending$ functions
-    status: pending
+    status: completed
   - id: integrate-node-creation
     content: Add triggerSync() to useNodeCreation.ts complete$ function
-    status: pending
+    status: completed
   - id: integrate-delete
     content: Add triggerSync() to DataField.tsx handleDelete$ function
-    status: pending
+    status: completed
   - id: add-tests
     content: Create src/test/useSyncTrigger.test.ts with debounce behavior tests
-    status: pending
+    status: completed
   - id: manual-test
     content: "Manual test: verify sync triggers after CUD operations with debounce"
-    status: pending
+    status: completed
 isProject: false
 ---
 

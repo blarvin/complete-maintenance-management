@@ -11,6 +11,7 @@
 import { useSignal, useVisibleTask$, useTask$, $, type QRL, type Signal } from '@builder.io/qwik';
 import { getFieldService } from '../data/services';
 import { generateId } from '../utils/id';
+import { triggerSync } from './useSyncTrigger';
 
 /** Pending form state for localStorage */
 export type PendingForm = {
@@ -153,6 +154,7 @@ export function usePendingForms(options: UsePendingFormsOptions) {
         await getFieldService().addField(options.nodeId, name, fieldValue, cardOrder);
         // Remove from pending
         forms.value = forms.value.filter(f => f.id !== formId);
+        triggerSync();
         // Notify parent to refresh persisted fields
         await options.onSaved$();
     });
@@ -191,6 +193,7 @@ export function usePendingForms(options: UsePendingFormsOptions) {
 
         // Clear all forms (saved ones are now persisted, empty ones are discarded)
         forms.value = [];
+        triggerSync();
         
         // Notify parent to refresh persisted fields
         await options.onSaved$();

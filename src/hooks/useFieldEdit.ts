@@ -15,6 +15,7 @@ import { useSignal, $, useVisibleTask$, useOnDocument, useTask$, type Signal, ty
 import { getFieldService } from '../data/services';
 import { useDoubleTap } from './useDoubleTap';
 import { useAppState, useAppTransitions, selectors } from '../state/appState';
+import { triggerSync } from './useSyncTrigger';
 
 export type UseFieldEditOptions = {
     fieldId: string;
@@ -166,6 +167,7 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
         await getFieldService().updateFieldValue(options.fieldId, newVal);
         currentValue.value = newVal ?? '';
         stopFieldEdit$();
+        triggerSync();
         if (options.onUpdated$) {
             await options.onUpdated$();
         }
@@ -246,6 +248,7 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
         await getFieldService().updateFieldValue(options.fieldId, value);
         currentValue.value = value ?? '';
         previewValue.value = null;
+        triggerSync();
         if (options.onUpdated$) {
             await options.onUpdated$();
         }

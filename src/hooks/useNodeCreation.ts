@@ -14,6 +14,7 @@ import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getNodeService, getFieldService } from '../data/services';
 import { generateId } from '../utils/id';
+import { triggerSync } from './useSyncTrigger';
 
 /**
  * Payload for completing node creation.
@@ -116,6 +117,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             );
         }
 
+        triggerSync();
         await completeConstruction$();
         console.log('[complete$] completeConstruction$ done, calling onCreated$');
         await options.onCreated$();
