@@ -52,17 +52,12 @@
 - [ ] Extract SyncManager responsibilities (SRP violation - too many concerns)
 - [x] Use FirestoreAdapter instead of direct Firestore SDK calls (DIP violation)
 - [ ] Extract shared history creation logic (DRY - duplicated in adapters)
-- [ ] Create new node should trigger sync to cloud DB.
-- [ ] Create new field should trigger sync to cloud DB.
-- [ ] Delete node should trigger sync to cloud DB.
-- [ ] Delete field should trigger sync to cloud DB.
-- [ ] Update node should trigger sync to cloud DB.
-- [ ] Update field should trigger sync to cloud DB.
-- [ ] Update field value should trigger sync to cloud DB.
-- [ ] Update field metadata should trigger sync to cloud DB.
-- [ ] Update field history should trigger sync to cloud DB.
-- [ ] Update field history value should trigger sync to cloud DB.
-- [ ] Update field history metadata should trigger sync to cloud DB.
+- [ ] Create TreeNode should trigger sync to cloud DB.
+- [ ] Create DataField should trigger sync to cloud DB.
+- [ ] Delete DataField should trigger sync to cloud DB.
+- [ ] Update DataFieldValue should trigger sync to cloud DB.
+- [ ] REVERT DataFieldHistory should trigger sync to cloud DB.
+
 
 ## Views
 - [x] ROOT view (listview of root nodes + CreateNodeButton)
