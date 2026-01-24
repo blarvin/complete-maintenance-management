@@ -21,7 +21,9 @@
     "test:cleanup": "npx tsx src/test/cleanup.ts",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
-    "cypress:cleanup": "npx tsx cypress/support/cleanup-firestore.ts"
+    "cypress:cleanup": "npx tsx cypress/support/cleanup-firestore.ts",
+    "emulator": "firebase emulators:start --only firestore",
+    "test:firestore": "vitest run src/test/firestoreAdapter.test.ts"
   },
   "repository": {
     "type": "git",

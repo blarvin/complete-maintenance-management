@@ -113,4 +113,7 @@ export interface RemoteSyncAdapter {
   pullAllNodes(): Promise<TreeNode[]>;
   pullAllFields(): Promise<DataField[]>;
   pullAllHistory(): Promise<DataFieldHistory[]>;
+  
+  // Delta sync methods
+  pullHistorySince(since: number): Promise<DataFieldHistory[]>;
 }

@@ -20,6 +20,7 @@ import {
   writeBatch,
   getCountFromServer,
   FirestoreError,
+  serverTimestamp,
 } from "firebase/firestore";
 import type { TreeNode, DataField, DataFieldHistory } from "../models";
 import { filterActive, filterDeleted } from "../models";
@@ -514,40 +515,67 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   /**
    * Apply a sync queue item to Firestore.
    * Handles create/update/delete operations for nodes and fields.
+   * Uses serverTimestamp() for authoritative timestamps (no clock skew).
+   * Uses soft delete for delete operations (enables delta sync detection).
    */
   async applySyncItem(item: SyncQueueItem): Promise<void> {
     switch (item.operation) {
       case 'create-node': {
         const node = item.payload as TreeNode;
-        await setDoc(doc(db, COLLECTIONS.NODES, node.id), node);
+        await setDoc(doc(db, COLLECTIONS.NODES, node.id), {
+          ...node,
+          updatedAt: serverTimestamp(),
+        });
         break;
       }
       case 'update-node': {
         const node = item.payload as TreeNode;
-        await setDoc(doc(db, COLLECTIONS.NODES, node.id), node, { merge: true });
+        await setDoc(doc(db, COLLECTIONS.NODES, node.id), {
+          ...node,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
         break;
       }
       case 'delete-node': {
-        await deleteDoc(doc(db, COLLECTIONS.NODES, item.entityId));
+        // Soft delete with server timestamp (enables delta sync detection)
+        const ref = doc(db, COLLECTIONS.NODES, item.entityId);
+        await updateDoc(ref, {
+          deletedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
         break;
       }
       case 'create-field': {
         const field = item.payload as DataField;
-        await setDoc(doc(db, COLLECTIONS.FIELDS, field.id), field);
+        await setDoc(doc(db, COLLECTIONS.FIELDS, field.id), {
+          ...field,
+          updatedAt: serverTimestamp(),
+        });
         break;
       }
       case 'update-field': {
         const field = item.payload as DataField;
-        await setDoc(doc(db, COLLECTIONS.FIELDS, field.id), field, { merge: true });
+        await setDoc(doc(db, COLLECTIONS.FIELDS, field.id), {
+          ...field,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
         break;
       }
       case 'delete-field': {
-        await deleteDoc(doc(db, COLLECTIONS.FIELDS, item.entityId));
+        // Soft delete with server timestamp (enables delta sync detection)
+        const ref = doc(db, COLLECTIONS.FIELDS, item.entityId);
+        await updateDoc(ref, {
+          deletedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
         break;
       }
       case 'create-history': {
         const history = item.payload as DataFieldHistory;
-        await setDoc(doc(db, COLLECTIONS.HISTORY, history.id), history);
+        await setDoc(doc(db, COLLECTIONS.HISTORY, history.id), {
+          ...history,
+          updatedAt: serverTimestamp(),
+        });
         break;
       }
       default:
@@ -598,6 +626,19 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
    */
   async pullAllHistory(): Promise<DataFieldHistory[]> {
     const snap = await getDocs(collection(db, COLLECTIONS.HISTORY));
+    return snap.docs.map(d => d.data() as DataFieldHistory);
+  }
+
+  /**
+   * Pull history updated since the given timestamp from Firestore.
+   * Used for delta sync to fetch only new/changed history entries.
+   */
+  async pullHistorySince(since: number): Promise<DataFieldHistory[]> {
+    const q = query(
+      collection(db, COLLECTIONS.HISTORY),
+      where('updatedAt', '>', since)
+    );
+    const snap = await getDocs(q);
     return snap.docs.map(d => d.data() as DataFieldHistory);
   }
 

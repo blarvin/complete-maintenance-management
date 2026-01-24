@@ -66,10 +66,10 @@ export async function initializeStorage(): Promise<void> {
     // Initialize dev tools (exposes window.__sync() and window.__syncStatus())
     initializeDevTools();
 
-    // Trigger immediate sync on startup if online (to detect remote deletions, get latest changes)
+    // Trigger immediate full sync on startup if online (to detect remote deletions, get latest changes)
     if (typeof navigator !== 'undefined' && navigator.onLine) {
-      console.log('[Storage] Triggering initial sync on startup...');
-      syncManager.syncOnce().catch(err => {
+      console.log('[Storage] Triggering initial full sync on startup...');
+      syncManager.syncFull().catch(err => {
         console.error('[Storage] Initial sync failed:', err);
         // Don't throw - app should still work even if initial sync fails
       });

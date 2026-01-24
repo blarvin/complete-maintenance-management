@@ -3,14 +3,19 @@
  *
  * Thin orchestration layer that composes focused collaborators:
  * - SyncPusher: Push local changes to remote
- * - SyncStrategy: Pull remote changes (FullCollectionSync, etc.)
+ * - SyncStrategy: Pull remote changes (FullCollectionSync, DeltaSync)
  * - SyncLifecycle: Timer and online event management
  * - LWWResolver: Conflict resolution
+ *
+ * Sync strategies:
+ * - syncDelta(): Fast incremental sync (only changes since last sync)
+ * - syncFull(): Complete sync (all entities, used on startup)
+ * - syncOnce(): Default sync (uses delta for speed)
  *
  * Sync triggers:
  * - Timer: Every 10 minutes (configurable)
  * - Network: On 'online' event
- * - Manual: syncOnce() can be called directly
+ * - Manual: syncOnce(), syncDelta(), syncFull() can be called directly
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
@@ -19,7 +24,7 @@ import { dispatchStorageChangeEvent } from '../storage/storageEvents';
 import { SyncPusher } from './SyncPusher';
 import { SyncLifecycle } from './SyncLifecycle';
 import { LWWResolver } from './LWWResolver';
-import { FullCollectionSync } from './strategies';
+import { FullCollectionSync, DeltaSync } from './strategies';
 import type { SyncStrategy } from './strategies';
 
 export class SyncManager {
@@ -27,7 +32,8 @@ export class SyncManager {
   private _isSyncing: boolean = false;
 
   private readonly pusher: SyncPusher;
-  private readonly strategy: SyncStrategy;
+  private readonly deltaStrategy: SyncStrategy;
+  private readonly fullStrategy: SyncStrategy;
   private readonly lifecycle: SyncLifecycle;
   private readonly local: SyncableStorageAdapter;
 
@@ -41,7 +47,8 @@ export class SyncManager {
     // Initialize collaborators
     const resolver = new LWWResolver(local);
     this.pusher = new SyncPusher(local, remote);
-    this.strategy = new FullCollectionSync(local, remote, resolver);
+    this.deltaStrategy = new DeltaSync(local, remote, resolver);
+    this.fullStrategy = new FullCollectionSync(local, remote, resolver);
     this.lifecycle = new SyncLifecycle(() => this.syncOnce(), pollIntervalMs);
   }
 
@@ -65,30 +72,72 @@ export class SyncManager {
 
   /**
    * Perform one sync cycle: push local changes, then pull remote changes.
+   * Uses delta sync by default for speed.
    */
   async syncOnce(): Promise<void> {
+    return this.syncDelta();
+  }
+
+  /**
+   * Fast delta sync: only pulls changes since last sync.
+   * Detects soft deletes via updatedAt timestamp.
+   */
+  async syncDelta(): Promise<void> {
     if (!this.canSync()) return;
 
     this._isSyncing = true;
-    console.log('[SyncManager] Starting sync cycle...');
+    console.log('[SyncManager] Starting delta sync cycle...');
 
     try {
       // Push local changes first
       await this.pusher.push();
 
-      // Then pull remote changes
-      console.log('[SyncManager] Pull: Starting', this.strategy.name, 'sync');
-      await this.strategy.sync();
+      // Then pull remote changes (delta)
+      console.log('[SyncManager] Pull: Starting', this.deltaStrategy.name, 'sync');
+      await this.deltaStrategy.sync();
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
-      console.log('[SyncManager] Sync cycle complete');
+      console.log('[SyncManager] Delta sync cycle complete');
 
       // Dispatch event to trigger UI updates
       dispatchStorageChangeEvent();
     } catch (err) {
-      console.error('[SyncManager] Sync cycle failed:', err);
+      console.error('[SyncManager] Delta sync cycle failed:', err);
+      // Don't rethrow - sync failures shouldn't crash the app
+    } finally {
+      this._isSyncing = false;
+    }
+  }
+
+  /**
+   * Full collection sync: pulls all entities for complete reconciliation.
+   * Used on startup or periodically as a safety net.
+   */
+  async syncFull(): Promise<void> {
+    if (!this.canSync()) return;
+
+    this._isSyncing = true;
+    console.log('[SyncManager] Starting full sync cycle...');
+
+    try {
+      // Push local changes first
+      await this.pusher.push();
+
+      // Then pull remote changes (full collection)
+      console.log('[SyncManager] Pull: Starting', this.fullStrategy.name, 'sync');
+      await this.fullStrategy.sync();
+
+      // Update last sync timestamp
+      await this.local.setLastSyncTimestamp(now());
+
+      console.log('[SyncManager] Full sync cycle complete');
+
+      // Dispatch event to trigger UI updates
+      dispatchStorageChangeEvent();
+    } catch (err) {
+      console.error('[SyncManager] Full sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
     } finally {
       this._isSyncing = false;
