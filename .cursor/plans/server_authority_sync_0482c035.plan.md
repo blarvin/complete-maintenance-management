@@ -4,19 +4,19 @@ overview: Replace timestamp-based LWW with "server is authority" model where pul
 todos:
   - id: refactor-resolver
     content: Refactor LWWResolver to ServerAuthorityResolver with sync-queue check
-    status: pending
+    status: completed
   - id: update-imports
     content: Update imports in SyncManager, DeltaSync, FullCollectionSync
-    status: pending
+    status: completed
   - id: update-resolver-tests
     content: Rewrite LWWResolver.test.ts as ServerAuthorityResolver.test.ts with queue-based tests
-    status: pending
+    status: completed
   - id: update-strategy-tests
     content: Update DeltaSync.test.ts and FullCollectionSync.test.ts imports
-    status: pending
+    status: completed
   - id: update-integration-tests
     content: Rewrite syncManager.test.ts "LWW Conflict Resolution" section for server authority model
-    status: pending
+    status: completed
 isProject: false
 ---
 

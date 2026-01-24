@@ -7,13 +7,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FullCollectionSync } from '../data/sync/strategies/FullCollectionSync';
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../data/storage/storageAdapter';
-import type { LWWResolver } from '../data/sync/LWWResolver';
+import type { ServerAuthorityResolver } from '../data/sync/ServerAuthorityResolver';
 import type { TreeNode, DataField, DataFieldHistory } from '../data/models';
 
 describe('FullCollectionSync', () => {
   let mockLocal: SyncableStorageAdapter;
   let mockRemote: RemoteSyncAdapter;
-  let mockResolver: LWWResolver;
+  let mockResolver: ServerAuthorityResolver;
   let strategy: FullCollectionSync;
 
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe('FullCollectionSync', () => {
     mockResolver = {
       resolveNode: vi.fn().mockResolvedValue('applied'),
       resolveField: vi.fn().mockResolvedValue('applied'),
-    } as unknown as LWWResolver;
+    } as unknown as ServerAuthorityResolver;
 
     strategy = new FullCollectionSync(mockLocal, mockRemote, mockResolver);
   });

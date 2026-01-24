@@ -5,7 +5,7 @@
  * - SyncPusher: Push local changes to remote
  * - SyncStrategy: Pull remote changes (FullCollectionSync, DeltaSync)
  * - SyncLifecycle: Timer and online event management
- * - LWWResolver: Conflict resolution
+ * - ServerAuthorityResolver: Conflict resolution (server is truth)
  *
  * Sync strategies:
  * - syncDelta(): Fast incremental sync (only changes since last sync)
@@ -23,7 +23,7 @@ import { now } from '../../utils/time';
 import { dispatchStorageChangeEvent } from '../storage/storageEvents';
 import { SyncPusher } from './SyncPusher';
 import { SyncLifecycle } from './SyncLifecycle';
-import { LWWResolver } from './LWWResolver';
+import { ServerAuthorityResolver } from './ServerAuthorityResolver';
 import { FullCollectionSync, DeltaSync } from './strategies';
 import type { SyncStrategy } from './strategies';
 
@@ -45,7 +45,7 @@ export class SyncManager {
     this.local = local;
 
     // Initialize collaborators
-    const resolver = new LWWResolver(local);
+    const resolver = new ServerAuthorityResolver(local);
     this.pusher = new SyncPusher(local, remote);
     this.deltaStrategy = new DeltaSync(local, remote, resolver);
     this.fullStrategy = new FullCollectionSync(local, remote, resolver);

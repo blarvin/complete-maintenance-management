@@ -11,7 +11,7 @@
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
-import type { LWWResolver } from '../LWWResolver';
+import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
 import type { TreeNode, DataField } from '../../models';
 
 export class DeltaSync implements SyncStrategy {
@@ -20,7 +20,7 @@ export class DeltaSync implements SyncStrategy {
   constructor(
     private local: SyncableStorageAdapter,
     private remote: RemoteSyncAdapter,
-    private resolver: LWWResolver
+    private resolver: ServerAuthorityResolver
   ) {}
 
   async sync(): Promise<SyncResult> {

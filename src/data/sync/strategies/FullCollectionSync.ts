@@ -1,14 +1,14 @@
 /**
  * FullCollectionSync - Full collection sync strategy.
  *
- * Pulls all entities from remote and applies them locally using LWW resolution.
+ * Pulls all entities from remote and applies them locally using server authority resolution.
  * Handles deletion detection: removes local entities not present in remote
  * (unless they have pending local changes).
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
-import type { LWWResolver } from '../LWWResolver';
+import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
 
 export class FullCollectionSync implements SyncStrategy {
   readonly name = 'full-collection';
@@ -16,7 +16,7 @@ export class FullCollectionSync implements SyncStrategy {
   constructor(
     private local: SyncableStorageAdapter,
     private remote: RemoteSyncAdapter,
-    private resolver: LWWResolver
+    private resolver: ServerAuthorityResolver
   ) {}
 
   async sync(): Promise<SyncResult> {
@@ -47,7 +47,7 @@ export class FullCollectionSync implements SyncStrategy {
       }
     }
 
-    // Apply remote nodes (LWW)
+    // Apply remote nodes (server authority)
     let applied = 0;
     for (const remoteNode of remoteNodes) {
       const result = await this.resolver.resolveNode(remoteNode);
@@ -77,7 +77,7 @@ export class FullCollectionSync implements SyncStrategy {
       }
     }
 
-    // Apply remote fields (LWW)
+    // Apply remote fields (server authority)
     let applied = 0;
     for (const remoteField of remoteFields) {
       const result = await this.resolver.resolveField(remoteField);

@@ -8,13 +8,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DeltaSync } from '../data/sync/strategies/DeltaSync';
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../data/storage/storageAdapter';
-import type { LWWResolver } from '../data/sync/LWWResolver';
+import type { ServerAuthorityResolver } from '../data/sync/ServerAuthorityResolver';
 import type { TreeNode, DataField, DataFieldHistory } from '../data/models';
 
 describe('DeltaSync', () => {
   let mockLocal: SyncableStorageAdapter;
   let mockRemote: RemoteSyncAdapter;
-  let mockResolver: LWWResolver;
+  let mockResolver: ServerAuthorityResolver;
   let strategy: DeltaSync;
 
   beforeEach(() => {
@@ -31,7 +31,7 @@ describe('DeltaSync', () => {
     mockResolver = {
       resolveNode: vi.fn().mockResolvedValue('applied'),
       resolveField: vi.fn().mockResolvedValue('applied'),
-    } as unknown as LWWResolver;
+    } as unknown as ServerAuthorityResolver;
 
     strategy = new DeltaSync(mockLocal, mockRemote, mockResolver);
   });
@@ -83,7 +83,7 @@ describe('DeltaSync', () => {
 
       await strategy.sync();
 
-      // Soft-deleted node should still be passed to resolver (LWW handles it)
+      // Soft-deleted node should still be passed to resolver
       expect(mockResolver.resolveNode).toHaveBeenCalledWith(softDeletedNode);
     });
   });
@@ -128,7 +128,7 @@ describe('DeltaSync', () => {
 
       await strategy.sync();
 
-      // Soft-deleted field should still be passed to resolver (LWW handles it)
+      // Soft-deleted field should still be passed to resolver
       expect(mockResolver.resolveField).toHaveBeenCalledWith(softDeletedField);
     });
   });
