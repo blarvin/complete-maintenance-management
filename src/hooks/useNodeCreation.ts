@@ -15,6 +15,7 @@ import { useAppState, useAppTransitions } from '../state/appState';
 import { getNodeService, getFieldService } from '../data/services';
 import { generateId } from '../utils/id';
 import { triggerSync } from './useSyncTrigger';
+import { getSavedFieldsFromLocalStorage } from './usePendingForms';
 
 /**
  * Payload for completing node creation.
@@ -50,19 +51,14 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
 
     /**
      * Start creating a new node.
-     * IMMEDIATELY creates an empty node in the database, then opens UC UI.
-     * This allows FieldList to work identically for UC and display modes.
-     * 
-     * Note: We don't reload the nodes list here. The node exists in DB (so FieldList works),
-     * but it only appears in the visual list after complete$(). This avoids dual-rendering
-     * where both the UC TreeNode and the list TreeNode would show.
+     * Generates an ID but does NOT create node in DB yet.
+     * Node creation is deferred until user clicks "Create".
+     * This eliminates orphan nodes if user cancels.
      */
     const start$ = $(async () => {
         const id = generateId();
         
-        // Create empty node in DB immediately
-        await getNodeService().createEmptyNode(id, options.parentId);
-        
+        // DON'T create node in DB - defer until CREATE
         // Open UC UI (node won't appear in list until complete$)
         await startConstruction$({
             id,
@@ -75,15 +71,20 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
 
     /**
      * Cancel node creation. Closes the under-construction UI.
-     * Note: The orphan node remains in DB (cleanup deferred to Phase 2).
+     * Clears localStorage for pending forms (no IDB cleanup needed since nothing was written).
      */
     const cancel$ = $(async () => {
+        const ucData = appState.underConstruction;
+        if (ucData) {
+            // Clear localStorage (no IDB cleanup needed)
+            localStorage.removeItem(`pendingFields:${ucData.id}`);
+        }
         await cancelConstruction$();
     });
 
     /**
-     * Complete node creation. Updates the node name/subtitle and saves fields.
-     * The node already exists in DB (created in start$).
+     * Complete node creation. Creates node + all saved fields atomically.
+     * All fields marked as "saved" during construction are created together with the node.
      */
     const complete$ = $(async (payload: CreateNodePayload) => {
         console.log('[complete$] Received payload:', JSON.stringify(payload));
@@ -95,27 +96,26 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             return;
         }
 
-        console.log('[complete$] Updating node', ucData.id, 'with:', {
+        // Get all saved fields from localStorage
+        const savedFields = getSavedFieldsFromLocalStorage(ucData.id);
+        console.log('[complete$] Saved fields from localStorage:', savedFields.length);
+
+        // Create node + all fields atomically
+        await getNodeService().createWithFields({
+            id: ucData.id,
+            parentId: ucData.parentId,
             nodeName: payload.nodeName || 'Untitled',
             nodeSubtitle: payload.nodeSubtitle || '',
+            defaults: savedFields.map(f => ({
+                fieldName: f.fieldName,
+                fieldValue: f.fieldValue,
+            })),
         });
 
-        // Update node with final name/subtitle
-        await getNodeService().updateNode(ucData.id, {
-            nodeName: payload.nodeName || 'Untitled',
-            nodeSubtitle: payload.nodeSubtitle || '',
-        });
+        console.log('[complete$] Node and fields created atomically');
 
-        console.log('[complete$] Node updated, calling completeConstruction$');
-
-        // Create fields from TreeNodeConstruction's local state
-        // (In Step 3, FieldList will handle this, and payload.fields will be empty)
-        if (payload.fields.length > 0) {
-            const fieldService = getFieldService();
-            await Promise.all(
-                payload.fields.map(f => fieldService.addField(ucData.id, f.fieldName, f.fieldValue))
-            );
-        }
+        // Clear localStorage
+        localStorage.removeItem(`pendingFields:${ucData.id}`);
 
         triggerSync();
         await completeConstruction$();

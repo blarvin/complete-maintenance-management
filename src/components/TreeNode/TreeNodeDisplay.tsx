@@ -58,7 +58,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                 onExpand$={toggleExpand$}
             />
             <DataCard isOpen={isExpanded} nodeId={props.id}>
-                <FieldList nodeId={props.id} />
+                <FieldList nodeId={props.id} isConstruction={false} />
             </DataCard>
         </div>
     );

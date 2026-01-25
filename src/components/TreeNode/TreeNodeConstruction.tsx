@@ -115,6 +115,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     nodeId={props.id} 
                     initialFieldNames={DEFAULT_DATAFIELD_NAMES}
                     handleRef={fieldListHandle}
+                    isConstruction={true}
                 />
                 
                 {/* Cancel/Create buttons at the very bottom */}

@@ -32,6 +32,7 @@ type FieldItem =
 /** Handle for external access to FieldList methods */
 export type FieldListHandle = {
     saveAllPending$: QRL<() => Promise<number>>;
+    getSavedFields$: QRL<() => PendingForm[]>;
 };
 
 export type FieldListProps = {
@@ -40,6 +41,8 @@ export type FieldListProps = {
     initialFieldNames?: readonly string[];
     /** Optional signal to receive the FieldList handle for external control */
     handleRef?: Signal<FieldListHandle | null>;
+    /** When true, operates in construction mode (defer IDB writes) */
+    isConstruction?: boolean;
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
@@ -59,6 +62,7 @@ export const FieldList = component$<FieldListProps>((props) => {
     // Pass the signal itself so add$() reads current value when called
     const { forms: pendingForms, add$, save$, cancel$, change$, saveAllPending$ } = usePendingForms({
         nodeId: props.nodeId,
+        mode: props.isConstruction ? 'construction' : 'display',
         onSaved$: reload$,
         initialFieldNames: props.initialFieldNames,
         maxPersistedCardOrder$: maxPersistedCardOrder,
@@ -67,7 +71,10 @@ export const FieldList = component$<FieldListProps>((props) => {
     // Expose handle for external access (e.g., UC CREATE button)
     useVisibleTask$(() => {
         if (props.handleRef) {
-            props.handleRef.value = { saveAllPending$ };
+            const getSavedFields$ = $(() => {
+                return pendingForms.value.filter(f => f.saved === true && f.fieldName.trim());
+            });
+            props.handleRef.value = { saveAllPending$, getSavedFields$ };
         }
     });
 

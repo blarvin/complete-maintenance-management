@@ -19,6 +19,7 @@ export type PendingForm = {
     fieldName: string;
     fieldValue: string | null;
     cardOrder: number;
+    saved?: boolean; // Marks fields "locked in" during construction mode
 };
 
 /** LS key for pending forms */
@@ -47,8 +48,19 @@ const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
     }
 };
 
+/**
+ * Extract saved fields from localStorage for batch creation.
+ * Used by useNodeCreation.complete$() to get all fields marked as saved during construction.
+ */
+export function getSavedFieldsFromLocalStorage(nodeId: string): PendingForm[] {
+    const forms = loadPendingForms(nodeId);
+    return forms.filter(f => f.saved === true && f.fieldName.trim());
+}
+
 export type UsePendingFormsOptions = {
     nodeId: string;
+    /** Mode: 'construction' = defer IDB writes, 'display' = write immediately */
+    mode: 'construction' | 'display';
     /** Called after a form is successfully saved to DB. Typically reloads the field list. */
     onSaved$: QRL<() => void | Promise<void>>;
     /** Default field names to initialize with if no persisted fields and no LS forms */
@@ -138,6 +150,7 @@ export function usePendingForms(options: UsePendingFormsOptions) {
     /**
      * Save a pending form to the database.
      * If fieldName is empty, the form is cancelled instead.
+     * In construction mode, marks form as saved in localStorage without writing to IDB.
      */
     const save$ = $(async (formId: string, fieldName: string, fieldValue: string | null) => {
         const name = fieldName.trim();
@@ -146,11 +159,22 @@ export function usePendingForms(options: UsePendingFormsOptions) {
             forms.value = forms.value.filter(f => f.id !== formId);
             return;
         }
+        
         // Get the cardOrder for this form
         const form = forms.value.find(f => f.id === formId);
         const cardOrder = form?.cardOrder;
         
-        // Persist to DB with cardOrder
+        if (options.mode === 'construction') {
+            // Construction mode: Mark as saved in localStorage, don't write to IDB
+            forms.value = forms.value.map(f =>
+                f.id === formId
+                    ? { ...f, fieldName: name, fieldValue, saved: true }
+                    : f
+            );
+            return; // Don't call addField() or trigger sync
+        }
+        
+        // Display mode: Write to IDB immediately (existing behavior)
         await getFieldService().addField(options.nodeId, name, fieldValue, cardOrder);
         // Remove from pending
         forms.value = forms.value.filter(f => f.id !== formId);
@@ -177,13 +201,25 @@ export function usePendingForms(options: UsePendingFormsOptions) {
 
     /**
      * Save all pending forms with valid field names.
-     * Used by UC CREATE to save any unsaved fields before completing.
+     * In construction mode: marks unsaved forms as saved (no IDB write).
+     * In display mode: writes all forms to IDB immediately.
      * Returns the number of forms saved.
      */
     const saveAllPending$ = $(async (): Promise<number> => {
         const formsToSave = forms.value.filter(f => f.fieldName.trim());
         if (formsToSave.length === 0) return 0;
 
+        if (options.mode === 'construction') {
+            // Construction mode: Mark all as saved, don't write to IDB
+            forms.value = forms.value.map(f =>
+                f.fieldName.trim()
+                    ? { ...f, fieldName: f.fieldName.trim(), saved: true }
+                    : f
+            );
+            return formsToSave.length;
+        }
+
+        // Display mode: Write to IDB immediately (existing behavior)
         const fieldService = getFieldService();
         await Promise.all(
             formsToSave.map(f => 
