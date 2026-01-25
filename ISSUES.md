@@ -129,12 +129,13 @@
 - [ ] DELETE button triggers Snackbar with undo
 - [x] display:contents grid layout (inline grid items)
 - [ ] Full cascade delete implementation (currently minimal)
-- [ ] DataField deletion persist to DB on sync to all clients
+- [ ] DataField deletion persist to DB and sync to all clients
+- [ ] Shows "Invalid Date" sometimes (BUG)
 
 ## Data Field CRUD
-- [ ] Deletion of Data Field cascade deletes the associated DataFieldHistory entries.
-- [ ] DataField soft deletion with deletedAt timestamp. Set deletedAt timestamp on DataField, and rely on implicit hiding of history entries.
-- [ ] DataField restoration UI: 
+- [x] DataField soft deletion with deletedAt timestamp.
+- [x] Deletion of Data Field implicitly deletes (hides)the associated DataFieldHistory entries.
+- [ ] DataField restoration UI: And code to set deletedAt timestamp to null.
 
 ## DataFieldHistory Component
 - [x] Scrollable historical values list
@@ -145,10 +146,10 @@
 - [x] CANCEL button cancels the edit and closes history list
 - [x] Current entry not selectable for reversion
 - [x] Empty entry (original null) not selectable for reversion
+- [ ] Shows "NaN/Nan/NaN NaN:NaN" instead of date and time (BUG)
 
 ## DataFieldHistory CRUD
 - [ ] Create DataFieldHistory entry immediately (not just on re-open)
-- [ ] Deletion of a Data Field cascade deletes the associated DataFieldHistory entries.
 
 ## CreateDataField Component
 - [x] Pure form component (name/value inputs + Save/Cancel)
