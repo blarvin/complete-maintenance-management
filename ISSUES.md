@@ -5,18 +5,20 @@
 - [x] Selectors for component states (getTreeNodeState, getDataCardState)
 - [x] Single-field editing guarantee (editingFieldId in AppState)
 - [x] UI prefs serialization (expandedCards, expandedFieldDetails to localStorage)
-- [x] FSM transitions (isRoot → isParent, isChild → isParent, etc.)
+- [x] FSM transitions (ROOT↔BRANCH, navigateToNode, navigateUp, navigateToRoot)
 - [x] AppState context provider (useProvideAppState, useAppState hooks)
 - [x] Transition functions (useAppTransitions hook)
 
 ## Data Layer
 - [x] TreeNode entity (id, nodeName, nodeSubtitle, parentId, updatedBy, updatedAt, deletedAt)
-- [x] DataField entity (id, fieldName, parentNodeId, fieldValue, updatedBy, updatedAt, deletedAt)
+- [x] DataField entity (id, fieldName, parentNodeId, fieldValue, cardOrder, updatedBy, updatedAt, deletedAt)
 - [x] DataFieldHistory entity (append-only audit with composite id)
 - [x] Root nodes via parentId: null (no sentinel value)
 - [x] History ID scheme (${dataFieldId}:${rev})
 - [x] Timestamps via Date.now() wrapped in now() helper
-- [ ] Orphaned nodes (no nodeName) queued for deletion after construction
+- [ ] Soft deletion (deletedAt timestamp) TreeNode and DataField using shared SoftDeletable type and helper functions
+- [ ] Implicit hiding of children and fields when a TreeNode is soft deleted. 
+- [ ] Implicit hiding of DataFieldHistory entries when a DataField is soft deleted.
 
 ## Storage & Persistence
 - [x] StorageAdapter interface (backend-agnostic)
@@ -32,16 +34,16 @@
 - [x] clearStorage() utility (testing/reset)
 - [x] Immediate sync on startup (if online)
 - [ ] Fix IDBAdapter sort direction to match FirestoreAdapter (ascending per SPEC)
-- [ ] Delete dead code (src/data/repo/ folder)
+- [ ] Use now() in initStorage and storageEvents instead of Date.now()
 
 ## Storage Events System
 - [x] Custom event system (storage-change CustomEvent)
 - [x] dispatchStorageChangeEvent() (triggers UI updates)
 - [x] Components listen for storage-change and reload
 - [x] Event payload with timestamp
-- [x] Used by useRootViewData for auto-reload
+- [x] Used by useRootViewData, BranchView, useTreeNodeFields for auto-reload
 
-## SyncManager
+## Sync and SyncManager
 - [x] Full collection sync (FullCollectionSync strategy)
 - [x] History sync (syncHistory in FullCollectionSync)
 - [x] Post-sync UI refresh (dispatchStorageChangeEvent in storageEvents.ts)
@@ -49,48 +51,54 @@
 - [x] LWW conflict resolution (last-write-wins)
 - [x] Protect pending items (don't delete local items pending push)
 - [x] Online/offline event handling
-- [ ] Extract SyncManager responsibilities (SRP violation - too many concerns)
+- [x] Extract SyncManager responsibilities (SRP violation - too many concerns)
 - [x] Use FirestoreAdapter instead of direct Firestore SDK calls (DIP violation)
 - [ ] Extract shared history creation logic (DRY - duplicated in adapters)
-- [ ] Create TreeNode should trigger sync to cloud DB.
-- [ ] Create DataField should trigger sync to cloud DB.
-- [ ] Delete DataField should trigger sync to cloud DB.
-- [ ] Update DataFieldValue should trigger sync to cloud DB.
-- [ ] REVERT DataFieldHistory should trigger sync to cloud DB.
+- [x] Create TreeNode should trigger sync to cloud DB.
+- [x] Create DataField should trigger sync to cloud DB.
+- [x] Delete DataField should trigger sync to cloud DB.
+- [x] Update DataFieldValue should trigger sync to cloud DB.
+- [x] REVERT DataFieldHistory should trigger sync to cloud DB.
 
 
 ## Views
 - [x] ROOT view (listview of root nodes + CreateNodeButton)
 - [x] BRANCH view (parent node + children container with gutter)
 - [x] Single grid container for layout (2px gap)
-- [x] Empty state welcome message ("Create a new asset to get started")
+- [x] Empty state shows CreateNodeButton (isRoot state)
 - [x] Navigation without URL changes (client-side FSM)
+- [ ] ROOT view loading state (BranchView shows "Loading..."; RootView does not)
 
 ## TreeNode Component
 - [x] Discriminated union props (TreeNodeDisplayProps | TreeNodeConstructionProps)
 - [x] Type guards (isConstructionProps, isDisplayProps)
 - [x] Four states: isRoot, isParent, isChild, isUnderConstruction
 - [x] Orchestrator pattern (picks TreeNodeDisplay vs TreeNodeConstruction)
-- [x] NodeTitle (displays nodeName bold)
-- [x] NodeSubtitle (description/location string)
 - [x] Delegates field logic to FieldList
 - [x] useTreeNodeFields hook (loads DataFields from DB)
-- [ ] NodeName and NodeSubtitle inline editing (UI/UX decision needed)
+
 
 ## NodeHeader Component
 - [x] Factored out from TreeNodeDisplay (visual card container)
 - [x] Clickable header area (title, subtitle, buttons, chevron)
+- [x] NodeTitle (displays nodeName bold)
+- [x] NodeSubtitle (description/location string)
 - [x] Keyboard events for accessibility (Enter/Space)
 - [x] UpButton integration (for isParent nodes)
 - [x] Expand/collapse chevron button
 - [x] Construction mode support (input fields instead of title/subtitle)
 - [x] ARIA attributes (role, tabIndex, aria-label, aria-expanded)
 - [x] Conditional styling (isExpanded, isParent, isClickable)
+- [ ] NodeTitle and NodeSubtitle inline editing (UI/UX decision needed)
+ 
+
+... checked to here ...
 
 ## TreeNode CRUD
 - [ ] TreeNode DELETE button in NodeTools component.
-- [ ] Deletion of a TreeNode cascade deletes the associated DataFields and DataFieldHistory entries.
 - [x] Soft deletion: set deletedAt on TreeNode, and rely on implicit hiding of children.
+- [x] No orphan nodes created at underConstruction "Cancel"
+- [x] Node creation only on "Create", 
 
 
 ## DataCard Component
