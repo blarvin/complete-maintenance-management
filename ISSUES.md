@@ -97,15 +97,16 @@
 - [x] Conditional styling (isExpanded, isParent, isClickable)
 - [ ] NodeTitle and NodeSubtitle inline editing (UI/UX decision needed)
 
-## NodeDetails Component
+## TreeNodeDetails Component
 
-- [ ] Expandable section (ellipsis + "Node Details")
-- [ ] Node metadata display
+- [ ] Expandable section (ellipsis + TreeNodeDetails component)
+- [ ] Node metadata display - CreatedAt, last UpdatedAt, last UpdatedBy
 - [ ] Breadcrumb hierarchy display
 - [ ] Breadcrumb, full upward navigation
 - [ ] DELETE button deletes the node - cascade delete via soft deletion + implicit hiding of children.
 - [ ] DELETE button confirmation dialog (shows counts)
 - [ ] DELETE button triggers Snackbar with undo
+- [ ] COPY as template and COPY full node buttons
 
 ## TreeNode CRUD
 
