@@ -40,6 +40,7 @@ Note: Media upload, preview, storage, and caching are out of scope for Phase 1. 
 Current `DataField.tsx` is a proto-component handling text values. Future phases need:
 
 **Component Types:**
+
 - TextDataField (current) - simple text values
 - ImageDataField - single image with preview/upload
 - ImageCarouselDataField - multiple images with carousel
@@ -49,13 +50,15 @@ Current `DataField.tsx` is a proto-component handling text values. Future phases
 - LinkDataField - URL with preview
 
 **Refactoring Strategy:**
+
 1. Extract shared layout/grid into `FieldRow` wrapper component
-2. Extract edit state management into `useFieldEdit` hook  
+2. Extract edit state management into `useFieldEdit` hook
 3. Create `FieldValue` interface for pluggable value renderers
 4. Each component type implements: display mode, edit mode, validation
 5. Field type registry maps `componentType` → renderer component
 
 **Current Pain Points to Address:**
+
 - Edit state FSM tightly coupled to DataField component
 - Double-tap detection could be a shared hook (already is: `useDoubleTap`)
 - Grid layout repeated in TreeNodeConstruction
@@ -193,7 +196,7 @@ Data Fields are either created by Users (simple Field Name + Field Value Type) o
 
 - **Physical push vs. layout reflow**: Currently, when a DataCard expands, elements below reposition due to layout reflow rather than being physically "pushed" by the card. This works now because of how the grid/flex containers are structured, but if page structure changes significantly, this animation behavior may need revisiting. Consider a more robust approach where the card expansion explicitly affects sibling positioning if layout issues arise.
 
-- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned. THIS SHOULD BE IN NODE TOOLS, NOT A DATAFIELD
+- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned. THIS SHOULD BE IN TREE NODE DETAILS, NOT A DATAFIELD
 
 - Note to self: What is "Keys must exist in TreeNode table" on line 160??
 
@@ -237,7 +240,7 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 - Double‑tap to edit: Double‑tap kept for mouse users. **✅ RESOLVED:** Keyboard support now implemented (Enter/Space to edit, Escape to cancel). See IMPLEMENTATION.md → Accessibility.
 - Multiple inline Create buttons (L62–L65, L79): n+1 “Create Here” buttons between child rows add clutter and tab‑stop pain. Consider a single “+ Add sub‑asset” that inserts relative to a selected sibling or uses a simple append, and defer in‑between insertion to later.
 - Delete/Undo timing (L86–L92): 5s Undo plus “irreversible” is brittle. Clarify whether Undo survives navigation and whether deletes are soft until timer elapses or applied immediately with a restore snapshot.
-- “NodeTools” delete only (L43): Consider at least “Rename/Move” later; if Phase 1 is delete‑only, explicitly state edits happen in the node header and card.
+- “TreeNodeDetails” delete only (L43): Consider at least “Rename/Move” later; if Phase 1 is delete‑only, explicitly state edits happen in the node header and card.
 
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
 - **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.

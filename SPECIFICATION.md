@@ -42,7 +42,7 @@ This structure enables users to construct, explore, and understand detailed hier
 - **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
 - **"UpButton**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
-- **NodeTools**: Expandable section (simple chevron and label "Tools") containing tools, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
+- **TreeNodeDetails**: Expandable section (simple chevron and label "Tree Node Details") containing details, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
 - **Snackbar**: Global transient notification toast at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes. Single-slot, replace current toast with latest if a new one arises.
 
 ## TreeNode States
@@ -55,7 +55,7 @@ This structure enables users to construct, explore, and understand detailed hier
 ## DataCard States
 
 - **isExpanded**: DataCard is open/closed. Persisted to local storage.
-- **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). NodeTools not shown. CreateDataFieldButton in last row and functions as normal. "Save" and "Cancel" buttons at the bottom.
+- **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). TreeNodeDetails not shown. CreateDataFieldButton in last row and functions as normal. "Save" and "Cancel" buttons at the bottom.
 
 ## DataField States
 
@@ -91,7 +91,7 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ### Node Deletion
 
-- **Delete Tree Node**: Button Available in NodeTools section of DataCard. Confirmation required.
+- **Delete Tree Node**: Button Available in TreeNodeDetails section of DataCard. Confirmation required.
 - Deleting any `TreeNode` performs a **soft delete**: sets `deletedAt` timestamp on the node. Children are implicitly hidden (not cascade soft-deleted) - queries filter out children of soft-deleted parents.
 - During deletion, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
 - After confirming, show a Snackbar with 5s Undo. If Undo is taken, restore by clearing `deletedAt`; otherwise the delete persists.

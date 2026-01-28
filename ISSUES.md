@@ -1,6 +1,7 @@
 # Complete Maintenance Management - Phase 1 Issues
 
 ## State Management (FSM)
+
 - [x] ViewState discriminated unions (ROOT, BRANCH with nodeId)
 - [x] Selectors for component states (getTreeNodeState, getDataCardState)
 - [x] Single-field editing guarantee (editingFieldId in AppState)
@@ -10,6 +11,7 @@
 - [x] Transition functions (useAppTransitions hook)
 
 ## Data Layer
+
 - [x] TreeNode entity (id, nodeName, nodeSubtitle, parentId, updatedBy, updatedAt, deletedAt)
 - [x] DataField entity (id, fieldName, parentNodeId, fieldValue, cardOrder, updatedBy, updatedAt, deletedAt)
 - [x] DataFieldHistory entity (append-only audit with composite id)
@@ -17,10 +19,11 @@
 - [x] History ID scheme (${dataFieldId}:${rev})
 - [x] Timestamps via Date.now() wrapped in now() helper
 - [ ] Soft deletion (deletedAt timestamp) TreeNode and DataField using shared SoftDeletable type and helper functions
-- [ ] Implicit hiding of children and fields when a TreeNode is soft deleted. 
+- [ ] Implicit hiding of children and fields when a TreeNode is soft deleted.
 - [ ] Implicit hiding of DataFieldHistory entries when a DataField is soft deleted.
 
 ## Storage & Persistence
+
 - [x] StorageAdapter interface (backend-agnostic)
 - [x] IDBAdapter (IndexedDB primary, offline-first via Dexie)
 - [x] FirestoreAdapter (cloud sync)
@@ -30,13 +33,14 @@
 - [x] Firestore→IDB migration (one-time on first load if IDB empty)
 - [x] Bulk insert via bulkPut (nodes, fields, history)
 - [x] syncMetadata table (lastSyncTimestamp tracking)
-- [x] Cypress test mode detection (__CYPRESS_SEED_MODE__)
+- [x] Cypress test mode detection (**CYPRESS_SEED_MODE**)
 - [x] clearStorage() utility (testing/reset)
 - [x] Immediate sync on startup (if online)
 - [ ] Fix IDBAdapter sort direction to match FirestoreAdapter (ascending per SPEC)
 - [ ] Use now() in initStorage and storageEvents instead of Date.now()
 
 ## Storage Events System
+
 - [x] Custom event system (storage-change CustomEvent)
 - [x] dispatchStorageChangeEvent() (triggers UI updates)
 - [x] Components listen for storage-change and reload
@@ -44,6 +48,7 @@
 - [x] Used by useRootViewData, BranchView, useTreeNodeFields for auto-reload
 
 ## Sync and SyncManager
+
 - [x] Full collection sync (FullCollectionSync strategy)
 - [x] History sync (syncHistory in FullCollectionSync)
 - [x] Post-sync UI refresh (dispatchStorageChangeEvent in storageEvents.ts)
@@ -60,8 +65,8 @@
 - [x] Update DataFieldValue should trigger sync to cloud DB.
 - [x] REVERT DataFieldHistory should trigger sync to cloud DB.
 
-
 ## Views
+
 - [x] ROOT view (listview of root nodes + CreateNodeButton)
 - [x] BRANCH view (parent node + children container with gutter)
 - [x] Single grid container for layout (2px gap)
@@ -70,6 +75,7 @@
 - [ ] ROOT view loading state (BranchView shows "Loading..."; RootView does not)
 
 ## TreeNode Component
+
 - [x] Discriminated union props (TreeNodeDisplayProps | TreeNodeConstructionProps)
 - [x] Type guards (isConstructionProps, isDisplayProps)
 - [x] Four states: isRoot, isParent, isChild, isUnderConstruction
@@ -77,8 +83,8 @@
 - [x] Delegates field logic to FieldList
 - [x] useTreeNodeFields hook (loads DataFields from DB)
 
-
 ## NodeHeader Component
+
 - [x] Factored out from TreeNodeDisplay (visual card container)
 - [x] Clickable header area (title, subtitle, buttons, chevron)
 - [x] NodeTitle (displays nodeName bold)
@@ -92,6 +98,7 @@
 - [ ] NodeTitle and NodeSubtitle inline editing (UI/UX decision needed)
 
 ## NodeDetails Component
+
 - [ ] Expandable section (ellipsis + "Node Details")
 - [ ] Node metadata display
 - [ ] Breadcrumb hierarchy display
@@ -99,28 +106,27 @@
 - [ ] DELETE button deletes the node - cascade delete via soft deletion + implicit hiding of children.
 - [ ] DELETE button confirmation dialog (shows counts)
 - [ ] DELETE button triggers Snackbar with undo
- 
+
 ## TreeNode CRUD
-- [ ] TreeNode DELETE button in NodeTools component.
+
+- [ ] TreeNode DELETE button in TreeNodeDetails component.
 - [x] Soft deletion: set deletedAt on TreeNode, and rely on implicit hiding of children.
 - [x] No orphan nodes created at underConstruction "Cancel"
-- [x] Node creation only on "Create", 
-
-
+- [x] Node creation only on "Create",
 
 ... checked to here ...
 
-
-
 ## DataCard Component
+
 - [x] Dual-transition animation (grid 0fr→1fr + translateY -100%→none). 100ms cubic-bezier timing, synchronized.
 - [x] Expand/collapse chevron button (right of NodeSubtitle)
 - [x] isExpanded state, persisted to localStorage
-- [x] isUnderConstruction state (default fields, no NodeTools)
+- [x] isUnderConstruction state (default fields, no TreeNodeDetails)
 - [x] Content-aware without ref (no explicit height)
 - [ ] Remove unused nodeId prop
 
 ## DataField Component (Basic_Key_Value)
+
 - [x] Double-tap to edit (with slop tolerance, 280ms threshold)
 - [x] Keyboard editing (Enter/Space to edit, Enter to save, Escape to cancel)
 - [x] useFieldEdit hook (extracts state/interaction logic)
@@ -133,6 +139,7 @@
 - [ ] Standardize nomenclature (DataField vs DataFieldValue)
 
 ## DataFieldDetails Component
+
 - [x] Expandable section (chevron + "Field Details")
 - [x] Field metadata display
 - [x] DELETE button deletes the field
@@ -144,11 +151,13 @@
 - [ ] Shows "Invalid Date" sometimes (BUG)
 
 ## Data Field CRUD
+
 - [x] DataField soft deletion with deletedAt timestamp.
 - [x] Deletion of Data Field implicitly deletes (hides)the associated DataFieldHistory entries.
 - [ ] DataField restoration UI: And code to set deletedAt timestamp to null.
 
 ## DataFieldHistory Component
+
 - [x] Scrollable historical values list
 - [x] Append-only audit log (action, property, prevValue, newValue)
 - [x] Rev counter (monotonic per field)
@@ -160,9 +169,11 @@
 - [ ] Shows "NaN/Nan/NaN NaN:NaN" instead of date and time (BUG)
 
 ## DataFieldHistory CRUD
+
 - [ ] Create DataFieldHistory entry immediately (not just on re-open)
 
 ## CreateDataField Component
+
 - [x] Pure form component (name/value inputs + Save/Cancel)
 - [x] Dropdown picker from DATAFIELD_LIBRARY
 - [x] Parent manages persistence (FieldList or TreeNodeConstruction)
@@ -174,6 +185,7 @@
 - [ ] Dropdown flip behavior (upward if insufficient space below)
 
 ## FieldList Component
+
 - [x] Orchestrates persisted fields + pending forms
 - [x] usePendingForms hook (localStorage persistence)
 - [x] Add/save/cancel logic for pending forms
@@ -187,20 +199,23 @@
 - [ ] cardOrder needs to recalculate when a DataField is "cancelled" on Under Construction Node. Currently showing wrong order in DB after creation.
 
 ## CreateNodeButton Component
+
 - [x] Contextual variants (root, child)
 - [x] Root variant: large button mimics ROOT node at bottom
 - [x] Child variant: small inline buttons (n+1)
 - [x] Normal document flow (no absolute positioning)
 - [x] Creates TreeNode in isUnderConstruction state
 
-## NodeTools Component
-- [ ] Expandable section (chevron + "Tools" label)
+## TreeNodeDetails Component
+
+- [ ] Expandable section (chevron + "Tree Node Details" label)
 - [ ] DELETE button with confirmation (shows counts)
 - [ ] Cascade delete (node + descendants + fields + history)
 - [ ] Snackbar with 5s undo (in-memory snapshot)
 - [ ] Undo survives navigation (not page reload)
 
 ## Snackbar Component
+
 - [ ] Global transient notification toast at bottom
 - [ ] Message + optional "Undo" button
 - [ ] Auto-dismiss after 5s
@@ -208,6 +223,7 @@
 - [ ] Used for field saves, deletes, cascade deletes
 
 ## Navigation & Up Button
+
 - [x] "Up" button on isParent nodes (navigates to parent or ROOT)
 - [x] Down-tree navigation (tap any child → isParent state)
 - [x] FSM-based transitions (explicit state changes)
@@ -215,6 +231,7 @@
 - [ ] Store parentId at instance location for snappier navigation
 
 ## Hooks
+
 - [x] useNodeCreation (extracts creation flow from views)
 - [x] useDoubleTap (pure function + signal-based hook)
 - [x] usePendingForms (pending form management with localStorage)
@@ -227,6 +244,7 @@
 - [x] useInitStorage (client-side storage initialization on document-ready)
 
 ## Accessibility
+
 - [x] Keyboard editing path (Tab, Enter, Space, Escape)
 - [x] Focus management (autoFocus, tabIndex, focus-visible styles)
 - [x] ARIA attributes (aria-expanded, aria-label, aria-labelledby)
@@ -235,6 +253,7 @@
 - [ ] Move Focus X/Y around app after Tab key activation
 
 ## CSS & Styling
+
 - [x] Three-layer token system (primitives, semantic, component)
 - [x] Semantic tokens throughout (never primitives directly)
 - [x] Utility classes (no-caret, btn-reset, input-reset, input-underline)
@@ -244,6 +263,7 @@
 - [ ] Tree-line and branch-line CSS decorations (deferred Phase 2)
 
 ## PWA Configuration
+
 - [x] Manifest.json (name, short_name, theme, icons)
 - [x] Service worker (setupServiceWorker, precaching, cache invalidation)
 - [x] Icons (192px, 512px)
@@ -257,6 +277,7 @@
 - [x] Theme color meta tag (for browser UI)
 
 ## Build Pipeline
+
 - [x] Three-stage build (types, client, server)
 - [x] Type check (tsc --incremental --noEmit)
 - [x] Client build (vite build → dist/)
@@ -267,6 +288,7 @@
 - [x] TypeScript strict mode (ES2022 module, ES2021 target)
 
 ## Testing Infrastructure
+
 - [x] Service testing via registry (getNodeService, getFieldService)
 - [x] Pure function testing (detectDoubleTap separately exported)
 - [x] localStorage mocking (Set↔Array conversion tests)
@@ -276,7 +298,8 @@
 - [x] Test utils (shared utilities)
 
 ## Dev Tools & Utilities
-- [x] Dev tools (window.__sync(), window.__syncStatus()): manual sync triggering via browser console.
+
+- [x] Dev tools (window.**sync(), window.**syncStatus()): manual sync triggering via browser console.
 - [x] Sync status inspection (enabled, isSyncing)
 - [x] initializeDevTools() called from initStorage
 - [x] ID generation utility (generateId with crypto.randomUUID fallback)
@@ -284,6 +307,7 @@
 - [x] User context abstraction (getCurrentUserId, Phase 1 constant "localUser")
 
 ## Constants & Configuration
+
 - [x] USER_ID constant ("localUser" for Phase 1)
 - [x] COLLECTIONS constants (treeNodes, dataFields, dataFieldHistory)
 - [x] DATAFIELD_LIBRARY (15 hardcoded field names from SPEC)
@@ -291,6 +315,7 @@
 - [x] DataFieldName type (from DATAFIELD_LIBRARY)
 
 ## Known Issues & Tech Debt
+
 - [ ] Extract inline magic numbers (FOCUS_DELAY_MS=10, BLUR_SUPPRESS_WINDOW_MS=220, DEFAULT_SYNC_INTERVAL_MS=600000)
 - [ ] SyncManager SRP violation (too many responsibilities)
 - [ ] DRY: history creation logic duplicated (IDB + Firestore adapters)
@@ -301,6 +326,6 @@
 - [ ] Inconsistent error handling (FirestoreAdapter comprehensive, IDBAdapter minimal)
 
 ## General UI/UX Improvements
-- [ ] DataFieldValues: remove double underline while editing (current underline is affordance)
-- [ ] DataCard animation: ensure physical push vs layout reflow robustness   
 
+- [ ] DataFieldValues: remove double underline while editing (current underline is affordance)
+- [ ] DataCard animation: ensure physical push vs layout reflow robustness
