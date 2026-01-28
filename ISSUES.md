@@ -90,15 +90,26 @@
 - [x] ARIA attributes (role, tabIndex, aria-label, aria-expanded)
 - [x] Conditional styling (isExpanded, isParent, isClickable)
 - [ ] NodeTitle and NodeSubtitle inline editing (UI/UX decision needed)
+
+## NodeDetails Component
+- [ ] Expandable section (ellipsis + "Node Details")
+- [ ] Node metadata display
+- [ ] Breadcrumb hierarchy display
+- [ ] Breadcrumb, full upward navigation
+- [ ] DELETE button deletes the node - cascade delete via soft deletion + implicit hiding of children.
+- [ ] DELETE button confirmation dialog (shows counts)
+- [ ] DELETE button triggers Snackbar with undo
  
-
-... checked to here ...
-
 ## TreeNode CRUD
 - [ ] TreeNode DELETE button in NodeTools component.
 - [x] Soft deletion: set deletedAt on TreeNode, and rely on implicit hiding of children.
 - [x] No orphan nodes created at underConstruction "Cancel"
 - [x] Node creation only on "Create", 
+
+
+
+... checked to here ...
+
 
 
 ## DataCard Component
