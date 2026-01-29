@@ -22,6 +22,7 @@ export { transitions } from './appState.transitions';
 
 // Re-export selectors
 export { selectors } from './appState.selectors';
+export type { TreeNodeDetailsState } from './appState.selectors';
 
 // Re-export context and hooks
 export {

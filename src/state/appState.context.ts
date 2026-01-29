@@ -59,7 +59,11 @@ export function useAppTransitions() {
         toggleFieldDetailsExpanded$: $((fieldId: string) => {
             transitions.toggleFieldDetailsExpanded(state, fieldId);
         }),
-        
+
+        toggleNodeDetailsExpanded$: $((nodeId: string) => {
+            transitions.toggleNodeDetailsExpanded(state, nodeId);
+        }),
+
         startFieldEdit$: $((fieldId: string) => {
             transitions.startFieldEdit(state, fieldId);
         }),

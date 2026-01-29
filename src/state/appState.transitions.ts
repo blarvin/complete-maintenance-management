@@ -110,11 +110,12 @@ export const transitions = {
             newSet.add(nodeId);
         }
         state.ui.expandedCards = newSet;
-        
+
         // Persist
         saveUIPrefs({
             expandedCards: state.ui.expandedCards,
             expandedFieldDetails: state.ui.expandedFieldDetails,
+            expandedNodeDetails: state.ui.expandedNodeDetails,
         });
     },
 
@@ -129,11 +130,32 @@ export const transitions = {
             newSet.add(fieldId);
         }
         state.ui.expandedFieldDetails = newSet;
-        
+
         // Persist
         saveUIPrefs({
             expandedCards: state.ui.expandedCards,
             expandedFieldDetails: state.ui.expandedFieldDetails,
+            expandedNodeDetails: state.ui.expandedNodeDetails,
+        });
+    },
+
+    /**
+     * Toggle node details expansion (TreeNodeDetails: COLLAPSED ↔ EXPANDED)
+     */
+    toggleNodeDetailsExpanded: (state: AppState, nodeId: string): void => {
+        const newSet = new Set(state.ui.expandedNodeDetails);
+        if (newSet.has(nodeId)) {
+            newSet.delete(nodeId);
+        } else {
+            newSet.add(nodeId);
+        }
+        state.ui.expandedNodeDetails = newSet;
+
+        // Persist
+        saveUIPrefs({
+            expandedCards: state.ui.expandedCards,
+            expandedFieldDetails: state.ui.expandedFieldDetails,
+            expandedNodeDetails: state.ui.expandedNodeDetails,
         });
     },
 

@@ -1,0 +1,44 @@
+/* TreeNodeDetails component styles - Upward slide animation */
+
+/* ─── Expansion wrapper ─── */
+.wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    /* Use same timing as DataCard for consistency */
+    transition: grid-template-rows var(--duration-fast) var(--ease-default);
+
+    z-index: var(--z-base); /* Behind NodeHeader */
+
+    /* Ensure content doesn't spill during animation */
+    overflow: hidden;
+}
+
+.wrapperOpen {
+    grid-template-rows: 1fr;
+}
+
+.inner {
+    min-height: 0;
+    /* This inner wrapper is the grid cell */
+}
+
+/* ─── TreeNodeDetails card ─── */
+
+.details {
+    border: var(--border-width) solid var(--border-default);
+    border-bottom: 0; /* NodeHeader border serves as bottom */
+    background: var(--bg-surface);
+    padding: var(--space-3);
+    margin-bottom: -1.5px; /* Tuck under NodeHeader border */
+
+    /* Start position: shifted down by 100% (hidden below NodeHeader) */
+    transform: translateY(100%);
+
+    /* Match the wrapper transition exactly to prevent "pop-in" */
+    transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.detailsOpen {
+    /* End position: natural location (above NodeHeader) */
+    transform: none;
+}

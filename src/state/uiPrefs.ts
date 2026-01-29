@@ -10,11 +10,13 @@ export const STORAGE_KEY = 'treeview:ui:prefs';
 export type UIPrefs = {
     expandedCards: Set<string>;      // node IDs
     expandedFieldDetails: Set<string>; // field IDs
+    expandedNodeDetails: Set<string>; // node IDs
 };
 
 type StoredUIPrefs = {
     expandedCards: string[];
     expandedFieldDetails: string[];
+    expandedNodeDetails: string[];
 };
 
 /**
@@ -25,17 +27,18 @@ export function loadUIPrefs(): UIPrefs {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) {
-            return { expandedCards: new Set(), expandedFieldDetails: new Set() };
+            return { expandedCards: new Set(), expandedFieldDetails: new Set(), expandedNodeDetails: new Set() };
         }
 
         const stored: StoredUIPrefs = JSON.parse(raw);
         return {
             expandedCards: new Set(stored.expandedCards ?? []),
             expandedFieldDetails: new Set(stored.expandedFieldDetails ?? []),
+            expandedNodeDetails: new Set(stored.expandedNodeDetails ?? []),
         };
     } catch {
         // Invalid JSON or other error - return defaults
-        return { expandedCards: new Set(), expandedFieldDetails: new Set() };
+        return { expandedCards: new Set(), expandedFieldDetails: new Set(), expandedNodeDetails: new Set() };
     }
 }
 
@@ -47,6 +50,7 @@ export function saveUIPrefs(prefs: UIPrefs): void {
     const stored: StoredUIPrefs = {
         expandedCards: [...prefs.expandedCards],
         expandedFieldDetails: [...prefs.expandedFieldDetails],
+        expandedNodeDetails: [...prefs.expandedNodeDetails],
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
 }

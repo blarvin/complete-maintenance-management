@@ -9,12 +9,14 @@ import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
 import { UpButton } from '../UpButton/UpButton';
+import { EllipsisButton } from '../EllipsisButton/EllipsisButton';
 import styles from '../TreeNode/TreeNode.module.css';
 
 export type NodeHeaderProps = {
     id: string;
     titleId: string;
     isExpanded?: boolean;
+    isDetailsExpanded?: boolean;
     isParent?: boolean;
     isClickable?: boolean;
     nodeName: string;
@@ -23,6 +25,7 @@ export type NodeHeaderProps = {
     onNodeClick$?: PropFunction<() => void>;
     onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
     onExpand$?: PropFunction<(e?: Event) => void>;
+    onDetailsToggle$?: PropFunction<() => void>;
     /** When true, renders input fields instead of NodeTitle/NodeSubtitle (construction mode) */
     isConstruction?: boolean;
     /** For construction mode: name input ref */
@@ -107,17 +110,23 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                         </>
                     )}
                 </div>
-                <button
-                    type="button"
-                    class={styles.nodeChevron}
-                    onClick$={props.onExpand$}
-                    onKeyDown$={handleExpandKeyDown$}
-                    aria-expanded={props.isExpanded}
-                    aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
-                    disabled={props.chevronDisabled}
-                >
-                    {props.isExpanded ? '▾' : '◂'}
-                </button>
+                <div class={styles.nodeButtons}>
+                    <EllipsisButton
+                        onDoubleTap$={props.onDetailsToggle$}
+                        isExpanded={props.isDetailsExpanded}
+                    />
+                    <button
+                        type="button"
+                        class={styles.nodeChevron}
+                        onClick$={props.onExpand$}
+                        onKeyDown$={handleExpandKeyDown$}
+                        aria-expanded={props.isExpanded}
+                        aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
+                        disabled={props.chevronDisabled}
+                    >
+                        {props.isExpanded ? '▾' : '◂'}
+                    </button>
+                </div>
             </div>
         </article>
     );

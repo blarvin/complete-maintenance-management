@@ -55,6 +55,7 @@ export type UnderConstructionData = {
 export type UIState = {
     expandedCards: Set<string>;        // nodeId -> card is expanded
     expandedFieldDetails: Set<string>; // fieldId -> details are expanded
+    expandedNodeDetails: Set<string>;  // nodeId -> node details panel is expanded
 };
 
 /**
@@ -89,6 +90,7 @@ export function createInitialState(): AppState {
         ui: {
             expandedCards: prefs.expandedCards,
             expandedFieldDetails: prefs.expandedFieldDetails,
+            expandedNodeDetails: prefs.expandedNodeDetails,
         },
         editingFieldId: null,
     };

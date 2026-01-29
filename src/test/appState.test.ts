@@ -23,6 +23,7 @@ function createTestState(overrides?: Partial<AppState>): AppState {
         ui: {
             expandedCards: new Set<string>(),
             expandedFieldDetails: new Set<string>(),
+            expandedNodeDetails: new Set<string>(),
         },
         editingFieldId: null,
         ...overrides,
@@ -312,6 +313,7 @@ describe('State Transitions', () => {
                 ui: {
                     expandedCards: new Set(['node-1']),
                     expandedFieldDetails: new Set(),
+                    expandedNodeDetails: new Set(),
                 },
             });
             transitions.toggleCardExpanded(state, 'node-1');
@@ -324,6 +326,7 @@ describe('State Transitions', () => {
                 ui: {
                     expandedCards: new Set(['node-1', 'node-2']),
                     expandedFieldDetails: new Set(),
+                    expandedNodeDetails: new Set(),
                 },
             });
             transitions.toggleCardExpanded(state, 'node-1');
@@ -346,6 +349,7 @@ describe('State Transitions', () => {
                 ui: {
                     expandedCards: new Set(),
                     expandedFieldDetails: new Set(['field-1']),
+                    expandedNodeDetails: new Set(),
                 },
             });
             transitions.toggleFieldDetailsExpanded(state, 'field-1');
@@ -444,6 +448,7 @@ describe('State Selectors', () => {
                 ui: {
                     expandedCards: new Set(['node-1']),
                     expandedFieldDetails: new Set(),
+                    expandedNodeDetails: new Set(),
                 },
             });
             
@@ -488,6 +493,7 @@ describe('State Selectors', () => {
                 ui: {
                     expandedCards: new Set(),
                     expandedFieldDetails: new Set(['field-1']),
+                    expandedNodeDetails: new Set(),
                 },
             });
             

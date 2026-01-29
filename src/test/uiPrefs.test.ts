@@ -102,6 +102,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set(['node-1', 'node-2']),
                 expandedFieldDetails: new Set<string>(),
+                expandedNodeDetails: new Set<string>(),
             };
 
             saveUIPrefs(prefs);
@@ -116,6 +117,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set<string>(),
                 expandedFieldDetails: new Set(['field-a', 'field-b']),
+                expandedNodeDetails: new Set<string>(),
             };
 
             saveUIPrefs(prefs);
@@ -130,6 +132,7 @@ describe('uiPrefs store', () => {
             const original = {
                 expandedCards: new Set(['node-x', 'node-y']),
                 expandedFieldDetails: new Set(['field-1', 'field-2', 'field-3']),
+                expandedNodeDetails: new Set<string>(),
             };
 
             saveUIPrefs(original);
@@ -152,6 +155,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set(['node-1']),
                 expandedFieldDetails: new Set<string>(),
+                expandedNodeDetails: new Set<string>(),
             };
             saveUIPrefs(prefs);
 
@@ -162,6 +166,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set(['node-1']),
                 expandedFieldDetails: new Set<string>(),
+                expandedNodeDetails: new Set<string>(),
             };
             saveUIPrefs(prefs);
 
@@ -178,6 +183,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set<string>(),
                 expandedFieldDetails: new Set(['field-1']),
+                expandedNodeDetails: new Set<string>(),
             };
             saveUIPrefs(prefs);
 
@@ -188,6 +194,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set<string>(),
                 expandedFieldDetails: new Set(['field-1']),
+                expandedNodeDetails: new Set<string>(),
             };
             saveUIPrefs(prefs);
 
@@ -234,6 +241,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set<string>(),
                 expandedFieldDetails: new Set(['field-1']),
+                expandedNodeDetails: new Set<string>(),
             };
             saveUIPrefs(prefs);
 
@@ -282,6 +290,7 @@ describe('uiPrefs store', () => {
             const prefs = {
                 expandedCards: new Set(['node-1']),
                 expandedFieldDetails: new Set<string>(),
+                expandedNodeDetails: new Set<string>(),
             };
             saveUIPrefs(prefs);
 

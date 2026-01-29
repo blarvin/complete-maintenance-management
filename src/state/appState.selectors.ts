@@ -1,11 +1,18 @@
 /**
  * Application State Selectors
- * 
+ *
  * This module defines derived state selectors that compute values from AppState.
  */
 
 import type { AppState, DataCardState, DataFieldState, DataFieldDetailsState } from './appState.types';
 import type { TreeNodeState, DisplayNodeState } from './appState.types';
+
+/**
+ * TreeNodeDetails States
+ */
+export type TreeNodeDetailsState =
+    | 'COLLAPSED'
+    | 'EXPANDED';
 
 export const selectors = {
     /**
@@ -77,6 +84,13 @@ export const selectors = {
      */
     getDataFieldDetailsState: (appState: AppState, fieldId: string): DataFieldDetailsState => {
         return appState.ui.expandedFieldDetails.has(fieldId) ? 'EXPANDED' : 'COLLAPSED';
+    },
+
+    /**
+     * Get the TreeNodeDetails state for a given node
+     */
+    getNodeDetailsState: (appState: AppState, nodeId: string): TreeNodeDetailsState => {
+        return appState.ui.expandedNodeDetails.has(nodeId) ? 'EXPANDED' : 'COLLAPSED';
     },
 
     /**

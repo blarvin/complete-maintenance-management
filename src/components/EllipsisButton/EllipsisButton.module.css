@@ -1,0 +1,18 @@
+/* EllipsisButton component styles */
+
+.ellipsisButton {
+    font-size: var(--text-lg);
+    color: var(--border-default);
+    /* Minimal padding - buttons are stacked vertically */
+    padding: 0 var(--space-3);
+    cursor: pointer;
+    /* Reset button defaults */
+    background: none;
+    border: none;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.ellipsisButton:hover {
+    color: var(--text-primary);
+}
