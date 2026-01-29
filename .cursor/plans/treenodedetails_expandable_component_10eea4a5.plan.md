@@ -9,10 +9,10 @@ todos:
     content: Create TreeNodeDetails component with upward slide animation (mirror of DataCard)
     status: pending
   - id: ellipsis-button
-    content: Create EllipsisButton component with three dots
+    content: Create EllipsisButton component with vertical three dots and double-tap
     status: pending
   - id: update-node-header
-    content: Add ellipsis button to NodeHeader above chevron, update grid layout
+    content: Add button container with ellipsis + chevron to NodeHeader
     status: pending
   - id: integrate-display
     content: Integrate TreeNodeDetails into TreeNodeDisplay with state management
@@ -29,8 +29,9 @@ isProject: false
 
 Add an expandable TreeNodeDetails component that slides UP from behind NodeHeader (opposite direction of DataCard). The component will include:
 
-- Three-dot ellipsis button in NodeHeader (positioned above the chevron)
-- TreeNodeDetails card that expands upward
+- Vertical three-dot ellipsis button (⋮) in NodeHeader, positioned above the chevron
+- Double-tap interaction pattern (same as DataField editing)
+- TreeNodeDetails card that expands upward, pushing NodeHeader down
 - State management for expansion state
 - Placeholder content for future features
 
@@ -71,69 +72,112 @@ Add an expandable TreeNodeDetails component that slides UP from behind NodeHeade
 - Mirror DataCard animation but upward:
   - Wrapper: `grid-template-rows: 0fr` → `1fr` (same as DataCard)
   - Card: `transform: translateY(100%)` → `none` (starts BELOW, slides UP)
-  - Full width (no margin-left indent)
+  - Full width (no margin-left indent like DataCard has)
   - Position above NodeHeader: `margin-bottom: -1.5px` (tuck under border)
   - z-index: `var(--z-base)` (behind NodeHeader which is `var(--z-node)`)
+
+**Animation comparison table:**
+
+
+| Aspect       | DataCard                              | TreeNodeDetails           |
+| ------------ | ------------------------------------- | ------------------------- |
+| Transform    | `translateY(-100%) → none`            | `translateY(100%) → none` |
+| Margin       | `margin-top: -1.5px`                  | `margin-bottom: -1.5px`   |
+| DOM position | After NodeHeader                      | Before NodeHeader         |
+| Slides       | DOWN from above                       | UP from below             |
+| Indent       | `margin-left: var(--datacard-indent)` | None (full width)         |
+
 
 ### 3. Ellipsis Button Component
 
 **New File**: `src/components/EllipsisButton/EllipsisButton.tsx`
 
-- Simple button component rendering three dots (⋯ or •••)
-- Props: `onClick$`, `isExpanded`, `aria-label`
-- Keyboard support (Enter/Space)
+- Renders vertical three dots: `⋮`
+- **Double-tap interaction** using `useDoubleTap` hook (same pattern as DataField)
+- Props:
+  - `onDoubleTap$: PropFunction<() => void>` - called on double-tap
+  - `isExpanded?: boolean` - for aria-expanded state
+- Keyboard support: Enter/Space toggles (single press, not double)
+- Call `checkDoubleTap$(x, y)` on `onPointerDown$`, toggle only if returns true
 
 **New File**: `src/components/EllipsisButton/EllipsisButton.module.css`
 
 - Style to match chevron button aesthetic
-- Position: above chevron, same right alignment
-- Font size: `var(--text-lg)` or similar
+- **Compact padding** to avoid inflating header height:
+  - Use `padding: var(--space-2) var(--space-3)` (smaller than chevron's `var(--space-4)`)
+- Font size: `var(--text-2xl)` (same as chevron for easy tap target)
 - Color: `var(--border-default)` (same as chevron)
-- Padding: similar to chevron
+- No `transform: translateY()` needed (unlike chevron)
 
-### 4. Update NodeHeader
+### 4. Update NodeHeader - Button Container Approach
+
+**Key insight**: Don't add more grid columns. Instead, wrap ellipsis + chevron in a single container that stacks them vertically.
 
 **File**: `src/components/NodeHeader/NodeHeader.tsx`
 
 - Add `isDetailsExpanded?: boolean` prop
-- Add `onDetailsToggle$?: PropFunction<(e?: Event) => void>` prop
-- Add EllipsisButton above the chevron button in the grid
-- Update grid layout to accommodate both buttons:
-  - Current: `grid-template-columns: 1fr auto` (or `auto 1fr auto` for parent)
-  - New: `grid-template-columns: 1fr auto auto` (or `auto 1fr auto auto` for parent)
-  - Ellipsis button comes before chevron in DOM order
+- Add `onDetailsToggle$?: PropFunction<() => void>` prop
+- Create a **button container div** that wraps both EllipsisButton and chevron button
+- The container replaces the standalone chevron as the rightmost grid cell
+- Grid template **stays the same**: `1fr auto` (or `auto 1fr auto` for parent)
+
+```jsx
+<div class={styles.nodeButtons}>
+    <EllipsisButton
+        onDoubleTap$={props.onDetailsToggle$}
+        isExpanded={props.isDetailsExpanded}
+    />
+    <button class={styles.nodeChevron} ...>
+        {props.isExpanded ? '▾' : '◂'}
+    </button>
+</div>
+```
 
 **File**: `src/components/TreeNode/TreeNode.module.css`
 
-- Add `.nodeDetailsButton` style (similar to `.nodeChevron`)
-- Position ellipsis button above chevron (vertical stacking or flex column)
-- Adjust chevron positioning if needed
+Add new styles:
+
+```css
+.nodeButtons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Buttons stack vertically: ellipsis on top, chevron below */
+}
+```
+
+- **Adjust chevron**: Remove or reduce `transform: translateY(10px)` since buttons are now stacked
+- Ensure hitboxes don't overlap (compact padding on ellipsis helps)
 
 ### 5. Update TreeNodeDisplay
 
 **File**: `src/components/TreeNode/TreeNodeDisplay.tsx`
 
 - Import TreeNodeDetails component
-- Get details expansion state using selector
-- Create toggle handler for details expansion
-- Render TreeNodeDetails ABOVE NodeHeader in DOM (so it slides up from behind)
+- Import `useDoubleTap` hook (for ellipsis button state, if needed at this level)
+- Get details expansion state using `getNodeDetailsState` selector
+- Create toggle handler: call `toggleNodeDetailsExpanded(nodeId)`
+- Render TreeNodeDetails **BEFORE** NodeHeader in DOM (so it's naturally positioned above)
 - Pass `isDetailsExpanded` and `onDetailsToggle$` to NodeHeader
 
 **File**: `src/components/TreeNode/TreeNode.module.css`
 
-- Update `.nodeWrapper` to handle TreeNodeDetails positioning
-- Ensure proper stacking: TreeNodeDetails (z-base) → NodeHeader (z-node) → DataCard (z-base)
+- Update `.nodeWrapper` if needed to handle the new layout
+- Ensure proper stacking order in the DOM:
+  1. TreeNodeDetails (z-base, slides up from behind)
+  2. NodeHeader (z-node, on top)
+  3. DataCard (z-base, slides down from behind)
 
 ### 6. Placeholder Content
 
 **File**: `src/components/TreeNodeDetails/TreeNodeDetails.tsx`
 
-- Add placeholder content inside Slot:
+- Add placeholder content inside the card:
   - Simple div with "Node Details" heading
-  - Placeholder sections for:
-    - Metadata (CreatedAt, UpdatedAt, UpdatedBy) - commented out
-    - Breadcrumb hierarchy - commented out
-    - Action buttons (DELETE, COPY) - commented out
+  - Placeholder text for future sections:
+    - Metadata (CreatedAt, UpdatedAt, UpdatedBy)
+    - Breadcrumb hierarchy
+    - Action buttons (DELETE, COPY)
   - Use CSS to style placeholder with appropriate spacing
 
 ## Animation Details
@@ -143,14 +187,23 @@ The upward slide animation works by:
 1. **Wrapper**: Uses CSS Grid `grid-template-rows: 0fr → 1fr` for height animation
 2. **Card**: Uses `transform: translateY(100%) → none` to slide from below to natural position
 3. **Timing**: Same as DataCard (`var(--duration-fast)` = 100ms, `var(--ease-default)`)
-4. **Positioning**: Card starts positioned below NodeHeader, slides up to sit above it
+4. **Visual effect**: Card starts shifted down (overlapping NodeHeader but behind it due to z-index), then slides up into view above NodeHeader, pushing everything below it down
 
 ## Layout Structure
 
 ```
 <div class="nodeWrapper">
-  <TreeNodeDetails isOpen={isDetailsExpanded} />  <!-- Slides UP -->
-  <NodeHeader ... />                              <!-- Gets pushed down -->
+  <TreeNodeDetails isOpen={isDetailsExpanded} />  <!-- Slides UP, pushes content down -->
+  <NodeHeader>
+    <div class="nodeHeaderContent">
+      [UpButton if parent]
+      <div>Title + Subtitle</div>
+      <div class="nodeButtons">           <!-- NEW: vertical flex container -->
+        <EllipsisButton />                <!-- Top: double-tap to toggle details -->
+        <button class="nodeChevron" />    <!-- Bottom: single-tap to toggle DataCard -->
+      </div>
+    </div>
+  </NodeHeader>
   <DataCard isOpen={isExpanded} />                <!-- Slides DOWN -->
 </div>
 ```
@@ -163,11 +216,14 @@ The upward slide animation works by:
 
 ## Testing Considerations
 
-- Verify ellipsis button appears above chevron
+- Verify ellipsis button (⋮) appears above chevron, vertically stacked
+- Verify double-tap on ellipsis toggles TreeNodeDetails
+- Verify single-tap on ellipsis does NOT toggle (only double-tap)
+- Verify keyboard Enter/Space on ellipsis toggles (single press)
 - Verify TreeNodeDetails slides upward smoothly
 - Verify NodeHeader is pushed down when details expand
+- Verify header height is not inflated by the button container
 - Verify state persists across page reloads
-- Verify keyboard accessibility (Enter/Space on ellipsis)
 - Verify animation timing matches DataCard
 
 ## Future Content Placeholders
@@ -178,4 +234,5 @@ The TreeNodeDetails component will eventually contain:
 - Breadcrumb hierarchy navigation
 - DELETE button with confirmation
 - COPY buttons (template and full node)
-  These will be added in future iterations per ISSUES.md.
+
+These will be added in future iterations per ISSUES.md.
