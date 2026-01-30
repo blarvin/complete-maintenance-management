@@ -1,0 +1,44 @@
+---
+description: When creating or editing a PLAN or plan.md file
+alwaysApply: false
+---
+
+# Plan Structure: Project Context Management Section
+
+When creating implementation plans (`.plan.md` files), include a **"Project Context Management"** section at the end with these steps:
+
+## Required Final Steps in Every Plan
+
+### 1. User Verification
+
+- List specific verification steps for the user to confirm the implementation works
+
+### 2. ISSUES.md
+
+- Mark off completed work items related to the feature
+
+### 3. IMPLEMENTATION.md (if applicable)
+
+- Add notes for architectural decisions or unusual patterns
+- Skip for straightforward implementations
+
+### 4. LATER.md
+
+- Add deferred work identified during implementation
+- Include related features intentionally out of scope
+- Note any technical debt or cleanup opportunities discovered
+
+## Example Section
+
+```markdown
+## Project Context Management
+
+After verification is complete, update project documentation:
+
+1. **ISSUES.md** - Mark off completed work items
+2. **IMPLEMENTATION.md** - [Add notes if architectural, or "N/A - straightforward implementation"]
+3. **LATER.md** - Add deferred items:
+   - [List specific deferred items here]
+```
+
+This ensures plans include the full workflow from implementation through documentation updates.
