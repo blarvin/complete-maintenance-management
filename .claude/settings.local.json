@@ -5,7 +5,17 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "WebFetch(domain:github.com)",
-      "mcp__google-drive__search"
+      "mcp__google-drive__search",
+      "Bash(tasklist:*)",
+      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_code_browser_extension\")",
+      "Bash(claude mcp:*)",
+      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
+      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_browser_extension\")",
+      "Bash(findstr:*)",
+      "Bash(test:*)",
+      "Bash(reg query \"HKLM\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
+      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_browser_extension\" /ve)",
+      "Bash(cat:*)"
     ]
   }
 }

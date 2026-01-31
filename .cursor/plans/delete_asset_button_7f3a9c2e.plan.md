@@ -167,7 +167,7 @@ Add console logs at each step:
 
 ## Project Context Management
 
-After verification is complete, update project documentation:
+After developer verification is complete, update project documentation:
 
 1. **ISSUES.md** - Mark off completed work items related to this feature
 2. **IMPLEMENTATION.md** - Add notes if work involved architectural decisions or unusual patterns (not needed for this straightforward feature)
