@@ -44,6 +44,7 @@ export interface INodeService {
     createWithFields(input: CreateNodeInput): Promise<void>;
     createEmptyNode(id: string, parentId: string | null): Promise<TreeNode>;
     updateNode(id: string, updates: { nodeName?: string; nodeSubtitle?: string }): Promise<void>;
+    deleteNode(id: string): Promise<void>;
 }
 
 export interface IFieldService {
@@ -112,6 +113,10 @@ function nodeServiceFromAdapter(adapter: StorageAdapter): INodeService {
             unwrap(await adapter.createNode({ id, parentId, nodeName: "", nodeSubtitle: "" })),
         updateNode: async (id: string, updates) => {
             await adapter.updateNode(id, updates);
+        },
+        deleteNode: async (id: string) => {
+            console.log('[NodeService] Deleting node:', id);
+            await adapter.deleteNode(id);
         },
     };
 }

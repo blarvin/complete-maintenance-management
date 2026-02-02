@@ -75,6 +75,7 @@ describe('Service Layer - Adapter Selection', () => {
                 createWithFields: vi.fn(),
                 createEmptyNode: vi.fn(),
                 updateNode: vi.fn(),
+                deleteNode: vi.fn(),
             };
 
             setNodeService(mockNodeService);
@@ -116,6 +117,7 @@ describe('Service Layer - Adapter Selection', () => {
                 createWithFields: vi.fn(),
                 createEmptyNode: vi.fn(),
                 updateNode: vi.fn(),
+                deleteNode: vi.fn(),
             };
 
             setNodeService(mockNodeService);
@@ -140,6 +142,7 @@ describe('Service Layer - Adapter Selection', () => {
                 createWithFields: vi.fn(),
                 createEmptyNode: vi.fn(),
                 updateNode: vi.fn(),
+                deleteNode: vi.fn(),
             };
             const mockFieldService: IFieldService = {
                 getFieldsForNode: vi.fn(),
@@ -286,6 +289,10 @@ describe('Service Layer - Adapter Selection', () => {
             // Test updateNode
             await nodeService.updateNode('test-node', { nodeName: 'Updated' });
             expect(mockAdapter.updateNode).toHaveBeenCalledWith('test-node', { nodeName: 'Updated' });
+
+            // Test deleteNode
+            await nodeService.deleteNode('test-node');
+            expect(mockAdapter.deleteNode).toHaveBeenCalledWith('test-node');
         });
 
         it('field service methods delegate to adapter correctly', async () => {

@@ -62,6 +62,7 @@
 - [x] Create TreeNode should trigger sync to cloud DB.
 - [x] Create DataField should trigger sync to cloud DB.
 - [x] Delete DataField should trigger sync to cloud DB.
+- [x] Delete TreeNode should trigger sync to cloud DB.
 - [x] Update DataFieldValue should trigger sync to cloud DB.
 - [x] REVERT DataFieldHistory should trigger sync to cloud DB.
 
@@ -103,14 +104,14 @@
 - [ ] Node metadata display - CreatedAt, last UpdatedAt, last UpdatedBy
 - [ ] Breadcrumb hierarchy display
 - [ ] Breadcrumb, full upward navigation
-- [ ] DELETE button deletes the node - cascade delete via soft deletion + implicit hiding of children.
+- [x] DELETE button deletes the node (soft-delete, navigate away; confirmation/snackbar/cascade deferred to LATER)
 - [ ] DELETE button confirmation dialog (shows counts)
 - [ ] DELETE button triggers Snackbar with undo
 - [ ] COPY as template and COPY full node buttons
 
 ## TreeNode CRUD
 
-- [ ] TreeNode DELETE button in TreeNodeDetails component.
+- [x] TreeNode DELETE button in TreeNodeDetails component.
 - [x] Soft deletion: set deletedAt on TreeNode, and rely on implicit hiding of children.
 - [x] No orphan nodes created at underConstruction "Cancel"
 - [x] Node creation only on "Create",
@@ -209,7 +210,7 @@
 
 ## TreeNodeDetails Component
 
-- [ ] Expandable section (chevron + "Tree Node Details" label)
+- [x] Expandable section (ellipsis opens TreeNodeDetails; "Delete Asset" button)
 - [ ] DELETE button with confirmation (shows counts)
 - [ ] Cascade delete (node + descendants + fields + history)
 - [ ] Snackbar with 5s undo (in-memory snapshot)

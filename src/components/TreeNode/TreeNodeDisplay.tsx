@@ -11,8 +11,11 @@ import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import { getNodeService } from '../../data/services';
+import { triggerSync } from '../../hooks/useSyncTrigger';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
+import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
@@ -45,6 +48,15 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
         toggleNodeDetailsExpanded$(props.id);
     });
 
+    const handleDeleteNode$ = $(async () => {
+        console.log('[TreeNodeDisplay] Delete requested for node:', props.id);
+        const parentId = props.parentId;
+        await getNodeService().deleteNode(props.id);
+        console.log('[TreeNodeDisplay] Node deleted, triggering sync');
+        triggerSync();
+        props.onNavigateUp$?.(parentId ?? null);
+    });
+
     const titleId = `node-title-${props.id}`;
     const isClickable = !!props.onNodeClick$;
     const isParent = props.nodeState === 'PARENT';
@@ -64,11 +76,16 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
 
                         {/* Future: Breadcrumb hierarchy */}
                         {/* Path: Root > Parent > Current */}
-
-                        {/* Future: Action buttons */}
-                        {/* DELETE, COPY (template), COPY (full node) */}
-
-                        <p style="margin: 0;">Placeholder for future features</p>
+                    </div>
+                    <div class={detailsStyles.actionsRow}>
+                        <button
+                            type="button"
+                            class={detailsStyles.deleteButton}
+                            onClick$={handleDeleteNode$}
+                            aria-label="Delete this asset"
+                        >
+                            Delete Asset
+                        </button>
                     </div>
                 </div>
             </TreeNodeDetails>

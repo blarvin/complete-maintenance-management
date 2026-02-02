@@ -116,6 +116,14 @@ Original text (SPEC): "Deleting a node must handle or cascade to all children"
 
 Note: In Phase 1, only leaf nodes are deletable. Full cascade delete will be implemented later.
 
+### Delete Asset UX (deferred from Delete Asset button feature)
+
+- **Confirmation dialog** before delete
+- **Toast notification** after delete
+- **Undo/restore** functionality
+- **Cascading soft-delete** of children when deleting a parent
+- **Orphan cleanup** job (children of deleted parents remain in IDB, implicitly hidden; future cleanup)
+
 ### Data Model: Server-assigned timestamps and componentType
 
 ### Rich New Node Construction UI
