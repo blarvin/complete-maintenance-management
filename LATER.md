@@ -124,6 +124,10 @@ Note: In Phase 1, only leaf nodes are deletable. Full cascade delete will be imp
 - **Cascading soft-delete** of children when deleting a parent
 - **Orphan cleanup** job (children of deleted parents remain in IDB, implicitly hidden; future cleanup)
 
+### getFieldHistory and soft-deleted fields
+
+- **Explicit adapter check**: `getFieldHistory(dataFieldId)` should return `[]` when the DataField is soft-deleted (e.g. check field’s `deletedAt` in IDBAdapter and FirestoreAdapter). Currently history is only “implicitly hidden” because the UI never requests history for a soft-deleted field. Explicit check is needed for direct API use or a future restore/admin UI.
+
 ### Data Model: Server-assigned timestamps and componentType
 
 ### Rich New Node Construction UI

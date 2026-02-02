@@ -18,9 +18,9 @@
 - [x] Root nodes via parentId: null (no sentinel value)
 - [x] History ID scheme (${dataFieldId}:${rev})
 - [x] Timestamps via Date.now() wrapped in now() helper
-- [ ] Soft deletion (deletedAt timestamp) TreeNode and DataField using shared SoftDeletable type and helper functions
-- [ ] Implicit hiding of children and fields when a TreeNode is soft deleted.
-- [ ] Implicit hiding of DataFieldHistory entries when a DataField is soft deleted.
+- [x] Soft deletion (deletedAt timestamp) TreeNode and DataField using shared SoftDeletable type and helper functions
+- [x] Implicit hiding of children and fields when a TreeNode is soft deleted.
+- [x] Implicit hiding of DataFieldHistory entries when a DataField is soft deleted.
 
 ## Storage & Persistence
 
@@ -100,7 +100,7 @@
 
 ## TreeNodeDetails Component
 
-- [ ] Expandable section (ellipsis + TreeNodeDetails component)
+- [x] Expandable section (ellipsis + TreeNodeDetails component)
 - [ ] Node metadata display - CreatedAt, last UpdatedAt, last UpdatedBy
 - [ ] Breadcrumb hierarchy display
 - [ ] Breadcrumb, full upward navigation
