@@ -37,7 +37,7 @@
 - [x] clearStorage() utility (testing/reset)
 - [x] Immediate sync on startup (if online)
 - [x] Fix IDBAdapter sort direction to match FirestoreAdapter (ascending per SPEC)
-- [ ] Use now() in initStorage and storageEvents instead of Date.now()
+- [x] Use now() in initStorage and storageEvents instead of Date.now()
 
 ## Storage Events System
 

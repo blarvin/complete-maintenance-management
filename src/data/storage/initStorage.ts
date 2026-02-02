@@ -15,6 +15,7 @@ import { IDBAdapter } from './IDBAdapter';
 import { FirestoreAdapter } from './firestoreAdapter';
 import { initializeSyncManager } from '../sync/syncManager';
 import { initializeDevTools } from '../sync/devTools';
+import { now } from '../../utils/time';
 
 let initialized = false;
 
@@ -118,7 +119,7 @@ async function migrateFromFirestore(): Promise<void> {
       }
 
       // Set last sync timestamp to now (we're in sync with Firestore)
-      await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: Date.now() });
+      await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: now() });
     });
 
     console.log('[Migration] Migration complete');
