@@ -1,7 +1,16 @@
 ---
 name: ""
 overview: ""
-todos: []
+todos:
+  - id: "1"
+    content: Expose deleteNode in INodeService and nodeServiceFromAdapter (src/data/services/index.ts)
+    status: pending
+  - id: "2"
+    content: Add .deleteButton and .actionsRow styles to TreeNodeDetails.module.css (copy from DataFieldDetails)
+    status: pending
+  - id: "3"
+    content: Add Delete Asset button and handleDeleteNode$ in TreeNodeDisplay (use props.onNavigateUp$ for post-delete navigation)
+    status: pending
 isProject: false
 ---
 
@@ -106,18 +115,12 @@ const handleDeleteNode$ = $(async () => {
   await getNodeService().deleteNode(props.id);
   console.log("[TreeNodeDisplay] Node deleted, triggering sync");
   triggerSync();
-  // Navigate to parent or ROOT
-  if (parentId) {
-    console.log("[TreeNodeDisplay] Navigating to parent:", parentId);
-    navigateToBranch(parentId);
-  } else {
-    console.log("[TreeNodeDisplay] Navigating to ROOT");
-    navigateToRoot();
-  }
+  // Reuse same "go up" as UpButton (parent branch or ROOT)
+  props.onNavigateUp$?.(parentId);
 });
 ```
 
-Will need access to `navigateToBranch` and `navigateToRoot` from appState context (already available in TreeNodeDisplay via `useAppState()`).
+Use the existing `props.onNavigateUp$` callback (same as UpButton); no new appState imports needed.
 
 Import the details styles:
 
@@ -127,12 +130,7 @@ import detailsStyles from "../TreeNodeDetails/TreeNodeDetails.module.css";
 
 ### Step 4: Handle Navigation After Delete
 
-After deletion, explicitly navigate away:
-
-- If node has a `parentId` → navigate to that parent (BRANCH view)
-- If node is a root node (`parentId` is null) → navigate to ROOT view
-
-This ensures user immediately sees valid content without any flash of deleted state.
+After deletion, navigate away by calling the same callback the Up button uses: `onNavigateUp$(parentId)` (with `parentId` captured before delete). This reuses the existing FSM transition (`transitions.navigateUp`) and avoids duplicating branch-vs-root logic. The user immediately sees valid content without any flash of deleted state.
 
 ## Logging Strategy
 

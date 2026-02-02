@@ -15,7 +15,9 @@
       "Bash(test:*)",
       "Bash(reg query \"HKLM\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
       "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_browser_extension\" /ve)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(reg query \"HKCU\\\\SOFTWARE\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
+      "Bash(reg query:*)"
     ]
   }
 }
