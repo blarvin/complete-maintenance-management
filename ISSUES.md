@@ -36,7 +36,7 @@
 - [x] Cypress test mode detection (**CYPRESS_SEED_MODE**)
 - [x] clearStorage() utility (testing/reset)
 - [x] Immediate sync on startup (if online)
-- [ ] Fix IDBAdapter sort direction to match FirestoreAdapter (ascending per SPEC)
+- [x] Fix IDBAdapter sort direction to match FirestoreAdapter (ascending per SPEC)
 - [ ] Use now() in initStorage and storageEvents instead of Date.now()
 
 ## Storage Events System

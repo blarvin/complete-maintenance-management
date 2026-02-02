@@ -43,8 +43,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
     // So we get all nodes and filter for null parentId and active (not soft-deleted)
     const allNodes = await db.nodes.toArray();
     const nodes = allNodes.filter(n => n.parentId === null && n.deletedAt === null);
-    // Sort by updatedAt descending (most recent first)
-    nodes.sort((a, b) => b.updatedAt - a.updatedAt);
+    // Sort by updatedAt ascending (per SPEC)
+    nodes.sort((a, b) => a.updatedAt - b.updatedAt);
     return createResult(nodes);
   }
 
@@ -57,8 +57,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
     const children = await db.nodes.where('parentId').equals(parentId).toArray();
     // Filter out soft-deleted children
     const activeChildren = filterActive(children);
-    // Sort by updatedAt descending
-    activeChildren.sort((a, b) => b.updatedAt - a.updatedAt);
+    // Sort by updatedAt ascending (per SPEC)
+    activeChildren.sort((a, b) => a.updatedAt - b.updatedAt);
     return createResult(activeChildren);
   }
 
