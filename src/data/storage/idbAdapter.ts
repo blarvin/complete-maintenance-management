@@ -21,6 +21,7 @@ import type { SyncQueueItem, SyncOperation } from './db';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { generateId } from '../../utils/id';
+import { createHistoryEntry } from './historyHelpers';
 import { makeStorageError } from './storageErrors';
 
 function createResult<T>(data: T, fromCache = true): StorageResult<T> {
@@ -188,20 +189,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
     await db.transaction('rw', db.fields, db.history, db.syncQueue, async () => {
       await db.fields.put(field);
 
-      // Create history entry
       const rev = await this.nextRev(field.id);
-      const hist: DataFieldHistory = {
-        id: `${field.id}:${rev}`,
+      const hist = createHistoryEntry({
         dataFieldId: field.id,
         parentNodeId: field.parentNodeId,
         action: 'create',
-        property: 'fieldValue',
         prevValue: null,
         newValue: field.fieldValue,
-        updatedBy: userId,
-        updatedAt: timestamp,
         rev,
-      };
+      });
       await db.history.put(hist);
 
       await this.enqueueSyncOperation({
@@ -240,20 +236,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
         updatedBy: userId,
       });
 
-      // Create history entry
       const rev = await this.nextRev(id);
-      const hist: DataFieldHistory = {
-        id: `${id}:${rev}`,
+      const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: field.parentNodeId,
         action: 'update',
-        property: 'fieldValue',
         prevValue: field.fieldValue,
         newValue: input.fieldValue,
-        updatedBy: userId,
-        updatedAt: timestamp,
         rev,
-      };
+      });
       await db.history.put(hist);
 
       // Get the updated field for the sync payload
@@ -295,20 +286,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
         updatedBy: userId,
       });
 
-      // Create history entry for the delete action
       const rev = await this.nextRev(id);
-      const hist: DataFieldHistory = {
-        id: `${id}:${rev}`,
+      const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: field.parentNodeId,
         action: 'delete',
-        property: 'fieldValue',
         prevValue: field.fieldValue,
         newValue: null,
-        updatedBy: userId,
-        updatedAt: timestamp,
         rev,
-      };
+      });
       await db.history.put(hist);
 
       // Get the updated field for the sync payload

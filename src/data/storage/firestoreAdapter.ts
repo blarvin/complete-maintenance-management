@@ -28,6 +28,7 @@ import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreat
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
 import { getCurrentUserId } from "../../context/userContext";
+import { createHistoryEntry } from "./historyHelpers";
 import { now } from "../../utils/time";
 import { toStorageError, makeStorageError, isStorageError } from "./storageErrors";
 
@@ -250,20 +251,15 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       
       await setDoc(doc(collection(db, COLLECTIONS.FIELDS), field.id), field);
 
-      // Create history entry
       const rev = await this.nextRev(field.id);
-      const hist: DataFieldHistory = {
-        id: `${field.id}:${rev}`,
+      const hist = createHistoryEntry({
         dataFieldId: field.id,
         parentNodeId: field.parentNodeId,
         action: "create",
-        property: "fieldValue",
         prevValue: null,
         newValue: field.fieldValue,
-        updatedBy: userId,
-        updatedAt: ts,
         rev,
-      };
+      });
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
       
       return createResult(field);
@@ -294,20 +290,15 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         updatedBy: userId,
       });
 
-      // Create history entry
       const rev = await this.nextRev(id);
-      const hist: DataFieldHistory = {
-        id: `${id}:${rev}`,
+      const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: prev.parentNodeId,
         action: "update",
-        property: "fieldValue",
         prevValue: prev.fieldValue,
         newValue: input.fieldValue,
-        updatedBy: userId,
-        updatedAt: ts,
         rev,
-      };
+      });
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
       
       return createResult(undefined);
@@ -342,20 +333,15 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         updatedBy: userId,
       });
 
-      // Create history entry for the delete action
       const rev = await this.nextRev(id);
-      const hist: DataFieldHistory = {
-        id: `${id}:${rev}`,
+      const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: prev.parentNodeId,
         action: "delete",
-        property: "fieldValue",
         prevValue: prev.fieldValue,
         newValue: null,
-        updatedBy: userId,
-        updatedAt: ts,
         rev,
-      };
+      });
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
       
       return createResult(undefined);
