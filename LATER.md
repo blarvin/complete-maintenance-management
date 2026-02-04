@@ -12,7 +12,7 @@
 
 Moved from SPECIFICATION.md → Core component hierarchy / Data Model:
 
-- UI: `NodeTitle` renders a breadcrumb: "Ancestor1 / Ancestor2 / Parent / CurrentNode" with the current node emphasized.
+- UI: `TreeNodeDetails` renders a breadcrumb: "Ancestor1 / Ancestor2 / Parent / CurrentNode" with the current node emphasized.
 - Storage: Introduce `ancestorNamePath: string[]` as a denormalized cache of ancestor names for fast breadcrumb rendering and search. Root nodes have an empty array. Children inherit and append on create; update on reparent.
 - Rendering: Breadcrumb joins `ancestorNamePath` with " / " and appends the current `nodeName`.
 - Business Rules: Keep consistent on moves; recompute for descendants on reparent. Not required in Phase 1.
