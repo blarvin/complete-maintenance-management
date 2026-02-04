@@ -1,0 +1,42 @@
+.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+}
+
+.segment {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.label {
+    font: inherit;
+    color: inherit;
+}
+
+.ancestor {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.ancestor:hover,
+.ancestor:focus-visible {
+    color: var(--text-default);
+    outline: none;
+}
+
+.current {
+    font-weight: 600;
+    color: var(--text-default);
+}
+
+.separator {
+    color: var(--text-muted);
+}

@@ -11,7 +11,7 @@ export default defineConfig({
         // Setup file for fake-indexeddb
         setupFiles: ['./src/test/setup.ts'],
         // Include test files
-        include: ['src/**/*.test.ts'],
+        include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
         // Environment
         environment: 'node',
     },

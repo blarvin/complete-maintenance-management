@@ -16,6 +16,7 @@ import { FirestoreAdapter } from './firestoreAdapter';
 import { initializeSyncManager } from '../sync/syncManager';
 import { initializeDevTools } from '../sync/devTools';
 import { now } from '../../utils/time';
+import { initializeNodeIndex } from '../nodeIndex';
 
 let initialized = false;
 
@@ -56,6 +57,8 @@ export async function initializeStorage(): Promise<void> {
     } else {
       console.log('[Storage] IDB has', nodeCount, 'nodes, using existing data');
     }
+
+    await seedNodeIndexFromDb();
 
     // Create adapters for sync manager
     const idbAdapter = new IDBAdapter();
@@ -127,6 +130,12 @@ async function migrateFromFirestore(): Promise<void> {
     console.error('[Migration] Migration failed:', err);
     // Don't throw - app should still work with empty IDB
   }
+}
+
+async function seedNodeIndexFromDb(): Promise<void> {
+  const nodes = await db.nodes.toArray();
+  const activeNodes = nodes.filter(node => node.deletedAt === null);
+  initializeNodeIndex(activeNodes);
 }
 
 /**

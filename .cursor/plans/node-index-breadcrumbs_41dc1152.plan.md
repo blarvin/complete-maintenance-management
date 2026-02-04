@@ -4,16 +4,16 @@ overview: Introduce an in-memory node index so TreeNodeDetails can render synchr
 todos:
   - id: setup-node-index
     content: Build node index module with sync API
-    status: pending
+    status: completed
   - id: wire-index-updates
     content: Hook services and adapters into node index
-    status: pending
+    status: completed
   - id: add-breadcrumb-ui
     content: Create breadcrumb hook and integrate UI
-    status: pending
+    status: completed
   - id: cover-tests
     content: Add unit/integration tests for index & breadcrumbs
-    status: pending
+    status: completed
 isProject: false
 ---
 

@@ -23,6 +23,7 @@ import { now } from '../../utils/time';
 import { generateId } from '../../utils/id';
 import { createHistoryEntry } from './historyHelpers';
 import { makeStorageError } from './storageErrors';
+import { upsertNodeSummary, removeNodeSummary } from '../nodeIndex';
 
 function createResult<T>(data: T, fromCache = true): StorageResult<T> {
   return {
@@ -88,6 +89,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Node created in IDB:', node.id, node.nodeName);
+    upsertNodeSummary({
+      id: node.id,
+      parentId: node.parentId,
+      nodeName: node.nodeName,
+    });
     return createResult(node);
   }
 
@@ -111,6 +117,17 @@ export class IDBAdapter implements SyncableStorageAdapter {
           entityId: id,
           payload: updated,
         });
+        if (updated.deletedAt === null) {
+          upsertNodeSummary({
+            id: updated.id,
+            parentId: updated.parentId,
+            nodeName: updated.nodeName,
+          });
+        } else {
+          removeNodeSummary(id);
+        }
+      } else {
+        removeNodeSummary(id);
       }
     });
 
@@ -145,6 +162,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Node soft-deleted in IDB:', id);
+    removeNodeSummary(id);
     return createResult(undefined);
   }
 
@@ -373,6 +391,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
           entityId: id,
           payload: updated,
         });
+        if (updated.deletedAt === null) {
+          upsertNodeSummary({
+            id: updated.id,
+            parentId: updated.parentId,
+            nodeName: updated.nodeName,
+          });
+        } else {
+          removeNodeSummary(id);
+        }
       }
     });
 
@@ -458,7 +485,17 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async applyRemoteUpdate(entityType: 'node' | 'field', entity: TreeNode | DataField): Promise<void> {
     if (entityType === 'node') {
-      await db.nodes.put(entity as TreeNode);
+      const node = entity as TreeNode;
+      await db.nodes.put(node);
+      if (node.deletedAt === null) {
+        upsertNodeSummary({
+          id: node.id,
+          parentId: node.parentId,
+          nodeName: node.nodeName,
+        });
+      } else {
+        removeNodeSummary(node.id);
+      }
     } else {
       await db.fields.put(entity as DataField);
     }
@@ -487,6 +524,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async deleteNodeLocal(id: string): Promise<void> {
     // Silent delete - no sync queue entry, no transaction needed
     await db.nodes.delete(id);
+    removeNodeSummary(id);
   }
 
   async deleteFieldLocal(id: string): Promise<void> {

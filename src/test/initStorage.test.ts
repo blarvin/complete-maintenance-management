@@ -203,6 +203,60 @@ describe('initStorage - Idempotent Initialization', () => {
     });
 });
 
+describe('initStorage - Node Index Seeding', () => {
+    beforeEach(async () => {
+        const { clearStorage } = await import('../data/storage/initStorage');
+        await clearStorage();
+        await db.open();
+    });
+
+    afterEach(async () => {
+        await db.delete();
+    });
+
+    it('hydrates in-memory node index with active nodes only', async () => {
+        await db.nodes.bulkAdd([
+            {
+                id: 'root',
+                parentId: null,
+                nodeName: 'Root',
+                nodeSubtitle: '',
+                updatedBy: 'test',
+                updatedAt: Date.now(),
+                deletedAt: null,
+            },
+            {
+                id: 'child',
+                parentId: 'root',
+                nodeName: 'Child',
+                nodeSubtitle: '',
+                updatedBy: 'test',
+                updatedAt: Date.now(),
+                deletedAt: null,
+            },
+            {
+                id: 'deleted-node',
+                parentId: null,
+                nodeName: 'Should Not Load',
+                nodeSubtitle: '',
+                updatedBy: 'test',
+                updatedAt: Date.now(),
+                deletedAt: Date.now(),
+            },
+        ]);
+
+        const { initializeStorage } = await import('../data/storage/initStorage');
+        await initializeStorage();
+
+        const { getAncestorPath } = await import('../data/nodeIndex');
+        expect(getAncestorPath('child')).toEqual([
+            { id: 'root', name: 'Root' },
+            { id: 'child', name: 'Child' },
+        ]);
+        expect(getAncestorPath('deleted-node')).toEqual([]);
+    });
+});
+
 describe('Firebase Emulator Flag Detection', () => {
     describe('shouldUseEmulator logic (browser-only)', () => {
         it('localStorage flag USE_FIRESTORE_EMULATOR is recognized', () => {

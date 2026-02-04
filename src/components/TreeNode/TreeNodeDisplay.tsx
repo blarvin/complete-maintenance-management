@@ -10,6 +10,7 @@ import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
+import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getNodeService } from '../../data/services';
 import { triggerSync } from '../../hooks/useSyncTrigger';
@@ -67,6 +68,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
             <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded}>
                 <div>
+                    <TreeBreadcrumbs nodeId={props.id} />
                     <h3 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); font-weight: 600;">
                         Node Details
                     </h3>
