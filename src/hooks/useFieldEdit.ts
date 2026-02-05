@@ -11,9 +11,10 @@
  * - Preview mode for historical values
  */
 
-import { useSignal, $, useVisibleTask$, useOnDocument, useTask$, type Signal, type QRL } from '@builder.io/qwik';
+import { useSignal, $, useVisibleTask$, useOnDocument, type Signal, type QRL } from '@builder.io/qwik';
 import { getFieldService } from '../data/services';
 import { useDoubleTap } from './useDoubleTap';
+import { useFocusManager, BLUR_SUPPRESS_WINDOW_MS } from './useFocusManager';
 import { useAppState, useAppTransitions, selectors } from '../state/appState';
 import { triggerSync } from './useSyncTrigger';
 
@@ -96,49 +97,19 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
     const currentValue = useSignal<string>(options.initialValue ?? '');
     const editValue = useSignal<string>('');
     const previewValue = useSignal<string | null>(null);
-    
-    // Timing state for blur handling
-    const suppressCancelUntil = useSignal<number>(0);
-    const focusTimeoutId = useSignal<number | null>(null);
-    
+
     // Double-tap detection
     const { checkDoubleTap$ } = useDoubleTap();
-    
+
+    // Focus management (auto-focus + blur suppression)
+    const { suppressBlurUntil } = useFocusManager(
+        editInputRef,
+        () => appState.editingFieldId === options.fieldId
+    );
+
     // Sync initial value on mount
     useVisibleTask$(() => {
         currentValue.value = options.initialValue ?? '';
-    });
-    
-    // Focus management - set cursor at end when entering edit mode
-    useTask$(({ track, cleanup }) => {
-        const editingId = track(() => appState.editingFieldId);
-        const thisFieldIsEditing = editingId === options.fieldId;
-        
-        // Clear any pending focus timeout
-        if (focusTimeoutId.value !== null) {
-            clearTimeout(focusTimeoutId.value);
-            focusTimeoutId.value = null;
-        }
-        
-        if (thisFieldIsEditing) {
-            // Schedule focus with cursor at end
-            focusTimeoutId.value = window.setTimeout(() => {
-                if (appState.editingFieldId === options.fieldId && editInputRef.value) {
-                    const input = editInputRef.value;
-                    const len = input.value.length;
-                    input.focus();
-                    input.setSelectionRange(len, len);
-                }
-                focusTimeoutId.value = null;
-            }, 10) as unknown as number;
-        }
-        
-        cleanup(() => {
-            if (focusTimeoutId.value !== null) {
-                clearTimeout(focusTimeoutId.value);
-                focusTimeoutId.value = null;
-            }
-        });
     });
     
     // Cancel edit on outside click
@@ -186,7 +157,7 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
     });
     
     const inputBlur$ = $(() => {
-        if (Date.now() < suppressCancelUntil.value) return;
+        if (Date.now() < suppressBlurUntil.value) return;
         if (appState.editingFieldId === options.fieldId) {
             stopFieldEdit$();
             editValue.value = currentValue.value;
@@ -207,7 +178,7 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
         if (appState.editingFieldId !== options.fieldId) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
-        suppressCancelUntil.value = Date.now() + 220;
+        suppressBlurUntil.value = Date.now() + BLUR_SUPPRESS_WINDOW_MS;
         const isDouble = await checkDoubleTap$(x, y);
         if (isDouble) {
             await save$();

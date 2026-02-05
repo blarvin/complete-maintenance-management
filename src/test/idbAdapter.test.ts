@@ -359,7 +359,7 @@ describe('IDBAdapter - Core Storage Operations', () => {
             const id = testId();
             await adapter.createNode({ id, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
 
-            const queue = await adapter.getSyncQueue();
+            const queue = await adapter.syncQueue.getSyncQueue();
             const op = queue.find(item => item.operation === 'create-node' && item.entityId === id);
 
             expect(op).toBeDefined();
@@ -373,14 +373,14 @@ describe('IDBAdapter - Core Storage Operations', () => {
             await adapter.createNode({ id, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
 
             // Clear queue
-            const createQueue = await adapter.getSyncQueue();
+            const createQueue = await adapter.syncQueue.getSyncQueue();
             for (const item of createQueue) {
-                await adapter.markSynced(item.id);
+                await adapter.syncQueue.markSynced(item.id);
             }
 
             await adapter.updateNode(id, { nodeName: 'Updated' });
 
-            const queue = await adapter.getSyncQueue();
+            const queue = await adapter.syncQueue.getSyncQueue();
             const op = queue.find(item => item.operation === 'update-node' && item.entityId === id);
 
             expect(op).toBeDefined();
@@ -393,7 +393,7 @@ describe('IDBAdapter - Core Storage Operations', () => {
             await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
             await adapter.createField({ id: fieldId, parentNodeId: nodeId, fieldName: 'Field', fieldValue: 'Value' });
 
-            const queue = await adapter.getSyncQueue();
+            const queue = await adapter.syncQueue.getSyncQueue();
             const op = queue.find(item => item.operation === 'create-field' && item.entityId === fieldId);
 
             expect(op).toBeDefined();
@@ -404,13 +404,13 @@ describe('IDBAdapter - Core Storage Operations', () => {
             const id = testId();
             await adapter.createNode({ id, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
 
-            const queue = await adapter.getSyncQueue();
+            const queue = await adapter.syncQueue.getSyncQueue();
             const item = queue.find(i => i.entityId === id);
             expect(item).toBeDefined();
 
-            await adapter.markSynced(item!.id);
+            await adapter.syncQueue.markSynced(item!.id);
 
-            const updatedQueue = await adapter.getSyncQueue();
+            const updatedQueue = await adapter.syncQueue.getSyncQueue();
             expect(updatedQueue.find(i => i.id === item!.id)).toBeUndefined();
         });
 
@@ -418,10 +418,10 @@ describe('IDBAdapter - Core Storage Operations', () => {
             const id = testId();
             await adapter.createNode({ id, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
 
-            const queue = await adapter.getSyncQueue();
+            const queue = await adapter.syncQueue.getSyncQueue();
             const item = queue.find(i => i.entityId === id);
 
-            await adapter.markFailed(item!.id, new Error('Test error'));
+            await adapter.syncQueue.markFailed(item!.id, new Error('Test error'));
 
             // Failed items should still be in queue but with status='failed'
             const allQueue = await db.syncQueue.toArray();
@@ -440,13 +440,13 @@ describe('IDBAdapter - Core Storage Operations', () => {
             await adapter.createNode({ id: id1, parentId: null, nodeName: 'Node 1', nodeSubtitle: '' });
             await adapter.createNode({ id: id2, parentId: null, nodeName: 'Node 2', nodeSubtitle: '' });
 
-            const queue = await adapter.getSyncQueue();
+            const queue = await adapter.syncQueue.getSyncQueue();
             const item1 = queue.find(i => i.entityId === id1);
 
             // Mark one as synced
-            await adapter.markSynced(item1!.id);
+            await adapter.syncQueue.markSynced(item1!.id);
 
-            const pendingQueue = await adapter.getSyncQueue();
+            const pendingQueue = await adapter.syncQueue.getSyncQueue();
             expect(pendingQueue.find(i => i.entityId === id1)).toBeUndefined();
             expect(pendingQueue.find(i => i.entityId === id2)).toBeDefined();
         });

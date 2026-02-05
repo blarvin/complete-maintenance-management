@@ -8,21 +8,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ServerAuthorityResolver } from '../data/sync/ServerAuthorityResolver';
 import type { SyncableStorageAdapter } from '../data/storage/storageAdapter';
+import type { SyncQueueManager } from '../data/sync/SyncQueueManager';
 import type { SyncQueueItem } from '../data/storage/db';
 import type { TreeNode, DataField } from '../data/models';
 
 describe('ServerAuthorityResolver', () => {
   let mockLocal: SyncableStorageAdapter;
+  let mockSyncQueue: SyncQueueManager;
   let resolver: ServerAuthorityResolver;
 
   beforeEach(() => {
     // Create mock adapter
     mockLocal = {
-      getSyncQueue: vi.fn(),
       applyRemoteUpdate: vi.fn(),
     } as unknown as SyncableStorageAdapter;
 
-    resolver = new ServerAuthorityResolver(mockLocal);
+    mockSyncQueue = {
+      getSyncQueue: vi.fn(),
+      enqueue: vi.fn(),
+      markSynced: vi.fn(),
+      markFailed: vi.fn(),
+    };
+
+    resolver = new ServerAuthorityResolver(mockLocal, mockSyncQueue);
   });
 
   describe('resolveNode', () => {
@@ -38,7 +46,7 @@ describe('ServerAuthorityResolver', () => {
       };
 
       // No pending items in queue
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([]);
 
       const result = await resolver.resolveNode(remoteNode);
 
@@ -58,7 +66,7 @@ describe('ServerAuthorityResolver', () => {
       };
 
       // No pending items - local node exists but not in queue
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([]);
 
       const result = await resolver.resolveNode(remoteNode);
 
@@ -88,7 +96,7 @@ describe('ServerAuthorityResolver', () => {
         status: 'pending',
         retryCount: 0,
       };
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([pendingItem]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([pendingItem]);
 
       const result = await resolver.resolveNode(remoteNode);
 
@@ -118,7 +126,7 @@ describe('ServerAuthorityResolver', () => {
         status: 'pending',
         retryCount: 0,
       };
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([pendingItem]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([pendingItem]);
 
       const result = await resolver.resolveNode(remoteNode);
 
@@ -141,7 +149,7 @@ describe('ServerAuthorityResolver', () => {
       };
 
       // No pending items in queue
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([]);
 
       const result = await resolver.resolveField(remoteField);
 
@@ -172,7 +180,7 @@ describe('ServerAuthorityResolver', () => {
         status: 'pending',
         retryCount: 0,
       };
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([pendingItem]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([pendingItem]);
 
       const result = await resolver.resolveField(remoteField);
 
@@ -203,7 +211,7 @@ describe('ServerAuthorityResolver', () => {
         status: 'pending',
         retryCount: 0,
       };
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([pendingItem]);
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([pendingItem]);
 
       const result = await resolver.resolveField(remoteField);
 

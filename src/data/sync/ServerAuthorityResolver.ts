@@ -8,11 +8,15 @@
 
 import type { SyncableStorageAdapter } from '../storage/storageAdapter';
 import type { TreeNode, DataField } from '../models';
+import type { SyncQueueManager } from './SyncQueueManager';
 
 export type ResolveResult = 'applied' | 'skipped';
 
 export class ServerAuthorityResolver {
-  constructor(private local: SyncableStorageAdapter) {}
+  constructor(
+    private local: SyncableStorageAdapter,
+    private syncQueue: SyncQueueManager
+  ) {}
 
   /**
    * Resolve a remote node against local state.
@@ -56,7 +60,7 @@ export class ServerAuthorityResolver {
    * Check if an entity has pending changes in the sync queue.
    */
   private async hasPendingSync(entityId: string): Promise<boolean> {
-    const queue = await this.local.getSyncQueue();
+    const queue = await this.syncQueue.getSyncQueue();
     return queue.some(item => item.entityId === entityId);
   }
 }

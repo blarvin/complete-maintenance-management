@@ -17,13 +17,13 @@ import type {
 } from './storageAdapter';
 import type { TreeNode, DataField, DataFieldHistory } from '../models';
 import { filterActive, filterDeleted } from '../models';
-import type { SyncQueueItem, SyncOperation } from './db';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
-import { generateId } from '../../utils/id';
 import { createHistoryEntry } from './historyHelpers';
 import { makeStorageError } from './storageErrors';
-import { upsertNodeSummary, removeNodeSummary } from '../nodeIndex';
+import { storageEventBus } from '../storageEventBus';
+import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
+import type { SyncQueueManager } from '../sync/SyncQueueManager';
 
 function createResult<T>(data: T, fromCache = true): StorageResult<T> {
   return {
@@ -36,6 +36,12 @@ function createResult<T>(data: T, fromCache = true): StorageResult<T> {
 }
 
 export class IDBAdapter implements SyncableStorageAdapter {
+  readonly syncQueue: SyncQueueManager;
+
+  constructor(syncQueue?: SyncQueueManager) {
+    this.syncQueue = syncQueue ?? new IDBSyncQueueManager();
+  }
+
   // ============================================================================
   // Node Operations
   // ============================================================================
@@ -80,7 +86,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
       await db.nodes.put(node);
-      await this.enqueueSyncOperation({
+      await this.syncQueue.enqueue({
         operation: 'create-node',
         entityType: 'node',
         entityId: node.id,
@@ -89,17 +95,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Node created in IDB:', node.id, node.nodeName);
-    upsertNodeSummary({
-      id: node.id,
-      parentId: node.parentId,
-      nodeName: node.nodeName,
-    });
+    storageEventBus.emit({ type: 'NODE_WRITTEN', node });
     return createResult(node);
   }
 
   async updateNode(id: string, updates: StorageNodeUpdate): Promise<StorageResult<void>> {
     const timestamp = now();
     const userId = getCurrentUserId();
+
+    let updatedNode: TreeNode | undefined;
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
       await db.nodes.update(id, {
@@ -111,27 +115,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Get the updated node for the sync payload
       const updated = await db.nodes.get(id);
       if (updated) {
-        await this.enqueueSyncOperation({
+        await this.syncQueue.enqueue({
           operation: 'update-node',
           entityType: 'node',
           entityId: id,
           payload: updated,
         });
-        if (updated.deletedAt === null) {
-          upsertNodeSummary({
-            id: updated.id,
-            parentId: updated.parentId,
-            nodeName: updated.nodeName,
-          });
-        } else {
-          removeNodeSummary(id);
-        }
-      } else {
-        removeNodeSummary(id);
+        updatedNode = updated;
       }
     });
 
     console.log('[IDBAdapter] Node updated in IDB:', id);
+    if (updatedNode) {
+      storageEventBus.emit({ type: 'NODE_WRITTEN', node: updatedNode });
+    }
     return createResult(undefined);
   }
 
@@ -141,6 +138,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
     // Note: Children are implicitly hidden (not cascade soft-deleted)
     const timestamp = now();
     const userId = getCurrentUserId();
+
+    let softDeletedNode: TreeNode | undefined;
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
       await db.nodes.update(id, {
@@ -152,17 +151,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Get the updated node for the sync payload
       const updated = await db.nodes.get(id);
       if (updated) {
-        await this.enqueueSyncOperation({
+        await this.syncQueue.enqueue({
           operation: 'update-node', // Sync as update, not delete
           entityType: 'node',
           entityId: id,
           payload: updated,
         });
+        softDeletedNode = updated;
       }
     });
 
     console.log('[IDBAdapter] Node soft-deleted in IDB:', id);
-    removeNodeSummary(id);
+    if (softDeletedNode) {
+      storageEventBus.emit({ type: 'NODE_WRITTEN', node: softDeletedNode });
+    }
     return createResult(undefined);
   }
 
@@ -218,7 +220,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       });
       await db.history.put(hist);
 
-      await this.enqueueSyncOperation({
+      await this.syncQueue.enqueue({
         operation: 'create-field',
         entityType: 'field',
         entityId: field.id,
@@ -226,7 +228,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       });
 
       // Enqueue history entry for sync
-      await this.enqueueSyncOperation({
+      await this.syncQueue.enqueue({
         operation: 'create-history',
         entityType: 'field-history',
         entityId: hist.id,
@@ -268,7 +270,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Get the updated field for the sync payload
       const updated = await db.fields.get(id);
       if (updated) {
-        await this.enqueueSyncOperation({
+        await this.syncQueue.enqueue({
           operation: 'update-field',
           entityType: 'field',
           entityId: id,
@@ -277,7 +279,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       }
 
       // Enqueue history entry for sync
-      await this.enqueueSyncOperation({
+      await this.syncQueue.enqueue({
         operation: 'create-history',
         entityType: 'field-history',
         entityId: hist.id,
@@ -318,7 +320,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Get the updated field for the sync payload
       const updated = await db.fields.get(id);
       if (updated) {
-        await this.enqueueSyncOperation({
+        await this.syncQueue.enqueue({
           operation: 'update-field', // Sync as update, not delete
           entityType: 'field',
           entityId: id,
@@ -327,7 +329,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       }
 
       // Enqueue history entry for sync
-      await this.enqueueSyncOperation({
+      await this.syncQueue.enqueue({
         operation: 'create-history',
         entityType: 'field-history',
         entityId: hist.id,
@@ -375,6 +377,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
     const timestamp = now();
     const userId = getCurrentUserId();
 
+    let restoredNode: TreeNode | undefined;
+
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
       await db.nodes.update(id, {
         deletedAt: null, // Clear soft delete
@@ -385,25 +389,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Get the updated node for the sync payload
       const updated = await db.nodes.get(id);
       if (updated) {
-        await this.enqueueSyncOperation({
+        await this.syncQueue.enqueue({
           operation: 'update-node',
           entityType: 'node',
           entityId: id,
           payload: updated,
         });
-        if (updated.deletedAt === null) {
-          upsertNodeSummary({
-            id: updated.id,
-            parentId: updated.parentId,
-            nodeName: updated.nodeName,
-          });
-        } else {
-          removeNodeSummary(id);
-        }
+        restoredNode = updated;
       }
     });
 
     console.log('[IDBAdapter] Node restored in IDB:', id);
+    if (restoredNode) {
+      storageEventBus.emit({ type: 'NODE_WRITTEN', node: restoredNode });
+    }
     return createResult(undefined);
   }
 
@@ -433,7 +432,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Get the updated field for the sync payload
       const updated = await db.fields.get(id);
       if (updated) {
-        await this.enqueueSyncOperation({
+        await this.syncQueue.enqueue({
           operation: 'update-field',
           entityType: 'field',
           entityId: id,
@@ -447,32 +446,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   // ============================================================================
-  // Sync Queue Operations
+  // Sync Metadata Operations
   // ============================================================================
-
-  async getSyncQueue(): Promise<SyncQueueItem[]> {
-    // Return only pending items, sorted by timestamp (FIFO)
-    const items = await db.syncQueue.where('status').equals('pending').toArray();
-    items.sort((a, b) => a.timestamp - b.timestamp);
-    return items;
-  }
-
-  async markSynced(queueItemId: string): Promise<void> {
-    // Remove the item from the queue once synced
-    await db.syncQueue.delete(queueItemId);
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async markFailed(queueItemId: string, error: any): Promise<void> {
-    const item = await db.syncQueue.get(queueItemId);
-    if (!item) return;
-
-    await db.syncQueue.update(queueItemId, {
-      status: 'failed',
-      retryCount: item.retryCount + 1,
-      lastError: error?.message || String(error),
-    });
-  }
 
   async getLastSyncTimestamp(): Promise<number> {
     const meta = await db.syncMetadata.get('lastSyncTimestamp');
@@ -487,15 +462,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     if (entityType === 'node') {
       const node = entity as TreeNode;
       await db.nodes.put(node);
-      if (node.deletedAt === null) {
-        upsertNodeSummary({
-          id: node.id,
-          parentId: node.parentId,
-          nodeName: node.nodeName,
-        });
-      } else {
-        removeNodeSummary(node.id);
-      }
+      storageEventBus.emit({ type: 'NODE_WRITTEN', node });
     } else {
       await db.fields.put(entity as DataField);
     }
@@ -524,7 +491,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async deleteNodeLocal(id: string): Promise<void> {
     // Silent delete - no sync queue entry, no transaction needed
     await db.nodes.delete(id);
-    removeNodeSummary(id);
+    storageEventBus.emit({ type: 'NODE_HARD_DELETED', nodeId: id });
   }
 
   async deleteFieldLocal(id: string): Promise<void> {
@@ -542,26 +509,5 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
     const maxRev = Math.max(...history.map(h => h.rev));
     return maxRev + 1;
-  }
-
-  private async enqueueSyncOperation(params: {
-    operation: SyncOperation;
-    entityType: 'node' | 'field' | 'field-history';
-    entityId: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload: any; // Dynamic payload for different entity types
-  }): Promise<void> {
-    const item: SyncQueueItem = {
-      id: generateId(),
-      operation: params.operation,
-      entityType: params.entityType,
-      entityId: params.entityId,
-      payload: params.payload,
-      timestamp: now(),
-      status: 'pending',
-      retryCount: 0,
-    };
-
-    await db.syncQueue.put(item);
   }
 }

@@ -14,9 +14,11 @@ import { db } from './db';
 import { IDBAdapter } from './IDBAdapter';
 import { FirestoreAdapter } from './firestoreAdapter';
 import { initializeSyncManager } from '../sync/syncManager';
+import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
 import { initializeDevTools } from '../sync/devTools';
 import { now } from '../../utils/time';
 import { initializeNodeIndex } from '../nodeIndex';
+import { subscribeNodeIndex } from '../nodeIndexSubscriber';
 
 let initialized = false;
 
@@ -59,13 +61,15 @@ export async function initializeStorage(): Promise<void> {
     }
 
     await seedNodeIndexFromDb();
+    subscribeNodeIndex();
 
-    // Create adapters for sync manager
-    const idbAdapter = new IDBAdapter();
+    // Create adapters and sync queue for sync manager
+    const syncQueue = new IDBSyncQueueManager();
+    const idbAdapter = new IDBAdapter(syncQueue);
     const firestoreAdapter = new FirestoreAdapter();
 
     // Start the sync manager
-    const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter);
+    const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);
 
     // Initialize dev tools (exposes window.__sync() and window.__syncStatus())
     initializeDevTools();

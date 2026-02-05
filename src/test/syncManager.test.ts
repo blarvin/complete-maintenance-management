@@ -28,7 +28,7 @@ describe('SyncManager - Bidirectional Sync', () => {
         firestoreAdapter = new FirestoreAdapter();
 
         // Create sync manager with short poll interval for tests
-        syncManager = new SyncManager(idbAdapter, firestoreAdapter, 100);
+        syncManager = new SyncManager(idbAdapter, firestoreAdapter, idbAdapter.syncQueue, 100);
     });
 
     afterEach(async () => {
@@ -71,7 +71,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             expect(firestoreResult.data?.nodeName).toBe('Test Node');
 
             // Verify queue is cleared
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             expect(queue.length).toBe(0);
         });
 
@@ -99,9 +99,9 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear sync queue (simulate already synced state)
-            const createQueue = await idbAdapter.getSyncQueue();
+            const createQueue = await idbAdapter.syncQueue.getSyncQueue();
             for (const item of createQueue) {
-                await idbAdapter.markSynced(item.id);
+                await idbAdapter.syncQueue.markSynced(item.id);
             }
 
             // Update node in IDB (enqueues update operation)
@@ -133,9 +133,9 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear queue
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             for (const item of queue) {
-                await idbAdapter.markSynced(item.id);
+                await idbAdapter.syncQueue.markSynced(item.id);
             }
 
             // Create field in IDB
@@ -198,7 +198,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             expect(result3.data).toBeDefined();
 
             // Queue should be empty
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             expect(queue.length).toBe(0);
         });
     });
@@ -305,7 +305,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Verify it's in the queue
-            const queueBefore = await idbAdapter.getSyncQueue();
+            const queueBefore = await idbAdapter.syncQueue.getSyncQueue();
             const hasPending = queueBefore.some(item => item.entityId === id);
             expect(hasPending).toBe(true);
 
@@ -389,7 +389,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             expect(result.data).toBeNull();
 
             // Queue should still have pending item
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             expect(queue.length).toBeGreaterThan(0);
 
             // Restore
@@ -408,7 +408,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             await idbAdapter.createNode({ id, parentId: null, nodeName: 'Offline Node', nodeSubtitle: '' });
 
             // Queue should have item
-            let queue = await idbAdapter.getSyncQueue();
+            let queue = await idbAdapter.syncQueue.getSyncQueue();
             expect(queue.length).toBeGreaterThan(0);
 
             // Go "online"
@@ -422,7 +422,7 @@ describe('SyncManager - Bidirectional Sync', () => {
             expect(result.data).toBeDefined();
 
             // Queue should be cleared
-            queue = await idbAdapter.getSyncQueue();
+            queue = await idbAdapter.syncQueue.getSyncQueue();
             const nodeOp = queue.find(item => item.entityId === id);
             expect(nodeOp).toBeUndefined();
         });
@@ -485,9 +485,9 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear queue
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             for (const item of queue) {
-                await idbAdapter.markSynced(item.id);
+                await idbAdapter.syncQueue.markSynced(item.id);
             }
 
             // Create field
@@ -542,9 +542,9 @@ describe('SyncManager - Bidirectional Sync', () => {
             });
 
             // Clear queue
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             for (const item of queue) {
-                await idbAdapter.markSynced(item.id);
+                await idbAdapter.syncQueue.markSynced(item.id);
             }
 
             // Update field
@@ -610,9 +610,9 @@ describe('SyncManager - Bidirectional Sync', () => {
             expect(localCount).toBeGreaterThan(0);
 
             // Clear sync queue to avoid pushing local data
-            const queue = await idbAdapter.getSyncQueue();
+            const queue = await idbAdapter.syncQueue.getSyncQueue();
             for (const item of queue) {
-                await idbAdapter.markSynced(item.id);
+                await idbAdapter.syncQueue.markSynced(item.id);
             }
 
             // Create remote node and field directly in Firestore

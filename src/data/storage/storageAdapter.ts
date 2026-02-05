@@ -77,25 +77,25 @@ export interface StorageAdapter {
 }
 
 /**
- * Storage adapter with sync queue capabilities.
- * Extends StorageAdapter with methods for managing sync state and queue.
+ * Storage adapter with sync capabilities.
+ * Extends StorageAdapter with methods for managing sync state.
+ *
+ * Note: Sync queue operations (getSyncQueue, markSynced, markFailed, enqueue)
+ * are handled by SyncQueueManager (see src/data/sync/SyncQueueManager.ts).
  */
 export interface SyncableStorageAdapter extends StorageAdapter {
-  getSyncQueue(): Promise<SyncQueueItem[]>;
-  markSynced(queueItemId: string): Promise<void>;
-  markFailed(queueItemId: string, error: any): Promise<void>;
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
   applyRemoteUpdate(entityType: 'node' | 'field', entity: TreeNode | DataField): Promise<void>;
-  
+
   // Full collection retrieval methods
   getAllNodes(): Promise<TreeNode[]>;
   getAllFields(): Promise<DataField[]>;
   getAllHistory(): Promise<DataFieldHistory[]>;
-  
+
   // History sync methods
   applyRemoteHistory(history: DataFieldHistory): Promise<void>;
-  
+
   // Silent delete methods (no sync queue entry)
   deleteNodeLocal(id: string): Promise<void>;
   deleteFieldLocal(id: string): Promise<void>;

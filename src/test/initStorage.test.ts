@@ -326,7 +326,7 @@ describe('Adapter Instance Creation', () => {
         expect(adapter).toBeDefined();
         expect(typeof adapter.listRootNodes).toBe('function');
         expect(typeof adapter.createNode).toBe('function');
-        expect(typeof adapter.getSyncQueue).toBe('function');
+        expect(typeof adapter.syncQueue.getSyncQueue).toBe('function');
     });
 
     it('FirestoreAdapter can be instantiated', async () => {
@@ -348,8 +348,8 @@ describe('Adapter Instance Creation', () => {
         // Verify they're different instances
         expect(idbAdapter).not.toBe(firestoreAdapter);
         
-        // Verify adapter types by checking unique methods
-        expect(typeof (idbAdapter as any).getSyncQueue).toBe('function'); // IDBAdapter-specific
+        // Verify adapter types by checking unique properties
+        expect((idbAdapter as any).syncQueue).toBeDefined(); // IDBAdapter-specific (SyncQueueManager)
         expect(typeof (firestoreAdapter as any).applySyncItem).toBe('function'); // FirestoreAdapter-specific
     });
 });

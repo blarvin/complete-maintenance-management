@@ -21,7 +21,9 @@
       "Bash(timeout 10 npm run preview:*)",
       "Bash(npm run build.preview:*)",
       "Bash(timeout 5 npx vite preview:*)",
-      "Bash(npx qwik:*)"
+      "Bash(npx qwik:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest run)"
     ]
   }
 }

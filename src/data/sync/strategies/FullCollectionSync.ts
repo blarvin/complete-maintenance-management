@@ -9,6 +9,7 @@
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
 import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
+import type { SyncQueueManager } from '../SyncQueueManager';
 
 export class FullCollectionSync implements SyncStrategy {
   readonly name = 'full-collection';
@@ -16,7 +17,8 @@ export class FullCollectionSync implements SyncStrategy {
   constructor(
     private local: SyncableStorageAdapter,
     private remote: RemoteSyncAdapter,
-    private resolver: ServerAuthorityResolver
+    private resolver: ServerAuthorityResolver,
+    private syncQueue: SyncQueueManager
   ) {}
 
   async sync(): Promise<SyncResult> {
@@ -32,7 +34,7 @@ export class FullCollectionSync implements SyncStrategy {
     const remoteIds = new Set(remoteNodes.map(n => n.id));
 
     const localNodes = await this.local.getAllNodes();
-    const pendingQueue = await this.local.getSyncQueue();
+    const pendingQueue = await this.syncQueue.getSyncQueue();
     const pendingIds = new Set(
       pendingQueue
         .filter(item => item.entityType === 'node')
@@ -62,7 +64,7 @@ export class FullCollectionSync implements SyncStrategy {
     const remoteIds = new Set(remoteFields.map(f => f.id));
 
     const localFields = await this.local.getAllFields();
-    const pendingQueue = await this.local.getSyncQueue();
+    const pendingQueue = await this.syncQueue.getSyncQueue();
     const pendingIds = new Set(
       pendingQueue
         .filter(item => item.entityType === 'field')

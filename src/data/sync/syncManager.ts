@@ -6,6 +6,7 @@
  * - SyncStrategy: Pull remote changes (FullCollectionSync, DeltaSync)
  * - SyncLifecycle: Timer and online event management
  * - ServerAuthorityResolver: Conflict resolution (server is truth)
+ * - SyncQueueManager: Sync queue operations (extracted from IDBAdapter)
  *
  * Sync strategies:
  * - syncDelta(): Fast incremental sync (only changes since last sync)
@@ -19,6 +20,7 @@
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
+import type { SyncQueueManager } from './SyncQueueManager';
 import { now } from '../../utils/time';
 import { dispatchStorageChangeEvent } from '../storage/storageEvents';
 import { SyncPusher } from './SyncPusher';
@@ -40,15 +42,16 @@ export class SyncManager {
   constructor(
     local: SyncableStorageAdapter,
     remote: RemoteSyncAdapter,
+    syncQueue: SyncQueueManager,
     pollIntervalMs: number = 600000 // 10 minutes
   ) {
     this.local = local;
 
     // Initialize collaborators
-    const resolver = new ServerAuthorityResolver(local);
-    this.pusher = new SyncPusher(local, remote);
+    const resolver = new ServerAuthorityResolver(local, syncQueue);
+    this.pusher = new SyncPusher(syncQueue, remote);
     this.deltaStrategy = new DeltaSync(local, remote, resolver);
-    this.fullStrategy = new FullCollectionSync(local, remote, resolver);
+    this.fullStrategy = new FullCollectionSync(local, remote, resolver, syncQueue);
     this.lifecycle = new SyncLifecycle(() => this.syncOnce(), pollIntervalMs);
   }
 
@@ -203,9 +206,13 @@ let syncManagerInstance: SyncManager | null = null;
  * Get the global SyncManager instance.
  * Creates one if it doesn't exist.
  */
-export function getSyncManager(local?: SyncableStorageAdapter, remote?: RemoteSyncAdapter): SyncManager {
-  if (!syncManagerInstance && local && remote) {
-    syncManagerInstance = new SyncManager(local, remote);
+export function getSyncManager(
+  local?: SyncableStorageAdapter,
+  remote?: RemoteSyncAdapter,
+  syncQueue?: SyncQueueManager
+): SyncManager {
+  if (!syncManagerInstance && local && remote && syncQueue) {
+    syncManagerInstance = new SyncManager(local, remote, syncQueue);
   }
   if (!syncManagerInstance) {
     throw new Error('SyncManager not initialized. Call getSyncManager with adapters first.');
@@ -217,11 +224,15 @@ export function getSyncManager(local?: SyncableStorageAdapter, remote?: RemoteSy
  * Initialize and start the SyncManager.
  * Call this during app initialization.
  */
-export function initializeSyncManager(local: SyncableStorageAdapter, remote: RemoteSyncAdapter): SyncManager {
+export function initializeSyncManager(
+  local: SyncableStorageAdapter,
+  remote: RemoteSyncAdapter,
+  syncQueue: SyncQueueManager
+): SyncManager {
   if (syncManagerInstance) {
     syncManagerInstance.stop();
   }
-  syncManagerInstance = new SyncManager(local, remote);
+  syncManagerInstance = new SyncManager(local, remote, syncQueue);
   syncManagerInstance.start();
   return syncManagerInstance;
 }

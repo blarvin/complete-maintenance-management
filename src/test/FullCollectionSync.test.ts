@@ -8,19 +8,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FullCollectionSync } from '../data/sync/strategies/FullCollectionSync';
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../data/storage/storageAdapter';
 import type { ServerAuthorityResolver } from '../data/sync/ServerAuthorityResolver';
+import type { SyncQueueManager } from '../data/sync/SyncQueueManager';
 import type { TreeNode, DataField, DataFieldHistory } from '../data/models';
 
 describe('FullCollectionSync', () => {
   let mockLocal: SyncableStorageAdapter;
   let mockRemote: RemoteSyncAdapter;
   let mockResolver: ServerAuthorityResolver;
+  let mockSyncQueue: SyncQueueManager;
   let strategy: FullCollectionSync;
 
   beforeEach(() => {
     mockLocal = {
       getAllNodes: vi.fn().mockResolvedValue([]),
       getAllFields: vi.fn().mockResolvedValue([]),
-      getSyncQueue: vi.fn().mockResolvedValue([]),
       deleteNodeLocal: vi.fn(),
       deleteFieldLocal: vi.fn(),
       applyRemoteHistory: vi.fn(),
@@ -37,7 +38,14 @@ describe('FullCollectionSync', () => {
       resolveField: vi.fn().mockResolvedValue('applied'),
     } as unknown as ServerAuthorityResolver;
 
-    strategy = new FullCollectionSync(mockLocal, mockRemote, mockResolver);
+    mockSyncQueue = {
+      getSyncQueue: vi.fn().mockResolvedValue([]),
+      enqueue: vi.fn(),
+      markSynced: vi.fn(),
+      markFailed: vi.fn(),
+    };
+
+    strategy = new FullCollectionSync(mockLocal, mockRemote, mockResolver, mockSyncQueue);
   });
 
   it('has correct name', () => {
@@ -82,7 +90,7 @@ describe('FullCollectionSync', () => {
 
       vi.mocked(mockLocal.getAllNodes).mockResolvedValue(localNodes);
       vi.mocked(mockRemote.pullAllNodes).mockResolvedValue([]);
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([
         { id: 'q1', entityType: 'node', entityId: 'pending-node', operation: 'create-node', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
       ]);
 
@@ -126,7 +134,7 @@ describe('FullCollectionSync', () => {
 
       vi.mocked(mockLocal.getAllFields).mockResolvedValue(localFields);
       vi.mocked(mockRemote.pullAllFields).mockResolvedValue([]);
-      vi.mocked(mockLocal.getSyncQueue).mockResolvedValue([
+      vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([
         { id: 'q1', entityType: 'field', entityId: 'pending-field', operation: 'create-field', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
       ]);
 

@@ -23,7 +23,6 @@
 import type { TreeNode, DataField, DataFieldHistory } from '../models';
 import type { StorageAdapter, StorageResult } from '../storage/storageAdapter';
 import { generateId } from '../../utils/id';
-import { upsertNodeSummary, removeNodeSummary } from '../nodeIndex';
 
 // ============================================================================
 // SERVICE INTERFACES
@@ -79,42 +78,21 @@ function unwrap<T>(result: StorageResult<T>): T {
     return result.data;
 }
 
-function recordNodeInIndex(node: TreeNode | null): TreeNode | null {
-    if (!node) return node;
-
-    if (node.deletedAt === null) {
-        upsertNodeSummary({
-            id: node.id,
-            parentId: node.parentId,
-            nodeName: node.nodeName,
-        });
-    } else {
-        removeNodeSummary(node.id);
-    }
-
-    return node;
-}
-
-function recordNodesInIndex(nodes: TreeNode[]): TreeNode[] {
-    nodes.forEach(recordNodeInIndex);
-    return nodes;
-}
-
 function nodeServiceFromAdapter(adapter: StorageAdapter): INodeService {
     return {
-        getRootNodes: async () => recordNodesInIndex(unwrap(await adapter.listRootNodes())),
-        getNodeById: async (id: string) => recordNodeInIndex(unwrap(await adapter.getNode(id))),
+        getRootNodes: async () => unwrap(await adapter.listRootNodes()),
+        getNodeById: async (id: string) => unwrap(await adapter.getNode(id)),
         getNodeWithChildren: async (id: string) => {
             const [nodeRes, childRes] = await Promise.all([
                 adapter.getNode(id),
                 adapter.listChildren(id),
             ]);
             return {
-                node: recordNodeInIndex(unwrap(nodeRes)),
-                children: recordNodesInIndex(unwrap(childRes)),
+                node: unwrap(nodeRes),
+                children: unwrap(childRes),
             };
         },
-        getChildren: async (parentId: string) => recordNodesInIndex(unwrap(await adapter.listChildren(parentId))),
+        getChildren: async (parentId: string) => unwrap(await adapter.listChildren(parentId)),
         createWithFields: async (input) => {
             // create node first, then fields; caller provides IDs and defaults
             await adapter.createNode({
@@ -122,11 +100,6 @@ function nodeServiceFromAdapter(adapter: StorageAdapter): INodeService {
                 parentId: input.parentId,
                 nodeName: input.nodeName,
                 nodeSubtitle: input.nodeSubtitle,
-            });
-            upsertNodeSummary({
-                id: input.id,
-                parentId: input.parentId,
-                nodeName: input.nodeName,
             });
             await Promise.all(
                 input.defaults.map((field) =>
@@ -140,19 +113,14 @@ function nodeServiceFromAdapter(adapter: StorageAdapter): INodeService {
             );
         },
         createEmptyNode: async (id: string, parentId: string | null) => {
-            const node = unwrap(await adapter.createNode({ id, parentId, nodeName: "", nodeSubtitle: "" }));
-            recordNodeInIndex(node);
-            return node;
+            return unwrap(await adapter.createNode({ id, parentId, nodeName: "", nodeSubtitle: "" }));
         },
         updateNode: async (id: string, updates) => {
             await adapter.updateNode(id, updates);
-            const updated = unwrap(await adapter.getNode(id));
-            recordNodeInIndex(updated);
         },
         deleteNode: async (id: string) => {
             console.log('[NodeService] Deleting node:', id);
             await adapter.deleteNode(id);
-            removeNodeSummary(id);
         },
     };
 }

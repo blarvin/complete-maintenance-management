@@ -5,7 +5,8 @@
  * and marking items as synced or failed.
  */
 
-import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
+import type { RemoteSyncAdapter } from '../storage/storageAdapter';
+import type { SyncQueueManager } from './SyncQueueManager';
 
 export type PushResult = {
   processed: number;
@@ -15,7 +16,7 @@ export type PushResult = {
 
 export class SyncPusher {
   constructor(
-    private local: SyncableStorageAdapter,
+    private syncQueue: SyncQueueManager,
     private remote: RemoteSyncAdapter
   ) {}
 
@@ -24,7 +25,7 @@ export class SyncPusher {
    * Returns counts of processed, succeeded, and failed items.
    */
   async push(): Promise<PushResult> {
-    const queue = await this.local.getSyncQueue();
+    const queue = await this.syncQueue.getSyncQueue();
 
     if (queue.length === 0) {
       console.log('[SyncPusher] No pending items');
@@ -39,12 +40,12 @@ export class SyncPusher {
     for (const item of queue) {
       try {
         await this.remote.applySyncItem(item);
-        await this.local.markSynced(item.id);
+        await this.syncQueue.markSynced(item.id);
         console.log('[SyncPusher] Synced', item.operation, item.entityId);
         succeeded++;
       } catch (err) {
         console.error('[SyncPusher] Failed', item.operation, item.entityId, err);
-        await this.local.markFailed(item.id, err);
+        await this.syncQueue.markFailed(item.id, err);
         failed++;
       }
     }

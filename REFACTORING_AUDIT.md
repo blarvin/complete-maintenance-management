@@ -19,15 +19,15 @@ However, there are opportunities to improve consistency, reduce duplication, and
 
 ### Refactoring checklist
 
-- [ ] **2.1 SRP** Extract `SyncQueueManager` from `IDBAdapter`
-- [ ] **2.1 SRP** Extract `useFocusManager` from `useFieldEdit`
-- [ ] **2.2 OCP** Event-based node index updates (or adopt event bus from 4.2)
+- [x] **2.1 SRP** Extract `SyncQueueManager` from `IDBAdapter`
+- [x] **2.1 SRP** Extract `useFocusManager` from `useFieldEdit`
+- [x] **2.2 OCP** Event-based node index updates (via StorageEventBus)
 - [ ] **2.3 DIP** Service injection / context for hooks (parameter or `createContextId`)
 - [ ] **3.1 DRY** Move `nextRev()` to `historyHelpers.ts`
 - [ ] **3.2 DRY** Create `useStorageChangeListener` hook
 - [ ] **3.3 DRY** Extract `persistUIPrefs(state)` in `appState.transitions`
 - [ ] **3.4 DRY** Move `createResult<T>()` to `storageResult.ts`
-- [ ] **4.2 CQRS** Introduce `StorageEventBus`; index and sync as subscribers
+- [x] **4.2 CQRS** Introduce `StorageEventBus`; node index as subscriber
 - [ ] **5.2** Extract `useEditableValue` from `useFieldEdit`
 - [ ] **5.3** Create `useAsyncOperation` for loading/error state
 - [ ] **5.4** Extract navigation guard logic (`guards.ts`)
