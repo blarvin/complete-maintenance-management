@@ -23,7 +23,10 @@
       "Bash(timeout 5 npx vite preview:*)",
       "Bash(npx qwik:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx vitest run)"
+      "Bash(npx vitest run)",
+      "WebSearch",
+      "WebFetch(domain:qwik.dev)",
+      "WebFetch(domain:dev.to)"
     ]
   }
 }

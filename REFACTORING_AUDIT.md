@@ -22,7 +22,6 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [x] **2.1 SRP** Extract `SyncQueueManager` from `IDBAdapter`
 - [x] **2.1 SRP** Extract `useFocusManager` from `useFieldEdit`
 - [x] **2.2 OCP** Event-based node index updates (via StorageEventBus)
-- [ ] **2.3 DIP** Service injection / context for hooks (parameter or `createContextId`)
 - [ ] **3.1 DRY** Move `nextRev()` to `historyHelpers.ts`
 - [ ] **3.2 DRY** Create `useStorageChangeListener` hook
 - [ ] **3.3 DRY** Extract `persistUIPrefs(state)` in `appState.transitions`
@@ -31,7 +30,6 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [ ] **5.2** Extract `useEditableValue` from `useFieldEdit`
 - [ ] **5.3** Create `useAsyncOperation` for loading/error state
 - [ ] **5.4** Extract navigation guard logic (`guards.ts`)
-- [ ] **6.1** Service context provider (`NodeServiceContext`, `FieldServiceContext`)
 - [ ] **6.2** Decouple sync trigger (event or dedicated API)
 - [ ] **6.3** Abstract time provider for tests
 - [ ] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
@@ -128,31 +126,6 @@ function useFocusManager(inputRef: Signal<HTMLInputElement | undefined>) {
 **Problem**: Adding new write paths requires remembering to update the index.
 
 **Recommendation**: Use an event-based approach (see CQRS section below).
-
-### 2.3 Dependency Inversion Principle (DIP)
-
-#### Issue: Direct imports of concrete services in hooks
-**Location**: Multiple hooks directly import `getFieldService()`, `getNodeService()`
-
-```typescript
-// useFieldEdit.ts
-import { getFieldService } from '../data/services';
-await getFieldService().updateFieldValue(fieldId, newValue);
-```
-
-**Problem**: Tight coupling makes testing harder; can't inject mocks easily.
-
-**Recommendation**: Pass service as parameter or use context:
-
-```typescript
-// Option A: Parameter injection
-function useFieldEdit(options: UseFieldEditOptions & { fieldService?: IFieldService }) {
-  const service = options.fieldService ?? getFieldService();
-}
-
-// Option B: Service context (better for Qwik)
-const FieldServiceContext = createContextId<IFieldService>('field.service');
-```
 
 ---
 
@@ -415,33 +388,6 @@ navigateToNode: (state, nodeId) => {
 
 ## Part 6: Decoupling Opportunities
 
-### 6.1 Service Context Provider
-
-Instead of `getNodeService()` module-level function:
-
-```typescript
-// New: src/data/services/ServiceContext.ts
-export const NodeServiceContext = createContextId<INodeService>('node.service');
-export const FieldServiceContext = createContextId<IFieldService>('field.service');
-
-export function useNodeService(): INodeService {
-  return useContext(NodeServiceContext);
-}
-
-export function useFieldService(): IFieldService {
-  return useContext(FieldServiceContext);
-}
-
-// In root.tsx:
-const nodeService = nodeServiceFromAdapter(idbAdapter);
-useContextProvider(NodeServiceContext, nodeService);
-```
-
-**Benefits**:
-- Easier testing (provide mock in test context)
-- No module-level mutable state
-- Follows Qwik idioms
-
 ### 6.2 Decouple Sync Trigger
 
 Currently `triggerSync()` is called directly after every CUD operation. Consider:
@@ -630,7 +576,7 @@ The sync system (`SyncManager`, `SyncPusher`, strategies, etc.) could be a stand
 |----------|------|--------|--------|
 | 9 | Migrate node index to event-driven updates | Medium | High |
 | 10 | Extract `SyncQueueManager` from `IDBAdapter` | Medium | Medium |
-| 11 | Implement service context providers | Medium | Medium |
+| ~~11~~ | ~~Implement service context providers~~ | — | **Removed** (Qwik serialization constraint) |
 | 12 | Create `useAsyncOperation` hook | Low | Medium |
 
 ### Long-Term (Future Phases)
