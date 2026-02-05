@@ -17,7 +17,11 @@
       "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_browser_extension\" /ve)",
       "Bash(cat:*)",
       "Bash(reg query \"HKCU\\\\SOFTWARE\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
-      "Bash(reg query:*)"
+      "Bash(reg query:*)",
+      "Bash(timeout 10 npm run preview:*)",
+      "Bash(npm run build.preview:*)",
+      "Bash(timeout 5 npx vite preview:*)",
+      "Bash(npx qwik:*)"
     ]
   }
 }

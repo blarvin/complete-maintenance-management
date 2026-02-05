@@ -17,6 +17,33 @@ The codebase has a solid foundation with excellent architectural patterns alread
 
 However, there are opportunities to improve consistency, reduce duplication, and better align with CQRS principles as the in-memory node index indicates a direction toward read model separation.
 
+### Refactoring checklist
+
+- [ ] **2.1 SRP** Extract `SyncQueueManager` from `IDBAdapter`
+- [ ] **2.1 SRP** Extract `useFocusManager` from `useFieldEdit`
+- [ ] **2.2 OCP** Event-based node index updates (or adopt event bus from 4.2)
+- [ ] **2.3 DIP** Service injection / context for hooks (parameter or `createContextId`)
+- [ ] **3.1 DRY** Move `nextRev()` to `historyHelpers.ts`
+- [ ] **3.2 DRY** Create `useStorageChangeListener` hook
+- [ ] **3.3 DRY** Extract `persistUIPrefs(state)` in `appState.transitions`
+- [ ] **3.4 DRY** Move `createResult<T>()` to `storageResult.ts`
+- [ ] **4.2 CQRS** Introduce `StorageEventBus`; index and sync as subscribers
+- [ ] **5.2** Extract `useEditableValue` from `useFieldEdit`
+- [ ] **5.3** Create `useAsyncOperation` for loading/error state
+- [ ] **5.4** Extract navigation guard logic (`guards.ts`)
+- [ ] **6.1** Service context provider (`NodeServiceContext`, `FieldServiceContext`)
+- [ ] **6.2** Decouple sync trigger (event or dedicated API)
+- [ ] **6.3** Abstract time provider for tests
+- [ ] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
+- [ ] **7.2** Remove unused `nodeId` prop from DataCard
+- [ ] **7.3** Add barrel exports for hooks
+- [ ] **7.4** Add barrel exports for sync strategies
+- [ ] **7.5** Consolidate / replace ad-hoc `console.log` with logger
+- [ ] **8.1** Full CQRS implementation (larger)
+- [ ] **8.2** Service layer rewrite with event sourcing (larger)
+- [ ] **8.3** Extract sync system to standalone module (larger)
+- [ ] **Part 10** Delete dead code: `src/data/repo/` (if no imports)
+
 ---
 
 ## Part 1: What's Working Well (Preserve These)
