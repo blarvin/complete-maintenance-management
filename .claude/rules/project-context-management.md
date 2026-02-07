@@ -6,16 +6,18 @@ When creating implementation plans (`.plan.md` files), include a **"Project Cont
 
 ### 1. User Verification
 - List specific verification steps for the user to confirm the implementation works
+- After the coding work is believed to be complete, ask the user to verify the implementation works.
+- IMPORTANT: If, and only if, the user confirms the implementation works, then move to the steps below regarding updating the project documentation.
 
 ### 2. ISSUES.md
-- Mark off completed work items related to the feature
+- If the user has confirmed the implementation works, then mark off the work items related to the feature.
 
 ### 3. IMPLEMENTATION.md (if applicable)
-- Add notes for architectural decisions or unusual patterns
+- If the user has confirmed the implementation works, then add notes for architectural decisions or unusual patterns.
 - Skip for straightforward implementations
 
-### 4. LATER.md
-- Add deferred work identified during implementation
+### 4. LATER.md   
+- If the user has confirmed the implementation works, then add deferred work identified during implementation.
 - Include related features intentionally out of scope
 - Note any technical debt or cleanup opportunities discovered
 
@@ -27,7 +29,7 @@ When creating implementation plans (`.plan.md` files), include a **"Project Cont
 After verification is complete, update project documentation:
 
 1. **ISSUES.md** - Mark off completed work items
-2. **IMPLEMENTATION.md** - [Add notes if architectural, or "N/A - straightforward implementation"]
+2. **IMPLEMENTATION.md** - [Add notes if architectural work was done or unusual patterns were used]
 3. **LATER.md** - Add deferred items:
    - [List specific deferred items here]
 ```

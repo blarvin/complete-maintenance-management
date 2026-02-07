@@ -1,6 +1,8 @@
 ---
 description: Test PWA offline functionality with browser automation
-allowed-tools: Bash, mcp__claude-in-chrome__*, AskUserQuestion, TodoWrite
+allowed-tools: Bash, mcp__claude-in-chrome__*, AskUserQuestion, TaskCreate, TaskUpdate, TaskList
+disable-model-invocation: true
+argument-hint: "[phase1|phase2|all] - optional, defaults to phase1 only"
 ---
 
 # PWA Offline Test
@@ -30,7 +32,6 @@ Test that the app works offline using browser offline/online events and sync beh
 # Kill any existing preview server on port 4173
 netstat -ano | grep ':4173'  # Find PID if running
 taskkill //F //PID <pid>     # Kill it (Windows)
-# OR: pkill -f "preview:pwa"  # Kill it (Linux/Mac)
 sleep 2                      # Wait for cleanup
 ```
 

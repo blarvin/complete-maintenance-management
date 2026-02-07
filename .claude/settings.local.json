@@ -2,31 +2,43 @@
   "permissions": {
     "allow": [
       "Bash(npm run typecheck:*)",
-      "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs",
-      "WebFetch(domain:github.com)",
-      "mcp__google-drive__search",
-      "Bash(tasklist:*)",
-      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_code_browser_extension\")",
-      "Bash(claude mcp:*)",
-      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
-      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_browser_extension\")",
-      "Bash(findstr:*)",
-      "Bash(test:*)",
-      "Bash(reg query \"HKLM\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
-      "Bash(reg query \"HKCU\\\\Software\\\\Google\\\\Chrome\\\\NativeMessagingHosts\\\\com.anthropic.claude_browser_extension\" /ve)",
-      "Bash(cat:*)",
-      "Bash(reg query \"HKCU\\\\SOFTWARE\\\\Google\\\\Chrome\\\\NativeMessagingHosts\")",
-      "Bash(reg query:*)",
-      "Bash(timeout 10 npm run preview:*)",
       "Bash(npm run build.preview:*)",
-      "Bash(timeout 5 npx vite preview:*)",
+      "Bash(npx vitest run)",
       "Bash(npx qwik:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx vitest run)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
       "WebSearch",
-      "WebFetch(domain:qwik.dev)",
-      "WebFetch(domain:dev.to)"
+      "Bash(find:*)",
+      "Bash(echo:*)"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Edit(.env*)",
+      "Write(.env*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'for f in \"$CLAUDE_TOOL_ARG_FILE_PATH\"; do case \"$f\" in */package-lock.json|*.env|*.env.*|*/SPECIFICATION.md) echo \"BLOCKED: Protected file $f — do not edit directly\" >&2; exit 2;; esac; done'"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -Command \"[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; [System.Windows.Forms.MessageBox]::Show('Claude Code needs your input', 'Claude Code', 'OK', 'Information') | Out-Null\""
+          }
+        ]
+      }
     ]
   }
 }
