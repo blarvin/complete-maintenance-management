@@ -10,7 +10,8 @@
       "mcp__context7__query-docs",
       "WebSearch",
       "Bash(find:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [
       "Read(.env*)",
@@ -19,13 +20,23 @@
     ]
   },
   "hooks": {
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'for f in \"$CLAUDE_TOOL_ARG_FILE_PATH\"; do case \"$f\" in */package-lock.json|*.env|*.env.*|*/SPECIFICATION.md) echo \"BLOCKED: Protected file $f — do not edit directly\" >&2; exit 2;; esac; done'"
+            "command": "bash -c 'INPUT=$(cat); FILE_PATH=$(echo \"$INPUT\" | jq -r \".tool_input.file_path // empty\"); case \"$FILE_PATH\" in */package-lock.json|*.env|*.env.*|*/SPECIFICATION.md) echo \"BLOCKED: Protected file $FILE_PATH — do not edit directly\" >&2; exit 2;; esac'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/log-tool-use.sh"
           }
         ]
       }
