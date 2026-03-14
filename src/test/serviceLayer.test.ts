@@ -8,7 +8,7 @@
  * - useStorageAdapter creates services from an adapter
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
     getNodeService,
     getFieldService,
@@ -19,7 +19,7 @@ import {
     type INodeService,
     type IFieldService,
 } from '../data/services/index';
-import type { StorageAdapter, StorageResult } from '../data/storage/storageAdapter';
+import type { StorageAdapter } from '../data/storage/storageAdapter';
 import type { TreeNode, DataField, DataFieldHistory } from '../data/models';
 
 describe('Service Layer - Adapter Selection', () => {

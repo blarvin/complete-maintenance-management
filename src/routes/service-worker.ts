@@ -211,7 +211,7 @@ async function networkFirstWithCache(request: Request): Promise<Response> {
     }
 
     return networkResponse;
-  } catch (error) {
+  } catch {
     // Network failed, try cache
     console.log('[SW] Network FAILED, trying cache:', request.url);
     const cachedResponse = await caches.match(request);

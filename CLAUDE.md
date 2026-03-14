@@ -3,6 +3,7 @@
 ## Development Philosophy
 
 **Spec-Driven Development**: `SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
+**This is prototyping**: Do the simplest thing that works. 
 
 **Documentation Hierarchy**:
 1. **SPECIFICATION.md** - Product requirements, data models, UX patterns (the spec)

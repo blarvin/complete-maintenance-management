@@ -16,14 +16,12 @@ import {
   where,
   orderBy,
   updateDoc,
-  deleteDoc,
   writeBatch,
-  getCountFromServer,
   FirestoreError,
   serverTimestamp,
 } from "firebase/firestore";
 import type { TreeNode, DataField, DataFieldHistory } from "../models";
-import { filterActive, filterDeleted } from "../models";
+import { filterDeleted } from "../models";
 import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";

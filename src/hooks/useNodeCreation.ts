@@ -12,7 +12,7 @@
 
 import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
-import { getNodeService, getFieldService } from '../data/services';
+import { getNodeService } from '../data/services';
 import { generateId } from '../utils/id';
 import { triggerSync } from './useSyncTrigger';
 import { getSavedFieldsFromLocalStorage } from './usePendingForms';
