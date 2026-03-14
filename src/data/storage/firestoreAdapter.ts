@@ -28,6 +28,24 @@ import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreat
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
 import { getCurrentUserId } from "../../context/userContext";
+
+/**
+ * Convert Firestore Timestamp fields to epoch ms numbers.
+ * Firestore returns Timestamp objects for serverTimestamp() fields;
+ * our domain models expect plain numbers (epoch ms).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function coerceTimestamps<T>(data: any): T {
+  if (data && typeof data === 'object') {
+    for (const key of ['updatedAt', 'deletedAt']) {
+      const val = data[key];
+      if (val != null && typeof val === 'object' && typeof val.toMillis === 'function') {
+        data[key] = val.toMillis();
+      }
+    }
+  }
+  return data as T;
+}
 import { createHistoryEntry } from "./historyHelpers";
 import { now } from "../../utils/time";
 import { toStorageError, makeStorageError, isStorageError } from "./storageErrors";
@@ -81,7 +99,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         orderBy("updatedAt", "asc")
       );
       const snap = await getDocs(q);
-      const nodes = snap.docs.map((d) => d.data() as TreeNode);
+      const nodes = snap.docs.map((d) => coerceTimestamps<TreeNode>(d.data()));
       return createResult(nodes);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -95,7 +113,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   async getNode(id: string): Promise<StorageResult<TreeNode | null>> {
     try {
       const snap = await getDoc(doc(db, COLLECTIONS.NODES, id));
-      const node = snap.exists() ? (snap.data() as TreeNode) : null;
+      const node = snap.exists() ? coerceTimestamps<TreeNode>(snap.data()) : null;
       return createResult(node);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -115,7 +133,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         orderBy("updatedAt", "asc")
       );
       const snap = await getDocs(q);
-      const nodes = snap.docs.map((d) => d.data() as TreeNode);
+      const nodes = snap.docs.map((d) => coerceTimestamps<TreeNode>(d.data()));
       return createResult(nodes);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -204,7 +222,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         orderBy("cardOrder", "asc")
       );
       const snap = await getDocs(q);
-      const fields = snap.docs.map((d) => d.data() as DataField);
+      const fields = snap.docs.map((d) => coerceTimestamps<DataField>(d.data()));
       return createResult(fields);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -280,7 +298,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         throw makeStorageError("not-found", "Field not found", { retryable: false });
       }
       
-      const prev = snap.data() as DataField;
+      const prev = coerceTimestamps<DataField>(snap.data());
       const ts = now();
       const userId = getCurrentUserId();
       
@@ -322,7 +340,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         return createResult(undefined);
       }
       
-      const prev = snap.data() as DataField;
+      const prev = coerceTimestamps<DataField>(snap.data());
       const ts = now();
       const userId = getCurrentUserId();
 
@@ -366,7 +384,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         orderBy("rev", "asc")
       );
       const snap = await getDocs(q);
-      const history = snap.docs.map((d) => d.data() as DataFieldHistory);
+      const history = snap.docs.map((d) => coerceTimestamps<DataFieldHistory>(d.data()));
       return createResult(history);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -391,7 +409,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         orderBy("deletedAt", "desc")
       );
       const snap = await getDocs(q);
-      const nodes = snap.docs.map((d) => d.data() as TreeNode);
+      const nodes = snap.docs.map((d) => coerceTimestamps<TreeNode>(d.data()));
       return createResult(nodes);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -410,7 +428,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         where("parentId", "==", parentId)
       );
       const snap = await getDocs(q);
-      const allChildren = snap.docs.map((d) => d.data() as TreeNode);
+      const allChildren = snap.docs.map((d) => coerceTimestamps<TreeNode>(d.data()));
       const deletedChildren = filterDeleted(allChildren);
       // Sort by deletedAt descending
       deletedChildren.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
@@ -458,7 +476,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         where("parentNodeId", "==", parentNodeId)
       );
       const snap = await getDocs(q);
-      const allFields = snap.docs.map((d) => d.data() as DataField);
+      const allFields = snap.docs.map((d) => coerceTimestamps<DataField>(d.data()));
       const deletedFields = filterDeleted(allFields);
       // Sort by deletedAt descending
       deletedFields.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
@@ -585,7 +603,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       return [];
     }
 
-    return snap.docs.map((docSnap) => docSnap.data() as TreeNode | DataField);
+    return snap.docs.map((docSnap) => coerceTimestamps<TreeNode | DataField>(docSnap.data()));
   }
 
   /**
@@ -594,7 +612,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
    */
   async pullAllNodes(): Promise<TreeNode[]> {
     const snap = await getDocs(collection(db, COLLECTIONS.NODES));
-    return snap.docs.map(d => d.data() as TreeNode);
+    return snap.docs.map(d => coerceTimestamps<TreeNode>(d.data()));
   }
 
   /**
@@ -603,7 +621,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
    */
   async pullAllFields(): Promise<DataField[]> {
     const snap = await getDocs(collection(db, COLLECTIONS.FIELDS));
-    return snap.docs.map(d => d.data() as DataField);
+    return snap.docs.map(d => coerceTimestamps<DataField>(d.data()));
   }
 
   /**
@@ -612,7 +630,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
    */
   async pullAllHistory(): Promise<DataFieldHistory[]> {
     const snap = await getDocs(collection(db, COLLECTIONS.HISTORY));
-    return snap.docs.map(d => d.data() as DataFieldHistory);
+    return snap.docs.map(d => coerceTimestamps<DataFieldHistory>(d.data()));
   }
 
   /**
@@ -625,7 +643,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       where('updatedAt', '>', since)
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => d.data() as DataFieldHistory);
+    return snap.docs.map(d => coerceTimestamps<DataFieldHistory>(d.data()));
   }
 
   // ============================================================================
