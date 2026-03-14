@@ -25,14 +25,10 @@ import { storageEventBus } from '../storageEventBus';
 import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
 import type { SyncQueueManager } from '../sync/SyncQueueManager';
 
+import { createResult as _createResult } from './storageResult';
+
 function createResult<T>(data: T, fromCache = true): StorageResult<T> {
-  return {
-    data,
-    meta: {
-      adapter: 'idb',
-      fromCache,
-    },
-  };
+  return _createResult(data, 'idb', fromCache);
 }
 
 export class IDBAdapter implements SyncableStorageAdapter {

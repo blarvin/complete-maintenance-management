@@ -71,16 +71,10 @@ function mapFirestoreError(err: unknown): { code: "not-found" | "validation" | "
   return { code: "internal", retryable: false };
 }
 
-/**
- * Creates a StorageResult with Firestore metadata.
- */
+import { createResult as _createResult } from './storageResult';
+
 function createResult<T>(data: T): StorageResult<T> {
-  return {
-    data,
-    meta: {
-      adapter: "firestore",
-    },
-  };
+  return _createResult(data, 'firestore');
 }
 
 export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
