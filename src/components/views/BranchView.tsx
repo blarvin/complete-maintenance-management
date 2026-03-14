@@ -3,12 +3,13 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { component$, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
+import { component$, useTask$, $ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useBranchViewData } from '../../hooks/useBranchViewData';
+import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
 
 export type BranchViewProps = {
     parentId: string;
@@ -27,24 +28,12 @@ export const BranchView = component$((props: BranchViewProps) => {
         await load$(parentId);
     });
     
-    // Listen for storage change events (triggered by sync or other storage operations)
-    useVisibleTask$(({ track, cleanup }) => {
-        if (typeof window !== 'undefined') {
-            const handleStorageChange = () => {
-                if (props.parentId) {
-                    console.log('[BranchView] Storage change detected, reloading...');
-                    reload$(props.parentId);
-                }
-            };
-            
-            window.addEventListener('storage-change', handleStorageChange);
-            track(() => props.parentId); // Track parentId for reactivity
-            
-            cleanup(() => {
-                window.removeEventListener('storage-change', handleStorageChange);
-            });
+    useStorageChangeListener($(() => {
+        if (props.parentId) {
+            console.log('[BranchView] Storage change detected, reloading...');
+            reload$(props.parentId);
         }
-    });
+    }));
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({

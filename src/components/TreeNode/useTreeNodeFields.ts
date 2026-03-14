@@ -10,6 +10,7 @@
 import { useSignal, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
 import { getFieldService } from '../../data/services';
 import type { DataField } from '../../data/models';
+import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
 
 export type UseTreeNodeFieldsOptions = {
     nodeId: string;
@@ -51,7 +52,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     });
 
     // Load fields when version changes (client-only for Firebase access)
-    useVisibleTask$(async ({ track, cleanup }) => {
+    useVisibleTask$(async ({ track }) => {
         // Track the version to react to prop changes
         track(() => loadVersion.value);
         const nodeId = currentNodeId.value;
@@ -65,23 +66,14 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         isLoading.value = true;
         fields.value = await getFieldService().getFieldsForNode(nodeId);
         isLoading.value = false;
-        
-        // Listen for storage change events (triggered by sync or other storage operations)
-        if (typeof window !== 'undefined') {
-            const handleStorageChange = () => {
-                if (currentEnabled.value) {
-                    console.log('[useTreeNodeFields] Storage change detected, reloading fields...');
-                    reload$();
-                }
-            };
-            
-            window.addEventListener('storage-change', handleStorageChange);
-            
-            cleanup(() => {
-                window.removeEventListener('storage-change', handleStorageChange);
-            });
-        }
     });
+
+    useStorageChangeListener($(() => {
+        if (currentEnabled.value) {
+            console.log('[useTreeNodeFields] Storage change detected, reloading fields...');
+            reload$();
+        }
+    }));
 
     return { fields, isLoading, reload$ };
 }

@@ -13,6 +13,7 @@
 import { useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
 import { getNodeService } from '../data/services';
 import type { TreeNode } from '../data/models';
+import { useStorageChangeListener } from './useStorageChangeListener';
 
 export function useRootViewData() {
     const nodes = useSignal<TreeNode[]>([]);
@@ -23,7 +24,6 @@ export function useRootViewData() {
         isLoading.value = true;
         try {
             const fetchedNodes = await getNodeService().getRootNodes();
-            // Log node count instead of full array to avoid console clutter
             console.log('[useRootViewData] Fetched', fetchedNodes.length, 'root nodes');
             nodes.value = fetchedNodes;
             console.log('[useRootViewData] nodes.value set to', nodes.value.length, 'nodes');
@@ -32,24 +32,14 @@ export function useRootViewData() {
         }
     });
 
-    useVisibleTask$(async ({ track, cleanup }) => {
+    useVisibleTask$(async () => {
         await load$();
-        
-        // Listen for storage change events (triggered by sync or other storage operations)
-        if (typeof window !== 'undefined') {
-            const handleStorageChange = () => {
-                console.log('[useRootViewData] Storage change detected, reloading...');
-                load$();
-            };
-            
-            window.addEventListener('storage-change', handleStorageChange);
-            track(() => handleStorageChange); // Track for reactivity
-            
-            cleanup(() => {
-                window.removeEventListener('storage-change', handleStorageChange);
-            });
-        }
     });
+
+    useStorageChangeListener($(() => {
+        console.log('[useRootViewData] Storage change detected, reloading...');
+        load$();
+    }));
 
     return { nodes, isLoading, reload$: load$ };
 }
