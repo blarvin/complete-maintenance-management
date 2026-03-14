@@ -44,7 +44,7 @@ function coerceTimestamps<T>(data: any): T {
   }
   return data as T;
 }
-import { createHistoryEntry } from "./historyHelpers";
+import { createHistoryEntry, computeNextRev } from "./historyHelpers";
 import { now } from "../../utils/time";
 import { toStorageError, makeStorageError, isStorageError } from "./storageErrors";
 
@@ -659,8 +659,8 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       orderBy("rev", "desc")
     );
     const snap = await getDocs(q);
-    const rev = snap.docs.length ? (snap.docs[0].data() as DataFieldHistory).rev + 1 : 0;
-    return rev;
+    const histories = snap.docs.map(d => d.data() as DataFieldHistory);
+    return computeNextRev(histories);
   }
 
   /**

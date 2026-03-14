@@ -19,7 +19,7 @@ import type { TreeNode, DataField, DataFieldHistory } from '../models';
 import { filterActive, filterDeleted } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
-import { createHistoryEntry } from './historyHelpers';
+import { createHistoryEntry, computeNextRev } from './historyHelpers';
 import { makeStorageError } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
 import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
@@ -505,9 +505,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   private async nextRev(dataFieldId: string): Promise<number> {
     const history = await db.history.where('dataFieldId').equals(dataFieldId).toArray();
-    if (history.length === 0) return 0;
-
-    const maxRev = Math.max(...history.map(h => h.rev));
-    return maxRev + 1;
+    return computeNextRev(history);
   }
 }
