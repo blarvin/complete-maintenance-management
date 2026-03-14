@@ -27,7 +27,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [x] **3.3 DRY** Extract `persistUIPrefs(state)` in `appState.transitions`
 - [x] **3.4 DRY** Move `createResult<T>()` to `storageResult.ts`
 - [x] **4.2 CQRS** Introduce `StorageEventBus`; node index as subscriber
-- [ ] **5.2** Extract `useEditableValue` from `useFieldEdit`
+- [x] **5.2** Extract `useEditableValue` from `useFieldEdit`
 - [ ] **5.3** Create `useAsyncOperation` for loading/error state
 - [ ] **5.4** Extract navigation guard logic (`guards.ts`)
 - [ ] **6.2** Decouple sync trigger (event or dedicated API)

@@ -17,6 +17,7 @@ import { useDoubleTap } from './useDoubleTap';
 import { useFocusManager, BLUR_SUPPRESS_WINDOW_MS } from './useFocusManager';
 import { useAppState, useAppTransitions, selectors } from '../state/appState';
 import { triggerSync } from './useSyncTrigger';
+import { useEditableValue } from './useEditableValue';
 
 export type UseFieldEditOptions = {
     fieldId: string;
@@ -93,10 +94,15 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
     const rootRef = useSignal<HTMLElement>();
     const editInputRef = useSignal<HTMLInputElement>();
     
-    // Value state
-    const currentValue = useSignal<string>(options.initialValue ?? '');
-    const editValue = useSignal<string>('');
-    const previewValue = useSignal<string | null>(null);
+    // Value state (current / edit / preview)
+    const {
+        current: currentValue,
+        edit: editValue,
+        preview: previewValue,
+        displayValue,
+        hasValue,
+        isPreviewActive,
+    } = useEditableValue(options.initialValue ?? '');
 
     // Double-tap detection
     const { checkDoubleTap$ } = useDoubleTap();
@@ -224,11 +230,6 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
             await options.onUpdated$();
         }
     });
-    
-    // Computed display values
-    const displayValue = previewValue.value !== null ? previewValue.value : currentValue.value;
-    const hasValue = !!displayValue;
-    const isPreviewActive = previewValue.value !== null;
     
     return {
         isEditing,
