@@ -7,16 +7,14 @@
 **Documentation Hierarchy**:
 1. **SPECIFICATION.md** - Product requirements, data models, UX patterns (the spec)
 2. **LATER.md** - Deferred features, Phase 2+ roadmap, resolved items
-3. **REFACTORING_AUDIT.md** - Known technical debt, code quality issues
-4. **CLAUDE.md** (this file) - Architecture, patterns, workflow for AI assistance
 
 ---
 
 ## Project Overview
 
-**Type**: Asset Tree Management System
-**Purpose**: Hierarchical maintenance tracking for physical assets (vehicles, buildings, machinery)
-**Status**: Phase 1 MVP - local-first persistence, text-only fields, rudimentary sync
+**Type**: Asset Management System based on a hierarchical tree view UI
+**Purpose**: Maintenance tracking for physical assets (vehicles, buildings, machinery, etc.)
+**Status**: Phase 1 MVP - local-first persistence, text-only fields
 
 ### Tech Stack
 - **Framework**: Qwik 1.16.0 (resumable, SSR-first)
@@ -35,17 +33,10 @@
 
 ## Architecture Patterns
 
-### 1. Finite State Machine (FSM) Navigation
-**Location**: `src/state/appState.*`
-
-View state uses discriminated unions. Components query state via selectors; never manage navigation state locally.
-
 ### 2. Adapter Pattern (Backend Abstraction)
 **Location**: `src/data/storage/`
-
 **Interface**: `StorageAdapter` - Backend-agnostic domain operations
 **Implementations**: `IDBAdapter` (primary, offline-first via Dexie), `FirestoreAdapter` (cloud sync)
-
 **Service Registry**: `src/data/services/index.ts`
 - Module-level getters: `getNodeService()`, `getFieldService()`
 - IMPORTANT: Call these at runtime inside `$()` handlers — never capture in closures or serialize
@@ -53,12 +44,6 @@ View state uses discriminated unions. Components query state via selectors; neve
 - Qwik `useContextProvider` CANNOT hold services (methods aren't serializable, `Code(3)` error)
 - `noSerialize` workaround not viable — values become `undefined` after SSR
 
-### 3. Offline-First Architecture
-1. All operations go to IndexedDB first (via IDBAdapter)
-2. Operations enqueued to `syncQueue` table (via standalone `SyncQueueManager`)
-3. SyncManager pushes to Firestore on timer/online event
-4. Pull fetches Firestore changes, applies server-authority conflict resolution
-5. UI works identically online or offline
 
 ### 4. Component Hierarchy with Type Safety
 Components use discriminated unions + type guards (no prop spreading).
@@ -72,11 +57,18 @@ Components use discriminated unions + type guards (no prop spreading).
 **DataCard states**: `isExpanded`, `isUnderConstruction`
 **DataField states**: `isMetadataExpanded`, `isEditing`
 
-### User Interactions (per SPEC)
+### Application User Interaction Design Principles
 - **Double-tap to edit**: DataField values (also supports Enter/Space for keyboard)
 - **Single tap**: Navigate down (child → parent), expand/collapse DataCard
 - **"Up" button**: Navigate to parent or ROOT view
 - **In-situ creation**: CreateNodeButton shows construction form inline
+
+### 3. Offline-First Architecture
+1. All operations go to IndexedDB first (via IDBAdapter)
+2. Operations enqueued to `syncQueue` table (via standalone `SyncQueueManager`)
+3. SyncManager pushes to Firestore on timer/online event
+4. Pull fetches Firestore changes, applies server-authority conflict resolution
+5. UI works identically online or offline
 
 ### Code Style
 - **TypeScript**: Strict mode, discriminated unions, type guards
@@ -108,19 +100,11 @@ npm run lint         # ESLint
 - **Fake-IndexedDB**: In-memory IndexedDB for fast unit tests
 - Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_EMULATOR', 'true')`
 
----
+### Testing Infrastructure
+- `src/test/globalSetup.ts` - Vitest + Firebase emulator setup
+- `cypress/support/commands.ts` - E2E helpers
+- `src/test/testUtils.ts` - Shared test utilities
 
-## Critical Known Issues (from REFACTORING_AUDIT.md)
-
-### High Priority
-1. **Dead Code**: `src/data/repo/` folder (no imports, safe to delete)
-2. **Sorting Bug**: IDBAdapter sorts descending, FirestoreAdapter ascending → different behavior offline/online
-
-### Medium Priority
-3. **Magic Numbers**: Extract constants (FOCUS_DELAY_MS, BLUR_SUPPRESS_WINDOW_MS)
-4. **Unused Prop**: DataCard.nodeId never used
-
----
 
 ## Quick Reference
 
@@ -165,7 +149,4 @@ useStorageAdapter(new IDBAdapter());
 - `src/data/services/index.ts` - Service registry
 - `src/constants.ts` - Hardcoded values (USER_ID, library)
 
-### Testing Infrastructure
-- `src/test/globalSetup.ts` - Vitest + Firebase emulator setup
-- `cypress/support/commands.ts` - E2E helpers
-- `src/test/testUtils.ts` - Shared test utilities
+
