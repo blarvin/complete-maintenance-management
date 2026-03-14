@@ -24,7 +24,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [x] **2.2 OCP** Event-based node index updates (via StorageEventBus)
 - [x] **3.1 DRY** Move `nextRev()` to `historyHelpers.ts`
 - [x] **3.2 DRY** Create `useStorageChangeListener` hook
-- [ ] **3.3 DRY** Extract `persistUIPrefs(state)` in `appState.transitions`
+- [x] **3.3 DRY** Extract `persistUIPrefs(state)` in `appState.transitions`
 - [ ] **3.4 DRY** Move `createResult<T>()` to `storageResult.ts`
 - [x] **4.2 CQRS** Introduce `StorageEventBus`; node index as subscriber
 - [ ] **5.2** Extract `useEditableValue` from `useFieldEdit`

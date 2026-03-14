@@ -8,6 +8,14 @@
 import type { AppState, UnderConstructionData } from './appState.types';
 import { saveUIPrefs } from './uiPrefs';
 
+function persistUIPrefs(state: AppState): void {
+    saveUIPrefs({
+        expandedCards: state.ui.expandedCards,
+        expandedFieldDetails: state.ui.expandedFieldDetails,
+        expandedNodeDetails: state.ui.expandedNodeDetails,
+    });
+}
+
 /**
  * Navigation Transitions
  * 
@@ -111,12 +119,7 @@ export const transitions = {
         }
         state.ui.expandedCards = newSet;
 
-        // Persist
-        saveUIPrefs({
-            expandedCards: state.ui.expandedCards,
-            expandedFieldDetails: state.ui.expandedFieldDetails,
-            expandedNodeDetails: state.ui.expandedNodeDetails,
-        });
+        persistUIPrefs(state);
     },
 
     /**
@@ -131,12 +134,7 @@ export const transitions = {
         }
         state.ui.expandedFieldDetails = newSet;
 
-        // Persist
-        saveUIPrefs({
-            expandedCards: state.ui.expandedCards,
-            expandedFieldDetails: state.ui.expandedFieldDetails,
-            expandedNodeDetails: state.ui.expandedNodeDetails,
-        });
+        persistUIPrefs(state);
     },
 
     /**
@@ -151,12 +149,7 @@ export const transitions = {
         }
         state.ui.expandedNodeDetails = newSet;
 
-        // Persist
-        saveUIPrefs({
-            expandedCards: state.ui.expandedCards,
-            expandedFieldDetails: state.ui.expandedFieldDetails,
-            expandedNodeDetails: state.ui.expandedNodeDetails,
-        });
+        persistUIPrefs(state);
     },
 
     /**
