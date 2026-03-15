@@ -31,12 +31,12 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [x] **5.3** Create `useAsyncOperation` for loading/error state
 - [x] **5.4** Extract navigation guard logic (`guards.ts`)
 - [ ] **6.2** Decouple sync trigger (event or dedicated API)
-- [ ] **6.3** Abstract time provider for tests
-- [ ] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
+- [s] **6.3** Abstract time provider for tests
+- [s] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
 - [x] **7.2** Remove unused `nodeId` prop from DataCard
-- [ ] **7.3** Add barrel exports for hooks
-- [ ] **7.4** Add barrel exports for sync strategies
-- [ ] **7.5** Consolidate / replace ad-hoc `console.log` with logger
+- [s] **7.3** Add barrel exports for hooks
+- [s] **7.4** Add barrel exports for sync strategies
+- [s] **7.5** Consolidate / replace ad-hoc `console.log` with logger
 - [ ] **8.1** Full CQRS implementation (larger)
 - [ ] **8.2** Service layer rewrite with event sourcing (larger)
 - [ ] **8.3** Extract sync system to standalone module (larger)

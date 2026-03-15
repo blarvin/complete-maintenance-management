@@ -257,6 +257,13 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
 - **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
 
+### Structured Logger (Refactoring Audit 7.5)
+
+- Replace ad-hoc `console.log` with a lightweight logger utility (`src/utils/logger.ts`)
+- Level filtering: silence debug/info in production, show only warn/error
+- 137 console statements across 27 files already use consistent `[Tag]` prefixes — migration is mechanical
+- Low priority: current logging works well for dev/prototyping
+
 ### Error Handling & Resilience
 
 - **Adopt `safeAsync` in views**: Wrap async data loading calls with `safeAsync()` from `withErrorHandling.ts` to prevent crashes on Firestore failures. Returns fallback data (empty arrays) and logs errors with context. Low priority for Phase 1 because Firestore SDK's offline persistence handles most network failures gracefully. Becomes valuable when: (1) Snackbar is implemented to show user-friendly errors, (2) Error monitoring (Sentry, etc.) is added, (3) UI has explicit error/retry states.
