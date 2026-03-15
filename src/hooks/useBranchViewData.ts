@@ -21,11 +21,12 @@ import { useSignal, $ } from '@builder.io/qwik';
 import { getNodeService } from '../data/services';
 import { useAppState, useAppTransitions } from '../state/appState';
 import type { TreeNode } from '../data/models';
+import { useAsyncOperation, runAsync } from './useAsyncOperation';
 
 export function useBranchViewData() {
     const parentNode = useSignal<TreeNode | null>(null);
     const children = useSignal<TreeNode[]>([]);
-    const isLoading = useSignal(false);
+    const op = useAsyncOperation();
 
     const appState = useAppState();
     const { cancelConstruction$ } = useAppTransitions();
@@ -38,14 +39,11 @@ export function useBranchViewData() {
             cancelConstruction$();
         }
 
-        isLoading.value = true;
-        try {
+        await runAsync(op, async () => {
             const result = await getNodeService().getNodeWithChildren(id);
             parentNode.value = result.node;
             children.value = result.children;
-        } finally {
-            isLoading.value = false;
-        }
+        });
     });
 
     // Reload function that accepts current parentId
@@ -55,7 +53,7 @@ export function useBranchViewData() {
     return {
         parentNode,
         children,
-        isLoading,
+        isLoading: op.isLoading,
         load$,
         reload$,
     };

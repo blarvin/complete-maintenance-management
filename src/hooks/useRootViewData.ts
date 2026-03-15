@@ -14,22 +14,20 @@ import { useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
 import { getNodeService } from '../data/services';
 import type { TreeNode } from '../data/models';
 import { useStorageChangeListener } from './useStorageChangeListener';
+import { useAsyncOperation, runAsync } from './useAsyncOperation';
 
 export function useRootViewData() {
     const nodes = useSignal<TreeNode[]>([]);
-    const isLoading = useSignal(false);
+    const op = useAsyncOperation();
 
     const load$ = $(async () => {
         console.log('[useRootViewData] load$ called');
-        isLoading.value = true;
-        try {
+        await runAsync(op, async () => {
             const fetchedNodes = await getNodeService().getRootNodes();
             console.log('[useRootViewData] Fetched', fetchedNodes.length, 'root nodes');
             nodes.value = fetchedNodes;
             console.log('[useRootViewData] nodes.value set to', nodes.value.length, 'nodes');
-        } finally {
-            isLoading.value = false;
-        }
+        });
     });
 
     useVisibleTask$(async () => {
@@ -41,5 +39,5 @@ export function useRootViewData() {
         load$();
     }));
 
-    return { nodes, isLoading, reload$: load$ };
+    return { nodes, isLoading: op.isLoading, reload$: load$ };
 }

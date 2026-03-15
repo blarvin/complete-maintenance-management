@@ -11,6 +11,7 @@ import { useSignal, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
 import { getFieldService } from '../../data/services';
 import type { DataField } from '../../data/models';
 import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
+import { useAsyncOperation, runAsync } from '../../hooks/useAsyncOperation';
 
 export type UseTreeNodeFieldsOptions = {
     nodeId: string;
@@ -19,12 +20,12 @@ export type UseTreeNodeFieldsOptions = {
 
 export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     const fields = useSignal<DataField[] | null>(null);
-    const isLoading = useSignal<boolean>(false);
-    
+    const op = useAsyncOperation();
+
     // Store nodeId in a signal so useVisibleTask$ can track it
     const currentNodeId = useSignal<string>(options.nodeId);
     const currentEnabled = useSignal<boolean>(options.enabled);
-    
+
     // Version counter to trigger reload - increments when props change
     const loadVersion = useSignal<number>(0);
 
@@ -46,9 +47,9 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     // Defined before useVisibleTask$ so it can be referenced in the event handler
     const reload$ = $(async () => {
         if (!currentEnabled.value) return;
-        isLoading.value = true;
-        fields.value = await getFieldService().getFieldsForNode(currentNodeId.value);
-        isLoading.value = false;
+        await runAsync(op, async () => {
+            fields.value = await getFieldService().getFieldsForNode(currentNodeId.value);
+        });
     });
 
     // Load fields when version changes (client-only for Firebase access)
@@ -63,9 +64,9 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
             return;
         }
 
-        isLoading.value = true;
-        fields.value = await getFieldService().getFieldsForNode(nodeId);
-        isLoading.value = false;
+        await runAsync(op, async () => {
+            fields.value = await getFieldService().getFieldsForNode(nodeId);
+        });
     });
 
     useStorageChangeListener($(() => {
@@ -75,5 +76,5 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         }
     }));
 
-    return { fields, isLoading, reload$ };
+    return { fields, isLoading: op.isLoading, reload$ };
 }
