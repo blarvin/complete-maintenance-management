@@ -7,6 +7,7 @@
 
 import type { AppState, UnderConstructionData } from './appState.types';
 import { saveUIPrefs } from './uiPrefs';
+import { guards } from './guards';
 
 function persistUIPrefs(state: AppState): void {
     saveUIPrefs({
@@ -31,8 +32,7 @@ export const transitions = {
      * Navigate into a node (ROOT→BRANCH or BRANCH→BRANCH)
      */
     navigateToNode: (state: AppState, nodeId: string): void => {
-        // Guard: can't navigate while under construction
-        if (state.underConstruction) return;
+        if (!guards.notUnderConstruction(state)) return;
         
         // Push current to history if in BRANCH view
         if (state.view.state === 'BRANCH') {
@@ -50,11 +50,8 @@ export const transitions = {
      * Navigate up (BRANCH→BRANCH or BRANCH→ROOT)
      */
     navigateUp: (state: AppState, parentId: string | null): void => {
-        // Guard: only valid from BRANCH view
-        if (state.view.state !== 'BRANCH') return;
-        
-        // Guard: can't navigate while under construction
-        if (state.underConstruction) return;
+        if (!guards.inBranchView(state)) return;
+        if (!guards.notUnderConstruction(state)) return;
         
         if (parentId === null) {
             // Transition to ROOT
@@ -75,8 +72,7 @@ export const transitions = {
      * Navigate directly to ROOT view
      */
     navigateToRoot: (state: AppState): void => {
-        // Guard: can't navigate while under construction
-        if (state.underConstruction) return;
+        if (!guards.notUnderConstruction(state)) return;
         
         state.view = { state: 'ROOT' };
         state.history = [];
@@ -87,8 +83,7 @@ export const transitions = {
      * Start creating a new node
      */
     startConstruction: (state: AppState, data: NonNullable<UnderConstructionData>): void => {
-        // Guard: can't start if already constructing
-        if (state.underConstruction) return;
+        if (!guards.notUnderConstruction(state)) return;
         
         state.underConstruction = data;
     },

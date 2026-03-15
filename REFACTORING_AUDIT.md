@@ -29,7 +29,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [x] **4.2 CQRS** Introduce `StorageEventBus`; node index as subscriber
 - [x] **5.2** Extract `useEditableValue` from `useFieldEdit`
 - [x] **5.3** Create `useAsyncOperation` for loading/error state
-- [ ] **5.4** Extract navigation guard logic (`guards.ts`)
+- [x] **5.4** Extract navigation guard logic (`guards.ts`)
 - [ ] **6.2** Decouple sync trigger (event or dedicated API)
 - [ ] **6.3** Abstract time provider for tests
 - [ ] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
