@@ -109,7 +109,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                 onKeyDown$={handleKeyDown$}
                 chevronDisabled={true}
             />
-            <DataCard nodeId={props.id} isOpen={true}>
+            <DataCard isOpen={true}>
                 {/* FieldList handles all field management - same as display mode */}
                 <FieldList 
                     nodeId={props.id} 

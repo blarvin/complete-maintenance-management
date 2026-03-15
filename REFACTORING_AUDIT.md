@@ -33,7 +33,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [ ] **6.2** Decouple sync trigger (event or dedicated API)
 - [ ] **6.3** Abstract time provider for tests
 - [ ] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
-- [ ] **7.2** Remove unused `nodeId` prop from DataCard
+- [x] **7.2** Remove unused `nodeId` prop from DataCard
 - [ ] **7.3** Add barrel exports for hooks
 - [ ] **7.4** Add barrel exports for sync strategies
 - [ ] **7.5** Consolidate / replace ad-hoc `console.log` with logger

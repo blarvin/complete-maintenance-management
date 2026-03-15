@@ -13,7 +13,6 @@ import { Slot, component$ } from '@builder.io/qwik';
 import styles from './DataCard.module.css';
 
 export type DataCardProps = {
-    nodeId: string;
     isOpen?: boolean;
 };
 
