@@ -339,17 +339,4 @@ describe('Adapter Instance Creation', () => {
         expect(typeof adapter.applySyncItem).toBe('function');
     });
 
-    it('services module exports both adapters', async () => {
-        const { idbAdapter, firestoreAdapter } = await import('../data/services/index');
-        
-        expect(idbAdapter).toBeDefined();
-        expect(firestoreAdapter).toBeDefined();
-        
-        // Verify they're different instances
-        expect(idbAdapter).not.toBe(firestoreAdapter);
-        
-        // Verify adapter types by checking unique properties
-        expect((idbAdapter as any).syncQueue).toBeDefined(); // IDBAdapter-specific (SyncQueueManager)
-        expect(typeof (firestoreAdapter as any).applySyncItem).toBe('function'); // FirestoreAdapter-specific
-    });
 });

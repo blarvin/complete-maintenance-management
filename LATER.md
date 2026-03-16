@@ -259,9 +259,9 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 
 ### CQRS Follow-ups
 
-- Remove deprecated `INodeService` / `IFieldService` once all tests migrated to CQRS APIs
 - Command logging/audit middleware on CommandBus (pre/post hooks)
 - Query caching / materialized views (beyond existing nodeIndex)
+- Remove `INodeService` / `IFieldService` interface types from `services/index.ts` once no external code references them
 
 ### Move useSyncTrigger.ts from src/hooks/ to src/data/
 

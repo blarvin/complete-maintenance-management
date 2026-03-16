@@ -1,369 +1,177 @@
 /**
- * Tests for Service Layer - Adapter selection and swapping
+ * Tests for CQRS Registry - CommandBus and Query singletons
  *
  * Covers:
- * - getNodeService / getFieldService return active services
- * - setNodeService / setFieldService allow custom injection
- * - resetServices restores defaults
- * - useStorageAdapter creates services from an adapter
+ * - getCommandBus / getNodeQueries / getFieldQueries return active instances
+ * - setCommandBus / setNodeQueries / setFieldQueries allow custom injection
+ * - resetCommandBus / resetQueries clears singletons
+ * - initializeCommandBus / initializeQueries wire up from adapter
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
-    getNodeService,
-    getFieldService,
-    setNodeService,
-    setFieldService,
-    resetServices,
-    useStorageAdapter,
-    type INodeService,
-    type IFieldService,
-} from '../data/services/index';
+    getCommandBus,
+    setCommandBus,
+    resetCommandBus,
+    initializeCommandBus,
+    CommandBus,
+} from '../data/commands';
+import {
+    getNodeQueries,
+    getFieldQueries,
+    setNodeQueries,
+    setFieldQueries,
+    resetQueries,
+    initializeQueries,
+} from '../data/queries';
+import type { INodeQueries, IFieldQueries } from '../data/queries';
 import type { StorageAdapter } from '../data/storage/storageAdapter';
-import type { TreeNode, DataField, DataFieldHistory } from '../data/models';
 
-describe('Service Layer - Adapter Selection', () => {
-    // Restore defaults after each test to avoid cross-test pollution
+function mockAdapter(): StorageAdapter {
+    return {
+        listRootNodes: vi.fn().mockResolvedValue({ data: [{ id: 'r1' }] }),
+        getNode: vi.fn().mockResolvedValue({ data: { id: 'n1' } }),
+        listChildren: vi.fn().mockResolvedValue({ data: [] }),
+        createNode: vi.fn().mockResolvedValue({ data: { id: 'n1' } }),
+        updateNode: vi.fn().mockResolvedValue({ data: undefined }),
+        deleteNode: vi.fn().mockResolvedValue({ data: undefined }),
+        listFields: vi.fn().mockResolvedValue({ data: [{ id: 'f1' }] }),
+        nextCardOrder: vi.fn().mockResolvedValue({ data: 3 }),
+        createField: vi.fn().mockResolvedValue({ data: { id: 'f1' } }),
+        updateFieldValue: vi.fn().mockResolvedValue({ data: undefined }),
+        deleteField: vi.fn().mockResolvedValue({ data: undefined }),
+        getFieldHistory: vi.fn().mockResolvedValue({ data: [] }),
+        listDeletedNodes: vi.fn().mockResolvedValue({ data: [] }),
+        listDeletedChildren: vi.fn().mockResolvedValue({ data: [] }),
+        restoreNode: vi.fn().mockResolvedValue({ data: undefined }),
+        listDeletedFields: vi.fn().mockResolvedValue({ data: [] }),
+        restoreField: vi.fn().mockResolvedValue({ data: undefined }),
+    } as StorageAdapter;
+}
+
+describe('CQRS Registry', () => {
     afterEach(() => {
-        resetServices();
+        resetCommandBus();
+        resetQueries();
     });
 
-    describe('getNodeService / getFieldService', () => {
-        it('returns a node service with expected methods', () => {
-            const nodeService = getNodeService();
-
-            expect(nodeService).toBeDefined();
-            expect(typeof nodeService.getRootNodes).toBe('function');
-            expect(typeof nodeService.getNodeById).toBe('function');
-            expect(typeof nodeService.getNodeWithChildren).toBe('function');
-            expect(typeof nodeService.getChildren).toBe('function');
-            expect(typeof nodeService.createWithFields).toBe('function');
-            expect(typeof nodeService.createEmptyNode).toBe('function');
-            expect(typeof nodeService.updateNode).toBe('function');
+    describe('CommandBus singleton', () => {
+        it('throws when not initialized', () => {
+            expect(() => getCommandBus()).toThrow('CommandBus not initialized');
         });
 
-        it('returns a field service with expected methods', () => {
-            const fieldService = getFieldService();
-
-            expect(fieldService).toBeDefined();
-            expect(typeof fieldService.getFieldsForNode).toBe('function');
-            expect(typeof fieldService.nextCardOrder).toBe('function');
-            expect(typeof fieldService.addField).toBe('function');
-            expect(typeof fieldService.updateFieldValue).toBe('function');
-            expect(typeof fieldService.deleteField).toBe('function');
-            expect(typeof fieldService.getFieldHistory).toBe('function');
+        it('returns bus after initializeCommandBus', () => {
+            initializeCommandBus(mockAdapter());
+            const bus = getCommandBus();
+            expect(bus).toBeInstanceOf(CommandBus);
         });
 
-        it('returns the same service instance on repeated calls', () => {
-            const nodeService1 = getNodeService();
-            const nodeService2 = getNodeService();
-            const fieldService1 = getFieldService();
-            const fieldService2 = getFieldService();
+        it('returns same instance on repeated calls', () => {
+            initializeCommandBus(mockAdapter());
+            expect(getCommandBus()).toBe(getCommandBus());
+        });
 
-            expect(nodeService1).toBe(nodeService2);
-            expect(fieldService1).toBe(fieldService2);
+        it('setCommandBus injects a custom bus', () => {
+            const custom = new CommandBus();
+            setCommandBus(custom);
+            expect(getCommandBus()).toBe(custom);
+        });
+
+        it('resetCommandBus clears the singleton', () => {
+            initializeCommandBus(mockAdapter());
+            resetCommandBus();
+            expect(() => getCommandBus()).toThrow('CommandBus not initialized');
+        });
+
+        it('initialized bus routes commands to adapter', async () => {
+            const adapter = mockAdapter();
+            initializeCommandBus(adapter);
+
+            await getCommandBus().execute({ type: 'DELETE_NODE', payload: { id: 'n1' } });
+            expect(adapter.deleteNode).toHaveBeenCalledWith('n1');
         });
     });
 
-    describe('setNodeService / setFieldService', () => {
-        it('allows injecting a custom node service', async () => {
-            const mockNodeService: INodeService = {
-                getRootNodes: vi.fn().mockResolvedValue([{ id: 'mock-node' }]),
+    describe('Query singletons', () => {
+        it('throws when not initialized', () => {
+            expect(() => getNodeQueries()).toThrow('Node queries not initialized');
+            expect(() => getFieldQueries()).toThrow('Field queries not initialized');
+        });
+
+        it('returns queries after initializeQueries', async () => {
+            const adapter = mockAdapter();
+            initializeQueries(adapter);
+
+            const nodes = await getNodeQueries().getRootNodes();
+            expect(nodes).toEqual([{ id: 'r1' }]);
+            expect(adapter.listRootNodes).toHaveBeenCalled();
+
+            const fields = await getFieldQueries().getFieldsForNode('n1');
+            expect(fields).toEqual([{ id: 'f1' }]);
+            expect(adapter.listFields).toHaveBeenCalledWith('n1');
+        });
+
+        it('returns same instance on repeated calls', () => {
+            initializeQueries(mockAdapter());
+            expect(getNodeQueries()).toBe(getNodeQueries());
+            expect(getFieldQueries()).toBe(getFieldQueries());
+        });
+
+        it('setNodeQueries / setFieldQueries inject custom implementations', async () => {
+            const customNodeQueries: INodeQueries = {
+                getRootNodes: vi.fn().mockResolvedValue([{ id: 'custom' }]),
                 getNodeById: vi.fn(),
                 getNodeWithChildren: vi.fn(),
                 getChildren: vi.fn(),
-                createWithFields: vi.fn(),
-                createEmptyNode: vi.fn(),
-                updateNode: vi.fn(),
-                deleteNode: vi.fn(),
             };
-
-            setNodeService(mockNodeService);
-
-            const activeService = getNodeService();
-            expect(activeService).toBe(mockNodeService);
-
-            const result = await activeService.getRootNodes();
-            expect(result).toEqual([{ id: 'mock-node' }]);
-            expect(mockNodeService.getRootNodes).toHaveBeenCalled();
-        });
-
-        it('allows injecting a custom field service', async () => {
-            const mockFieldService: IFieldService = {
-                getFieldsForNode: vi.fn().mockResolvedValue([{ id: 'mock-field' }]),
-                nextCardOrder: vi.fn(),
-                addField: vi.fn(),
-                updateFieldValue: vi.fn(),
-                deleteField: vi.fn(),
+            const customFieldQueries: IFieldQueries = {
+                getFieldsForNode: vi.fn().mockResolvedValue([{ id: 'custom-f' }]),
                 getFieldHistory: vi.fn(),
-            };
-
-            setFieldService(mockFieldService);
-
-            const activeService = getFieldService();
-            expect(activeService).toBe(mockFieldService);
-
-            const result = await activeService.getFieldsForNode('node-1');
-            expect(result).toEqual([{ id: 'mock-field' }]);
-            expect(mockFieldService.getFieldsForNode).toHaveBeenCalledWith('node-1');
-        });
-
-        it('injected services persist until reset', () => {
-            const mockNodeService: INodeService = {
-                getRootNodes: vi.fn(),
-                getNodeById: vi.fn(),
-                getNodeWithChildren: vi.fn(),
-                getChildren: vi.fn(),
-                createWithFields: vi.fn(),
-                createEmptyNode: vi.fn(),
-                updateNode: vi.fn(),
-                deleteNode: vi.fn(),
-            };
-
-            setNodeService(mockNodeService);
-
-            // Multiple calls should return the same injected service
-            expect(getNodeService()).toBe(mockNodeService);
-            expect(getNodeService()).toBe(mockNodeService);
-        });
-    });
-
-    describe('resetServices', () => {
-        it('restores default services after custom injection', () => {
-            const originalNodeService = getNodeService();
-            const originalFieldService = getFieldService();
-
-            // Inject custom services
-            const mockNodeService: INodeService = {
-                getRootNodes: vi.fn(),
-                getNodeById: vi.fn(),
-                getNodeWithChildren: vi.fn(),
-                getChildren: vi.fn(),
-                createWithFields: vi.fn(),
-                createEmptyNode: vi.fn(),
-                updateNode: vi.fn(),
-                deleteNode: vi.fn(),
-            };
-            const mockFieldService: IFieldService = {
-                getFieldsForNode: vi.fn(),
                 nextCardOrder: vi.fn(),
-                addField: vi.fn(),
-                updateFieldValue: vi.fn(),
-                deleteField: vi.fn(),
-                getFieldHistory: vi.fn(),
             };
 
-            setNodeService(mockNodeService);
-            setFieldService(mockFieldService);
+            setNodeQueries(customNodeQueries);
+            setFieldQueries(customFieldQueries);
 
-            expect(getNodeService()).toBe(mockNodeService);
-            expect(getFieldService()).toBe(mockFieldService);
+            expect(getNodeQueries()).toBe(customNodeQueries);
+            expect(getFieldQueries()).toBe(customFieldQueries);
 
-            // Reset
-            resetServices();
-
-            // Should be back to defaults (same references as original)
-            expect(getNodeService()).toBe(originalNodeService);
-            expect(getFieldService()).toBe(originalFieldService);
-        });
-    });
-
-    describe('useStorageAdapter', () => {
-        it('creates services from a custom adapter', async () => {
-            // Create a minimal mock adapter
-            const mockAdapter: StorageAdapter = {
-                listRootNodes: vi.fn().mockResolvedValue({ data: [{ id: 'adapter-node', nodeName: 'From Adapter' }] }),
-                getNode: vi.fn().mockResolvedValue({ data: null }),
-                listChildren: vi.fn().mockResolvedValue({ data: [] }),
-                createNode: vi.fn().mockResolvedValue({ data: { id: 'new-node' } }),
-                updateNode: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listFields: vi.fn().mockResolvedValue({ data: [{ id: 'adapter-field' }] }),
-                nextCardOrder: vi.fn().mockResolvedValue({ data: 5 }),
-                createField: vi.fn().mockResolvedValue({ data: { id: 'new-field' } }),
-                updateFieldValue: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteField: vi.fn().mockResolvedValue({ data: undefined }),
-                getFieldHistory: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedNodes: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedChildren: vi.fn().mockResolvedValue({ data: [] }),
-                restoreNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listDeletedFields: vi.fn().mockResolvedValue({ data: [] }),
-                restoreField: vi.fn().mockResolvedValue({ data: undefined }),
-            };
-
-            useStorageAdapter(mockAdapter);
-
-            // Node service should use the adapter
-            const nodes = await getNodeService().getRootNodes();
-            expect(nodes).toEqual([{ id: 'adapter-node', nodeName: 'From Adapter' }]);
-            expect(mockAdapter.listRootNodes).toHaveBeenCalled();
-
-            // Field service should use the adapter
-            const fields = await getFieldService().getFieldsForNode('node-1');
-            expect(fields).toEqual([{ id: 'adapter-field' }]);
-            expect(mockAdapter.listFields).toHaveBeenCalledWith('node-1');
-
-            const order = await getFieldService().nextCardOrder('node-1');
-            expect(order).toBe(5);
-            expect(mockAdapter.nextCardOrder).toHaveBeenCalledWith('node-1');
+            const nodes = await getNodeQueries().getRootNodes();
+            expect(nodes).toEqual([{ id: 'custom' }]);
         });
 
-        it('adapter services can be reset to defaults', async () => {
-            const mockAdapter: StorageAdapter = {
-                listRootNodes: vi.fn().mockResolvedValue({ data: [{ id: 'mock' }] }),
-                getNode: vi.fn().mockResolvedValue({ data: null }),
-                listChildren: vi.fn().mockResolvedValue({ data: [] }),
-                createNode: vi.fn().mockResolvedValue({ data: {} }),
-                updateNode: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listFields: vi.fn().mockResolvedValue({ data: [] }),
-                nextCardOrder: vi.fn().mockResolvedValue({ data: 0 }),
-                createField: vi.fn().mockResolvedValue({ data: {} }),
-                updateFieldValue: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteField: vi.fn().mockResolvedValue({ data: undefined }),
-                getFieldHistory: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedNodes: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedChildren: vi.fn().mockResolvedValue({ data: [] }),
-                restoreNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listDeletedFields: vi.fn().mockResolvedValue({ data: [] }),
-                restoreField: vi.fn().mockResolvedValue({ data: undefined }),
-            };
-
-            const originalNodeService = getNodeService();
-
-            useStorageAdapter(mockAdapter);
-            expect(getNodeService()).not.toBe(originalNodeService);
-
-            resetServices();
-            expect(getNodeService()).toBe(originalNodeService);
+        it('resetQueries clears singletons', () => {
+            initializeQueries(mockAdapter());
+            resetQueries();
+            expect(() => getNodeQueries()).toThrow('Node queries not initialized');
+            expect(() => getFieldQueries()).toThrow('Field queries not initialized');
         });
 
-        it('node service methods delegate to adapter correctly', async () => {
-            const mockNode: TreeNode = {
-                id: 'test-node',
-                parentId: null,
-                nodeName: 'Test',
-                nodeSubtitle: 'Sub',
-                updatedBy: 'user',
-                updatedAt: Date.now(),
-                deletedAt: null,
-            };
+        it('node query methods delegate to adapter correctly', async () => {
+            const adapter = mockAdapter();
+            initializeQueries(adapter);
 
-            const mockAdapter: StorageAdapter = {
-                listRootNodes: vi.fn().mockResolvedValue({ data: [mockNode] }),
-                getNode: vi.fn().mockResolvedValue({ data: mockNode }),
-                listChildren: vi.fn().mockResolvedValue({ data: [] }),
-                createNode: vi.fn().mockResolvedValue({ data: mockNode }),
-                updateNode: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listFields: vi.fn().mockResolvedValue({ data: [] }),
-                nextCardOrder: vi.fn().mockResolvedValue({ data: 0 }),
-                createField: vi.fn().mockResolvedValue({ data: {} }),
-                updateFieldValue: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteField: vi.fn().mockResolvedValue({ data: undefined }),
-                getFieldHistory: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedNodes: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedChildren: vi.fn().mockResolvedValue({ data: [] }),
-                restoreNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listDeletedFields: vi.fn().mockResolvedValue({ data: [] }),
-                restoreField: vi.fn().mockResolvedValue({ data: undefined }),
-            };
+            await getNodeQueries().getNodeById('n1');
+            expect(adapter.getNode).toHaveBeenCalledWith('n1');
 
-            useStorageAdapter(mockAdapter);
-            const nodeService = getNodeService();
+            await getNodeQueries().getNodeWithChildren('n1');
+            expect(adapter.getNode).toHaveBeenCalledWith('n1');
+            expect(adapter.listChildren).toHaveBeenCalledWith('n1');
 
-            // Test getNodeById
-            const node = await nodeService.getNodeById('test-node');
-            expect(node).toEqual(mockNode);
-            expect(mockAdapter.getNode).toHaveBeenCalledWith('test-node');
-
-            // Test getNodeWithChildren
-            const result = await nodeService.getNodeWithChildren('test-node');
-            expect(result.node).toEqual(mockNode);
-            expect(result.children).toEqual([]);
-
-            // Test getChildren
-            await nodeService.getChildren('parent-id');
-            expect(mockAdapter.listChildren).toHaveBeenCalledWith('parent-id');
-
-            // Test updateNode
-            await nodeService.updateNode('test-node', { nodeName: 'Updated' });
-            expect(mockAdapter.updateNode).toHaveBeenCalledWith('test-node', { nodeName: 'Updated' });
-
-            // Test deleteNode
-            await nodeService.deleteNode('test-node');
-            expect(mockAdapter.deleteNode).toHaveBeenCalledWith('test-node');
+            await getNodeQueries().getChildren('p1');
+            expect(adapter.listChildren).toHaveBeenCalledWith('p1');
         });
 
-        it('field service methods delegate to adapter correctly', async () => {
-            const mockField: DataField = {
-                id: 'test-field',
-                parentNodeId: 'node-1',
-                fieldName: 'Test Field',
-                fieldValue: 'Value',
-                cardOrder: 0,
-                updatedBy: 'user',
-                updatedAt: Date.now(),
-                deletedAt: null,
-            };
+        it('field query methods delegate to adapter correctly', async () => {
+            const adapter = mockAdapter();
+            initializeQueries(adapter);
 
-            const mockHistory: DataFieldHistory = {
-                id: 'test-field:0',
-                dataFieldId: 'test-field',
-                parentNodeId: 'node-1',
-                action: 'create',
-                property: 'fieldValue',
-                prevValue: null,
-                newValue: 'Value',
-                updatedBy: 'user',
-                updatedAt: Date.now(),
-                rev: 0,
-            };
+            await getFieldQueries().getFieldHistory('f1');
+            expect(adapter.getFieldHistory).toHaveBeenCalledWith('f1');
 
-            const mockAdapter: StorageAdapter = {
-                listRootNodes: vi.fn().mockResolvedValue({ data: [] }),
-                getNode: vi.fn().mockResolvedValue({ data: null }),
-                listChildren: vi.fn().mockResolvedValue({ data: [] }),
-                createNode: vi.fn().mockResolvedValue({ data: {} }),
-                updateNode: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listFields: vi.fn().mockResolvedValue({ data: [mockField] }),
-                nextCardOrder: vi.fn().mockResolvedValue({ data: 3 }),
-                createField: vi.fn().mockResolvedValue({ data: mockField }),
-                updateFieldValue: vi.fn().mockResolvedValue({ data: undefined }),
-                deleteField: vi.fn().mockResolvedValue({ data: undefined }),
-                getFieldHistory: vi.fn().mockResolvedValue({ data: [mockHistory] }),
-                listDeletedNodes: vi.fn().mockResolvedValue({ data: [] }),
-                listDeletedChildren: vi.fn().mockResolvedValue({ data: [] }),
-                restoreNode: vi.fn().mockResolvedValue({ data: undefined }),
-                listDeletedFields: vi.fn().mockResolvedValue({ data: [] }),
-                restoreField: vi.fn().mockResolvedValue({ data: undefined }),
-            };
-
-            useStorageAdapter(mockAdapter);
-            const fieldService = getFieldService();
-
-            // Test getFieldsForNode
-            const fields = await fieldService.getFieldsForNode('node-1');
-            expect(fields).toEqual([mockField]);
-            expect(mockAdapter.listFields).toHaveBeenCalledWith('node-1');
-
-            // Test nextCardOrder
-            const order = await fieldService.nextCardOrder('node-1');
+            const order = await getFieldQueries().nextCardOrder('n1');
             expect(order).toBe(3);
-
-            // Test updateFieldValue
-            await fieldService.updateFieldValue('test-field', 'New Value');
-            expect(mockAdapter.updateFieldValue).toHaveBeenCalledWith('test-field', { fieldValue: 'New Value' });
-
-            // Test deleteField
-            await fieldService.deleteField('test-field');
-            expect(mockAdapter.deleteField).toHaveBeenCalledWith('test-field');
-
-            // Test getFieldHistory
-            const history = await fieldService.getFieldHistory('test-field');
-            expect(history).toEqual([mockHistory]);
-            expect(mockAdapter.getFieldHistory).toHaveBeenCalledWith('test-field');
+            expect(adapter.nextCardOrder).toHaveBeenCalledWith('n1');
         });
     });
 });

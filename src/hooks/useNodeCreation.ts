@@ -4,7 +4,7 @@
  * 
  * Satisfies OCP: Views are now closed for modification when creation logic changes.
  * Satisfies SRP: Views only handle rendering, this hook handles creation orchestration.
- * Satisfies DIP: Uses service abstraction (can be swapped via setNodeService).
+ * Satisfies DIP: Uses CommandBus abstraction for writes.
  * 
  * IMMEDIATE CREATION: Node is created in DB immediately when UC starts.
  * This allows FieldList to work identically for UC and display modes.
