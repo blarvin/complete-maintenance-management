@@ -20,6 +20,8 @@ import { now } from '../../utils/time';
 import { initializeNodeIndex } from '../nodeIndex';
 import { subscribeNodeIndex } from '../nodeIndexSubscriber';
 import { subscribeSyncTrigger } from '../syncSubscriber';
+import { initializeCommandBus } from '../commands';
+import { initializeQueries } from '../queries';
 
 let initialized = false;
 
@@ -69,6 +71,10 @@ export async function initializeStorage(): Promise<void> {
     const syncQueue = new IDBSyncQueueManager();
     const idbAdapter = new IDBAdapter(syncQueue);
     const firestoreAdapter = new FirestoreAdapter();
+
+    // Initialize CQRS command bus and query layer
+    initializeCommandBus(idbAdapter);
+    initializeQueries(idbAdapter);
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);

@@ -8,7 +8,7 @@
  */
 
 import { useSignal, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
-import { getFieldService } from '../../data/services';
+import { getFieldQueries } from '../../data/queries';
 import type { DataField } from '../../data/models';
 import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
 import { useAsyncOperation, runAsync } from '../../hooks/useAsyncOperation';
@@ -48,7 +48,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     const reload$ = $(async () => {
         if (!currentEnabled.value) return;
         await runAsync(op, async () => {
-            fields.value = await getFieldService().getFieldsForNode(currentNodeId.value);
+            fields.value = await getFieldQueries().getFieldsForNode(currentNodeId.value);
         });
     });
 
@@ -65,7 +65,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         }
 
         await runAsync(op, async () => {
-            fields.value = await getFieldService().getFieldsForNode(nodeId);
+            fields.value = await getFieldQueries().getFieldsForNode(nodeId);
         });
     });
 

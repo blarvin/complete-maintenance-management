@@ -6,7 +6,7 @@
  */
 
 import { component$, $, PropFunction } from '@builder.io/qwik';
-import { getFieldService } from '../../data/services';
+import { getCommandBus } from '../../data/commands';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
@@ -62,7 +62,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const handleDelete$ = $(async () => {
-        await getFieldService().deleteField(props.id);
+        await getCommandBus().execute({ type: 'DELETE_FIELD', payload: { fieldId: props.id } });
         if (props.onDeleted$) {
             props.onDeleted$();
         }

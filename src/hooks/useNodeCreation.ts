@@ -12,7 +12,7 @@
 
 import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
-import { getNodeService } from '../data/services';
+import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
 import { getSavedFieldsFromLocalStorage } from './usePendingForms';
 
@@ -100,15 +100,18 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         console.log('[complete$] Saved fields from localStorage:', savedFields.length);
 
         // Create node + all fields atomically
-        await getNodeService().createWithFields({
-            id: ucData.id,
-            parentId: ucData.parentId,
-            nodeName: payload.nodeName || 'Untitled',
-            nodeSubtitle: payload.nodeSubtitle || '',
-            defaults: savedFields.map(f => ({
-                fieldName: f.fieldName,
-                fieldValue: f.fieldValue,
-            })),
+        await getCommandBus().execute({
+            type: 'CREATE_NODE_WITH_FIELDS',
+            payload: {
+                id: ucData.id,
+                parentId: ucData.parentId,
+                nodeName: payload.nodeName || 'Untitled',
+                nodeSubtitle: payload.nodeSubtitle || '',
+                defaults: savedFields.map(f => ({
+                    fieldName: f.fieldName,
+                    fieldValue: f.fieldValue,
+                })),
+            },
         });
 
         console.log('[complete$] Node and fields created atomically');

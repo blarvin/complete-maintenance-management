@@ -9,7 +9,7 @@
  */
 
 import { useSignal, useVisibleTask$, useTask$, $, type QRL, type Signal } from '@builder.io/qwik';
-import { getFieldService } from '../data/services';
+import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
 
 /** Pending form state for localStorage */
@@ -174,7 +174,7 @@ export function usePendingForms(options: UsePendingFormsOptions) {
         }
         
         // Display mode: Write to IDB immediately (existing behavior)
-        await getFieldService().addField(options.nodeId, name, fieldValue, cardOrder);
+        await getCommandBus().execute({ type: 'ADD_FIELD', payload: { nodeId: options.nodeId, fieldName: name, fieldValue, cardOrder } });
         // Remove from pending
         forms.value = forms.value.filter(f => f.id !== formId);
         // Notify parent to refresh persisted fields
@@ -218,10 +218,10 @@ export function usePendingForms(options: UsePendingFormsOptions) {
         }
 
         // Display mode: Write to IDB immediately (existing behavior)
-        const fieldService = getFieldService();
+        const commandBus = getCommandBus();
         await Promise.all(
-            formsToSave.map(f => 
-                fieldService.addField(options.nodeId, f.fieldName.trim(), f.fieldValue, f.cardOrder)
+            formsToSave.map(f =>
+                commandBus.execute({ type: 'ADD_FIELD', payload: { nodeId: options.nodeId, fieldName: f.fieldName.trim(), fieldValue: f.fieldValue, cardOrder: f.cardOrder } })
             )
         );
 

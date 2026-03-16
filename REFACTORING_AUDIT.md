@@ -37,7 +37,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [s] **7.3** Add barrel exports for hooks
 - [s] **7.4** Add barrel exports for sync strategies
 - [s] **7.5** Consolidate / replace ad-hoc `console.log` with logger
-- [ ] **8.1** Full CQRS implementation (larger)
+- [x] **8.1** Full CQRS implementation (larger)
 - [ ] **8.2** Service layer rewrite with event sourcing (larger)
 - [ ] **8.3** Extract sync system to standalone module (larger)
 - [x] **Part 10** Delete dead code: `src/data/repo/` (if no imports)

@@ -257,6 +257,12 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 - **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
 - **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
 
+### CQRS Follow-ups
+
+- Remove deprecated `INodeService` / `IFieldService` once all tests migrated to CQRS APIs
+- Command logging/audit middleware on CommandBus (pre/post hooks)
+- Query caching / materialized views (beyond existing nodeIndex)
+
 ### Move useSyncTrigger.ts from src/hooks/ to src/data/
 
 - `useSyncTrigger.ts` is no longer UI-facing — only imported by `syncSubscriber.ts` (in `src/data/`)

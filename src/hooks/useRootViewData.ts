@@ -11,7 +11,7 @@
  */
 
 import { useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
-import { getNodeService } from '../data/services';
+import { getNodeQueries } from '../data/queries';
 import type { TreeNode } from '../data/models';
 import { useStorageChangeListener } from './useStorageChangeListener';
 import { useAsyncOperation, runAsync } from './useAsyncOperation';
@@ -23,7 +23,7 @@ export function useRootViewData() {
     const load$ = $(async () => {
         console.log('[useRootViewData] load$ called');
         await runAsync(op, async () => {
-            const fetchedNodes = await getNodeService().getRootNodes();
+            const fetchedNodes = await getNodeQueries().getRootNodes();
             console.log('[useRootViewData] Fetched', fetchedNodes.length, 'root nodes');
             nodes.value = fetchedNodes;
             console.log('[useRootViewData] nodes.value set to', nodes.value.length, 'nodes');

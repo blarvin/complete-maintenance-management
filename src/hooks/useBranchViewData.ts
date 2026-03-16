@@ -18,7 +18,7 @@
  */
 
 import { useSignal, $ } from '@builder.io/qwik';
-import { getNodeService } from '../data/services';
+import { getNodeQueries } from '../data/queries';
 import { useAppState, useAppTransitions } from '../state/appState';
 import type { TreeNode } from '../data/models';
 import { useAsyncOperation, runAsync } from './useAsyncOperation';
@@ -40,7 +40,7 @@ export function useBranchViewData() {
         }
 
         await runAsync(op, async () => {
-            const result = await getNodeService().getNodeWithChildren(id);
+            const result = await getNodeQueries().getNodeWithChildren(id);
             parentNode.value = result.node;
             children.value = result.children;
         });

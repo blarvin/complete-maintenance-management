@@ -12,7 +12,7 @@ import { FieldList } from '../FieldList/FieldList';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
-import { getNodeService } from '../../data/services';
+import { getCommandBus } from '../../data/commands';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
 import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
@@ -51,7 +51,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const handleDeleteNode$ = $(async () => {
         console.log('[TreeNodeDisplay] Delete requested for node:', props.id);
         const parentId = props.parentId;
-        await getNodeService().deleteNode(props.id);
+        await getCommandBus().execute({ type: 'DELETE_NODE', payload: { id: props.id } });
         console.log('[TreeNodeDisplay] Node deleted');
         props.onNavigateUp$?.(parentId ?? null);
     });

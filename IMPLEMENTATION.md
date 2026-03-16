@@ -87,6 +87,24 @@ Orchestrator picks sub-component based on state.
 
 ---
 
+### CQRS: Command/Query Responsibility Segregation
+
+**Pattern**: Thin CommandBus dispatcher + separate query interfaces. Not a full mediator — no middleware, no logging pipeline (yet).
+
+**Write path**: UI hooks call `getCommandBus().execute({ type: 'DELETE_NODE', payload: { id } })`. The CommandBus routes to a handler registered in `src/data/commands/handlers.ts`. Handlers call `StorageAdapter` methods directly.
+
+**Read path**: UI hooks call `getNodeQueries().getRootNodes()` or `getFieldQueries().getFieldsForNode(id)`. Query implementations in `src/data/queries/index.ts` unwrap `StorageResult<T>` from adapter methods.
+
+**Event emission stays in IDBAdapter**: The adapter emits `StorageEvent` after writes. The CommandBus doesn't emit events — it delegates to the adapter which handles events + sync queue. This means `applyRemoteUpdate` (sync pull path) still keeps the node index current without extra work.
+
+**Query layer reads from adapter directly**: No materialized views yet (beyond the existing `nodeIndex`). Queries delegate to `StorageAdapter.listRootNodes()`, etc., same as the old service layer did.
+
+**Initialization**: `initStorage.ts` calls `initializeCommandBus(idbAdapter)` and `initializeQueries(idbAdapter)` after creating the adapter, ensuring the command bus and queries share the same adapter instance that SyncManager uses.
+
+**Deprecated but kept**: `INodeService` / `IFieldService` interfaces and `getNodeService()` / `getFieldService()` are marked `@deprecated` but remain for existing tests. `CreateNodeInput` is re-exported from `commands/types.ts` for backward compatibility.
+
+---
+
 ## Non-Obvious Implementation Details
 
 ### DataCard Animation: Dual-Transition Technique

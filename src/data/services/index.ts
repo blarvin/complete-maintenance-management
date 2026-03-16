@@ -22,19 +22,15 @@
 
 import type { TreeNode, DataField, DataFieldHistory } from '../models';
 import type { StorageAdapter, StorageResult } from '../storage/storageAdapter';
+import type { CreateNodeInput } from '../commands/types';
 import { generateId } from '../../utils/id';
 
 // ============================================================================
 // SERVICE INTERFACES
 // ============================================================================
 
-export type CreateNodeInput = {
-    id: string;
-    parentId: string | null;
-    nodeName: string;
-    nodeSubtitle: string;
-    defaults: { fieldName: string; fieldValue: string | null }[];
-};
+/** @deprecated Use CreateNodeInput from '../commands/types' instead */
+export type { CreateNodeInput } from '../commands/types';
 
 export interface INodeService {
     getRootNodes(): Promise<TreeNode[]>;
@@ -158,7 +154,7 @@ let activeFieldService: IFieldService = defaultFieldService;
 
 /**
  * Get the active node service.
- * Used by components to access node operations.
+ * @deprecated Use getCommandBus() for writes and getNodeQueries() for reads instead.
  */
 export function getNodeService(): INodeService {
     return activeNodeService;
@@ -166,7 +162,7 @@ export function getNodeService(): INodeService {
 
 /**
  * Get the active field service.
- * Used by components to access field operations.
+ * @deprecated Use getCommandBus() for writes and getFieldQueries() for reads instead.
  */
 export function getFieldService(): IFieldService {
     return activeFieldService;
