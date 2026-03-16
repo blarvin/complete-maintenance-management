@@ -13,7 +13,6 @@ import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getNodeService } from '../../data/services';
-import { triggerSync } from '../../hooks/useSyncTrigger';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
 import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
@@ -53,8 +52,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
         console.log('[TreeNodeDisplay] Delete requested for node:', props.id);
         const parentId = props.parentId;
         await getNodeService().deleteNode(props.id);
-        console.log('[TreeNodeDisplay] Node deleted, triggering sync');
-        triggerSync();
+        console.log('[TreeNodeDisplay] Node deleted');
         props.onNavigateUp$?.(parentId ?? null);
     });
 

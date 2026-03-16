@@ -16,7 +16,6 @@ import { getFieldService } from '../data/services';
 import { useDoubleTap } from './useDoubleTap';
 import { useFocusManager, BLUR_SUPPRESS_WINDOW_MS } from './useFocusManager';
 import { useAppState, useAppTransitions, selectors } from '../state/appState';
-import { triggerSync } from './useSyncTrigger';
 import { useEditableValue } from './useEditableValue';
 
 export type UseFieldEditOptions = {
@@ -144,7 +143,6 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
         await getFieldService().updateFieldValue(options.fieldId, newVal);
         currentValue.value = newVal ?? '';
         stopFieldEdit$();
-        triggerSync();
         if (options.onUpdated$) {
             await options.onUpdated$();
         }
@@ -225,7 +223,6 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
         await getFieldService().updateFieldValue(options.fieldId, value);
         currentValue.value = value ?? '';
         previewValue.value = null;
-        triggerSync();
         if (options.onUpdated$) {
             await options.onUpdated$();
         }

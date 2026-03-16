@@ -233,6 +233,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Field created in IDB:', field.id, field.fieldName);
+    storageEventBus.emit({ type: 'FIELD_WRITTEN', field });
     return createResult(field);
   }
 
@@ -284,6 +285,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Field updated in IDB:', id, input.fieldValue);
+    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, deletedAt: field.deletedAt } });
     return createResult(undefined);
   }
 
@@ -334,6 +336,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Field soft-deleted in IDB:', id);
+    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, deletedAt: timestamp } });
     return createResult(undefined);
   }
 
@@ -418,6 +421,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
     const timestamp = now();
     const userId = getCurrentUserId();
 
+    let restoredField: DataField | undefined;
+
     await db.transaction('rw', db.fields, db.syncQueue, async () => {
       await db.fields.update(id, {
         deletedAt: null, // Clear soft delete
@@ -434,10 +439,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
           entityId: id,
           payload: updated,
         });
+        restoredField = updated;
       }
     });
 
     console.log('[IDBAdapter] Field restored in IDB:', id);
+    if (restoredField) {
+      storageEventBus.emit({ type: 'FIELD_WRITTEN', field: restoredField });
+    }
     return createResult(undefined);
   }
 

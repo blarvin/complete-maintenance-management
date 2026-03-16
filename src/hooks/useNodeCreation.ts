@@ -14,7 +14,6 @@ import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getNodeService } from '../data/services';
 import { generateId } from '../utils/id';
-import { triggerSync } from './useSyncTrigger';
 import { getSavedFieldsFromLocalStorage } from './usePendingForms';
 
 /**
@@ -117,7 +116,6 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         // Clear localStorage
         localStorage.removeItem(`pendingFields:${ucData.id}`);
 
-        triggerSync();
         await completeConstruction$();
         console.log('[complete$] completeConstruction$ done, calling onCreated$');
         await options.onCreated$();

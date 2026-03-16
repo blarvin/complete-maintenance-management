@@ -162,6 +162,8 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Post-Sync UI Refresh**: `dispatchStorageChangeEvent()` triggers components to reload data. Components listen for `storage-change` CustomEvent and refresh their queries.
 
+**Event-Driven Sync Triggering**: Sync is triggered via `StorageEventBus` rather than manual `triggerSync()` calls in UI code. `IDBAdapter` emits typed events (`NODE_WRITTEN`, `NODE_HARD_DELETED`, `FIELD_WRITTEN`, `FIELD_DELETED`) after local CUD operations. `syncSubscriber.ts` subscribes to all events and calls `triggerSync()`, which debounces at 500ms. Remote/sync-originated operations (`applyRemoteUpdate`, `applyRemoteHistory`, `deleteFieldLocal`) do NOT emit events to avoid sync loops. UI code never calls `triggerSync()` directly.
+
 ---
 
 ### Data Model Conventions

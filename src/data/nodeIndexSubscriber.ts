@@ -26,6 +26,8 @@ export function handleStorageEvent(event: StorageEvent): void {
     case 'NODE_HARD_DELETED':
       removeNodeSummary(event.nodeId);
       break;
+    default:
+      break;
   }
 }
 

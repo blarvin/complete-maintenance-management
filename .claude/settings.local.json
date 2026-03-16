@@ -12,7 +12,13 @@
       "Bash(find:*)",
       "Bash(echo:*)",
       "WebFetch(domain:github.com)",
-      "mcp__jcodemunch__index_folder"
+      "mcp__jcodemunch__index_folder",
+      "mcp__jcodemunch__list_repos",
+      "mcp__jcodemunch__get_file_tree",
+      "mcp__jcodemunch__search_symbols",
+      "mcp__jcodemunch__get_symbol",
+      "mcp__jcodemunch__get_file_outline",
+      "Bash(npx vitest:*)"
     ],
     "deny": [
       "Read(.env*)",

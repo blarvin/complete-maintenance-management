@@ -19,6 +19,7 @@ import { initializeDevTools } from '../sync/devTools';
 import { now } from '../../utils/time';
 import { initializeNodeIndex } from '../nodeIndex';
 import { subscribeNodeIndex } from '../nodeIndexSubscriber';
+import { subscribeSyncTrigger } from '../syncSubscriber';
 
 let initialized = false;
 
@@ -62,6 +63,7 @@ export async function initializeStorage(): Promise<void> {
 
     await seedNodeIndexFromDb();
     subscribeNodeIndex();
+    subscribeSyncTrigger();
 
     // Create adapters and sync queue for sync manager
     const syncQueue = new IDBSyncQueueManager();

@@ -5,7 +5,7 @@
  * in-memory node index) react without the adapter knowing about them.
  */
 
-import type { TreeNode } from './models';
+import type { TreeNode, DataField } from './models';
 
 // ---------------------------------------------------------------------------
 // Event types
@@ -13,7 +13,9 @@ import type { TreeNode } from './models';
 
 export type StorageEvent =
   | { type: 'NODE_WRITTEN'; node: Pick<TreeNode, 'id' | 'parentId' | 'nodeName' | 'deletedAt'> }
-  | { type: 'NODE_HARD_DELETED'; nodeId: string };
+  | { type: 'NODE_HARD_DELETED'; nodeId: string }
+  | { type: 'FIELD_WRITTEN'; field: Pick<DataField, 'id' | 'parentNodeId' | 'deletedAt'> }
+  | { type: 'FIELD_DELETED'; fieldId: string };
 
 // ---------------------------------------------------------------------------
 // Bus implementation

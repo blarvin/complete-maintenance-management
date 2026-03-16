@@ -30,7 +30,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [x] **5.2** Extract `useEditableValue` from `useFieldEdit`
 - [x] **5.3** Create `useAsyncOperation` for loading/error state
 - [x] **5.4** Extract navigation guard logic (`guards.ts`)
-- [ ] **6.2** Decouple sync trigger (event or dedicated API)
+- [x] **6.2** Decouple sync trigger (event)
 - [s] **6.3** Abstract time provider for tests
 - [s] **7.1** Extract magic numbers to constants (e.g. `constants/timing.ts`)
 - [x] **7.2** Remove unused `nodeId` prop from DataCard
@@ -40,7 +40,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [ ] **8.1** Full CQRS implementation (larger)
 - [ ] **8.2** Service layer rewrite with event sourcing (larger)
 - [ ] **8.3** Extract sync system to standalone module (larger)
-- [ ] **Part 10** Delete dead code: `src/data/repo/` (if no imports)
+- [x] **Part 10** Delete dead code: `src/data/repo/` (if no imports)
 
 ---
 
