@@ -9,6 +9,7 @@
 ## Executive Summary
 
 The codebase has a solid foundation with excellent architectural patterns already in place:
+
 - **FSM-based navigation** with discriminated unions
 - **Adapter pattern** for storage abstraction
 - **Service registry** for dependency injection
@@ -38,7 +39,7 @@ However, there are opportunities to improve consistency, reduce duplication, and
 - [s] **7.4** Add barrel exports for sync strategies
 - [s] **7.5** Consolidate / replace ad-hoc `console.log` with logger
 - [x] **8.1** Full CQRS implementation (larger)
-- [ ] **8.2** Service layer rewrite with event sourcing (larger)
+- [s] **8.2** Service layer rewrite with event sourcing (larger)
 - [ ] **8.3** Extract sync system to standalone module (larger)
 - [x] **Part 10** Delete dead code: `src/data/repo/` (if no imports)
 
@@ -47,7 +48,9 @@ However, there are opportunities to improve consistency, reduce duplication, and
 ## Part 1: What's Working Well (Preserve These)
 
 ### 1.1 FSM Navigation Pattern
+
 The `appState.types.ts`, `appState.transitions.ts`, `appState.selectors.ts` split is exemplary:
+
 - **Types**: Define the state shape (discriminated unions)
 - **Transitions**: Pure state mutation functions (guards, no side effects)
 - **Selectors**: Derived state queries
@@ -55,18 +58,23 @@ The `appState.types.ts`, `appState.transitions.ts`, `appState.selectors.ts` spli
 This separation makes the navigation logic testable and predictable.
 
 ### 1.2 Adapter Pattern
+
 `StorageAdapter` and `SyncableStorageAdapter` interfaces provide clean abstraction:
+
 - `IDBAdapter` (primary, offline-first)
 - `FirestoreAdapter` (cloud sync)
 
 The `nodeServiceFromAdapter()` and `fieldServiceFromAdapter()` factory functions allow easy swapping.
 
 ### 1.3 Sync Strategy Pattern
+
 `SyncStrategy` interface with `FullCollectionSync` and `DeltaSync` implementations:
+
 - Clean composition in `SyncManager`
 - Single Responsibility: `SyncPusher`, `SyncLifecycle`, `ServerAuthorityResolver`
 
 ### 1.4 Hook Extraction
+
 `useFieldEdit`, `useNodeCreation`, `usePendingForms` demonstrate good separation of UI state from business logic.
 
 ---
@@ -76,6 +84,7 @@ The `nodeServiceFromAdapter()` and `fieldServiceFromAdapter()` factory functions
 ### 2.1 Single Responsibility Principle (SRP)
 
 #### Issue: `IDBAdapter` has dual responsibilities
+
 **Location**: `src/data/storage/IDBAdapter.ts`
 **Problem**: The adapter handles both storage operations AND sync queue management.
 
@@ -103,6 +112,7 @@ class IDBSyncQueueManager implements SyncQueueManager { ... }
 This makes `IDBAdapter` purely a storage adapter, and `SyncQueueManager` reusable across different storage backends.
 
 #### Issue: `useFieldEdit` does too much
+
 **Location**: `src/hooks/useFieldEdit.ts`
 **Problem**: Handles edit state, preview mode, revert operations, AND focus management.
 
@@ -119,7 +129,9 @@ function useFocusManager(inputRef: Signal<HTMLInputElement | undefined>) {
 ### 2.2 Open/Closed Principle (OCP)
 
 #### Issue: Node index updates scattered across codebase
+
 **Location**: Multiple files call `upsertNodeSummary()` / `removeNodeSummary()`
+
 - `src/data/services/index.ts` (6 calls)
 - `src/data/storage/IDBAdapter.ts` (10 calls)
 
@@ -132,7 +144,9 @@ function useFocusManager(inputRef: Signal<HTMLInputElement | undefined>) {
 ## Part 3: DRY Violations
 
 ### 3.1 `nextRev()` duplication
+
 **Locations**:
+
 - `src/data/storage/IDBAdapter.ts:539`
 - `src/data/storage/firestoreAdapter.ts:639`
 
@@ -143,16 +157,18 @@ Both have identical logic for computing the next revision number.
 ```typescript
 // src/data/storage/historyHelpers.ts
 export async function computeNextRev(
-  getHistory: () => Promise<DataFieldHistory[]>
+  getHistory: () => Promise<DataFieldHistory[]>,
 ): Promise<number> {
   const history = await getHistory();
   if (history.length === 0) return 0;
-  return Math.max(...history.map(h => h.rev)) + 1;
+  return Math.max(...history.map((h) => h.rev)) + 1;
 }
 ```
 
 ### 3.2 Storage change event listeners
+
 **Locations**:
+
 - `src/hooks/useRootViewData.ts:39-50`
 - `src/hooks/useTreeNodeFields.ts:70-82`
 - `src/hooks/useBranchViewData.ts` (should have it too)
@@ -165,16 +181,17 @@ All have similar event listener setup/cleanup.
 // New: src/hooks/useStorageChangeListener.ts
 export function useStorageChangeListener(callback: QRL<() => void>) {
   useVisibleTask$(({ cleanup }) => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     const handler = () => callback();
-    window.addEventListener('storage-change', handler);
-    cleanup(() => window.removeEventListener('storage-change', handler));
+    window.addEventListener("storage-change", handler);
+    cleanup(() => window.removeEventListener("storage-change", handler));
   });
 }
 ```
 
 ### 3.3 UI prefs persistence in transitions
+
 **Location**: `src/state/appState.transitions.ts:115-159`
 
 Three toggle functions have identical persistence logic:
@@ -182,12 +199,13 @@ Three toggle functions have identical persistence logic:
 ```typescript
 toggleCardExpanded: (state, nodeId) => {
   // ... toggle logic ...
-  saveUIPrefs({  // Repeated 3 times
+  saveUIPrefs({
+    // Repeated 3 times
     expandedCards: state.ui.expandedCards,
     expandedFieldDetails: state.ui.expandedFieldDetails,
     expandedNodeDetails: state.ui.expandedNodeDetails,
   });
-}
+};
 ```
 
 **Recommendation**: Extract persistence helper:
@@ -203,7 +221,9 @@ function persistUIPrefs(state: AppState): void {
 ```
 
 ### 3.4 `createResult<T>()` functions
+
 **Locations**:
+
 - `src/data/storage/IDBAdapter.ts:28-36`
 - `src/data/storage/firestoreAdapter.ts:61-68`
 
@@ -214,7 +234,7 @@ function persistUIPrefs(state: AppState): void {
 export function createStorageResult<T>(
   data: T,
   adapter: string,
-  fromCache?: boolean
+  fromCache?: boolean,
 ): StorageResult<T> {
   return { data, meta: { adapter, fromCache } };
 }
@@ -227,6 +247,7 @@ export function createStorageResult<T>(
 The `nodeIndex.ts` in-memory cache is a step toward CQRS (Command Query Responsibility Segregation). Here's how to evolve it:
 
 ### 4.1 Current State
+
 - **Write path**: Adapters write to storage AND call `upsertNodeSummary()`
 - **Read path**: `getAncestorPath()` reads from in-memory index
 - **Problem**: Write path "knows" about the read model
@@ -271,6 +292,7 @@ export const storageEventBus = new StorageEventBus();
 ```
 
 **Benefits**:
+
 1. Adapters only emit events, don't know about index
 2. Index subscribes and updates itself
 3. `triggerSync()` becomes another subscriber
@@ -312,12 +334,30 @@ function useEditableValue<T>(initialValue: T) {
   const displayValue = preview.value ?? current.value;
   const isPreviewActive = preview.value !== null;
 
-  const beginEdit$ = $(() => { edit.value = current.value; });
-  const commitEdit$ = $(() => { current.value = edit.value; preview.value = null; });
-  const cancelEdit$ = $(() => { edit.value = current.value; });
-  const setPreview$ = $((v: T | null) => { preview.value = v; });
+  const beginEdit$ = $(() => {
+    edit.value = current.value;
+  });
+  const commitEdit$ = $(() => {
+    current.value = edit.value;
+    preview.value = null;
+  });
+  const cancelEdit$ = $(() => {
+    edit.value = current.value;
+  });
+  const setPreview$ = $((v: T | null) => {
+    preview.value = v;
+  });
 
-  return { current, edit, displayValue, isPreviewActive, beginEdit$, commitEdit$, cancelEdit$, setPreview$ };
+  return {
+    current,
+    edit,
+    displayValue,
+    isPreviewActive,
+    beginEdit$,
+    commitEdit$,
+    cancelEdit$,
+    setPreview$,
+  };
 }
 ```
 
@@ -374,14 +414,14 @@ if (state.underConstruction) return;
 // src/state/guards.ts
 export const guards = {
   notUnderConstruction: (state: AppState): boolean => !state.underConstruction,
-  inBranchView: (state: AppState): boolean => state.view.state === 'BRANCH',
+  inBranchView: (state: AppState): boolean => state.view.state === "BRANCH",
 };
 
 // Usage in transitions:
 navigateToNode: (state, nodeId) => {
   if (!guards.notUnderConstruction(state)) return;
   // ...
-}
+};
 ```
 
 ---
@@ -437,6 +477,7 @@ This makes time-dependent tests deterministic.
 ## Part 7: Quick Wins (Low Effort, High Value)
 
 ### 7.1 Extract magic numbers to constants
+
 **Location**: `src/hooks/useFieldEdit.ts`, `src/hooks/useSyncTrigger.ts`
 
 ```typescript
@@ -451,34 +492,41 @@ export const TIMING = {
 ```
 
 ### 7.2 Remove unused `nodeId` prop from DataCard
+
 **Location**: `src/components/DataCard/DataCard.tsx`
 
 Per ISSUES.md, this prop is never used.
 
 ### 7.3 Add barrel exports for hooks
+
 **Create**: `src/hooks/index.ts`
 
 ```typescript
-export { useFieldEdit } from './useFieldEdit';
-export { useNodeCreation } from './useNodeCreation';
-export { usePendingForms } from './usePendingForms';
-export { useDoubleTap } from './useDoubleTap';
-export { useAncestorPath } from './useAncestorPath';
-export { useBranchViewData } from './useBranchViewData';
-export { useRootViewData } from './useRootViewData';
-export { useTreeNodeFields } from '../components/TreeNode/useTreeNodeFields';
+export { useFieldEdit } from "./useFieldEdit";
+export { useNodeCreation } from "./useNodeCreation";
+export { usePendingForms } from "./usePendingForms";
+export { useDoubleTap } from "./useDoubleTap";
+export { useAncestorPath } from "./useAncestorPath";
+export { useBranchViewData } from "./useBranchViewData";
+export { useRootViewData } from "./useRootViewData";
+export { useTreeNodeFields } from "../components/TreeNode/useTreeNodeFields";
 // etc.
 ```
 
 ### 7.4 Add barrel exports for sync strategies
+
 **Create**: `src/data/sync/index.ts`
 
 ```typescript
-export { SyncManager, getSyncManager, initializeSyncManager } from './syncManager';
-export { SyncPusher } from './SyncPusher';
-export { SyncLifecycle } from './SyncLifecycle';
-export { ServerAuthorityResolver } from './ServerAuthorityResolver';
-export * from './strategies';
+export {
+  SyncManager,
+  getSyncManager,
+  initializeSyncManager,
+} from "./syncManager";
+export { SyncPusher } from "./SyncPusher";
+export { SyncLifecycle } from "./SyncLifecycle";
+export { ServerAuthorityResolver } from "./ServerAuthorityResolver";
+export * from "./strategies";
 ```
 
 ### 7.5 Consolidate console.log statements
@@ -505,15 +553,18 @@ export const logger = {
 ## Part 8: Larger Refactoring Projects
 
 ### 8.1 Full CQRS Implementation
+
 **Effort**: Medium-High
 **Value**: High
 
 See Part 4. This enables:
+
 - Better separation of read/write paths
 - Easier caching strategies
 - Foundation for offline-first optimistic updates
 
 ### 8.2 Service Layer Rewrite with Event Sourcing
+
 **Effort**: High
 **Value**: High (for audit/undo features)
 
@@ -521,7 +572,7 @@ Instead of direct mutations, emit events:
 
 ```typescript
 await commandBus.execute({
-  type: 'UPDATE_FIELD_VALUE',
+  type: "UPDATE_FIELD_VALUE",
   fieldId,
   newValue,
   userId: getCurrentUserId(),
@@ -529,11 +580,13 @@ await commandBus.execute({
 ```
 
 Benefits:
+
 - Full audit trail built-in
 - Easy undo/redo implementation
 - Better offline conflict resolution
 
 ### 8.3 Extract Sync System to Standalone Module
+
 **Effort**: Medium
 **Value**: Medium
 
@@ -554,38 +607,38 @@ The sync system (`SyncManager`, `SyncPusher`, strategies, etc.) could be a stand
 
 ### Immediate (This Sprint)
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| 1 | Extract magic numbers to `TIMING` constants | Low | Medium |
-| 2 | Remove unused `nodeId` prop from DataCard | Low | Low |
-| 3 | Extract `persistUIPrefs()` helper | Low | Low |
-| 4 | Create barrel exports (`hooks/index.ts`, etc.) | Low | Medium |
+| Priority | Item                                           | Effort | Impact |
+| -------- | ---------------------------------------------- | ------ | ------ |
+| 1        | Extract magic numbers to `TIMING` constants    | Low    | Medium |
+| 2        | Remove unused `nodeId` prop from DataCard      | Low    | Low    |
+| 3        | Extract `persistUIPrefs()` helper              | Low    | Low    |
+| 4        | Create barrel exports (`hooks/index.ts`, etc.) | Low    | Medium |
 
 ### Short-Term (Next 2 Sprints)
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| 5 | Extract `useStorageChangeListener` hook | Low | Medium |
-| 6 | Extract `nextRev()` to `historyHelpers.ts` | Low | Medium |
-| 7 | Extract `createStorageResult()` to shared module | Low | Low |
-| 8 | Create basic `StorageEventBus` | Medium | High |
+| Priority | Item                                             | Effort | Impact |
+| -------- | ------------------------------------------------ | ------ | ------ |
+| 5        | Extract `useStorageChangeListener` hook          | Low    | Medium |
+| 6        | Extract `nextRev()` to `historyHelpers.ts`       | Low    | Medium |
+| 7        | Extract `createStorageResult()` to shared module | Low    | Low    |
+| 8        | Create basic `StorageEventBus`                   | Medium | High   |
 
 ### Medium-Term (Next Quarter)
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| 9 | Migrate node index to event-driven updates | Medium | High |
-| 10 | Extract `SyncQueueManager` from `IDBAdapter` | Medium | Medium |
-| ~~11~~ | ~~Implement service context providers~~ | — | **Removed** (Qwik serialization constraint) |
-| 12 | Create `useAsyncOperation` hook | Low | Medium |
+| Priority | Item                                         | Effort | Impact                                      |
+| -------- | -------------------------------------------- | ------ | ------------------------------------------- |
+| 9        | Migrate node index to event-driven updates   | Medium | High                                        |
+| 10       | Extract `SyncQueueManager` from `IDBAdapter` | Medium | Medium                                      |
+| ~~11~~   | ~~Implement service context providers~~      | —      | **Removed** (Qwik serialization constraint) |
+| 12       | Create `useAsyncOperation` hook              | Low    | Medium                                      |
 
 ### Long-Term (Future Phases)
 
-| Priority | Item | Effort | Impact |
-|----------|------|--------|--------|
-| 13 | Full CQRS with read model projections | High | High |
-| 14 | Event sourcing for undo/redo | High | High |
-| 15 | Extract sync to standalone package | High | Medium |
+| Priority | Item                                  | Effort | Impact |
+| -------- | ------------------------------------- | ------ | ------ |
+| 13       | Full CQRS with read model projections | High   | High   |
+| 14       | Event sourcing for undo/redo          | High   | High   |
+| 15       | Extract sync to standalone package    | High   | Medium |
 
 ---
 
