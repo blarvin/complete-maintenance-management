@@ -103,11 +103,13 @@ Components use discriminated unions + type guards (no prop spreading).
 
 ```bash
 npm run dev          # Dev server (SSR mode)
+npm run preview:pwa  # Run preview server on port 4173
 npm run test         # Run all unit tests
 npm run test:watch   # Watch mode (Vitest)
 npm run cypress      # Open Cypress GUI
 npm run typecheck    # TypeScript validation
 npm run lint         # ESLint
+npm run emulator     # Run Firebase emulator
 ```
 
 ### Testing Strategy

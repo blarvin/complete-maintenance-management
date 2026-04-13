@@ -1,288 +1,303 @@
+# LATER.md — Deferred Work
+
+Work intentionally deferred beyond Phase 1. Grouped by theme. For active issues see ISSUES.md; for product scope see SPECIFICATION.md; for architectural notes on what _is_ built see IMPLEMENTATION.md.
+
+---
+
 ## Phase 1 Prototyping Simplifications
 
-- **Skip virtualParents**: Focus on basic parent-child relationships only
-- **Skip componentType and componentVersion**: Use hardcoded list of available DataFields
-- **Skip customProperties**: Focus on basic node and DataField types only
-- **Skip isRequired**: No "required data field" features for now
-- **Skip isEditable and isLocked**: All data fields are editable for now, no "locking" features for now
+Scope exclusions that keep the Phase 1 MVP small:
 
-## Deferred to Later Phases
+- **Skip `virtualParents`** — focus on basic parent-child relationships only
+- **Skip `componentType` and `componentVersion`** — use hardcoded DataField library
+- **Skip `customProperties`** — basic node and DataField types only
+- **Skip `isRequired`** — no required-field validation
+- **Skip `isEditable` and `isLocked`** — all fields editable, no locking
+- **Text-only DataFields** — all field values treated as text strings
+- **Client-assigned timestamps** — `updatedAt` set by client; server-assigned timestamps deferred
+- **Single-user** — constant `updatedBy: "localUser"`; real user identity deferred
+- **Leaf-only deletion** — only leaf nodes are deletable; cascade delete deferred
+- **No background progressive loading** — breadth-first lazy loading deferred
 
-### Breadcrumbs & Ancestor Path
+---
 
-Moved from SPECIFICATION.md → Core component hierarchy / Data Model:
+## Data Model & Schema
 
-- UI: `TreeNodeDetails` renders a breadcrumb: "Ancestor1 / Ancestor2 / Parent / CurrentNode" with the current node emphasized.
-- Storage: Introduce `ancestorNamePath: string[]` as a denormalized cache of ancestor names for fast breadcrumb rendering and search. Root nodes have an empty array. Children inherit and append on create; update on reparent.
-- Rendering: Breadcrumb joins `ancestorNamePath` with " / " and appends the current `nodeName`.
-- Business Rules: Keep consistent on moves; recompute for descendants on reparent. Not required in Phase 1.
+### Phase 2 TreeNode Fields
 
-### Reordering on Data Card
+- `virtualParents: string[]` — cross-references (cables, pipes, connections)
+- `componentType: string` — special node types (settings, templates); rendering variants from an allowed list
+- `componentVersion: string` — for debugging and compatibility
+- `customProperties: string[]` — extensibility (API keys, sources)
 
-Moved from SPECIFICATION.md → DataField Management:
+### Phase 2 DataField Fields
 
-When a Data Field is active for editing, a small "drag handle" appears to the left of the row. The user can drag the row up or down to reorder the DataFields on the DataCard. (Implementation: Show drag handle when isEditing=true. Use HTML5 drag events for interaction. Recalculate and persist cardOrdering numbers to storage.)
+- `cardOrdering` — explicit, user-editable (Phase 1 auto-assigns based on creation order)
+- `componentVersion: string` — for debugging
+- `customProperties: string[]` — extensibility
+- `isRequired: boolean` — validation flag
+- `isLocked: boolean` — edit protection
+- `isEditable: boolean` — permission control
 
-Note: Reintroduce with persistent `cardOrdering` recalculation and UI affordances.
+### Server-Assigned Timestamps
 
-- **tree-line and branch-lines**: Non-interactive CSS-only decorations inside the children container. The Tree Line is a vertical guide positioned slightly left of child nodes (as in `ASSET_view.svg`), derived from `--child-indent` with a small offset (e.g., `--tree-line-offset`). Each child row shows a short horizontal branch from the Tree Line to the node. These elements do not affect layout or capture pointer events. (See Styling Design below)
+- `TreeNode.updatedAt` and `DataField.updatedAt` assigned by server on sync
+- Client keeps local monotonic clock for UX; replaces with server timestamp on ack
+- Until server ack, `updatedAt` treated as pending
+- Phase 1 uses client-assigned `Date.now()` via `now()` helper (already mockable)
 
-### Image / Media Fields
+### Tree Partitioning (Multi-Collection Support)
 
-Moved from SPECIFICATION.md → Example DataFields:
+All records would carry `treeID` and `treeType` to support multiple independent trees per user.
 
-- Image: <IMAGE>
+**Semantics:**
 
-Note: Media upload, preview, storage, and caching are out of scope for Phase 1. All fields treated as text in Phase 1.
+- Root node: `treeID = id` (self-reference)
+- Child nodes, fields, history: `treeID = parent.treeID` (inherited)
+- `treeType` (Phase 1 would be fixed `"AssetTree"`; Phase 2 adds other tree kinds)
+- ASSET/BRANCH view always scoped to one `treeID`
+- `createNodeButton.isRoot` creates a new tree (sets `treeID = id`) and navigates to its BRANCH view
 
-### DataField Component Library Architecture
-
-Current `DataField.tsx` is a proto-component handling text values. Future phases need:
-
-**Component Types:**
-
-- TextDataField (current) - simple text values
-- ImageDataField - single image with preview/upload
-- ImageCarouselDataField - multiple images with carousel
-- NumberDataField - numerical values with units
-- DateDataField - date/datetime picker
-- SelectDataField - dropdown from predefined options
-- LinkDataField - URL with preview
-
-**Refactoring Strategy:**
-
-1. Extract shared layout/grid into `FieldRow` wrapper component
-2. Extract edit state management into `useFieldEdit` hook
-3. Create `FieldValue` interface for pluggable value renderers
-4. Each component type implements: display mode, edit mode, validation
-5. Field type registry maps `componentType` → renderer component
-
-**Current Pain Points to Address:**
-
-- Edit state FSM tightly coupled to DataField component
-- Double-tap detection could be a shared hook (already is: `useDoubleTap`)
-- Grid layout repeated in TreeNodeConstruction
-
-Note: Phase 1 text-only is sufficient. Refactor when adding second component type.
-
-### Data Fetching and Sync Strategy
-
-Moved from SPECIFICATION.md → Data Fetching Strategy:
-
-- **Offline-First Architecture**: All data operations work against local IndexedDB first, with automatic synchronization to cloud/server when connected.
-- **Breadth-first data fetching**: Fetch top-level TreeNodeRecords + DataFieldRecords first, then their children, then their children's children, etc.
-- **Bidirectional Auto-Sync**: All local changes immediately persist to IndexedDB and queue for cloud/server sync when connected
-- **Background Progressive Loading**: Automatically fetch tree layers breadth-first
-- **Each chunk**: One TreeNode + its DataFields (DataFields are fetched in parallel)
-- **Display Strategy**: Show what's loaded, continue fetching in background
-- **Cache Strategy**: IndexedDB + browser cache for offline resilience
-- **Conflict Resolution**: Last-write-wins with version tracking for merge conflicts between local and cloud data
-
-Note: Phase 1 is local-only persistence without background fetching or server sync.
-
-### Implementation Notes (moved as-is)
-
-Moved from SPECIFICATION.md → Implementation Notes:
-
-1. **Storage Strategy:**
-   - Primary: IndexedDB for offline-first capability
-   - Future: Cloud sync with conflict resolution
-
-2. **ID Generation:**
-   - Client-generated UUIDs (v4) for offline creation
-   - No dependency on server for ID assignment; server echoes client IDs
-
-3. **Indexing Requirements:**
-   - TreeNode: Index on parentId, nodeName
-   - DataField: Index on parentNodeId, fieldName
-
-4. **Data Validation:**
-   - Enforce at UI component level
-   - Validate before IndexedDB writes
-   - Server-side validation on sync
-
-5. **Sync & Consistency (Phase 1):**
-   - Conflict Resolution: Use Last-Write-Wins (LWW) when reconciling with the cloud. The authoritative winner is the record with the highest server `updatedAt` timestamp.
-   - Timestamps: All authoritative timestamps (`updatedAt`) are assigned by the server during sync. Client may keep a local monotonic clock for UX, but must replace local values with server timestamps on ack.
-   - Until server ack, updatedAt may be missing; treat as pending.
-   - UUID Assignment: Default to client-generated UUIDv4 for offline creation (as specified above). Server must accept and echo IDs. If server-side IDs are adopted later, use a `provisionalId` remap strategy and update both IndexedDB and in-memory state atomically.
-   - Cache/UI Update Rules: Apply local optimistic updates immediately; replace local `updatedAt` with the server timestamp on ack.
-   - Deletions: Treat delete as a hard delete propagated to all clients. Clients must gracefully handle missing references (prune missing `DataField` IDs from `TreeNode.dataFields`) and recompute `cardOrdering`.
-   - Duplicates/Moves: For Phase 1, treat move/duplicate as delete+create without special conflict handling. LWW applies to resulting records.
-
-### Business Rules: Cascade Delete
-
-Original text (SPEC): "Deleting a node must handle or cascade to all children"
-
-Note: In Phase 1, only leaf nodes are deletable. Full cascade delete will be implemented later.
-
-### Delete Asset UX (deferred from Delete Asset button feature)
-
-- **Confirmation dialog** before delete
-- **Toast notification** after delete
-- **Undo/restore** functionality
-- **Cascading soft-delete** of children when deleting a parent
-- **Orphan cleanup** job (children of deleted parents remain in IDB, implicitly hidden; future cleanup)
-
-### getFieldHistory and soft-deleted fields
-
-- **Explicit adapter check**: `getFieldHistory(dataFieldId)` should return `[]` when the DataField is soft-deleted (e.g. check field’s `deletedAt` in IDBAdapter and FirestoreAdapter). Currently history is only “implicitly hidden” because the UI never requests history for a soft-deleted field. Explicit check is needed for direct API use or a future restore/admin UI.
-
-### Data Model: Server-assigned timestamps and componentType
-
-### Rich New Node Construction UI
-
-Moved from SPECIFICATION.md → Node Creation:
-
-- New TreeNode DataField Construction UI with multiple default rows and five dropdowns for user-selected fields; an Add button in row 10; and Save/Cancel in row 11; defaults skipped if empty.
-
-Note: Phase 1 creation is minimal (Name + Subtitle); fields added post-creation from the DataCard.
-Original excerpts:
-
-- TreeNode.updatedAt: Server-assigned on sync
-- DataField.updatedAt: Server-assigned on sync
-- DataField.componentType: Special rendering type (From allowed list)
-
-Note: In Phase 1, timestamps are client-assigned; componentType rendering types deferred.
-
-### History & Audit Enhancements
-
-Moved from SPECIFICATION.md → Data Model / DataFieldHistory:
-
-- Phase 1 implements minimal append-only history for `DataField.dataValue` in a dedicated `dataFieldHistory` store, keyed by `${dataFieldId}:${rev}` and indexed by `dataFieldId`, `updatedAt`.
-- Phase 2 will expand history coverage and UI:
-  - Record `fieldName` changes (label renames) with `property: "fieldName"` entries
-  - Optional history for other properties (e.g., `cardOrdering` moves)
-  - Rollback/restore to a given `rev`
-  - Pagination, filtering, and search within history
-  - Multi-user provenance with real user IDs and server-assigned timestamps
-  - Merge strategy guidance for sync conflicts (event-level dedupe via `id`, causal ordering)
-  - Pruning/archival policies for very long histories
-
-Note: Single-user Phase 1 uses a constant `updatedBy` (e.g., "localUser"). Real user identity and trust features deferred to Phase 2.
-
-- Export/import add “Export Collection (JSON)” and “Import Collection” to LATER.md.
+**Related follow-ups:**
 
 - Cross-collection references and moves
 - Per-collection settings and field libraries
 - Multi-collection search and dashboards
-- Implementation helpers to add:
-  deriveCollectionId(nodeId): string
-  stampCollectionIds() run on startup for migration
-  filterByCollection<T>(records, collectionId) for UI queries
+- Startup migration: walk up to root and stamp `treeID` on any record missing it
+- Implementation helpers: `deriveCollectionId(nodeId)`, `stampCollectionIds()`, `filterByCollection<T>(records, collectionId)`
 
-- Soft delete/recycle bin with restore window
-- Audit-preserving deletes (keep history, tombstone nodes)
+### Breadcrumbs & Ancestor Path
+
+Spec called for a breadcrumb in `TreeNodeDetails` (`"Ancestor1 / Ancestor2 / Parent / CurrentNode"`).
+
+- Storage: denormalized `ancestorNamePath: string[]` on each node
+- Root nodes: empty array; children inherit and append on create; recompute for descendants on reparent
+- Rendering: join with `" / "` and append current `nodeName`
+
+---
+
+## DataField Component Library
+
+Phase 1 `DataField.tsx` is a proto-component handling text values. Phase 2 expands into a library of typed components.
+
+### Component Types
+
+- **TextDataField** (current) — simple text values
+- **ImageDataField** — single image with preview/upload
+- **ImageCarouselDataField** — multiple images with carousel
+- **NumberDataField** — numerical values with units
+- **DateDataField** — date/datetime picker
+- **SelectDataField** — dropdown from predefined options
+- **LinkDataField** — URL with preview
+
+### Refactoring Strategy
+
+1. Extract shared layout/grid into `FieldRow` wrapper component
+2. (Already done) Extract edit state management into `useFieldEdit` hook
+3. Create `FieldValue` interface for pluggable value renderers
+4. Each component type implements: display mode, edit mode, validation
+5. Field type registry maps `componentType` → renderer component
+
+Refactor when adding the second component type. Current pain points (edit FSM coupled to DataField, grid layout repeated in TreeNodeConstruction) resolve naturally during that refactor.
+
+### Media / Image Fields
+
+Media upload, preview, storage, and caching are out of scope for Phase 1. All fields treated as text.
+
+### DataField Creation Enhancements
+
+- **Typeahead filtering** on combo box — filter prefab list as user types (currently requires chevron click)
+- **Dropdown flip behavior** — flip upward if insufficient space below
+- **Custom entry + auto-library** — user-entered field names added to their personal library of previously used fields
+
+---
+
+## UI / UX
+
+### Node Creation
+
+**Rich Construction UI** (per spec): multiple default rows, five dropdowns for user-selected fields, Add button in row 10, Save/Cancel in row 11, empty rows skipped on save.
+
+Phase 1 creation is minimal (Name + Subtitle); fields added post-creation from the DataCard.
+
+### Reordering on DataCard
+
+When a DataField is active for editing, a drag handle appears left of the row. User drags to reorder. Uses HTML5 drag events. Recalculates and persists `cardOrdering` for all affected fields.
+
+### Tree Decorations
+
+**Tree-line and branch-lines** — non-interactive CSS-only decorations inside the children container. Vertical guide slightly left of child nodes (per `ASSET_view.svg`), derived from `--child-indent` with a `--tree-line-offset`. Each child row shows a short horizontal branch. No layout impact, no pointer events.
+
+### Navigation Enhancements
+
+- **UpButton double-tap** navigates all the way to ROOT view
+- **UpButton caching** — store `parentId` in context at instance creation rather than recomputing on each click. Benchmark cache vs. lookup for snappiness.
+- **Down-tree navigation** — counterpart to UpButton for descending without tap-by-tap
+- **User-configurable double-tap** — threshold and enable/disable in a future User Settings view
+
+### CreateNodeButton Clutter
+
+Multiple inline "Create Here" buttons (n+1 between child rows) add visual noise and tab-stop pain. Consider a single "+ Add sub-asset" that inserts relative to a selected sibling, or appends by default. Defer in-between insertion UI.
+
+### TreeNodeDetails Beyond Delete
+
+Phase 1 offers delete only. Add Rename and Move later; until then, edits happen in the node header and card.
+
+### DataCard Animation Robustness
+
+Currently, DataCard expansion repositions siblings via layout reflow (not physical push). Works because of current grid/flex structure. If page structure changes significantly and layout glitches appear, move to a model where expansion explicitly drives sibling positioning.
+
+### Node Metadata Surface
+
+`updatedBy` and `updatedAt` for nodes belong in **TreeNodeDetails**, not as a DataField on the DataCard. Timestamps client-assigned until server timestamps land.
+
+---
+
+## Destructive Operations
+
+### Cascade Delete
+
+Spec: "Deleting a node must handle or cascade to all children." Phase 1 allows leaf-only deletion.
+
+- Full cascade delete (or soft-delete with implicit hiding of descendants)
+- Orphan cleanup job — children of deleted parents remain in IDB, implicitly hidden; future cleanup pass removes
+- Cascade delete semantics for history: no new history entries appended on cascade (descendant history preserved but hidden)
+
+### Delete UX
+
+- Confirmation dialog before delete
+- Toast notification after delete (Snackbar)
+- Undo / restore within a window
+- Clarify: does Undo survive navigation? Are deletes soft until the timer elapses, or applied immediately with a restore snapshot?
+
+### Recycle Bin / Audit-Preserving Delete
+
+- Soft delete with restore window (user-visible recycle bin)
+- Tombstone nodes that preserve history for audit
 - Per-collection export before destructive ops
-- Undo for last destructive action
+- Undo for last destructive action (session-level)
 
-**TreeNode Entity Phase 2 Fields (Future):**
+---
 
-- virtualParents: string[] - For cross-references (cables, pipes, connections)
-- componentType: string - For special node types (settings, templates)
-- componentVersion: string - For debugging and compatibility
-- customProperties: string[] - For extensibility (API keys, sources)
+## History & Audit
 
-- **Startup migration** (dev helper): If any record lacks `treeID`, derive it by walking up to root and stamp it.
+Phase 1 implements minimal append-only history for `DataField.dataValue` in `dataFieldHistory`, keyed by `${dataFieldId}:${rev}` and indexed by `dataFieldId`, `updatedAt`.
 
-5. (Phase 2) Reordering updates cardOrdering for all affected fields
+### Phase 2 Expansion
 
-- Label (`fieldName`) rename history is deferred to Phase 2.
+- Record `fieldName` changes (label renames) with `property: "fieldName"` entries
+- Optional history for other properties (e.g., `cardOrdering` moves)
+- Rollback / restore to a given `rev`
+- Pagination, filtering, and search within history
+- Multi-user provenance with real user IDs and server-assigned timestamps
+- Merge strategy guidance for sync conflicts (event-level dedupe via `id`, causal ordering)
+- Pruning / archival policies for very long histories
 
-Data Fields are either created by Users (simple Field Name + Field Value Type) or selected from a library sourced from previous creations of the Users
+### getFieldHistory and Soft-Deleted Fields
 
-- Double-tap upButton navigates all the way to ROOT view.
-- UpButton should be ready for action: it should store the parentId at each instance location (context) when created, rather than a function to find this prop. Or some kind of cache? [test which is faster / snappier]
-- Down-tree nav as well?
+Currently history for soft-deleted fields is only _implicitly_ hidden (UI never requests it). Add explicit adapter check: `getFieldHistory(dataFieldId)` should return `[]` when the DataField's `deletedAt` is set. Needed for direct API use or a future restore/admin UI.
 
-- double-tap settings and options in User Settings
+---
 
-- newDataField custom entry + automatic add to library
+## Sync & Storage
 
-### CreateDataField Combo Box Enhancements
+### Breadth-First Quantized Background Lazy Loading
 
-- **Typeahead filtering**: As user types in Field Name input, auto-filter dropdown to show matching prefab names. Currently chevron must be clicked to open dropdown.
-- **Dropdown flip behavior**: Detect viewport space below the Field Name input; if insufficient room, flip the dropdown to open upward instead of downward. Standard "flip" positioning pattern.
+Fetch top-level TreeNodes + DataFields first, then children, then grandchildren. Each chunk is one TreeNode + its DataFields (fields fetched in parallel). Display what's loaded, continue in background. IndexedDB + browser cache for offline resilience.
 
-### DataCard Animation & Layout
+Phase 1 loads eagerly; background progressive loading deferred.
 
-- **Physical push vs. layout reflow**: Currently, when a DataCard expands, elements below reposition due to layout reflow rather than being physically "pushed" by the card. This works now because of how the grid/flex containers are structured, but if page structure changes significantly, this animation behavior may need revisiting. Consider a more robust approach where the card expansion explicitly affects sibling positioning if layout issues arise.
+### Export / Import
 
-- **"Node Metadata"**: History and metadata for the node: updatedBy, updatedAt. Timestamps are client-assigned. THIS SHOULD BE IN TREE NODE DETAILS, NOT A DATAFIELD
+- "Export Collection (JSON)" and "Import Collection" actions
+- Per-collection export before destructive ops (see Destructive Operations)
 
-- Note to self: What is "Keys must exist in TreeNode table" on line 160??
+### Extract Sync System as Standalone Package (Refactoring Audit 8.3)
 
-- For cascade deletes, no new history entries are appended ??
+Package the offline sync subsystem as a reusable module — provisional name `@blarvin/offline-sync`. The pieces are already reasonably decoupled and event-driven, so the extraction is mostly a packaging exercise rather than a rewrite.
 
-- **Unique Trees**: Creating node on ROOT view sets `treeID = id`. Creating a node on ASSET view (a child node) sets `treeID = parent.treeID`.
+**What would move:**
 
-- **Partitioning**: All records include `treeID` and `treeType` (Phase 1: `treeType` = "AssetTree").
+- `src/data/sync/SyncManager.ts` — orchestrator
+- `src/data/sync/SyncPusher.ts` — local→remote push loop
+- `src/data/sync/SyncLifecycle.ts` — online/offline/interval triggers
+- `src/data/sync/SyncQueueManager.ts` — queue abstraction (already extracted from IDBAdapter)
+- `src/data/sync/ServerAuthorityResolver.ts` — LWW conflict resolution
+- `src/data/sync/strategies/` — `FullCollectionSync`, `DeltaSync`
+- `src/data/syncSubscriber.ts` — event-bus bridge (or leave as app-side glue)
 
-- **Creation**:
-  - Root node: `treeID = id`.
-  - Child nodes/fields/history: `treeID = parent’s treeID`.
+**What would stay app-side:**
 
-| treeID | string | Yes | Tree boundary identifier | Root: equals `id`. Children: inherited root |
-| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+- `StorageEventBus` and domain event types (the package would accept a generic event stream)
+- `IDBAdapter` / `FirestoreAdapter` (the package would define adapter interfaces, not implementations)
+- App-specific domain models (`TreeNode`, `DataField`, `DataFieldHistory`)
 
-| componentType | string | No | Special rendering type | (Phase 2) From allowed list |
-| treeID | string | Yes | Tree boundary identifier | Inherited root |
-| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+**Shape of the public API (sketch):**
 
-| treeID | string | Yes | Tree boundary identifier | Inherited root |
-| treeType | string | Yes | Tree classification identifier | Phase 1 fixed: "AssetTree" |
+```typescript
+interface SyncableAdapter<T> {
+  /* push, pull, applyRemote, etc. */
+}
+interface SyncQueue {
+  enqueue;
+  getPending;
+  markSynced;
+  markFailed;
+}
+interface SyncStrategy<T> {
+  pull(since: number | null): Promise<T[]>;
+}
 
-[createNodeButton.isRoot] Creates a new Tree (sets `treeID = id`) and navigates to the new node’s ASSET (BRANCH) view.
+createSyncManager({
+  local,
+  remote,
+  queue,
+  strategies,
+  resolver,
+  eventStream,
+});
+```
 
-ASSET View is always scoped to one `treeID` (the current root’s id).
+**Prerequisites before extracting:**
 
-**Phase 2 dataFields (Future):**
+1. Generify types — sync code currently imports `TreeNode` / `DataField` directly; these must become type parameters.
+2. Finalize the adapter contract — `SyncableStorageAdapter` is close but has a few domain-shaped methods (e.g., `applyRemoteHistory`) that should become generic.
+3. Decide on event transport — either accept an injected `EventBus` interface or expose hook points for the host app to wire up.
+4. Decouple from app-specific conflict resolution — `ServerAuthorityResolver` assumes LWW on `updatedAt`; expose as a pluggable strategy.
 
-- cardOrdering:
-- componentVersion: string - For debugging
-- customProperties: string[] - For extensibility
-- isRequired: boolean - Validation flag
-- isLocked: boolean - Edit protection
-- isEditable: boolean - Permission control
+**Why defer:** The current inlined form is fine for Phase 1 and there's only one consumer (this app). Extraction pays off when (a) a second project needs the same sync primitives, or (b) the sync system becomes stable enough that versioning it separately is an advantage rather than friction.
 
-### "Breadth-first quantized background lazy loading"
+**Effort:** Medium. Most of the work is genericizing types and tightening the adapter interface; the runtime logic is already in the right shape.
 
-### Interaction/UX risks
+---
 
-- Double‑tap to edit: Double‑tap kept for mouse users. **✅ RESOLVED:** Keyboard support now implemented (Enter/Space to edit, Escape to cancel). See IMPLEMENTATION.md → Accessibility.
-- Multiple inline Create buttons (L62–L65, L79): n+1 “Create Here” buttons between child rows add clutter and tab‑stop pain. Consider a single “+ Add sub‑asset” that inserts relative to a selected sibling or uses a simple append, and defer in‑between insertion to later.
-- Delete/Undo timing (L86–L92): 5s Undo plus “irreversible” is brittle. Clarify whether Undo survives navigation and whether deletes are soft until timer elapses or applied immediately with a restore snapshot.
-- “TreeNodeDetails” delete only (L43): Consider at least “Rename/Move” later; if Phase 1 is delete‑only, explicitly state edits happen in the node header and card.
-
-- **Design tokens**: Implement SPEC CSS variables in a global `tokens.css` and import once in the app entry
-- **Utilities**: TailwindCSS is optional; if enabled, limit to `@apply` inside component CSS to keep markup clean. If it adds complexity, defer heavy Tailwind usage to later.
+## Refactoring & Technical Debt
 
 ### CQRS Follow-ups
 
-- Command logging/audit middleware on CommandBus (pre/post hooks)
-- Query caching / materialized views (beyond existing nodeIndex)
+- Command logging / audit middleware on CommandBus (pre/post hooks)
+- Query caching / materialized views (beyond existing `nodeIndex`)
 - Remove `INodeService` / `IFieldService` interface types from `services/index.ts` once no external code references them
-
-### Move useSyncTrigger.ts from src/hooks/ to src/data/
-
-- `useSyncTrigger.ts` is no longer UI-facing — only imported by `syncSubscriber.ts` (in `src/data/`)
-- Moving it to `src/data/` would better reflect its role as a data-layer concern
-- Low priority: works fine where it is
 
 ### Structured Logger (Refactoring Audit 7.5)
 
-- Replace ad-hoc `console.log` with a lightweight logger utility (`src/utils/logger.ts`)
-- Level filtering: silence debug/info in production, show only warn/error
-- 137 console statements across 27 files already use consistent `[Tag]` prefixes — migration is mechanical
-- Low priority: current logging works well for dev/prototyping
+Replace ad-hoc `console.log` with a lightweight logger (`src/utils/logger.ts`). Level filtering to silence debug/info in production. ~137 console statements across 27 files already use consistent `[Tag]` prefixes — migration is mechanical. Low priority: current logging works fine for dev.
 
 ### Error Handling & Resilience
 
-- **Adopt `safeAsync` in views**: Wrap async data loading calls with `safeAsync()` from `withErrorHandling.ts` to prevent crashes on Firestore failures. Returns fallback data (empty arrays) and logs errors with context. Low priority for Phase 1 because Firestore SDK's offline persistence handles most network failures gracefully. Becomes valuable when: (1) Snackbar is implemented to show user-friendly errors, (2) Error monitoring (Sentry, etc.) is added, (3) UI has explicit error/retry states.
+Adopt `safeAsync()` from `withErrorHandling.ts` in view-layer data loads. Wraps async calls, returns fallback (empty arrays), logs with context. Low priority for Phase 1 because Firestore's offline persistence absorbs most network failures. Becomes valuable once:
 
-### TailwindCSS
+1. Snackbar is implemented for user-facing error messages
+2. Error monitoring (Sentry, etc.) is added
+3. UI has explicit error/retry states
 
-- limit use to `@apply` within component CSS to keep HTML uncluttered
+### File Organization Nits
+
+- **Move `useSyncTrigger.ts`** from `src/hooks/` to `src/data/` — no longer UI-facing, only imported by `syncSubscriber.ts`. Works fine where it is; low priority.
+
+### TailwindCSS (if adopted)
+
+Limit to `@apply` within component CSS to keep markup uncluttered. Defer heavy utility-class usage.
 
 ---
 
@@ -290,14 +305,18 @@ ASSET View is always scoped to one `treeID` (the current root’s id).
 
 ### ✅ Accessibility & AI Agent Compatibility
 
-Originally flagged as a risk: "Double-tap hurts accessibility/keyboard support"
+Originally flagged as a risk: "Double-tap hurts accessibility/keyboard support."
 
-**Now implemented:**
+Now implemented:
 
 - Full keyboard navigation (Tab, Enter, Space, Escape)
 - Semantic HTML (`<article>`, `<button>`, `<h2>`, `<label>`)
 - ARIA attributes (`aria-expanded`, `aria-label`, `aria-labelledby`)
 - `:focus-visible` styles for keyboard users
-- AI agent compatibility - all elements appear in accessibility tree with descriptive names
+- AI agent compatibility — all elements appear in accessibility tree with descriptive names
 
-See IMPLEMENTATION.md → Accessibility section for full details.
+See IMPLEMENTATION.md → Accessibility for details.
+
+### ✅ Design Tokens
+
+SPEC CSS variables implemented in `src/styles/tokens.css` with a three-layer system (primitives → semantic → component). See IMPLEMENTATION.md → CSS Architecture.
