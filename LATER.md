@@ -32,7 +32,6 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 ### Phase 2 DataField Fields
 
-- `cardOrdering` — explicit, user-editable (Phase 1 auto-assigns based on creation order)
 - `componentVersion: string` — for debugging
 - `customProperties: string[]` — extensibility
 - `isRequired: boolean` — validation flag
@@ -119,10 +118,6 @@ Media upload, preview, storage, and caching are out of scope for Phase 1. All fi
 **Rich Construction UI** (per spec): multiple default rows, five dropdowns for user-selected fields, Add button in row 10, Save/Cancel in row 11, empty rows skipped on save.
 
 Phase 1 creation is minimal (Name + Subtitle); fields added post-creation from the DataCard.
-
-### Reordering on DataCard
-
-When a DataField is active for editing, a drag handle appears left of the row. User drags to reorder. Uses HTML5 drag events. Recalculates and persists `cardOrdering` for all affected fields.
 
 ### Tree Decorations
 

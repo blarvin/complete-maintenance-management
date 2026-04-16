@@ -32,6 +32,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **DataField picker keyboard + clickaway** — In the CreateDataField combo box: Up/Down to move, Enter to pick, click-outside or tab-away to close. Touch path must keep working. (Typeahead and flip-up are in LATER.md.)
 - **Copy node** — "Copy as template" (structure only) and "Copy full node" (structure + values) buttons in TreeNodeDetails.
 - **Tab focus order audit** — Walk the app with keyboard only; fix any jumps that land in weird places after Tab across views.
+- **CreateNodeButton child UX** — Spec says n+1 buttons between children; LATER.md flags this as cluttered. Decide: keep interleaved buttons, switch to a single "Add sub-asset" that appends (or inserts relative to a selection), or something else. Then update spec + implementation to match.
 
 ---
 

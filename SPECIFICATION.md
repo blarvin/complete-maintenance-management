@@ -10,11 +10,11 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 - Level II: Data pertaining directly to one Node; facts, attributes, properties, characteristics, etc. of the Node itself. Each Node has one Data Card containing any number of Data Fields (facts about that thing). The Node's own Title and Subtitle are on this level conceptually, but reside above the Data Card in a Node Header.
 - Level III: Each Data Field has a Field Details section containing context (e.g., metadata) and management actions (e.g., delete).
 - Level IV: Each Data Field has a user‑facing history of previous Field values.
-- Level v: Help, App Training, App Feedback. These are fully contextualized at every point, every UI affordance, within the tree view. (Phase 2)
+- Level V: The fifth level of knowledge presentation/interaction is the "meta" level: Help, App Training, App Feedback. These are fully contextualized at every point, every UI affordance, within the tree view. UI intention is a seperate layer of "i" icons, which may be hidden.  [Phase 2+]
 
 This structure enables users to construct, explore, and understand detailed hierarchical models of real world assets.
 
-## Core Principles
+## Core Principles [DONE]
 
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
 - **Self Similarity**: Single TreeNode component handles all levels
@@ -28,47 +28,47 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ### Views
 
-- **ROOT View**: Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom. Single grid container element for layout.
-- **BRANCH View**: Listview comprising a single grid container (rows) with gap: 2px containing one parent TreeNode (isParent state) at top, and a children container (grid) with a left gutter column (width `--child-indent`).
+- **ROOT View**: [DONE] Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom.
+- **BRANCH View**: [DONE] One parent TreeNode (isParent state) at top, followed by indented children below. Children are visually indented by `--child-indent`.
 
 ### Core component hierarchy
 
-- **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
-- **NodeTitle**: Displays the current node's `nodeName` (bold).
-- **NodeSubtitle**: Simple description or location string
-- **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Slides down into view when expanded. Use a grid container with display: grid and grid-template-rows transition (0fr → 1fr), containing a middle div with overflow: hidden, wrapping a DataCard div with translateY transition (-100% → 0). Both the grid and transform transitions must run simultaneously with matching durations. This should react to content (DataField) quantity without a ref. This expands/retracts using a simple chevron button, located on the body of the parent TreeNode to the right of NodeSubtitle.
-- **DataField**: Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed.
-- **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
-- **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
-- **"UpButton**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
-- **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
-- **TreeNodeDetails**: Expandable section (simple chevron and label "Tree Node Details") containing details, actions, and settings pertaining to the whole TreeNode. DELETE button only during phase 1.
-- **Snackbar**: Global transient notification toast at bottom. Shows message + optional "Undo". Auto-dismiss after 5s. Used for DataField saves, DataField deletes, and Node cascade deletes. Single-slot, replace current toast with latest if a new one arises.
+- **TreeNode**: [DONE] Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
+- **NodeTitle**: [DONE] Displays the current node's `nodeName` (bold).
+- **NodeSubtitle**: [DONE] Simple description or location string
+- **DataCard**: [DONE] Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Expands/collapses with an animated slide-down, triggered by a chevron button on the TreeNode body to the right of NodeSubtitle. Animation must be content-aware (no fixed heights). See IMPLEMENTATION.md → DataCard Animation for technique.
+- **DataField**: [DONE] Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed.
+- **DataFieldDetails**: [DONE] Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
+- **CreateDataFieldButton**: [DONE] Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
+- **UpButton**: [DONE] On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
+- **CreateNodeButton**: [DONE] Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
+- **TreeNodeDetails**: [DONE] Expandable section (simple chevron and label "Tree Node Details") containing details, actions, and settings pertaining to the whole TreeNode. DELETE button only for now; Rename and Move [Phase 2+].
+- **Snackbar**: Global transient notification toast. See Snackbar & Undo section below for full spec.
 
-## TreeNode States
+## TreeNode States [DONE]
 
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by updatedAt, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of BRANCH view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of BRANCH view.
 - **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the BRANCH view.
 - **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard state is also set to isUnderConstruction.
 
-## DataCard States
+## DataCard States [DONE]
 
 - **isExpanded**: DataCard is open/closed. Persisted to local storage.
 - **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). TreeNodeDetails not shown. CreateDataFieldButton in last row and functions as normal. "Save" and "Cancel" buttons at the bottom.
 
-## DataField States
+## DataField States [DONE]
 
 - **isMetadataExpanded**: Field Details area is expanded/collapsed. Persisted to local storage.
 - **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
 
-## CreateNodeButton Contextual Variants
+## CreateNodeButton Contextual Variants [DONE]
 
 - **root** (ROOT view): Large button styled to mimic a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset".
-- **child** (BRANCH view): Small inline buttons rendered as their own grid rows, aligned with the left gutter in the two‑column children grid. Multiple instances are shown: for n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it according to button DOM order. Normal document flow; no absolute positioning.
+- **child** (BRANCH view): Small inline buttons aligned with the children indent gutter. For n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it at the button's position.
 - **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
-### State Transitions (use finite state machine pattern)
+### State Transitions (use finite state machine pattern) [DONE]
 
 - isRoot → isParent (navigate to BRANCH VIEW)
 - isChild → isParent (navigate deeper)
@@ -77,12 +77,12 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ## User Experience pathways
 
-### Navigation Logic ... handled client-side without URL changes
+### Navigation Logic ... handled client-side without URL changes [DONE]
 
 - **Down-tree**: Move down the tree by tapping any child node. Takes user to isParent state for that node.
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
 
-### Node Creation
+### Node Creation [DONE]
 
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the BRANCH view, multiple child variant instances appear between the isChild instances of TreeNode.
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
@@ -91,25 +91,91 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ### Node Deletion
 
-- **Delete Tree Node**: Button Available in TreeNodeDetails section of DataCard. Confirmation required.
-- Deleting any `TreeNode` performs a **soft delete**: sets `deletedAt` timestamp on the node. Children are implicitly hidden (not cascade soft-deleted) - queries filter out children of soft-deleted parents.
-- During deletion, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
-- After confirming, show a Snackbar with 5s Undo. If Undo is taken, restore by clearing `deletedAt`; otherwise the delete persists.
-- Root (tree) deletion uses the same soft delete mechanism.
-- UI: one confirm dialog summarizing counts (nodes, fields) before proceeding; Snackbar with Undo follows. After undo window lapses, action is irreversible.
-- **Undo semantics**: Deletes apply immediately to storage (set `deletedAt`); an in-memory snapshot enables Undo for 5s. Undo restores by clearing `deletedAt`. Undo is available across in-app navigation but not across page reloads. Newer toasts replace older ones; only the latest operation can be undone. For manual field deletes, the "delete" history entry is written only after the undo window elapses.
+- **Delete Tree Node**: [DONE] Button available in TreeNodeDetails section of DataCard.
+- [DONE] Deleting any `TreeNode` performs a **soft delete**: sets `deletedAt` timestamp on the node. Children are implicitly hidden (not cascade soft-deleted) — queries filter out children of soft-deleted parents.
+- [DONE] During deletion, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
+- [DONE] Root (tree) deletion uses the same soft delete mechanism.
+- Confirmation dialog summarizing counts (nodes, fields) before proceeding. Snackbar with Undo follows (see Snackbar & Undo).
 
 ## DataField Management
 
-- **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. (Implementation: Set isEditing=true on double-tap to show input field. Set isEditing=false on save/cancel.) Confirmation is shown via Snackbar with a 5s Undo.
-- **Create Data Field**: A "+" button at bottom of DataCard opens a dropdown to select from the hardcoded DataField Library. Phase 1: creation is selection-only; users cannot define new field types.
-- **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Deletion triggers a Snackbar with 5s Undo before finalizing.
-  - **Soft Delete**: DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
-  - Manual DataField delete writes a `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` if Undo is not taken.
+- **Double-Tap to edit**: [DONE] Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
+- **Create Data Field**: [DONE] A "+" button at bottom of DataCard opens a dropdown to select from the hardcoded DataField Library. Creation is selection-only; users cannot define new field types. [Phase 2+]: ad-hoc/custom field definitions.
+- **Delete Data Field**: [DONE] Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
+    - **Soft Delete**: [DONE] DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
+    - A `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` is written only after the undo window elapses.
 
-### DataField Library - (EXAMPLE hardcoded library for bootstrapping)
+## Snackbar & Undo
 
-Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. In Phase 1, creating a Data Field is selection-only from this library; ad-hoc/custom field definitions are deferred.
+A single global Snackbar component provides transient feedback and brief undo for destructive or significant actions.
+
+### Snackbar component
+
+- Fixed-position toast at the bottom of the viewport.
+- Shows a message and an optional action button (typically "Undo").
+- Auto-dismisses after 5 seconds.
+- **Single-slot**: only one Snackbar is visible at a time. A new toast replaces the current one immediately; only the most recent action can be undone.
+
+### When the Snackbar appears
+
+| Trigger | Message | Undo? |
+|---|---|---|
+| DataField value saved | Confirmation (e.g. "Field updated") | Yes — reverts to previous value |
+| DataField deleted | "Field deleted" | Yes — clears `deletedAt` |
+| TreeNode deleted | "Node deleted" (with descendant count) | Yes — clears `deletedAt` |
+
+### Undo semantics
+
+- **Immediate apply**: Deletes (soft-delete via `deletedAt`) and saves are written to storage immediately — the UI does not wait for the undo window to elapse.
+- **In-memory snapshot**: The Snackbar holds a snapshot of the prior state. If the user taps Undo within 5 seconds, it restores from the snapshot (clears `deletedAt` for deletes, reverts value for edits).
+- **Scope**: Undo is available across in-app navigation but not across page reloads. Only the latest action can be undone (new toasts replace older ones).
+- **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written only after the undo window elapses without undo, so that undone deletes leave no audit trace.
+
+### What Snackbar does NOT cover
+
+- **Undo is not restore.** The 5-second undo window is the only in-app recovery path. After the window lapses, the soft delete is final from the user's perspective.
+- **Restore UI** is a separate concern: currently, soft-deleted entities can only be restored by clearing `deletedAt` directly in the cloud database. [Phase 2+]: a dedicated in-app view for browsing and restoring deleted items.
+
+## Loading & Error States
+
+### Loading states
+
+- **BranchView**: [DONE] Shows "Loading..." while the parent node and children are fetched from storage.
+- **RootView**: Should show an equivalent loading indicator while root nodes load. Currently renders empty until data arrives (see ISSUES.md).
+- **DataFieldHistory**: [DONE] History entries load on expand; the component renders once data is available.
+
+### Error states
+
+Storage operations can fail (IndexedDB quota, corrupt data, Firestore unavailable). Error handling is currently minimal:
+
+- [DONE] `StorageError` contract normalises adapter failures with typed codes (`not-found`, `validation`, `conflict`, `unavailable`, `internal`) and a `retryable` flag.
+- User-facing error feedback will use the Snackbar to surface brief error messages when storage operations fail. The `StorageError.describeForUser()` helper provides Snackbar-friendly messages.
+- No retry UI or explicit error/retry states in components — Firestore's offline persistence and IndexedDB reliability absorb most failures in practice.
+
+### Sync feedback
+
+The sync system operates silently in the background. There is no user-facing indication of sync status, online/offline state, or data staleness. [Phase 2+]: consider a subtle status indicator (e.g. offline badge, last-synced timestamp).
+
+## Keyboard & Accessibility [DONE]
+
+All interactive elements are keyboard-accessible. This is a core quality bar, not a feature.
+
+- **Semantic HTML**: `<article>`, `<button>`, `<h2>`, `<label>` used throughout; no click handlers on bare `<div>` elements.
+- **ARIA attributes**: `aria-expanded` on collapsible sections (DataCard, DataFieldDetails, TreeNodeDetails), `aria-label` on icon-only buttons (UpButton, expand chevrons, CreateNodeButton variants).
+- **Keyboard interactions**:
+    - DataField value: Enter/Space to begin editing, Enter to save, Escape to cancel
+    - Node header: Enter/Space to navigate (body) or expand (chevron)
+    - CreateDataField dropdown: ArrowDown to open, Enter to select, Escape to close
+    - TreeNodeConstruction: Enter to create, Escape to cancel
+- **Focus management**: `:focus-visible` ring on all focusable elements; `:focus:not(:focus-visible)` suppresses the ring for mouse users.
+
+### DataField Reordering
+
+Users can reorder DataFields within a DataCard. Reordering updates `cardOrder` for all affected fields and persists immediately. Detailed UX/interaction design TBD.
+
+### DataField Library [DONE]
+
+Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. Creating a Data Field is selection-only from this library; ad-hoc/custom field definitions deferred. [Phase 2+]
 
 | Field Name      | Category       | Type | Example Value                          | Notes                    |
 | --------------- | -------------- | ---- | -------------------------------------- | ------------------------ |
@@ -129,7 +195,7 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 | Current Reading | Measurement    | Text | "5.4 amps at 2025-01-01"               | Current measurements     |
 | Note            | General        | Text | "Requires quarterly maintenance"       | General notes            |
 
-### Default DataFields ... Added at node creation time.
+### Default DataFields ... Added at node creation time. [DONE]
 
 - **"Type Of"**: Such as "Vehicle", "Building", "Machine", "Equipment", "Tool", "Other" (arbitrary string entered by user, no entry required).
 - **"Description"**: A short description of the asset. (No entry required)
@@ -140,53 +206,53 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 - Default welcome message "Create a new asset to get started"
 - CreateNodeButton shown (isRoot state)
 
-## Data Model
+## Data Model [DONE]
 
 #### TreeNode Entity
 
 **Purpose:** Represents physical assets or logical containers in a hierarchical structure
 
-| Field        | Type              | Required | Description                     | Constraints                                                 |
-| ------------ | ----------------- | -------- | ------------------------------- | ----------------------------------------------------------- |
-| id           | string (UUID)     | Yes      | Unique identifier               | Generated client-side and used as canonical ID              |
-| nodeName     | string            | Yes      | Display name of the asset       | Max 100 chars, required                                     |
-| nodeSubtitle | string            | No       | Additional description/location | Max 200 chars                                               |
-| parentId     | string \| null    | Yes      | Reference to parent node        | Must exist or be null                                       |
-| updatedBy    | string            | Yes      | User ID of last editor          | Valid user ID                                               |
-| updatedAt    | timestamp         | Yes      | Last modification time (epoch)  | Client-assigned in Phase 1; server-assigned in later phases |
-| deletedAt    | timestamp \| null | Yes      | Soft delete timestamp           | null = active, number = deleted at epoch ms                 |
+| Field        | Type          | Required | Description                     | Constraints                                                 |
+| ------------ | ------------- | -------- | ------------------------------- | ----------------------------------------------------------- |
+| id           | string (UUID) | Yes      | Unique identifier               | Generated client-side and used as canonical ID              |
+| nodeName     | string        | Yes      | Display name of the asset       | Max 100 chars, required                                     |
+| nodeSubtitle | string        | No       | Additional description/location | Max 200 chars                                               |
+| parentId     | string \      | null     | Yes                             | Reference to parent node                                    |
+| updatedBy    | string        | Yes      | User ID of last editor          | Valid user ID                                               |
+| updatedAt    | timestamp     | Yes      | Last modification time (epoch)  | Client-assigned; server-assigned [Phase 2+] |
+| deletedAt    | timestamp \   | null     | Yes                             | Soft delete timestamp                                       |
 
 #### DataField Entity
 
 **Purpose:** Stores configurable attributes and metadata for assets
 
-| Field        | Type              | Required | Description                       | Constraints                                                 |
-| ------------ | ----------------- | -------- | --------------------------------- | ----------------------------------------------------------- |
-| id           | string (UUID)     | Yes      | Unique identifier                 | Generated client-side and used as canonical ID              |
-| fieldName    | string            | Yes      | Display label                     | Max 50 chars, user-editable                                 |
-| parentNodeId | string            | Yes      | Parent TreeNode reference         | Must exist in TreeNode table                                |
-| fieldValue   | string \| null    | Yes      | Stored value (any type as string) | Max 1000 chars                                              |
-| cardOrder    | number            | Yes      | Display ordering within DataCard  | Auto-assigned on creation                                   |
-| updatedBy    | string            | Yes      | User ID of last editor            | Valid user ID                                               |
-| updatedAt    | timestamp         | Yes      | Last modification time (epoch)    | Client-assigned in Phase 1; server-assigned in later phases |
-| deletedAt    | timestamp \| null | Yes      | Soft delete timestamp             | null = active, number = deleted at epoch ms                 |
+| Field        | Type          | Required | Description                      | Constraints                                                 |
+| ------------ | ------------- | -------- | -------------------------------- | ----------------------------------------------------------- |
+| id           | string (UUID) | Yes      | Unique identifier                | Generated client-side and used as canonical ID              |
+| fieldName    | string        | Yes      | Display label                    | Max 50 chars, user-editable                                 |
+| parentNodeId | string        | Yes      | Parent TreeNode reference        | Must exist in TreeNode table                                |
+| fieldValue   | string \      | null     | Yes                              | Stored value (any type as string)                           |
+| cardOrder    | number        | Yes      | Display ordering within DataCard | Auto-assigned on creation                                   |
+| updatedBy    | string        | Yes      | User ID of last editor           | Valid user ID                                               |
+| updatedAt    | timestamp     | Yes      | Last modification time (epoch)   | Client-assigned; server-assigned [Phase 2+] |
+| deletedAt    | timestamp \   | null     | Yes                              | Soft delete timestamp                                       |
 
-#### DataFieldHistory Entity (Phase 1 minimal)
+#### DataFieldHistory Entity [DONE] (minimal — value changes only; `fieldName` logging [Phase 2+])
 
-**Purpose:** Immutable append-only audit log of changes to a single `DataField`'s properties (Phase 1: value changes only)
+**Purpose:** Immutable append-only audit log of changes to a single `DataField`'s properties (value changes only; broader property tracking [Phase 2+])
 
-| Field        | Type           | Required | Description                          | Constraints                           |
-| ------------ | -------------- | -------- | ------------------------------------ | ------------------------------------- |
-| id           | string         | Yes      | Primary key                          | Composite key `${dataFieldId}:${rev}` |
-| dataFieldId  | string (UUID)  | Yes      | Reference to `DataField.id`          | Must exist in `DataField` table       |
-| parentNodeId | string (UUID)  | Yes      | Reference to owning `TreeNode`       | Denormalized for easy queries         |
-| action       | enum           | Yes      | "create" \| "update" \| "delete"     |                                       |
-| property     | string         | Yes      | Changed property                     | Phase 1 fixed: "fieldValue"           |
-| prevValue    | string \| null | Yes      | Previous value                       | null on create                        |
-| newValue     | string \| null | Yes      | New value                            | null on delete                        |
-| updatedBy    | string         | Yes      | Editor identifier                    | Phase 1: constant (e.g., "localUser") |
-| updatedAt    | timestamp      | Yes      | When the change occurred (epoch)     | Client-assigned in Phase 1            |
-| rev          | number         | Yes      | Monotonic revision per `dataFieldId` | Starts at 0 for create                |
+| Field        | Type          | Required | Description                          | Constraints                           |
+| ------------ | ------------- | -------- | ------------------------------------ | ------------------------------------- |
+| id           | string        | Yes      | Primary key                          | Composite key `${dataFieldId}:${rev}` |
+| dataFieldId  | string (UUID) | Yes      | Reference to `DataField.id`          | Must exist in `DataField` table       |
+| parentNodeId | string (UUID) | Yes      | Reference to owning `TreeNode`       | Denormalized for easy queries         |
+| action       | enum          | Yes      | "create" \                           | "update" \                            |
+| property     | string        | Yes      | Changed property                     | Fixed: "fieldValue"; other properties [Phase 2+]           |
+| prevValue    | string \      | null     | Yes                                  | Previous value                        |
+| newValue     | string \      | null     | Yes                                  | New value                             |
+| updatedBy    | string        | Yes      | Editor identifier                    | Constant "localUser"; real user IDs [Phase 2+] |
+| updatedAt    | timestamp     | Yes      | When the change occurred (epoch)     | Client-assigned; server-assigned [Phase 2+]            |
+| rev          | number        | Yes      | Monotonic revision per `dataFieldId` | Starts at 0 for create                |
 
 **Indexes**:
 
@@ -204,7 +270,7 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 **Sorting policy**:
 
 - Children within a parent are displayed sorted by `updatedAt` ascending.
-- DataFields within a DataCard are displayed sorted by `cardOrder` ascending (which reflects creation order via `updatedAt`).
+- DataFields within a DataCard are displayed sorted by `cardOrder` ascending. New fields are auto-assigned the next available `cardOrder` on creation. Users can reorder fields manually (see DataField Reordering below).
 
 **TreeNode Rules**:
 
@@ -214,18 +280,18 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 **DataField Rules**:
 
 - All values are stored as strings (parsing/validation in UI)
-- Metadata field `updatedAt` auto-updates on changes (client-assigned in Phase 1)
+- Metadata field `updatedAt` auto-updates on changes (client-assigned; server-assigned [Phase 2+])
 
 **Data Persistence**:
 
-- **Storage Abstraction**: Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
-- **Stores**: `treeNodes`, `dataFields`, `dataFieldHistory`
-- **Primary Storage**: Local browser storage for offline-first capability. All operations persist locally first.
-- **Cloud Sync**: Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
-- **Sync Triggers**: Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
-- **Single-user environment**: Phase 1 uses constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes (phase 1).
+- **Storage Abstraction**: [DONE] Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
+- **Stores**: [DONE] `treeNodes`, `dataFields`, `dataFieldHistory`
+- **Primary Storage**: [DONE] Local browser storage for offline-first capability. All operations persist locally first.
+- **Cloud Sync**: [DONE] Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
+- **Sync Triggers**: [DONE] Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
+- **Single-user environment**: [DONE] Uses constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes. [Phase 2+]: real user identity, `fieldName` change logging.
 
-## Storage Architecture
+## Storage Architecture [DONE]
 
 ### Storage Abstraction
 
@@ -235,13 +301,13 @@ Storage operations are abstracted through a backend-agnostic interface, enabling
 
 - **Bidirectional Sync**: Local changes push to remote; remote changes pull to local
 - **Push-First**: Local changes are pushed before pulling remote changes
-- **Conflict Resolution**: Last-Write-Wins (LWW) based on `updatedAt` timestamps. Server timestamps are authoritative when available.
+- **Conflict Resolution**: Last-Write-Wins (LWW) based on `updatedAt` timestamps. Server timestamps are authoritative when available. [Phase 2+]: server-assigned timestamps.
 - **Sync Strategies**:
-  - Full Collection Sync: Pulls all entities (used on startup)
-  - Delta Sync: Pulls only changes since last sync (faster, used periodically)
+    - Full Collection Sync: Pulls all entities (used on startup)
+    - Delta Sync: Pulls only changes since last sync (faster, used periodically)
 - **Sync Queue**: Local changes are enqueued and processed sequentially. Failed items are marked for retry.
 
-### Soft Deletion
+### Soft Deletion [DONE]
 
 Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps:
 
@@ -249,7 +315,7 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
 - Deleted entities have `deletedAt: <timestamp>`
 - Queries filter out soft-deleted entities by default
 - Children of soft-deleted nodes are implicitly hidden (not cascade soft-deleted)
-- Soft-deleted entities can be restored by clearing `deletedAt` (restore UI deferred to later phases) // WHAT???
+- Restoration: see Snackbar & Undo for the 5s undo window; beyond that, restore is currently cloud-db-only. [Phase 2+]: in-app restore UI (a dedicated TreeNode view for browsing and restoring deleted items).
 
 #### TreeNode Example
 
@@ -325,135 +391,24 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
 
 ## Styling Design
 
-<div style="display:flex; gap:25%; align-items:flex-start; padding:1.5rem; border-radius:1rem;">
-  <div>
-    <p style="color:lt-grey"><strong>ROOT view</strong></p>
-  </div>
-  </div>
-    <iframe
-    title="ROOT Wireframe Preview"
-    style="width:300px; height:560px; border:1.5px solid #000; background:#fff;"
-    srcdoc='<!doctype html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <style>
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; background: #fff; color: #111; font-family: Inter, Arial, sans-serif; }
-        .artboard { width: 300px; height: 560px; margin: 0 auto; padding: 6px 6px 6px; }
-        .node { border: 1.5px solid #000; background: #fff; margin-bottom: 3px; }
-        .node__body { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 3px 3px 3px 8px; min-height: 35px; }
-        .node__title { font-weight: 700; font-size: 12px; line-height: 1; margin: 0 0 6px 0; }
-        .node__subtitle { font-size: 9px; color: #666; line-height: 1; }
-        .node__chevron { font-size: 18px; color: #000; padding: 8px 6px; transform: translateY(10px); }
-        .datacard { border: 1.5px solid #000; border-top: 0; margin: 0 0 12px 31px; background: #fff; padding-top: 10px; }
-        .datacard__row { display: grid; grid-template-columns: 60px 1.5fr; font-size: 10px; gap: 6px; align-items: baseline; margin: 0 6px 6px 10px; }
-        .datacard__label { color: #111; }
-        .datacard__value { color: #222; }
-        .datacard__value--underlined { text-decoration: underline; }
-        .datacard__add { font-size: 10px; font-weight: 600; color: #222; margin: 6px 6px 6px 10px; }
-        .create-node { border: 1.5px solid #000; background: #fff; height: 35px; display: grid; place-items: center; margin-top: 3px; font-size: 16px; color: #000; }
-        .node--expanded { margin-bottom: 0; }
-        .node--expanded .node__body { padding-bottom: 0; }
-    </style>
-    </head>
-    <body>
-    <div class="artboard">
-        <section class="node">
-            <div class="node__body">
-                <div>
-                <div class="node__title">Asset Name A</div>
-                <div class="node__subtitle">Subtitle / Location / Short description</div>
-                </div>
-                <div class="node__chevron">◂</div>
-            </div>
-            <!-- keep open for datacard --> 
-        </section>
-         <section class="node">
-                <div class="node__body">
-                    <div>
-                    <div class="node__title">Asset Name B</div>
-                    <div class="node__subtitle">Subtitle / Location / Short description</div>
-                    </div>
-                    <div class="node__chevron">◂</div>
-                </div>
-        </section>
-        <section class="node node--expanded">
-            <div class="node__body">
-                <div>
-                <div class="node__title">Asset Name C</div>
-                <div class="node__subtitle">Subtitle / Location / Short description</div>
-                </div>
-                <div class="node__chevron">▾</div>
-            </div>
-        </section>
-        <div class="datacard">
-            <div class="datacard__rows">
-            <div class="datacard__row">
-                <div class="datacard__label">Type Of:</div>
-                <div class="datacard__value datacard__value--underlined">Pump</div>
-            </div>
-            <div class="datacard__row">
-                <div class="datacard__label">Description:</div>
-                <div class="datacard__value datacard__value--underlined">Primary cooling pump for HVAC</div>
-            </div>
-            <div class="datacard__row">
-                <div class="datacard__label">Tags:</div>
-                <div class="datacard__value datacard__value--underlined">critical, hvac, maintenance</div>
-            </div>
-            <div class="datacard__row">
-                <div class="datacard__label">Status:</div>
-                <div class="datacard__value datacard__value--underlined">In Service</div>
-            </div>
-            <div class="datacard__row">
-                <div class="datacard__label">Installed Date:</div>
-                <div class="datacard__value datacard__value--underlined">2025-01-01</div>
-            </div>
-            </div>
-            <div class="datacard__add">+ Add Field</div>
-        </div>
-        <section class="node">
-        <div class="node__body">
-            <div>
-            <div class="node__title">Asset Name D</div>
-            <div class="node__subtitle">Subtitle / Location / Short description</div>
-            </div>
-            <div class="node__chevron">◂</div>
-        </div>
-        </section>
-        <section class="node">
-        <div class="node__body">
-            <div>
-            <div class="node__title">Asset Name E</div>
-            <div class="node__subtitle">Subtitle / Location / Short description</div>
-            </div>
-            <div class="node__chevron">◂</div>
-        </div>
-        </section>
-        <section class="node">
-        <div class="node__body">
-            <div>
-            <div class="node__title">Asset Name F</div>
-            <div class="node__subtitle">Subtitle / Location / Short description</div>
-            </div>
-            <div class="node__chevron">◂</div>
-        </div>
-        </section>
-        <section class="node">
-        <div class="node__body">
-            <div>
-            <div class="node__title">Asset Name G</div>
-            <div class="node__subtitle">Subtitle / Location / Short description</div>
-            </div>
-            <div class="node__chevron">◂</div>
-        </div>
-        </section>
-        <div class="create-node">Create New Asset</div>
-    </div>
-    </body>
-    </html>'></iframe>
-    
-  </div>
-</div>
+Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (open in browser to preview).
 
-### Style Guide (Phase 1)
+### Style Guide [DONE]
+
+**Visual identity: deliberately "unstyled."** The app should look like a well-structured document, not a themed product UI. Black borders, minimal colour, no rounded cards, no gradients, no drop shadows on primary elements. The visual hierarchy comes from typography weight, indentation, and whitespace — not from decorative styling. This makes the information itself the foreground, which suits a data-heavy maintenance tool.
+
+**What "unstyled" means in practice:**
+- Borders are solid black (`--border-default`), uniform weight (`--border-width: 1.5px`)
+- Backgrounds are white or near-white; colour is reserved for interactive affordances (accent blue for focus/links, red for destructive actions, yellow for preview state)
+- Typography is a single family (Inter) at a compact size scale (9–18px), with weight doing the work of visual hierarchy (bold titles, regular body)
+- Interactive elements are stripped to bare structure: `.btn-reset` and `.input-reset` remove all browser chrome; inline editing uses a minimal underline, not a boxed input
+- Animations are fast and functional (100–150ms), not decorative
+
+**Three-layer design token system** (`src/styles/tokens.css`):
+1. **Primitives** — raw palette values (`--color-gray-600: #666`)
+2. **Semantic tokens** — purpose-mapped references (`--text-muted: var(--color-gray-600)`)
+3. **Component tokens** — local overrides in CSS modules, referencing semantic tokens
+
+Components never reference primitives directly. This makes the unstyled look a deliberate choice rather than an absence — the system is ready for theming by overriding the semantic layer.
+
+**[Phase 2+]**: Per-user and per-org style configuration (colour scheme, font size, contrast/accessibility preferences) via semantic token overrides. The three-layer architecture was designed with this in mind.

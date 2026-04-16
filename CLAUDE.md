@@ -93,7 +93,7 @@ Components use discriminated unions + type guards (no prop spreading).
 ### Sorting Policy (per SPEC)
 
 - Children within parent: sorted by `updatedAt` ascending
-- DataFields within DataCard: sorted by `updatedAt` ascending
+- DataFields within DataCard: sorted by `cardOrder` ascending
 
 ---
 
