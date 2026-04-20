@@ -53,4 +53,12 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
   bus.register('DELETE_FIELD', async (cmd) => {
     await adapter.deleteField(cmd.payload.fieldId);
   });
+
+  bus.register('RESTORE_FIELD', async (cmd) => {
+    await adapter.restoreField(cmd.payload.fieldId);
+  });
+
+  bus.register('RESTORE_NODE', async (cmd) => {
+    await adapter.restoreNode(cmd.payload.id);
+  });
 }

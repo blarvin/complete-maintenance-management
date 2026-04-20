@@ -13,6 +13,8 @@
 
 import { useSignal, $, useVisibleTask$, useOnDocument, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
+import { getSnackbarService } from '../services/snackbar';
+import { toStorageError, describeForUser } from '../data/storage/storageErrors';
 import { useDoubleTap } from './useDoubleTap';
 import { useFocusManager, BLUR_SUPPRESS_WINDOW_MS } from './useFocusManager';
 import { useAppState, useAppTransitions, selectors } from '../state/appState';
@@ -140,11 +142,29 @@ export function useFieldEdit(options: UseFieldEditOptions): UseFieldEditResult {
     const save$ = $(async () => {
         if (appState.editingFieldId !== options.fieldId) return;
         const newVal = editValue.value.trim() === '' ? null : editValue.value;
-        await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId: options.fieldId, newValue: newVal } });
-        currentValue.value = newVal ?? '';
-        stopFieldEdit$();
-        if (options.onUpdated$) {
-            await options.onUpdated$();
+        const prevVal = currentValue.value === '' ? null : currentValue.value;
+        const fieldId = options.fieldId;
+        try {
+            await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId, newValue: newVal } });
+            currentValue.value = newVal ?? '';
+            stopFieldEdit$();
+            getSnackbarService().show({
+                message: 'Field updated',
+                action: {
+                    label: 'Undo',
+                    handler: $(async () => {
+                        await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId, newValue: prevVal } });
+                    }),
+                },
+            });
+            if (options.onUpdated$) {
+                await options.onUpdated$();
+            }
+        } catch (err) {
+            getSnackbarService().show({
+                variant: 'error',
+                message: describeForUser(toStorageError(err)),
+            });
         }
     });
     

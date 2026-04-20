@@ -13,6 +13,8 @@ import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getCommandBus } from '../../data/commands';
+import { getSnackbarService } from '../../services/snackbar';
+import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import type { DisplayNodeState } from './types';
 import styles from './TreeNode.module.css';
 import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
@@ -49,11 +51,26 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     });
 
     const handleDeleteNode$ = $(async () => {
-        console.log('[TreeNodeDisplay] Delete requested for node:', props.id);
+        const nodeId = props.id;
         const parentId = props.parentId;
-        await getCommandBus().execute({ type: 'DELETE_NODE', payload: { id: props.id } });
-        console.log('[TreeNodeDisplay] Node deleted');
-        props.onNavigateUp$?.(parentId ?? null);
+        try {
+            await getCommandBus().execute({ type: 'DELETE_NODE', payload: { id: nodeId } });
+            getSnackbarService().show({
+                message: 'Node deleted',
+                action: {
+                    label: 'Undo',
+                    handler: $(async () => {
+                        await getCommandBus().execute({ type: 'RESTORE_NODE', payload: { id: nodeId } });
+                    }),
+                },
+            });
+            props.onNavigateUp$?.(parentId ?? null);
+        } catch (err) {
+            getSnackbarService().show({
+                variant: 'error',
+                message: describeForUser(toStorageError(err)),
+            });
+        }
     });
 
     const titleId = `node-title-${props.id}`;

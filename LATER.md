@@ -202,6 +202,12 @@ Fetch top-level TreeNodes + DataFields first, then children, then grandchildren.
 
 Phase 1 loads eagerly; background progressive loading deferred.
 
+### Sync Status & Pull-Applied Notifications
+
+- Subtle sync-status indicator (e.g. "Synced · 2m ago" / "Offline" chip) — already noted in SPECIFICATION §Sync feedback.
+- Snackbar toast when a background pull applies remote changes to an entity currently rendered (narrow rule to avoid chatty toasts). Successful pushes of the user's own writes stay silent.
+- Snackbar toast only when `SyncQueueManager` exhausts retries for an item — otherwise sync stays silent per Phase 1.
+
 ### Export / Import
 
 - "Export Collection (JSON)" and "Import Collection" actions

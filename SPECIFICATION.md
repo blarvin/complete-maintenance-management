@@ -112,24 +112,75 @@ A single global Snackbar component provides transient feedback and brief undo fo
 ### Snackbar component
 
 - Fixed-position toast at the bottom of the viewport.
-- Shows a message and an optional action button (typically "Undo").
-- Auto-dismisses after 5 seconds.
+- Shows a message and an optional action button (typically "Undo" or "Retry").
+- Auto-dismisses after its duration elapses (default 5s; 8s for errors).
 - **Single-slot**: only one Snackbar is visible at a time. A new toast replaces the current one immediately; only the most recent action can be undone.
+- **Timer pause**: the auto-dismiss countdown pauses while the toast is hovered or keyboard-focused, and resumes on blur.
+- **Manual dismissal**: `Esc` dismisses the current toast. The action button (if present) dismisses on activation after running its handler.
+
+### Variants
+
+| Variant | Use | Default duration | ARIA |
+|---|---|---|---|
+| `success` (default) | Save/delete confirmations with optional Undo | 5s | `role="status"`, `aria-live="polite"` |
+| `error` | Immediate storage-op failures (IDB write, quota, validation) | 8s | `role="alert"`, `aria-live="assertive"` |
+| `info` | Neutral notices (reserved; not used in Phase 1) | 5s | `role="status"`, `aria-live="polite"` |
 
 ### When the Snackbar appears
 
-| Trigger | Message | Undo? |
-|---|---|---|
-| DataField value saved | Confirmation (e.g. "Field updated") | Yes — reverts to previous value |
-| DataField deleted | "Field deleted" | Yes — clears `deletedAt` |
-| TreeNode deleted | "Node deleted" (with descendant count) | Yes — clears `deletedAt` |
+| Trigger | Variant | Message | Action |
+|---|---|---|---|
+| DataField value saved | success | "Field updated" | Undo — reverts to previous value |
+| DataField deleted | success | "Field deleted" | Undo — clears `deletedAt` |
+| TreeNode deleted | success | "Node deleted" (with descendant count) | Undo — clears `deletedAt` |
+| Immediate storage-op failure | error | From `StorageError.describeForUser()` | Retry (if the op is retryable) or none |
+
+Background sync failures are **not** surfaced — `SyncQueueManager` retries silently. Sync-status and pull-applied notifications are deferred (see LATER.md).
+
+### Component API
+
+A module-level service registry, matching the `getNodeService()` / `getFieldService()` idiom:
+
+```ts
+interface SnackbarService {
+  show(toast: ToastInput): void;
+  dismiss(): void;            // dismisses current toast without running handlers
+}
+
+interface ToastInput {
+  message: string;
+  variant?: "success" | "error" | "info";   // default "success"
+  durationMs?: number;                      // default by variant
+  action?: {
+    label: string;                          // e.g. "Undo", "Retry"
+    handler: QRL<() => void | Promise<void>>;
+  };
+  onExpire?: QRL<() => void | Promise<void>>;  // runs if the toast auto-dismisses WITHOUT the action being invoked; used for deferred-write tails (see Undo semantics)
+}
+```
+
+- Access via `getSnackbarService()`; call inside `$()` handlers, never captured in closures (same rule as other services).
+- State is held in a Qwik signal store inside the service. The app renders exactly one `<SnackbarHost>` near the app root that reads from that store.
+- Replacement: `show()` while a toast is visible immediately runs the prior toast's `onExpire` (if any), cancels its timer, and renders the new one.
 
 ### Undo semantics
 
 - **Immediate apply**: Deletes (soft-delete via `deletedAt`) and saves are written to storage immediately — the UI does not wait for the undo window to elapse.
-- **In-memory snapshot**: The Snackbar holds a snapshot of the prior state. If the user taps Undo within 5 seconds, it restores from the snapshot (clears `deletedAt` for deletes, reverts value for edits).
+- **Closure-based undo, not record snapshot**: The Snackbar holds only the reversal closure the caller passed in (`action.handler`) plus the minimum data the caller captured for that closure (e.g. the previous `fieldValue` string for a value edit, or just the entity id for a delete). There is no snapshot service and no whole-record copy.
 - **Scope**: Undo is available across in-app navigation but not across page reloads. Only the latest action can be undone (new toasts replace older ones).
-- **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written only after the undo window elapses without undo, so that undone deletes leave no audit trace.
+- **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written via `onExpire` — only after the undo window elapses without undo — so that undone deletes leave no audit trace.
+
+### Placement & animation
+
+- **Desktop**: bottom-center, max-width ~480px, 16px inset from bottom.
+- **Mobile**: bottom, full width minus 8px side insets, above `env(safe-area-inset-bottom)`.
+- **Animation**: 150ms slide-up + fade on enter; 150ms fade on exit. Respect `prefers-reduced-motion: reduce` by skipping the slide and using instant show/hide.
+
+### Accessibility
+
+- Toast text is rendered inside the live region; screen readers announce on appearance. Focus is not moved — it stays on whatever the user was interacting with.
+- The action button is keyboard-reachable (`Tab`) while the toast is visible and activates on `Enter`/`Space`.
+- `Esc` dismisses the current toast from anywhere in the app.
 
 ### What Snackbar does NOT cover
 

@@ -15,7 +15,9 @@ export type Command =
   | { type: 'DELETE_NODE'; payload: { id: string } }
   | { type: 'ADD_FIELD'; payload: { nodeId: string; fieldName: string; fieldValue: string | null; cardOrder?: number } }
   | { type: 'UPDATE_FIELD_VALUE'; payload: { fieldId: string; newValue: string | null } }
-  | { type: 'DELETE_FIELD'; payload: { fieldId: string } };
+  | { type: 'DELETE_FIELD'; payload: { fieldId: string } }
+  | { type: 'RESTORE_FIELD'; payload: { fieldId: string } }
+  | { type: 'RESTORE_NODE'; payload: { id: string } };
 
 export type CommandResultMap = {
   CREATE_NODE_WITH_FIELDS: void;
@@ -25,4 +27,6 @@ export type CommandResultMap = {
   ADD_FIELD: DataField;
   UPDATE_FIELD_VALUE: void;
   DELETE_FIELD: void;
+  RESTORE_FIELD: void;
+  RESTORE_NODE: void;
 };

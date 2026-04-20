@@ -7,6 +7,8 @@
 
 import { component$, $, PropFunction } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
+import { getSnackbarService } from '../../services/snackbar';
+import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
@@ -62,9 +64,26 @@ export const DataField = component$<DataFieldProps>((props) => {
     });
 
     const handleDelete$ = $(async () => {
-        await getCommandBus().execute({ type: 'DELETE_FIELD', payload: { fieldId: props.id } });
-        if (props.onDeleted$) {
-            props.onDeleted$();
+        const fieldId = props.id;
+        try {
+            await getCommandBus().execute({ type: 'DELETE_FIELD', payload: { fieldId } });
+            getSnackbarService().show({
+                message: 'Field deleted',
+                action: {
+                    label: 'Undo',
+                    handler: $(async () => {
+                        await getCommandBus().execute({ type: 'RESTORE_FIELD', payload: { fieldId } });
+                    }),
+                },
+            });
+            if (props.onDeleted$) {
+                props.onDeleted$();
+            }
+        } catch (err) {
+            getSnackbarService().show({
+                variant: 'error',
+                message: describeForUser(toStorageError(err)),
+            });
         }
     });
 

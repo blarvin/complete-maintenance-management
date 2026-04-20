@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './styles/global.css';
 import { useProvideAppState } from './state/appState';
 import { useInitStorage } from './hooks/useInitStorage';
+import { SnackbarHost } from './components/Snackbar/SnackbarHost';
 
 export default component$(() => {
     useProvideAppState();
@@ -33,6 +34,7 @@ export default component$(() => {
             </head>
             <body>
                 <RouterOutlet />
+                <SnackbarHost />
             </body>
         </QwikCityProvider>
     );

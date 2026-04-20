@@ -15,8 +15,9 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-- **Timestamp rendering** — DataFieldDetails shows "Invalid Date" and DataFieldHistory shows "NaN/NaN/NaN NaN:NaN". Likely one root cause in the date-formatting path; dig through both together.
-- **`cardOrder` wrong in DB after cancel** — Cancelling a DataField on an Under-Construction Node doesn't recompute `cardOrder` for remaining pending fields, so the persisted order comes out wrong.
+- No text entry caret when editing dataField names or values - it should only have active blinking caret when in editing state
+- Double underline when editing dataField values. There must be a better way.
+- `**cardOrder` wrong in DB after cancel** — Cancelling a DataField on an Under-Construction Node doesn't recompute `cardOrder` for remaining pending fields, so the persisted order comes out wrong.
 - **DataFieldHistory written lazily** — History entries are created when the field is re-opened, not on save. Should emit on commit so history is never missing after a reload.
 - **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
 - **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
@@ -30,7 +31,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Inline rename of NodeTitle and NodeSubtitle** — Decide UX (double-tap like DataFields? edit button?), then wire up. Currently nodes are rename-less after creation.
 - **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
 - **DataField picker keyboard + clickaway** — In the CreateDataField combo box: Up/Down to move, Enter to pick, click-outside or tab-away to close. Touch path must keep working. (Typeahead and flip-up are in LATER.md.)
-- **Copy node** — "Copy as template" (structure only) and "Copy full node" (structure + values) buttons in TreeNodeDetails.
 - **Tab focus order audit** — Walk the app with keyboard only; fix any jumps that land in weird places after Tab across views.
 - **CreateNodeButton child UX** — Spec says n+1 buttons between children; LATER.md flags this as cluttered. Decide: keep interleaved buttons, switch to a single "Add sub-asset" that appends (or inserts relative to a selection), or something else. Then update spec + implementation to match.
 
@@ -40,8 +40,9 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 - **Timestamp-formatting helper** — Whatever fixes the Invalid Date / NaN bugs should land as a single shared formatter, not two copies. (Pairs with the bug above.)
 - **Shared history creation logic** — Duplicated between `IDBAdapter` and `FirestoreAdapter`. Extract alongside the existing `historyHelpers.ts` (where `nextRev` already lives).
-- **`recomputeCardOrder()` duplicated** — Same pattern in both adapters. Extract to a shared helper.
+- `**recomputeCardOrder()` duplicated** — Same pattern in both adapters. Extract to a shared helper.
 - **IDBAdapter error handling is minimal** — `FirestoreAdapter` normalizes to `StorageError` comprehensively; `IDBAdapter` is terse. Bring IDB up to parity before Snackbar work so user-facing error messages have a consistent shape.
 - **Nomenclature: DataField vs DataFieldValue** — Inconsistent across code and docs. Pick one, rename, done.
 - **Remove unused `nodeId` prop from DataCard** — Trivial cleanup.
 - **Double underline while editing** — DataField value has a visible affordance underline plus the browser's input underline while editing. Pick one.
+

@@ -20,7 +20,8 @@
       "mcp__jcodemunch__get_file_outline",
       "Bash(npx vitest:*)",
       "mcp__jcodemunch__get_file_content",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(grep -E \"\\\\.tsx$\")"
     ],
     "deny": [
       "Read(.env*)",
