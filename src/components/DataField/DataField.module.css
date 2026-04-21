@@ -7,25 +7,11 @@
     /* Caret handling via .no-caret class in JSX */
 }
 
-/* When details are expanded, show light grey background via pseudo-element */
-.datafieldWrapperExpanded::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    /* Only cover the main row, not the delete button area */
-    height: 18px;
-    left: var(--chevron-size);   /* Start after chevron column */
-    right: 0;
+/* When details are expanded, grey background covers the whole field
+   (main row + metadata + delete button area) to visually group the component. */
+.datafieldWrapperExpanded {
     background: var(--bg-expanded);
     border-radius: var(--radius-sm);
-    z-index: 0;
-}
-
-/* Ensure content sits above the background */
-.datafieldWrapperExpanded .datafield,
-.datafieldWrapperExpanded > div:last-child {
-    position: relative;
-    z-index: var(--z-base);
 }
 
 /* 6-column grid layout:
@@ -40,7 +26,7 @@
 */
 .datafield {
     display: grid;
-    grid-template-columns: var(--chevron-size) var(--label-width) 1fr auto 1fr var(--chevron-size);
+    grid-template-columns: var(--chevron-col-width) var(--label-width) minmax(0, 1fr) auto minmax(0, 1fr) var(--chevron-col-width);
     font-size: var(--text-sm);
     gap: var(--space-2);
     align-items: baseline;
@@ -61,10 +47,10 @@
     border: none;
     padding: 0;
     margin: 0;
-    font-size: var(--text-lg);
+    font-size: var(--field-chevron-size);
     color: var(--border-default);
     cursor: pointer;
-    width: var(--chevron-size);
+    width: var(--chevron-col-width);
     text-align: center;
     line-height: 1;
     font-family: inherit;

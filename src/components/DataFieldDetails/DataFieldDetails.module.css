@@ -71,7 +71,6 @@
 .metadata {
     font-size: var(--text-sm);
     color: var(--color-gray-700);
-    white-space: nowrap;
     align-self: baseline;
     text-align: right;
     /* Caret handling via .no-caret class in JSX */
@@ -83,10 +82,10 @@
     border: none;
     padding: 0;
     margin: 0;
-    font-size: var(--text-lg);
+    font-size: var(--field-chevron-size);
     color: var(--border-default);
     cursor: pointer;
-    width: var(--chevron-size);
+    width: var(--chevron-col-width);
     text-align: center;
     line-height: 1;
     font-family: inherit;
@@ -139,8 +138,8 @@
 /* History list row - spans all 6 columns */
 .historyRow {
     grid-column: 1 / -1;
-    /* Left: align with Field Value column (18px chevron + 60px label = 78px) */
-    /* Right: leave 18px for chevron column so metadata aligns with col 5 above */
-    padding: 0 var(--chevron-size) 0 78px;
+    /* Left: align with Field Value column (chevron + gap + label + gap).
+       Right: leave chevron column so metadata aligns with col 5 above. */
+    padding: 0 calc(var(--chevron-col-width) - var(--border-width-thin) - var(--space-4)) 0 calc(var(--chevron-col-width) + var(--space-2) + var(--label-width) + var(--space-2) - var(--border-width-thin) - var(--space-4));
     /* Caret handling via .no-caret class in JSX */
 }

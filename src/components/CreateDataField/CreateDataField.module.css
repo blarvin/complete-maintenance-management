@@ -32,7 +32,7 @@
 /* Construction mode - grid layout: chevron | field name | value */
 .construction {
     display: grid;
-    grid-template-columns: var(--chevron-size) minmax(100px, 1fr) minmax(80px, 1fr);
+    grid-template-columns: var(--chevron-col-width) minmax(100px, 1fr) minmax(80px, 1fr);
     font-size: var(--text-sm);
     gap: var(--space-2);
     align-items: baseline;
@@ -40,8 +40,8 @@
 
 /* Hollow chevron button */
 .chevronButton {
-    width: var(--chevron-size);
-    height: var(--chevron-size);
+    width: var(--chevron-col-width);
+    height: var(--chevron-col-width);
     padding: 0;
     border: none;
     background: transparent;

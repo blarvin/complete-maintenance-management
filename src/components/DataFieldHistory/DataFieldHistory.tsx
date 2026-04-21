@@ -64,7 +64,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                                 {entry.newValue || <em>Empty</em>}
                             </span>
                             <span class={styles.historyMeta}>
-                                {formatDateTime(entry.updatedAt)}  by {entry.updatedBy}
+                                {formatDateTime(entry.updatedAt)} {entry.updatedBy}
                             </span>
                         </button>
                     ))}

@@ -70,21 +70,23 @@
 
   /* === TYPOGRAPHY === */
   --font-family: Inter, Arial, sans-serif;
-  --text-xs: 9px;
-  --text-sm: 10px;
-  --text-base: 12px;
-  --text-lg: 14px;
-  --text-xl: 16px;
-  --text-2xl: 18px;
+  --text-xs: 10px;
+  --text-sm: 11px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 20px;
 
   /* === LAYOUT CONSTANTS === */
   --container-max: 650px;
-  --container-min: 275px;
-  --chevron-size: 18px;
-  --label-width: 60px;
+  --container-min: 240px;
+  --chevron-col-width: 24px;
+  --node-chevron-size: 28px;
+  --field-chevron-size: 22px;
+  --label-width: 50px;
   --child-indent: 32px;
-  --datacard-indent: 40px;
-  --node-min-height: 35px;
+  --datacard-indent: 30px;
+  --node-min-height: 45px;
   --node-child-height: 28px;
 
   /* === FOCUS === */

@@ -20,8 +20,8 @@
 /* Individual history row */
 .historyRow {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: var(--space-8);
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: var(--space-2);
     align-items: baseline;
     padding: var(--space-2) var(--space-4);
     font-size: var(--text-sm);
@@ -58,13 +58,15 @@
 
 .historyValue {
     color: var(--text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: break-word;
+    min-width: 0;
 }
 
 .historyMeta {
+    grid-column: 3;
+    text-align: right;
     color: var(--text-muted);
     font-size: var(--text-xs);
-    white-space: nowrap;
+    overflow-wrap: break-word;
+    min-width: 0;
 }
