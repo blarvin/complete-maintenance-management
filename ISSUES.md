@@ -33,6 +33,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **DataField picker keyboard + clickaway** — In the CreateDataField combo box: Up/Down to move, Enter to pick, click-outside or tab-away to close. Touch path must keep working. (Typeahead and flip-up are in LATER.md.)
 - **Tab focus order audit** — Walk the app with keyboard only; fix any jumps that land in weird places after Tab across views.
 - **CreateNodeButton child UX** — Spec says n+1 buttons between children; LATER.md flags this as cluttered. Decide: keep interleaved buttons, switch to a single "Add sub-asset" that appends (or inserts relative to a selection), or something else. Then update spec + implementation to match.
+- NodeDetails should show createdAt, createdBy, and last edit date
 
 ---
 
