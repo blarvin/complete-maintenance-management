@@ -17,7 +17,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 - No text entry caret when editing dataField names or values - it should only have active blinking caret when in editing state
 - Double underline when editing dataField values. There must be a better way.
-- `**cardOrder` wrong in DB after cancel** — Cancelling a DataField on an Under-Construction Node doesn't recompute `cardOrder` for remaining pending fields, so the persisted order comes out wrong.
 - **DataFieldHistory written lazily** — History entries are created when the field is re-opened, not on save. Should emit on commit so history is never missing after a reload.
 - **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
 - **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
@@ -41,7 +40,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 - **Timestamp-formatting helper** — Whatever fixes the Invalid Date / NaN bugs should land as a single shared formatter, not two copies. (Pairs with the bug above.)
 - **Shared history creation logic** — Duplicated between `IDBAdapter` and `FirestoreAdapter`. Extract alongside the existing `historyHelpers.ts` (where `nextRev` already lives).
-- `**recomputeCardOrder()` duplicated** — Same pattern in both adapters. Extract to a shared helper.
 - **IDBAdapter error handling is minimal** — `FirestoreAdapter` normalizes to `StorageError` comprehensively; `IDBAdapter` is terse. Bring IDB up to parity before Snackbar work so user-facing error messages have a consistent shape.
 - **Nomenclature: DataField vs DataFieldValue** — Inconsistent across code and docs. Pick one, rename, done.
 - **Remove unused `nodeId` prop from DataCard** — Trivial cleanup.

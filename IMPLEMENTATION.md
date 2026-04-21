@@ -198,6 +198,16 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **cardOrder**: Auto-assigned on creation based on `nextCardOrder(parentNodeId)`. Reflects creation order (via `updatedAt`) but allows future reordering without changing all fields.
 
+**cardOrder compaction policy**: Gaps are tolerated; the UI sorts ascending so they're invisible. Compaction (via `computeCardOrderUpdates` in `src/data/utils/cardOrder.ts`) runs only at three points:
+
+1. **Cancel during UC** — `usePendingForms.cancel$` / empty-name `save$` resequence in-memory pending forms starting from `maxPersisted + 1`. Free (no I/O).
+2. **Incoming remote field sync** — `IDBAdapter.applyRemoteUpdate('field', ...)` resequences active siblings locally using `sortByCardOrder` (cardOrder asc, id asc tiebreak). Writes are IDB-only; not enqueued to the sync queue. Two clients independently converge on the same deterministic order.
+3. **Reorder UI** (future) — will call the same helper.
+
+**Not compacted on delete**: soft-delete leaves a gap; would cost N field writes + N sync ops per delete for no user-visible benefit.
+
+**Construction-mode field creation races**: `CREATE_NODE_WITH_FIELDS` iterates `defaults` sequentially with explicit `cardOrder: i`. A prior `Promise.all(defaults.map(createField))` raced — every concurrent call saw an empty fields table in `nextCardOrder` and returned 0, collapsing all fields to cardOrder=0.
+
 ---
 
 ### UI Prefs Serialization

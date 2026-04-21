@@ -6,14 +6,18 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
   bus.register('CREATE_NODE_WITH_FIELDS', async (cmd) => {
     const { id, parentId, nodeName, nodeSubtitle, defaults } = cmd.payload;
     await adapter.createNode({ id, parentId, nodeName, nodeSubtitle });
-    await Promise.all(
-      defaults.map(f => adapter.createField({
+    // Sequential with explicit cardOrder by index: defaults arrive in user-intended order.
+    // Parallel Promise.all racing with the nextCardOrder fallback would assign every field 0.
+    for (let i = 0; i < defaults.length; i++) {
+      const f = defaults[i];
+      await adapter.createField({
         id: generateId(),
         parentNodeId: id,
         fieldName: f.fieldName,
         fieldValue: f.fieldValue,
-      }))
-    );
+        cardOrder: i,
+      });
+    }
   });
 
   bus.register('CREATE_EMPTY_NODE', async (cmd) => {

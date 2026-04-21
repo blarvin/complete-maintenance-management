@@ -16,7 +16,6 @@ import {
   where,
   orderBy,
   updateDoc,
-  writeBatch,
   FirestoreError,
   serverTimestamp,
 } from "firebase/firestore";
@@ -655,28 +654,5 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
     const snap = await getDocs(q);
     const histories = snap.docs.map(d => d.data() as DataFieldHistory);
     return computeNextRev(histories);
-  }
-
-  /**
-   * Recompute cardOrder values to close gaps after deletion.
-   * Assigns sequential cardOrder (0, 1, 2, ...) based on current order.
-   */
-  private async recomputeCardOrder(parentNodeId: string): Promise<void> {
-    const fieldsResult = await this.listFields(parentNodeId);
-    const fields = fieldsResult.data;
-    if (fields.length === 0) return;
-
-    const batch = writeBatch(db);
-    const ts = now();
-    const userId = getCurrentUserId();
-
-    fields.forEach((field, index) => {
-      if (field.cardOrder !== index) {
-        const ref = doc(db, COLLECTIONS.FIELDS, field.id);
-        batch.update(ref, { cardOrder: index, updatedAt: ts, updatedBy: userId });
-      }
-    });
-
-    await batch.commit();
   }
 }

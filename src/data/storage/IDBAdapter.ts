@@ -20,6 +20,7 @@ import { filterActive, filterDeleted } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { createHistoryEntry, computeNextRev } from './historyHelpers';
+import { computeCardOrderUpdates, sortByCardOrder } from '../utils/cardOrder';
 import { makeStorageError } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
 import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
@@ -469,7 +470,22 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.nodes.put(node);
       storageEventBus.emit({ type: 'NODE_WRITTEN', node });
     } else {
-      await db.fields.put(entity as DataField);
+      const incoming = entity as DataField;
+      await db.fields.put(incoming);
+      // Reconcile cardOrder across active siblings so concurrent remote writes
+      // with colliding orders converge to a deterministic sequence.
+      // Local-only writes; do not enqueue sync ops.
+      const siblings = await db.fields.where('parentNodeId').equals(incoming.parentNodeId).toArray();
+      const active = filterActive(siblings);
+      const sorted = sortByCardOrder(active);
+      const updates = computeCardOrderUpdates(sorted);
+      if (updates.length > 0) {
+        await db.transaction('rw', db.fields, async () => {
+          for (const u of updates) {
+            await db.fields.update(u.id, { cardOrder: u.cardOrder });
+          }
+        });
+      }
     }
   }
 

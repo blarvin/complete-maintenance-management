@@ -517,6 +517,60 @@ describe('IDBAdapter - Core Storage Operations', () => {
             expect(retrieved).toBeDefined();
             expect(retrieved?.fieldValue).toBe('From Server');
         });
+
+        it('reconciles cardOrder after remote field sync with collision', async () => {
+            const nodeId = testId();
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+
+            // Seed two local fields at orders 0, 1.
+            await adapter.createField({ id: 'aaa', parentNodeId: nodeId, fieldName: 'A', fieldValue: null, cardOrder: 0 });
+            await adapter.createField({ id: 'bbb', parentNodeId: nodeId, fieldName: 'B', fieldValue: null, cardOrder: 1 });
+
+            // Remote field arrives colliding at cardOrder 1.
+            const remote = {
+                id: 'ccc',
+                parentNodeId: nodeId,
+                fieldName: 'C',
+                fieldValue: 'remote',
+                cardOrder: 1,
+                updatedBy: 'remoteUser',
+                updatedAt: Date.now(),
+                deletedAt: null,
+            };
+            await adapter.applyRemoteUpdate('field', remote);
+
+            const result = await adapter.listFields(nodeId);
+            const byId = Object.fromEntries(result.data.map(f => [f.id, f.cardOrder]));
+            // Deterministic tiebreak by id ascending: aaa=0, bbb=1, ccc=... wait —
+            // incoming ccc collides with bbb at cardOrder 1. Sorted by (cardOrder asc, id asc):
+            //   aaa(0), bbb(1), ccc(1) -> ids sort b<c, so order is aaa, bbb, ccc.
+            expect(byId['aaa']).toBe(0);
+            expect(byId['bbb']).toBe(1);
+            expect(byId['ccc']).toBe(2);
+        });
+
+        it('does not rewrite cardOrder when already contiguous after remote sync', async () => {
+            const nodeId = testId();
+            await adapter.createNode({ id: nodeId, parentId: null, nodeName: 'Node', nodeSubtitle: '' });
+            await adapter.createField({ id: 'aaa', parentNodeId: nodeId, fieldName: 'A', fieldValue: null, cardOrder: 0 });
+
+            const remote = {
+                id: 'bbb',
+                parentNodeId: nodeId,
+                fieldName: 'B',
+                fieldValue: 'remote',
+                cardOrder: 1,
+                updatedBy: 'remoteUser',
+                updatedAt: Date.now(),
+                deletedAt: null,
+            };
+            await adapter.applyRemoteUpdate('field', remote);
+
+            const result = await adapter.listFields(nodeId);
+            const byId = Object.fromEntries(result.data.map(f => [f.id, f.cardOrder]));
+            expect(byId['aaa']).toBe(0);
+            expect(byId['bbb']).toBe(1);
+        });
     });
 
     describe('History Sync Operations', () => {

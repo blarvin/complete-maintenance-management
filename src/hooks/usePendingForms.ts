@@ -53,7 +53,9 @@ const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
  */
 export function getSavedFieldsFromLocalStorage(nodeId: string): PendingForm[] {
     const forms = loadPendingForms(nodeId);
-    return forms.filter(f => f.saved === true && f.fieldName.trim());
+    return forms
+        .filter(f => f.saved === true && f.fieldName.trim())
+        .sort((a, b) => a.cardOrder - b.cardOrder);
 }
 
 export type UsePendingFormsOptions = {
@@ -154,8 +156,11 @@ export function usePendingForms(options: UsePendingFormsOptions) {
     const save$ = $(async (formId: string, fieldName: string, fieldValue: string | null) => {
         const name = fieldName.trim();
         if (!name) {
-            // Empty name - just cancel the form
-            forms.value = forms.value.filter(f => f.id !== formId);
+            // Empty name - cancel the form and resequence remaining pending cardOrders
+            const base = options.maxPersistedCardOrder$.value + 1;
+            forms.value = forms.value
+                .filter(f => f.id !== formId)
+                .map((f, i) => ({ ...f, cardOrder: base + i }));
             return;
         }
         
@@ -185,7 +190,12 @@ export function usePendingForms(options: UsePendingFormsOptions) {
      * Cancel a pending form without saving.
      */
     const cancel$ = $((formId: string) => {
-        forms.value = forms.value.filter(f => f.id !== formId);
+        // Resequence remaining pending cardOrders to close the gap left by the cancelled form.
+        // During UC maxPersistedCardOrder is -1, so pending orders start at 0.
+        const base = options.maxPersistedCardOrder$.value + 1;
+        forms.value = forms.value
+            .filter(f => f.id !== formId)
+            .map((f, i) => ({ ...f, cardOrder: base + i }));
     });
 
     /**

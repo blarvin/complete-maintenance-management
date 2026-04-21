@@ -109,6 +109,14 @@ Media upload, preview, storage, and caching are out of scope for Phase 1. All fi
 - **Dropdown flip behavior** — flip upward if insufficient space below
 - **Custom entry + auto-library** — user-entered field names added to their personal library of previously used fields
 
+### DataField Reordering UI
+
+Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Implementation will call the existing `computeCardOrderUpdates` helper (`src/data/utils/cardOrder.ts`) and write through the adapter. This is the point at which persisted gaps from deletions get compacted.
+
+### cardOrder Compaction on Delete
+
+Currently deleting a field leaves a gap in `cardOrder`. Display sorts ascending so the gap is invisible. Revisit only if accumulated gaps become user-visible or cause ordering surprises — then compact on delete, accepting the write cost.
+
 ---
 
 ## UI / UX
