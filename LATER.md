@@ -9,7 +9,7 @@ Work intentionally deferred beyond Phase 1. Grouped by theme. For active issues 
 Scope exclusions that keep the Phase 1 MVP small:
 
 - **Skip `virtualParents`** — focus on basic parent-child relationships only
-- **Skip `componentType` and `componentVersion`** — use hardcoded DataField library
+- **Skip `componentVersion`** — Template + `componentType` landed; version field deferred
 - **Skip `customProperties`** — basic node and DataField types only
 - **Skip `isRequired`** — no required-field validation
 - **Skip `isEditable` and `isLocked`** — all fields editable, no locking
@@ -77,27 +77,35 @@ Spec called for a breadcrumb in `TreeNodeDetails` (`"Ancestor1 / Ancestor2 / Par
 
 ## DataField Component Library
 
-Phase 1 `DataField.tsx` is a proto-component handling text values. Phase 2 expands into a library of typed components.
+The Component/Template/Instance spine landed in Phase 1. Phase 1 ships only `text-kv`; additional Components extend the `ComponentType` discriminated union and widen `DataFieldValue` / `DataFieldHistory` accordingly.
 
-### Component Types
+### Additional Components (not yet specced)
 
-- **TextDataField** (current) — simple text values
-- **ImageDataField** — single image with preview/upload
-- **ImageCarouselDataField** — multiple images with carousel
-- **NumberDataField** — numerical values with units
-- **DateDataField** — date/datetime picker
-- **SelectDataField** — dropdown from predefined options
-- **LinkDataField** — URL with preview
+- `enum-kv` — dropdown from predefined options
+- `measurement-kv` — numeric value + unit, plus unit conversion
+- `single-image` — one image with preview/upload
+- `number-kv` — numerical values without units
+- `date-kv` — date/datetime picker
+- `image-carousel` — multiple images, carousel UI
+- `image-grid` — multiple images, grid UI
+- `image-aggregator` — derived gallery across descendants
+- `composite-kv` — recursive Template configs (fields containing fields)
 
-### Refactoring Strategy
+### Template Library Enhancements
+
+- **`componentVersion` field** on Template (per-template contract versioning)
+- **User-authored Templates + Template-builder UI** — currently only dev-written Templates
+- **Template sharing scope** — private / workspace / global, plus moderation
+- **Firestore blob sync** — needed once `single-image` lands
+- **Orphaned-blob GC** — needed once blobs are in play
+
+### Refactoring Strategy (for when the second Component type arrives)
 
 1. Extract shared layout/grid into `FieldRow` wrapper component
-2. (Already done) Extract edit state management into `useFieldEdit` hook
-3. Create `FieldValue` interface for pluggable value renderers
-4. Each component type implements: display mode, edit mode, validation
-5. Field type registry maps `componentType` → renderer component
+2. Split `DataField.tsx` into per-`componentType` renderers; dispatch on `field.componentType` (the scaffolding is there but only has a `text-kv` branch today)
+3. Each component type implements: display mode, edit mode, validation
 
-Refactor when adding the second component type. Current pain points (edit FSM coupled to DataField, grid layout repeated in TreeNodeConstruction) resolve naturally during that refactor.
+The Template/Instance plumbing is already in place; adding `enum-kv` only requires widening `ComponentType`, extending `DataFieldTemplateConfig`, widening `DataFieldValue` and the history union, and adding a renderer branch.
 
 ### Media / Image Fields
 

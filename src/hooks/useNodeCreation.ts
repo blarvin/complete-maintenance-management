@@ -19,11 +19,13 @@ import { getSavedFieldsFromLocalStorage } from './usePendingForms';
 /**
  * Payload for completing node creation.
  * Matches what TreeNodeConstruction emits via onCreate$.
+ *
+ * Fields are passed as Template references; the handler instantiates each one.
  */
 export type CreateNodePayload = {
     nodeName: string;
     nodeSubtitle: string;
-    fields: { fieldName: string; fieldValue: string | null }[];
+    fields: { templateId: string }[];
 };
 
 export type UseNodeCreationOptions = {
@@ -107,10 +109,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
                 parentId: ucData.parentId,
                 nodeName: payload.nodeName || 'Untitled',
                 nodeSubtitle: payload.nodeSubtitle || '',
-                defaults: savedFields.map(f => ({
-                    fieldName: f.fieldName,
-                    fieldValue: f.fieldValue,
-                })),
+                defaults: savedFields.map(f => ({ templateId: f.templateId })),
             },
         });
 

@@ -19,9 +19,9 @@ import {
   FirestoreError,
   serverTimestamp,
 } from "firebase/firestore";
-import type { TreeNode, DataField, DataFieldHistory } from "../models";
+import type { TreeNode, DataField, DataFieldHistory, DataFieldTemplate } from "../models";
 import { filterDeleted } from "../models";
-import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
+import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageTemplateCreate, StorageTemplateUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
 import { getCurrentUserId } from "../../context/userContext";
@@ -244,35 +244,47 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
 
   async createField(input: StorageFieldCreate): Promise<StorageResult<DataField>> {
     try {
+      const tplSnap = await getDoc(doc(db, COLLECTIONS.TEMPLATES, input.templateId));
+      if (!tplSnap.exists()) {
+        throw makeStorageError("not-found", `Template not found: ${input.templateId}`, { retryable: false });
+      }
+      const template = coerceTimestamps<DataFieldTemplate>(tplSnap.data());
+
       const ts = now();
       const userId = getCurrentUserId();
-      
-      // Use provided cardOrder, or compute next available
+
       const order = input.cardOrder ?? (await this.nextCardOrder(input.parentNodeId)).data;
-      
+
       const field: DataField = {
-        ...input,
+        id: input.id,
+        parentNodeId: input.parentNodeId,
+        templateId: template.id,
+        componentType: template.componentType,
+        fieldName: template.label,
+        value: null,
         cardOrder: order,
         updatedBy: userId,
         updatedAt: ts,
-        deletedAt: null, // Initialize as active (not soft-deleted)
+        deletedAt: null,
       };
-      
+
       await setDoc(doc(collection(db, COLLECTIONS.FIELDS), field.id), field);
 
       const rev = await this.nextRev(field.id);
       const hist = createHistoryEntry({
         dataFieldId: field.id,
         parentNodeId: field.parentNodeId,
+        componentType: field.componentType,
         action: "create",
         prevValue: null,
-        newValue: field.fieldValue,
+        newValue: field.value,
         rev,
       });
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
-      
+
       return createResult(field);
     } catch (err) {
+      if (isStorageError(err)) throw err;
       const mapped = mapFirestoreError(err);
       throw toStorageError(err, {
         code: mapped.code,
@@ -288,13 +300,13 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       if (!snap.exists()) {
         throw makeStorageError("not-found", "Field not found", { retryable: false });
       }
-      
+
       const prev = coerceTimestamps<DataField>(snap.data());
       const ts = now();
       const userId = getCurrentUserId();
-      
+
       await updateDoc(ref, {
-        fieldValue: input.fieldValue,
+        value: input.value,
         updatedAt: ts,
         updatedBy: userId,
       });
@@ -303,13 +315,14 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: prev.parentNodeId,
+        componentType: prev.componentType,
         action: "update",
-        prevValue: prev.fieldValue,
-        newValue: input.fieldValue,
+        prevValue: prev.value,
+        newValue: input.value,
         rev,
       });
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
-      
+
       return createResult(undefined);
     } catch (err) {
       if (isStorageError(err)) {
@@ -330,12 +343,11 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       if (!snap.exists()) {
         return createResult(undefined);
       }
-      
+
       const prev = coerceTimestamps<DataField>(snap.data());
       const ts = now();
       const userId = getCurrentUserId();
 
-      // Soft delete: set deletedAt timestamp instead of hard delete
       await updateDoc(ref, {
         deletedAt: ts,
         updatedAt: ts,
@@ -346,13 +358,14 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: prev.parentNodeId,
+        componentType: prev.componentType,
         action: "delete",
-        prevValue: prev.fieldValue,
+        prevValue: prev.value,
         newValue: null,
         rev,
       });
       await setDoc(doc(collection(db, COLLECTIONS.HISTORY), hist.id), hist);
-      
+
       return createResult(undefined);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -360,6 +373,66 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         code: mapped.code,
         retryable: mapped.retryable,
       });
+    }
+  }
+
+  // ============================================================================
+  // Template Operations
+  // ============================================================================
+
+  async listTemplates(): Promise<StorageResult<DataFieldTemplate[]>> {
+    try {
+      const snap = await getDocs(collection(db, COLLECTIONS.TEMPLATES));
+      const templates = snap.docs.map(d => coerceTimestamps<DataFieldTemplate>(d.data()));
+      templates.sort((a, b) => a.label.localeCompare(b.label));
+      return createResult(templates);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
+    }
+  }
+
+  async getTemplate(id: string): Promise<StorageResult<DataFieldTemplate | null>> {
+    try {
+      const snap = await getDoc(doc(db, COLLECTIONS.TEMPLATES, id));
+      const tpl = snap.exists() ? coerceTimestamps<DataFieldTemplate>(snap.data()) : null;
+      return createResult(tpl);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
+    }
+  }
+
+  async createTemplate(input: StorageTemplateCreate): Promise<StorageResult<DataFieldTemplate>> {
+    try {
+      const template: DataFieldTemplate = {
+        id: input.id,
+        componentType: input.componentType,
+        label: input.label,
+        config: input.config,
+        updatedBy: getCurrentUserId(),
+        updatedAt: now(),
+      };
+      await setDoc(doc(collection(db, COLLECTIONS.TEMPLATES), template.id), template);
+      return createResult(template);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
+    }
+  }
+
+  async updateTemplate(id: string, updates: StorageTemplateUpdate): Promise<StorageResult<void>> {
+    try {
+      const ref = doc(db, COLLECTIONS.TEMPLATES, id);
+      await updateDoc(ref, {
+        ...updates,
+        updatedBy: getCurrentUserId(),
+        updatedAt: now(),
+      });
+      return createResult(undefined);
+    } catch (err) {
+      const mapped = mapFirestoreError(err);
+      throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
     }
   }
 
@@ -573,6 +646,27 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         });
         break;
       }
+      case 'create-template': {
+        const tpl = item.payload as DataFieldTemplate;
+        await setDoc(doc(db, COLLECTIONS.TEMPLATES, tpl.id), {
+          ...tpl,
+          updatedAt: serverTimestamp(),
+        });
+        break;
+      }
+      case 'update-template': {
+        const tpl = item.payload as DataFieldTemplate;
+        await setDoc(doc(db, COLLECTIONS.TEMPLATES, tpl.id), {
+          ...tpl,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        break;
+      }
+      case 'delete-template': {
+        // No soft-delete on templates in Phase 1; treat as hard delete.
+        // If/when we need soft delete for templates, mirror field handling.
+        break;
+      }
       default:
         console.warn('[FirestoreAdapter] Unknown sync operation:', item.operation);
     }
@@ -580,10 +674,12 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
 
   /**
    * Pull entities updated since the given timestamp from Firestore.
-   * Returns an array of TreeNode or DataField entities.
    */
-  async pullEntitiesSince(type: 'node' | 'field', since: number): Promise<Array<TreeNode | DataField>> {
-    const collectionName = type === 'node' ? COLLECTIONS.NODES : COLLECTIONS.FIELDS;
+  async pullEntitiesSince(type: 'node' | 'field' | 'template', since: number): Promise<Array<TreeNode | DataField | DataFieldTemplate>> {
+    const collectionName =
+      type === 'node' ? COLLECTIONS.NODES
+      : type === 'template' ? COLLECTIONS.TEMPLATES
+      : COLLECTIONS.FIELDS;
     const q = query(
       collection(db, collectionName),
       where('updatedAt', '>', since)
@@ -594,7 +690,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       return [];
     }
 
-    return snap.docs.map((docSnap) => coerceTimestamps<TreeNode | DataField>(docSnap.data()));
+    return snap.docs.map((docSnap) => coerceTimestamps<TreeNode | DataField | DataFieldTemplate>(docSnap.data()));
   }
 
   /**
@@ -622,6 +718,14 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   async pullAllHistory(): Promise<DataFieldHistory[]> {
     const snap = await getDocs(collection(db, COLLECTIONS.HISTORY));
     return snap.docs.map(d => coerceTimestamps<DataFieldHistory>(d.data()));
+  }
+
+  /**
+   * Pull all templates from Firestore (full collection).
+   */
+  async pullAllTemplates(): Promise<DataFieldTemplate[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.TEMPLATES));
+    return snap.docs.map(d => coerceTimestamps<DataFieldTemplate>(d.data()));
   }
 
   /**

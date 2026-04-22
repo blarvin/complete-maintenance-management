@@ -1,12 +1,9 @@
 /**
- * Dexie Database Schema (Stub for TDD)
- *
- * This is a minimal stub so tests can import it.
- * All methods will fail until you implement them.
+ * Dexie Database Schema.
  */
 
 import Dexie, { Table } from 'dexie';
-import type { TreeNode, DataField, DataFieldHistory } from '../models';
+import type { TreeNode, DataField, DataFieldHistory, DataFieldTemplate } from '../models';
 
 export type SyncOperation =
   | 'create-node'
@@ -15,12 +12,15 @@ export type SyncOperation =
   | 'create-field'
   | 'update-field'
   | 'delete-field'
-  | 'create-history';
+  | 'create-history'
+  | 'create-template'
+  | 'update-template'
+  | 'delete-template';
 
 export type SyncQueueItem = {
   id: string;
   operation: SyncOperation;
-  entityType: 'node' | 'field' | 'field-history';
+  entityType: 'node' | 'field' | 'field-history' | 'template';
   entityId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any; // Dynamic payload for different entity types
@@ -38,6 +38,7 @@ export type SyncMetadata = {
 
 export class AppDatabase extends Dexie {
   nodes!: Table<TreeNode, string>;
+  templates!: Table<DataFieldTemplate, string>;
   fields!: Table<DataField, string>;
   history!: Table<DataFieldHistory, string>;
   syncQueue!: Table<SyncQueueItem, string>;
@@ -61,6 +62,28 @@ export class AppDatabase extends Dexie {
       history: 'id, dataFieldId, parentNodeId, updatedAt, rev',
       syncQueue: 'id, status, timestamp, entityType',
       syncMetadata: 'key',
+    });
+
+    // Version 3: Components/Templates/Instances spine.
+    // DataField shape changed (fieldValue -> templateId + componentType + value).
+    // No migration path — wipe all non-schema state so the old shape cannot leak.
+    this.version(3).stores({
+      nodes: 'id, parentId, updatedAt, deletedAt',
+      templates: 'id, componentType, updatedAt',
+      fields: 'id, parentNodeId, templateId, componentType, cardOrder, updatedAt, deletedAt',
+      history: 'id, dataFieldId, parentNodeId, updatedAt, rev',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      // Clear everything — plan explicitly opts out of migration.
+      await Promise.all([
+        tx.table('nodes').clear(),
+        tx.table('fields').clear(),
+        tx.table('history').clear(),
+        tx.table('templates').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
     });
   }
 }

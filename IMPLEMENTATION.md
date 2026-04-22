@@ -188,6 +188,22 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 ---
 
+### DataField Components / Templates / Instances
+
+**Pattern**: DataField is split into three entities:
+
+1. **Template** (`DataFieldTemplate`) — declares `componentType` (discriminated union; Phase 1 has only `"text-kv"`), a human label, and per-component `config`. Stored in its own Dexie table and Firestore collection (`dataFieldTemplates`).
+2. **Instance** (`DataField`) — attaches a Template to a TreeNode with a typed `value: DataFieldValue | null`. Snapshots `fieldName` and `componentType` from the Template at creation so later Template label edits don't rewrite persisted user data.
+3. **History** (`DataFieldHistory`) — discriminated union on `componentType`; `property` is always `"value"`; `prevValue` / `newValue` widen with the union as new components are added. Phase 1 variant is `TextKvHistory`.
+
+**No seed on boot**: the `templates` table ships empty. A follow-up plan writes the first Templates (the 4 SPEC fields). This was a deliberate choice: the old `DATAFIELD_LIBRARY` constant was a prototype bootstrap and not worth persisting as seed rows — a clean empty state is simpler than a seed-once guard key.
+
+**Command shape**: writes go through `ADD_FIELD_FROM_TEMPLATE` (creates an instance of a Template on a node) and `CREATE_NODE_WITH_FIELDS` (whose `defaults` is `{ templateId }[]`). The older freeform `ADD_FIELD` is gone — there's no path to create a DataField without a Template.
+
+**Schema v3 upgrade-clear**: `db.ts` `version(3)` upgrade function clears every table. `fieldValue` is gone from the row shape, and no migration path was worth writing for prototype data. Firestore emulator should be wiped alongside.
+
+---
+
 ### Data Model Conventions
 
 **Root Nodes**: Use `parentId: null`, not sentinel value like `"ROOT"`. Adapter queries use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.

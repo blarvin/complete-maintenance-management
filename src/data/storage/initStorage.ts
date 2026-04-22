@@ -115,6 +115,9 @@ async function migrateFromFirestore(): Promise<void> {
     const nodes = await firestoreAdapter.pullAllNodes();
     console.log('[Migration] Found', nodes.length, 'nodes');
 
+    const templates = await firestoreAdapter.pullAllTemplates();
+    console.log('[Migration] Found', templates.length, 'templates');
+
     const fields = await firestoreAdapter.pullAllFields();
     console.log('[Migration] Found', fields.length, 'fields');
 
@@ -122,9 +125,12 @@ async function migrateFromFirestore(): Promise<void> {
     console.log('[Migration] Found', history.length, 'history entries');
 
     // Bulk insert into IDB
-    await db.transaction('rw', db.nodes, db.fields, db.history, db.syncMetadata, async () => {
+    await db.transaction('rw', [db.nodes, db.templates, db.fields, db.history, db.syncMetadata], async () => {
       if (nodes.length > 0) {
         await db.nodes.bulkPut(nodes);
+      }
+      if (templates.length > 0) {
+        await db.templates.bulkPut(templates);
       }
       if (fields.length > 0) {
         await db.fields.bulkPut(fields);

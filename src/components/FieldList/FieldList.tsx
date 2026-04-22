@@ -37,8 +37,6 @@ export type FieldListHandle = {
 
 export type FieldListProps = {
     nodeId: string;
-    /** Optional default field names to initialize with (for UC mode) */
-    initialFieldNames?: readonly string[];
     /** Optional signal to receive the FieldList handle for external control */
     handleRef?: Signal<FieldListHandle | null>;
     /** When true, operates in construction mode (defer IDB writes) */
@@ -46,33 +44,27 @@ export type FieldListProps = {
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
-    // Fetch persisted fields from DB
-    const { fields, reload$ } = useTreeNodeFields({ 
-        nodeId: props.nodeId, 
-        enabled: true 
+    const { fields, reload$ } = useTreeNodeFields({
+        nodeId: props.nodeId,
+        enabled: true
     });
 
-    // Calculate max persisted cardOrder for pending form ordering
     const maxPersistedCardOrder = useComputed$(() => {
         if (!fields.value || fields.value.length === 0) return -1;
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
-    // Manage pending forms with localStorage persistence
-    // Pass the signal itself so add$() reads current value when called
     const { forms: pendingForms, add$, save$, cancel$, change$, saveAllPending$ } = usePendingForms({
         nodeId: props.nodeId,
         mode: props.isConstruction ? 'construction' : 'display',
         onSaved$: reload$,
-        initialFieldNames: props.initialFieldNames,
         maxPersistedCardOrder$: maxPersistedCardOrder,
     });
 
-    // Expose handle for external access (e.g., UC CREATE button)
     useVisibleTask$(() => {
         if (props.handleRef) {
             const getSavedFields$ = $(() => {
-                return pendingForms.value.filter(f => f.saved === true && f.fieldName.trim());
+                return pendingForms.value.filter(f => f.saved === true && f.templateId);
             });
             props.handleRef.value = { saveAllPending$, getSavedFields$ };
         }
@@ -126,7 +118,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                             key={item.field.id}
                             id={item.field.id}
                             fieldName={item.field.fieldName}
-                            fieldValue={item.field.fieldValue}
+                            fieldValue={item.field.value}
                             onDeleted$={handleFieldDeleted$}
                         />
                     );
@@ -135,8 +127,8 @@ export const FieldList = component$<FieldListProps>((props) => {
                         <CreateDataField
                             key={item.form.id}
                             id={item.form.id}
-                            initialName={item.form.fieldName}
-                            initialValue={item.form.fieldValue}
+                            initialTemplateId={item.form.templateId}
+                            initialTemplateLabel={item.form.templateLabel}
                             onSave$={save$}
                             onCancel$={cancel$}
                             onChange$={change$}

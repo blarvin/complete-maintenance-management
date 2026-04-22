@@ -7,14 +7,12 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     const { id, parentId, nodeName, nodeSubtitle, defaults } = cmd.payload;
     await adapter.createNode({ id, parentId, nodeName, nodeSubtitle });
     // Sequential with explicit cardOrder by index: defaults arrive in user-intended order.
-    // Parallel Promise.all racing with the nextCardOrder fallback would assign every field 0.
     for (let i = 0; i < defaults.length; i++) {
-      const f = defaults[i];
+      const d = defaults[i];
       await adapter.createField({
         id: generateId(),
         parentNodeId: id,
-        fieldName: f.fieldName,
-        fieldValue: f.fieldValue,
+        templateId: d.templateId,
         cardOrder: i,
       });
     }
@@ -38,20 +36,19 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     await adapter.deleteNode(cmd.payload.id);
   });
 
-  bus.register('ADD_FIELD', async (cmd) => {
-    const { nodeId, fieldName, fieldValue, cardOrder } = cmd.payload;
+  bus.register('ADD_FIELD_FROM_TEMPLATE', async (cmd) => {
+    const { nodeId, templateId, cardOrder } = cmd.payload;
     const result = await adapter.createField({
       id: generateId(),
       parentNodeId: nodeId,
-      fieldName,
-      fieldValue,
+      templateId,
       cardOrder,
     });
     return result.data;
   });
 
   bus.register('UPDATE_FIELD_VALUE', async (cmd) => {
-    await adapter.updateFieldValue(cmd.payload.fieldId, { fieldValue: cmd.payload.newValue });
+    await adapter.updateFieldValue(cmd.payload.fieldId, { value: cmd.payload.newValue });
   });
 
   bus.register('DELETE_FIELD', async (cmd) => {

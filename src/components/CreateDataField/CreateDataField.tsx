@@ -1,137 +1,74 @@
 /**
- * CreateDataField - Form for creating a new field.
- * Purely UI component: handles name/value inputs, library picker, Save/Cancel.
- * Does NOT handle persistence - parent decides what to do with onSave$.
- * 
- * Used in both UC mode (defaults + added fields) and Display mode (added fields).
+ * CreateDataField - Template picker for creating a new field.
+ *
+ * The user picks a Template from the library; on selection, the parent is
+ * notified via onSave$ which creates a DataField instance (ADD_FIELD_FROM_TEMPLATE).
+ * Phase 1 ships with no seeded templates, so the list is typically empty until the
+ * follow-up SPEC templates plan lands.
  */
 
-import { component$, useSignal, $, PropFunction, useTask$ } from '@builder.io/qwik';
-import { DATAFIELD_LIBRARY } from '../../constants';
+import { component$, useSignal, useResource$, Resource, $, PropFunction, useTask$ } from '@builder.io/qwik';
+import { getTemplateQueries } from '../../data/queries';
+import type { DataFieldTemplate } from '../../data/models';
 import styles from './CreateDataField.module.css';
 
 export type CreateDataFieldProps = {
     /** Unique ID for this form instance (used for keying, LS tracking) */
     id: string;
-    /** Initial field name (for defaults like "Type Of") */
-    initialName?: string;
-    /** Initial field value */
-    initialValue?: string | null;
-    /** Called when user saves the field */
-    onSave$: PropFunction<(id: string, fieldName: string, fieldValue: string | null) => void>;
+    /** Pre-selected template ID (when restored from localStorage) */
+    initialTemplateId?: string;
+    /** Pre-selected template label (snapshot) */
+    initialTemplateLabel?: string;
+    /** Called when user picks a template */
+    onSave$: PropFunction<(id: string, templateId: string, templateLabel: string) => void>;
     /** Called when user cancels */
     onCancel$: PropFunction<(id: string) => void>;
-    /** Called when form values change (for LS persistence in display mode) */
-    onChange$?: PropFunction<(id: string, fieldName: string, fieldValue: string | null) => void>;
+    /** Called when selection changes (for LS persistence in display mode) */
+    onChange$?: PropFunction<(id: string, templateId: string, templateLabel: string) => void>;
 };
 
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
-    const fieldName = useSignal(props.initialName ?? '');
-    const fieldValue = useSignal(props.initialValue ?? '');
+    const selectedTemplateId = useSignal(props.initialTemplateId ?? '');
+    const selectedLabel = useSignal(props.initialTemplateLabel ?? '');
     const isDropdownOpen = useSignal(false);
-    const nameInputRef = useSignal<HTMLInputElement>();
-    const valueInputRef = useSignal<HTMLInputElement>();
-    const comboBoxRef = useSignal<HTMLDivElement>();
-    const dropdownPosition = useSignal({ top: 0, left: 0, width: 0 });
+    const triggerRef = useSignal<HTMLButtonElement>();
 
-    // Auto-focus name input on mount (if no initial name)
     useTask$(() => {
-        if (!props.initialName) {
-            setTimeout(() => {
-                nameInputRef.value?.focus();
-            }, 10);
+        if (!props.initialTemplateId) {
+            setTimeout(() => triggerRef.value?.focus(), 10);
         }
     });
 
-    // Notify parent of changes (for LS persistence)
-    const notifyChange$ = $(() => {
+    const templatesResource = useResource$<DataFieldTemplate[]>(async () => {
+        return await getTemplateQueries().listTemplates();
+    });
+
+    const notifyChange$ = $((tplId: string, label: string) => {
         if (props.onChange$) {
-            props.onChange$(props.id, fieldName.value, fieldValue.value || null);
+            props.onChange$(props.id, tplId, label);
         }
     });
 
-    const save$ = $(() => {
-        const name = fieldName.value.trim();
-        const value = fieldValue.value.trim() || null;
-        props.onSave$(props.id, name, value);
+    const selectTemplate$ = $((tpl: DataFieldTemplate) => {
+        selectedTemplateId.value = tpl.id;
+        selectedLabel.value = tpl.label;
+        isDropdownOpen.value = false;
+        notifyChange$(tpl.id, tpl.label);
+        props.onSave$(props.id, tpl.id, tpl.label);
     });
 
     const cancel$ = $(() => {
-        // Blur any focused element
-        if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-        }
         props.onCancel$(props.id);
     });
 
     const toggleDropdown$ = $(() => {
-        if (!isDropdownOpen.value && comboBoxRef.value) {
-            const rect = comboBoxRef.value.getBoundingClientRect();
-            dropdownPosition.value = {
-                top: rect.bottom + 2,
-                left: rect.left,
-                width: rect.width,
-            };
-        }
         isDropdownOpen.value = !isDropdownOpen.value;
     });
 
-    const selectPrefab$ = $((name: string) => {
-        fieldName.value = name;
-        isDropdownOpen.value = false;
-        notifyChange$();
-        setTimeout(() => {
-            valueInputRef.value?.focus();
-        }, 10);
-    });
-
-    const handleNameInput$ = $((e: Event) => {
-        fieldName.value = (e.target as HTMLInputElement).value;
-        notifyChange$();
-    });
-
-    const handleValueInput$ = $((e: Event) => {
-        fieldValue.value = (e.target as HTMLInputElement).value;
-        notifyChange$();
-    });
-
-    const handleNameKeyDown$ = $((e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
+    const handleTriggerKeyDown$ = $((e: KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
             e.preventDefault();
-            save$();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            if (isDropdownOpen.value) {
-                isDropdownOpen.value = false;
-            } else {
-                cancel$();
-            }
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            toggleDropdown$();
-        } else if (e.key === 'Tab' && !e.shiftKey) {
-            e.preventDefault();
-            valueInputRef.value?.focus();
-        }
-    });
-
-    const handleValueKeyDown$ = $((e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            save$();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            cancel$();
-        } else if (e.key === 'Tab' && e.shiftKey) {
-            e.preventDefault();
-            nameInputRef.value?.focus();
-        }
-    });
-
-    const handleChevronKeyDown$ = $((e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggleDropdown$();
+            isDropdownOpen.value = true;
         } else if (e.key === 'Escape') {
             e.preventDefault();
             if (isDropdownOpen.value) {
@@ -145,74 +82,54 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     return (
         <div class={styles.constructionWrapper}>
             <div class={styles.construction}>
-                {/* Chevron button for dropdown */}
                 <button
+                    ref={triggerRef}
                     type="button"
-                    class={styles.chevronButton}
+                    class={styles.inputName}
                     onClick$={toggleDropdown$}
-                    onKeyDown$={handleChevronKeyDown$}
+                    onKeyDown$={handleTriggerKeyDown$}
+                    aria-haspopup="listbox"
                     aria-expanded={isDropdownOpen.value}
-                    aria-label={isDropdownOpen.value ? 'Close field name picker' : 'Open field name picker'}
-                    tabIndex={-1}
+                    aria-label="Pick a field template"
                 >
-                    <span class={[styles.chevron, isDropdownOpen.value && styles.chevronOpen]}></span>
+                    {selectedLabel.value || 'Pick a template…'}
                 </button>
-                
-                {/* Field Name combo box */}
-                <div class={styles.comboBoxWrapper} ref={comboBoxRef}>
-                    <input
-                        ref={nameInputRef}
-                        type="text"
-                        class={styles.inputName}
-                        value={fieldName.value}
-                        onInput$={handleNameInput$}
-                        onKeyDown$={handleNameKeyDown$}
-                        onFocus$={() => { isDropdownOpen.value = false; }}
-                        placeholder="Field Name"
-                        aria-label="Field name (press Down Arrow for library)"
-                    />
-                    
-                    {/* Dropdown menu */}
-                    {isDropdownOpen.value && (
-                        <div 
-                            class={styles.dropdown} 
-                            role="listbox" 
-                            aria-label="Prefab field names"
-                            style={{
-                                top: `${dropdownPosition.value.top}px`,
-                                left: `${dropdownPosition.value.left}px`,
-                                width: `${dropdownPosition.value.width}px`,
+
+                {isDropdownOpen.value && (
+                    <div class={styles.dropdown} role="listbox" aria-label="Field templates">
+                        <Resource
+                            value={templatesResource}
+                            onPending={() => <div class={styles.dropdownItem}>Loading…</div>}
+                            onRejected={() => <div class={styles.dropdownItem}>Failed to load templates</div>}
+                            onResolved={(templates) => {
+                                if (templates.length === 0) {
+                                    return (
+                                        <div class={styles.dropdownItem}>
+                                            No templates available.
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <>
+                                        {templates.map((tpl) => (
+                                            <button
+                                                key={tpl.id}
+                                                type="button"
+                                                class={styles.dropdownItem}
+                                                onClick$={() => selectTemplate$(tpl)}
+                                                role="option"
+                                            >
+                                                {tpl.label}
+                                            </button>
+                                        ))}
+                                    </>
+                                );
                             }}
-                        >
-                            {DATAFIELD_LIBRARY.map((name) => (
-                                <button
-                                    key={name}
-                                    type="button"
-                                    class={styles.dropdownItem}
-                                    onClick$={() => selectPrefab$(name)}
-                                    role="option"
-                                >
-                                    {name}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                
-                {/* Value input */}
-                <input
-                    ref={valueInputRef}
-                    type="text"
-                    class={styles.inputValue}
-                    value={fieldValue.value}
-                    onInput$={handleValueInput$}
-                    onKeyDown$={handleValueKeyDown$}
-                    placeholder="Value (optional)"
-                    aria-label="Field value"
-                />
+                        />
+                    </div>
+                )}
             </div>
-            
-            {/* Save/Cancel buttons */}
+
             <div class={styles.actions}>
                 <button
                     type="button"
@@ -220,13 +137,6 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                     onClick$={cancel$}
                 >
                     Cancel
-                </button>
-                <button
-                    type="button"
-                    class={styles.actionButton}
-                    onClick$={save$}
-                >
-                    Save
                 </button>
             </div>
         </div>

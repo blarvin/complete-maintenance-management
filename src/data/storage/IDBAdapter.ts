@@ -12,10 +12,12 @@ import type {
   StorageResult,
   StorageNodeCreate,
   StorageNodeUpdate,
+  StorageTemplateCreate,
+  StorageTemplateUpdate,
   StorageFieldCreate,
   StorageFieldUpdate,
 } from './storageAdapter';
-import type { TreeNode, DataField, DataFieldHistory } from '../models';
+import type { TreeNode, DataField, DataFieldHistory, DataFieldTemplate } from '../models';
 import { filterActive, filterDeleted } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
@@ -45,10 +47,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async listRootNodes(): Promise<StorageResult<TreeNode[]>> {
     // Dexie doesn't support querying for null values with .equals()
-    // So we get all nodes and filter for null parentId and active (not soft-deleted)
     const allNodes = await db.nodes.toArray();
     const nodes = allNodes.filter(n => n.parentId === null && n.deletedAt === null);
-    // Sort by updatedAt ascending (per SPEC)
     nodes.sort((a, b) => a.updatedAt - b.updatedAt);
     return createResult(nodes);
   }
@@ -60,9 +60,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async listChildren(parentId: string): Promise<StorageResult<TreeNode[]>> {
     const children = await db.nodes.where('parentId').equals(parentId).toArray();
-    // Filter out soft-deleted children
     const activeChildren = filterActive(children);
-    // Sort by updatedAt ascending (per SPEC)
     activeChildren.sort((a, b) => a.updatedAt - b.updatedAt);
     return createResult(activeChildren);
   }
@@ -78,7 +76,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       parentId: input.parentId,
       updatedBy: userId,
       updatedAt: timestamp,
-      deletedAt: null, // Initialize as active (not soft-deleted)
+      deletedAt: null,
     };
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
@@ -109,7 +107,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
         updatedAt: timestamp,
       });
 
-      // Get the updated node for the sync payload
       const updated = await db.nodes.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
@@ -131,8 +128,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async deleteNode(id: string, _opts?: { cascade?: boolean }): Promise<StorageResult<void>> {
-    // Soft delete: set deletedAt timestamp instead of hard delete
-    // Note: Children are implicitly hidden (not cascade soft-deleted)
     const timestamp = now();
     const userId = getCurrentUserId();
 
@@ -145,11 +140,10 @@ export class IDBAdapter implements SyncableStorageAdapter {
         updatedBy: userId,
       });
 
-      // Get the updated node for the sync payload
       const updated = await db.nodes.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
-          operation: 'update-node', // Sync as update, not delete
+          operation: 'update-node',
           entityType: 'node',
           entityId: id,
           payload: updated,
@@ -166,14 +160,78 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   // ============================================================================
+  // Template Operations
+  // ============================================================================
+
+  async listTemplates(): Promise<StorageResult<DataFieldTemplate[]>> {
+    const templates = await db.templates.toArray();
+    templates.sort((a, b) => a.label.localeCompare(b.label));
+    return createResult(templates);
+  }
+
+  async getTemplate(id: string): Promise<StorageResult<DataFieldTemplate | null>> {
+    const tpl = await db.templates.get(id);
+    return createResult(tpl ?? null);
+  }
+
+  async createTemplate(input: StorageTemplateCreate): Promise<StorageResult<DataFieldTemplate>> {
+    const timestamp = now();
+    const userId = getCurrentUserId();
+
+    const template: DataFieldTemplate = {
+      id: input.id,
+      componentType: input.componentType,
+      label: input.label,
+      config: input.config,
+      updatedBy: userId,
+      updatedAt: timestamp,
+    };
+
+    await db.transaction('rw', db.templates, db.syncQueue, async () => {
+      await db.templates.put(template);
+      await this.syncQueue.enqueue({
+        operation: 'create-template',
+        entityType: 'template',
+        entityId: template.id,
+        payload: template,
+      });
+    });
+
+    console.log('[IDBAdapter] Template created in IDB:', template.id, template.label);
+    return createResult(template);
+  }
+
+  async updateTemplate(id: string, updates: StorageTemplateUpdate): Promise<StorageResult<void>> {
+    const timestamp = now();
+    const userId = getCurrentUserId();
+
+    await db.transaction('rw', db.templates, db.syncQueue, async () => {
+      await db.templates.update(id, {
+        ...updates,
+        updatedBy: userId,
+        updatedAt: timestamp,
+      });
+      const updated = await db.templates.get(id);
+      if (updated) {
+        await this.syncQueue.enqueue({
+          operation: 'update-template',
+          entityType: 'template',
+          entityId: id,
+          payload: updated,
+        });
+      }
+    });
+
+    return createResult(undefined);
+  }
+
+  // ============================================================================
   // Field Operations
   // ============================================================================
 
   async listFields(parentNodeId: string): Promise<StorageResult<DataField[]>> {
     const fields = await db.fields.where('parentNodeId').equals(parentNodeId).toArray();
-    // Filter out soft-deleted fields
     const activeFields = filterActive(fields);
-    // Sort by cardOrder ascending
     activeFields.sort((a, b) => a.cardOrder - b.cardOrder);
     return createResult(activeFields);
   }
@@ -187,6 +245,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   async createField(input: StorageFieldCreate): Promise<StorageResult<DataField>> {
+    const template = await db.templates.get(input.templateId);
+    if (!template) {
+      throw makeStorageError('not-found', `Template not found: ${input.templateId}`, { retryable: false });
+    }
+
     const timestamp = now();
     const userId = getCurrentUserId();
 
@@ -194,13 +257,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
     const field: DataField = {
       id: input.id,
-      fieldName: input.fieldName,
-      fieldValue: input.fieldValue,
       parentNodeId: input.parentNodeId,
+      templateId: template.id,
+      componentType: template.componentType,
+      fieldName: template.label, // snapshot
+      value: null,
       cardOrder: order,
       updatedBy: userId,
       updatedAt: timestamp,
-      deletedAt: null, // Initialize as active (not soft-deleted)
+      deletedAt: null,
     };
 
     await db.transaction('rw', db.fields, db.history, db.syncQueue, async () => {
@@ -210,9 +275,10 @@ export class IDBAdapter implements SyncableStorageAdapter {
       const hist = createHistoryEntry({
         dataFieldId: field.id,
         parentNodeId: field.parentNodeId,
+        componentType: field.componentType,
         action: 'create',
         prevValue: null,
-        newValue: field.fieldValue,
+        newValue: field.value,
         rev,
       });
       await db.history.put(hist);
@@ -224,7 +290,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
         payload: field,
       });
 
-      // Enqueue history entry for sync
       await this.syncQueue.enqueue({
         operation: 'create-history',
         entityType: 'field-history',
@@ -249,7 +314,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
     await db.transaction('rw', db.fields, db.history, db.syncQueue, async () => {
       await db.fields.update(id, {
-        fieldValue: input.fieldValue,
+        value: input.value,
         updatedAt: timestamp,
         updatedBy: userId,
       });
@@ -258,14 +323,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
       const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: field.parentNodeId,
+        componentType: field.componentType,
         action: 'update',
-        prevValue: field.fieldValue,
-        newValue: input.fieldValue,
+        prevValue: field.value,
+        newValue: input.value,
         rev,
       });
       await db.history.put(hist);
 
-      // Get the updated field for the sync payload
       const updated = await db.fields.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
@@ -276,7 +341,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
         });
       }
 
-      // Enqueue history entry for sync
       await this.syncQueue.enqueue({
         operation: 'create-history',
         entityType: 'field-history',
@@ -285,7 +349,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       });
     });
 
-    console.log('[IDBAdapter] Field updated in IDB:', id, input.fieldValue);
+    console.log('[IDBAdapter] Field updated in IDB:', id, input.value);
     storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, deletedAt: field.deletedAt } });
     return createResult(undefined);
   }
@@ -297,7 +361,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
     const timestamp = now();
     const userId = getCurrentUserId();
 
-    // Soft delete: set deletedAt timestamp instead of hard delete
     await db.transaction('rw', db.fields, db.history, db.syncQueue, async () => {
       await db.fields.update(id, {
         deletedAt: timestamp,
@@ -309,25 +372,24 @@ export class IDBAdapter implements SyncableStorageAdapter {
       const hist = createHistoryEntry({
         dataFieldId: id,
         parentNodeId: field.parentNodeId,
+        componentType: field.componentType,
         action: 'delete',
-        prevValue: field.fieldValue,
+        prevValue: field.value,
         newValue: null,
         rev,
       });
       await db.history.put(hist);
 
-      // Get the updated field for the sync payload
       const updated = await db.fields.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
-          operation: 'update-field', // Sync as update, not delete
+          operation: 'update-field',
           entityType: 'field',
           entityId: id,
           payload: updated,
         });
       }
 
-      // Enqueue history entry for sync
       await this.syncQueue.enqueue({
         operation: 'create-history',
         entityType: 'field-history',
@@ -347,7 +409,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async getFieldHistory(dataFieldId: string): Promise<StorageResult<DataFieldHistory[]>> {
     const history = await db.history.where('dataFieldId').equals(dataFieldId).toArray();
-    // Sort by rev ascending
     history.sort((a, b) => a.rev - b.rev);
     return createResult(history);
   }
@@ -357,10 +418,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
 
   async listDeletedNodes(): Promise<StorageResult<TreeNode[]>> {
-    // Query for nodes where deletedAt is set (soft-deleted)
     const allNodes = await db.nodes.toArray();
     const deletedNodes = filterDeleted(allNodes);
-    // Sort by deletedAt descending (most recently deleted first)
     deletedNodes.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
     return createResult(deletedNodes);
   }
@@ -368,7 +427,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async listDeletedChildren(parentId: string): Promise<StorageResult<TreeNode[]>> {
     const children = await db.nodes.where('parentId').equals(parentId).toArray();
     const deletedChildren = filterDeleted(children);
-    // Sort by deletedAt descending
     deletedChildren.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
     return createResult(deletedChildren);
   }
@@ -381,12 +439,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
     await db.transaction('rw', db.nodes, db.syncQueue, async () => {
       await db.nodes.update(id, {
-        deletedAt: null, // Clear soft delete
+        deletedAt: null,
         updatedAt: timestamp,
         updatedBy: userId,
       });
 
-      // Get the updated node for the sync payload
       const updated = await db.nodes.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
@@ -413,7 +470,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>> {
     const fields = await db.fields.where('parentNodeId').equals(parentNodeId).toArray();
     const deletedFields = filterDeleted(fields);
-    // Sort by deletedAt descending (most recently deleted first)
     deletedFields.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
     return createResult(deletedFields);
   }
@@ -426,12 +482,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
     await db.transaction('rw', db.fields, db.syncQueue, async () => {
       await db.fields.update(id, {
-        deletedAt: null, // Clear soft delete
+        deletedAt: null,
         updatedAt: timestamp,
         updatedBy: userId,
       });
 
-      // Get the updated field for the sync payload
       const updated = await db.fields.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
@@ -464,17 +519,16 @@ export class IDBAdapter implements SyncableStorageAdapter {
     await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: timestamp });
   }
 
-  async applyRemoteUpdate(entityType: 'node' | 'field', entity: TreeNode | DataField): Promise<void> {
+  async applyRemoteUpdate(entityType: 'node' | 'field' | 'template', entity: TreeNode | DataField | DataFieldTemplate): Promise<void> {
     if (entityType === 'node') {
       const node = entity as TreeNode;
       await db.nodes.put(node);
       storageEventBus.emit({ type: 'NODE_WRITTEN', node });
+    } else if (entityType === 'template') {
+      await db.templates.put(entity as DataFieldTemplate);
     } else {
       const incoming = entity as DataField;
       await db.fields.put(incoming);
-      // Reconcile cardOrder across active siblings so concurrent remote writes
-      // with colliding orders converge to a deterministic sequence.
-      // Local-only writes; do not enqueue sync ops.
       const siblings = await db.fields.where('parentNodeId').equals(incoming.parentNodeId).toArray();
       const active = filterActive(siblings);
       const sorted = sortByCardOrder(active);
@@ -505,18 +559,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
     return await db.history.toArray();
   }
 
+  async getAllTemplates(): Promise<DataFieldTemplate[]> {
+    return await db.templates.toArray();
+  }
+
   async applyRemoteHistory(history: DataFieldHistory): Promise<void> {
     await db.history.put(history);
   }
 
   async deleteNodeLocal(id: string): Promise<void> {
-    // Silent delete - no sync queue entry, no transaction needed
     await db.nodes.delete(id);
     storageEventBus.emit({ type: 'NODE_HARD_DELETED', nodeId: id });
   }
 
   async deleteFieldLocal(id: string): Promise<void> {
-    // Silent delete - no sync queue entry, no history entry, no transaction needed
     await db.fields.delete(id);
   }
 

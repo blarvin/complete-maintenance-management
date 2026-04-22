@@ -30,6 +30,8 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Inline rename of NodeTitle and NodeSubtitle** — Decide UX (double-tap like DataFields? edit button?), then wire up. Currently nodes are rename-less after creation.
 - **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
 - **DataField picker keyboard + clickaway** — In the CreateDataField combo box: Up/Down to move, Enter to pick, click-outside or tab-away to close. Touch path must keep working. (Typeahead and flip-up are in LATER.md.)
+- **Seed the 4 SPEC Templates** — Templates table is intentionally empty after the Component/Template/Instance refactor. Until seeded, `CreateDataField` dropdown is empty and new nodes get no default fields. Follow-up plan.
+- **Reconstitute deleted test coverage** — `commandHandlers`, `createNodeService`, `dbSchema`, `DeltaSync`, `firestoreAdapter`, `FullCollectionSync`, `idbAdapter`, `ServerAuthorityResolver`, `serviceLayer`, `syncManager` test files were removed in the Template refactor (structural coupling to the old `fieldValue`/`fieldName`/`ADD_FIELD` shape). Rewrite against the new shape when the SPEC templates land.
 - **Tab focus order audit** — Walk the app with keyboard only; fix any jumps that land in weird places after Tab across views.
 - **CreateNodeButton child UX** — Spec says n+1 buttons between children; LATER.md flags this as cluttered. Decide: keep interleaved buttons, switch to a single "Add sub-asset" that appends (or inserts relative to a selection), or something else. Then update spec + implementation to match.
 - NodeDetails should show createdAt, createdBy, and last edit date

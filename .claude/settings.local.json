@@ -22,7 +22,8 @@
       "mcp__jcodemunch__get_file_content",
       "Bash(cd:*)",
       "Bash(grep -E \"\\\\.tsx$\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npx vite *)"
     ],
     "deny": [
       "Read(.env*)",

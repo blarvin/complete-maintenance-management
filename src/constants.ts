@@ -1,6 +1,5 @@
 /**
  * Centralized constants for the application.
- * Single source of truth for magic values used across the codebase.
  */
 
 /**
@@ -13,41 +12,19 @@ export const USER_ID = "localUser" as const;
  */
 export const COLLECTIONS = {
     NODES: "treeNodes",
+    TEMPLATES: "dataFieldTemplates",
     FIELDS: "dataFields",
     HISTORY: "dataFieldHistory",
 } as const;
 
-/**
- * DataField Library - hardcoded field names for Phase 1.
- * From SPECIFICATION.md DataField Library table.
- * Users select from this library when creating new Data Fields.
+/*
+ * Historical prototype DataField labels (bootstrap-only, no longer exported):
+ *   Description, Type Of, Tags, Location, Serial Number, Part Number,
+ *   Manufacturer, Model, Status, Installed Date, Weight, Dimensions,
+ *   Power Rating, Current Reading, Note
+ *
+ * These were hardcoded strings used during early UI/UX development. The
+ * Component/Template/Instance refactor replaced them with a `templates`
+ * table populated by a follow-up plan. Kept here as a reminder of the
+ * prototype set only.
  */
-export const DATAFIELD_LIBRARY = [
-    "Description",
-    "Type Of",
-    "Tags",
-    "Location",
-    "Serial Number",
-    "Part Number",
-    "Manufacturer",
-    "Model",
-    "Status",
-    "Installed Date",
-    "Weight",
-    "Dimensions",
-    "Power Rating",
-    "Current Reading",
-    "Note",
-] as const;
-
-export type DataFieldName = typeof DATAFIELD_LIBRARY[number];
-
-/**
- * Default DataFields added at node creation time.
- */
-export const DEFAULT_DATAFIELD_NAMES = [
-    "Type Of",
-    "Description",
-    "Tags",
-] as const;
-

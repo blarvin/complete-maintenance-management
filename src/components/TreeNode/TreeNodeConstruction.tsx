@@ -17,7 +17,6 @@ import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList, type FieldListHandle } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
-import { DEFAULT_DATAFIELD_NAMES } from '../../constants';
 import styles from './TreeNode.module.css';
 
 // Re-export for backwards compatibility
@@ -111,9 +110,8 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
             />
             <DataCard isOpen={true}>
                 {/* FieldList handles all field management - same as display mode */}
-                <FieldList 
-                    nodeId={props.id} 
-                    initialFieldNames={DEFAULT_DATAFIELD_NAMES}
+                <FieldList
+                    nodeId={props.id}
                     handleRef={fieldListHandle}
                     isConstruction={true}
                 />

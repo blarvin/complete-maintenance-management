@@ -1,4 +1,4 @@
-import type { DataFieldHistory } from '../models';
+import type { DataFieldHistory, ComponentType, DataFieldValue } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
@@ -14,18 +14,21 @@ export function computeNextRev(histories: { rev: number }[]): number {
 export function createHistoryEntry(params: {
   dataFieldId: string;
   parentNodeId: string;
+  componentType: ComponentType;
   action: 'create' | 'update' | 'delete';
-  prevValue: string | null;
-  newValue: string | null;
+  prevValue: DataFieldValue | null;
+  newValue: DataFieldValue | null;
   rev: number;
 }): DataFieldHistory {
-  const { dataFieldId, parentNodeId, action, prevValue, newValue, rev } = params;
+  const { dataFieldId, parentNodeId, componentType, action, prevValue, newValue, rev } = params;
+  // Phase 1 only has text-kv; when new variants land, branch on componentType.
   return {
     id: `${dataFieldId}:${rev}`,
     dataFieldId,
     parentNodeId,
+    componentType,
     action,
-    property: 'fieldValue',
+    property: 'value',
     prevValue,
     newValue,
     updatedBy: getCurrentUserId(),
