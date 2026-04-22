@@ -14,7 +14,7 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 
 This structure enables users to construct, explore, and understand detailed hierarchical models of real world assets.
 
-## Core Principles [DONE]
+## Core Principles
 
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
 - **Self Similarity**: Single TreeNode component handles all levels
@@ -100,10 +100,10 @@ This structure enables users to construct, explore, and understand detailed hier
 ## DataField Management
 
 - **Double-Tap to edit**: [DONE] Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
-- **Create Data Field**: [DONE] A "+" button at bottom of DataCard opens a dropdown to select from the hardcoded DataField Library. Creation is selection-only; users cannot define new field types. [Phase 2+]: ad-hoc/custom field definitions.
+- **Create Data Field**: [DONE] A "+" button at bottom of DataCard opens a dropdown to select from the DataField Library (Templates table). Creation is selection-only; users cannot author new Templates in Phase 1. [Phase 2+]: user-authored Templates.
 - **Delete Data Field**: [DONE] Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
     - **Soft Delete**: [DONE] DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
-    - A `DataFieldHistory` entry with `action: "delete"`, `property: "fieldValue"`, and `newValue: null` is written only after the undo window elapses.
+    - A `DataFieldHistory` entry with `action: "delete"`, `property: "value"`, and `newValue: null` is written only after the undo window elapses.
 
 ## Snackbar & Undo
 
@@ -120,20 +120,20 @@ A single global Snackbar component provides transient feedback and brief undo fo
 
 ### Variants
 
-| Variant | Use | Default duration | ARIA |
-|---|---|---|---|
-| `success` (default) | Save/delete confirmations with optional Undo | 5s | `role="status"`, `aria-live="polite"` |
-| `error` | Immediate storage-op failures (IDB write, quota, validation) | 8s | `role="alert"`, `aria-live="assertive"` |
-| `info` | Neutral notices (reserved; not used in Phase 1) | 5s | `role="status"`, `aria-live="polite"` |
+| Variant             | Use                                                          | Default duration | ARIA                                    |
+| ------------------- | ------------------------------------------------------------ | ---------------- | --------------------------------------- |
+| `success` (default) | Save/delete confirmations with optional Undo                 | 5s               | `role="status"`, `aria-live="polite"`   |
+| `error`             | Immediate storage-op failures (IDB write, quota, validation) | 8s               | `role="alert"`, `aria-live="assertive"` |
+| `info`              | Neutral notices (reserved; not used in Phase 1)              | 5s               | `role="status"`, `aria-live="polite"`   |
 
 ### When the Snackbar appears
 
-| Trigger | Variant | Message | Action |
-|---|---|---|---|
-| DataField value saved | success | "Field updated" | Undo — reverts to previous value |
-| DataField deleted | success | "Field deleted" | Undo — clears `deletedAt` |
-| TreeNode deleted | success | "Node deleted" (with descendant count) | Undo — clears `deletedAt` |
-| Immediate storage-op failure | error | From `StorageError.describeForUser()` | Retry (if the op is retryable) or none |
+| Trigger                      | Variant | Message                                | Action                                 |
+| ---------------------------- | ------- | -------------------------------------- | -------------------------------------- |
+| DataField value saved        | success | "Field updated"                        | Undo — reverts to previous value       |
+| DataField deleted            | success | "Field deleted"                        | Undo — clears `deletedAt`              |
+| TreeNode deleted             | success | "Node deleted" (with descendant count) | Undo — clears `deletedAt`              |
+| Immediate storage-op failure | error   | From `StorageError.describeForUser()`  | Retry (if the op is retryable) or none |
 
 Background sync failures are **not** surfaced — `SyncQueueManager` retries silently. Sync-status and pull-applied notifications are deferred (see LATER.md).
 
@@ -166,7 +166,7 @@ interface ToastInput {
 ### Undo semantics
 
 - **Immediate apply**: Deletes (soft-delete via `deletedAt`) and saves are written to storage immediately — the UI does not wait for the undo window to elapse.
-- **Closure-based undo, not record snapshot**: The Snackbar holds only the reversal closure the caller passed in (`action.handler`) plus the minimum data the caller captured for that closure (e.g. the previous `fieldValue` string for a value edit, or just the entity id for a delete). There is no snapshot service and no whole-record copy.
+- **Closure-based undo, not record snapshot**: The Snackbar holds only the reversal closure the caller passed in (`action.handler`) plus the minimum data the caller captured for that closure (e.g. the previous `value` for a value edit, or just the entity id for a delete). There is no snapshot service and no whole-record copy.
 - **Scope**: Undo is available across in-app navigation but not across page reloads. Only the latest action can be undone (new toasts replace older ones).
 - **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written via `onExpire` — only after the undo window elapses without undo — so that undone deletes leave no audit trace.
 
@@ -224,27 +224,138 @@ All interactive elements are keyboard-accessible. This is a core quality bar, no
 
 Users can reorder DataFields within a DataCard. Reordering updates `cardOrder` for all affected fields and persists immediately. Detailed UX/interaction design TBD.
 
-### DataField Library [DONE]
+### DataField Components, Templates, and Library
 
-Data Fields are selected from a library. The string value of "fieldName" is used as the user-facing Field Name. These Data Fields are available for selection during node creation on the isCardUnderConstruction state of the DataCard. Creating a Data Field is selection-only from this library; ad-hoc/custom field definitions deferred. [Phase 2+]
+DataFields are instances of **DataField Components**. A DataField Component is a dev-authored contract defining how a field renders, edits, validates, stores its value, and records history. Components are a bounded set identified by `componentType` (e.g. `"text-kv"`, `"enum-kv"`). Users do not author Components.
 
-| Field Name      | Category       | Type | Example Value                          | Notes                    |
-| --------------- | -------------- | ---- | -------------------------------------- | ------------------------ |
-| Description     | General        | Text | "Primary cooling pump for HVAC"        | Short description        |
-| Type Of         | Classification | Text | "Pump", "Vehicle", "Building"          | User-defined categories  |
-| Tags            | Search         | CSV  | "critical, hvac, maintenance"          | Comma-separated values   |
-| Location        | Location       | Text | "Building A, Room 102"                 | Physical location        |
-| Serial Number   | Identification | Text | "SN-123456789"                         | Manufacturer serial      |
-| Part Number     | Identification | Text | "PN-ABC-123"                           | Manufacturer part number |
-| Manufacturer    | Identification | Text | "Acme Inc."                            | Equipment manufacturer   |
-| Model           | Identification | Text | "Model XYZ-500"                        | Equipment model          |
-| Status          | Status         | Enum | "In Service", "Maintenance", "Retired" | Operational status       |
-| Installed Date  | Temporal       | Date | "2025-01-01"                           | Installation date        |
-| Weight          | Physical       | Text | "36.2 kg"                              | Physical weight          |
-| Dimensions      | Physical       | Text | "310 x 210 x 110 mm"                   | Physical dimensions      |
-| Power Rating    | Electrical     | Text | "1200W"                                | Power specifications     |
-| Current Reading | Measurement    | Text | "5.4 amps at 2025-01-01"               | Current measurements     |
-| Note            | General        | Text | "Requires quarterly maintenance"       | General notes            |
+A **DataFieldTemplate** is a library entry: a `componentType` + `config` + user-facing `label`. Templates are persisted (see Data Model) and are what users select when adding a field to a node. The Library is the set of all Templates. Phase 1 ships dev-seeded Templates; user-authored Templates [Phase 2+].
+
+A **DataField** (instance) references a Template and stores its own typed `value`. The `componentType` is denormalized onto the DataField for dispatch.
+
+```
+Component (code)  ──▶  Template (persisted, selectable)  ──▶  DataField instance (on a node)
+```
+
+**Phase 1 componentTypes**: `text-kv`, `enum-kv`, `measurement-kv`, `single-image`. Additional Components (number-kv, date-kv, composite-kv, image-carousel, image-grid, image-aggregator, …) [Phase 2+].
+
+#### Component: `text-kv`
+
+**Purpose**: Free-form text. Current Phase-1 default.
+
+**Template config**:
+| Field       | Type     | Default | Notes                              |
+| ----------- | -------- | ------- | ---------------------------------- |
+| maxLength   | number?  | 500     | Hard limit on input                |
+| multiline   | boolean  | false   | `true` renders a textarea          |
+| placeholder | string?  | —       | Shown when value is empty          |
+
+**Instance value**: `string | null`
+
+**Edit UX**: Single-line input (or textarea if `multiline`). Double-tap activates edit. Enter saves, Escape cancels. If `multiline`, Enter inserts newline and Cmd/Ctrl+Enter saves.
+
+**Display UX**: Plain text. Multi-line renders with preserved line breaks.
+
+**Validation**: length ≤ `maxLength`.
+
+#### Component: `enum-kv`
+
+**Purpose**: Selection from a fixed option list (Status, Condition, Category, …).
+
+**Template config**:
+| Field       | Type     | Default | Notes                                       |
+| ----------- | -------- | ------- | ------------------------------------------- |
+| options     | string[] | —       | **Required.** Selectable values.            |
+| allowOther  | boolean  | false   | If `true`, user may enter an ad-hoc value   |
+| default     | string?  | —       | Pre-selected on new instance                |
+
+**Instance value**: `string | null` — must match an `options` entry unless `allowOther`.
+
+**Edit UX**: Dropdown. If `allowOther`, final item is "Other…" which reveals a text input.
+
+**Display UX**: Plain text. Option styling (badges, colors) [Phase 2+].
+
+**Validation**: value ∈ `options` (or `allowOther === true`).
+
+#### Component: `measurement-kv`
+
+**Purpose**: A numeric quantity with semantic units and optional operating ranges (Pressure, Temperature, Current, Flow Rate).
+
+**Template config**:
+| Field       | Type     | Required | Notes                                               |
+| ----------- | -------- | -------- | --------------------------------------------------- |
+| units       | string   | Yes      | Canonical unit label (e.g. `"PSI"`, `"°C"`, `"A"`)  |
+| decimals    | number?  | No       | Display precision (default 2)                       |
+| nominalMin  | number?  | No       | Lower bound of normal operating range               |
+| nominalMax  | number?  | No       | Upper bound of normal operating range               |
+| warnLow     | number?  | No       | Below this is a warning state                       |
+| warnHigh    | number?  | No       | Above this is a warning state                       |
+| absoluteMin | number?  | No       | Input rejected below this                           |
+| absoluteMax | number?  | No       | Input rejected above this                           |
+
+**Config invariants** (enforced at Template creation):
+`absoluteMin ≤ warnLow ≤ nominalMin ≤ nominalMax ≤ warnHigh ≤ absoluteMax`. Any subset may be omitted; provided values must satisfy the chain.
+
+**Instance value**: `number | null`. Units are **not** stored per-instance — they come from the Template and are fixed for the field's life. Unit conversion [Phase 2+].
+
+**Edit UX**: Numeric input with fixed units label. Helper text summarizes nominal range if configured.
+
+**Display UX**: `{value} {units}` with visual state: **ok** (within nominal), **warn** (outside nominal but within warn range), **alarm** (outside warn range). Subtle background color on value in Phase 1.
+
+**Validation**: within `[absoluteMin, absoluteMax]` if set. Warn/nominal are informational, not blocking.
+
+#### Component: `single-image`
+
+**Purpose**: One image attached to a field (Asset Main Image, Nameplate Photo, Field Observation).
+
+**Template config**:
+| Field          | Type     | Default | Notes                                     |
+| -------------- | -------- | ------- | ----------------------------------------- |
+| maxSizeMB      | number   | 5       | Reject uploads above this size            |
+| requireCaption | boolean  | false   | Caption shown and required                |
+| aspectHint     | string?  | —       | e.g. `"4:3"` — display hint, not enforced |
+
+**Instance value**:
+```ts
+{
+  blobId: string;       // key into blob storage
+  mimeType: string;     // "image/jpeg" | "image/png" | "image/webp"
+  width: number;        // px
+  height: number;       // px
+  byteSize: number;
+  caption?: string;
+} | null
+```
+
+**Storage**: Blob payload in a separate Dexie table (`imageBlobs`), keyed by `blobId`. DataField stores only the metadata object above. Firestore blob sync [Phase 2+] — Phase 1 images are local-device only.
+
+**Edit UX**: Double-tap → file picker. Preview with "Replace" / "Remove" and (if configured) caption input. Save commits the new blob and writes history.
+
+**Display UX**: Image at container width, respecting `aspectHint` if set. Tap opens full-size modal (no zoom in Phase 1).
+
+**Validation**: MIME in allowed set; `byteSize ≤ maxSizeMB * 1024 * 1024`.
+
+**History**: stores the metadata object (including `blobId`), not the blob bytes. Replacing an image writes history; prior blob retained. Orphaned-blob GC [Phase 2+].
+
+### DataField Library (seeded)
+
+Phase 1 ships with a set of dev-seeded Templates selectable during DataCard `isUnderConstruction`. Creation is selection-only; user-authored Templates [Phase 2+]. A non-exhaustive starter set:
+
+| Label           | componentType    | Notes                                                       |
+| --------------- | ---------------- | ----------------------------------------------------------- |
+| Description     | text-kv          | `multiline: true`                                           |
+| Type Of         | text-kv          | User-defined categories                                     |
+| Tags            | text-kv          | Comma-separated values (structured tags [Phase 2+])         |
+| Location        | text-kv          | Physical location                                           |
+| Serial Number   | text-kv          | Manufacturer serial                                         |
+| Part Number     | text-kv          | Manufacturer part number                                    |
+| Manufacturer    | text-kv          | Equipment manufacturer                                      |
+| Model           | text-kv          | Equipment model                                             |
+| Status          | enum-kv          | `options: ["In Service", "Maintenance", "Retired"]`         |
+| Installed Date  | text-kv          | ISO date; date-kv Component [Phase 2+]                      |
+| Weight          | measurement-kv   | `units: "kg"`                                               |
+| Power Rating    | measurement-kv   | `units: "W"`                                                |
+| Note            | text-kv          | `multiline: true`                                           |
+| Main Image      | single-image     | `requireCaption: false`                                     |
 
 ### Default DataFields ... Added at node creation time. [DONE]
 
@@ -263,53 +374,80 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 
 **Purpose:** Represents physical assets or logical containers in a hierarchical structure
 
-| Field        | Type          | Required | Description                     | Constraints                                                 |
-| ------------ | ------------- | -------- | ------------------------------- | ----------------------------------------------------------- |
-| id           | string (UUID) | Yes      | Unique identifier               | Generated client-side and used as canonical ID              |
-| nodeName     | string        | Yes      | Display name of the asset       | Max 100 chars, required                                     |
-| nodeSubtitle | string        | No       | Additional description/location | Max 200 chars                                               |
-| parentId     | string \      | null     | Yes                             | Reference to parent node                                    |
-| updatedBy    | string        | Yes      | User ID of last editor          | Valid user ID                                               |
-| updatedAt    | timestamp     | Yes      | Last modification time (epoch)  | Client-assigned; server-assigned [Phase 2+] |
-| deletedAt    | timestamp \   | null     | Yes                             | Soft delete timestamp                                       |
+| Field        | Type          | Required | Description                     | Constraints                                    |
+| ------------ | ------------- | -------- | ------------------------------- | ---------------------------------------------- |
+| id           | string (UUID) | Yes      | Unique identifier               | Generated client-side and used as canonical ID |
+| nodeName     | string        | Yes      | Display name of the asset       | Max 100 chars, required                        |
+| nodeSubtitle | string        | No       | Additional description/location | Max 200 chars                                  |
+| parentId     | string \      | null     | Yes                             | Reference to parent node                       |
+| updatedBy    | string        | Yes      | User ID of last editor          | Valid user ID                                  |
+| updatedAt    | timestamp     | Yes      | Last modification time (epoch)  | Client-assigned; server-assigned [Phase 2+]    |
+| deletedAt    | timestamp \   | null     | Yes                             | Soft delete timestamp                          |
+
+#### DataFieldTemplate Entity
+
+**Purpose:** A library entry: a `componentType` + `config` + `label` that users select when adding a field.
+
+| Field         | Type          | Required | Description                           | Constraints                                         |
+| ------------- | ------------- | -------- | ------------------------------------- | --------------------------------------------------- |
+| id            | string (UUID) | Yes      | Unique identifier                     | Generated client-side; canonical ID                 |
+| componentType | string        | Yes      | Which Component this Template targets | One of the Phase 1 componentTypes                   |
+| label         | string        | Yes      | User-facing field name                | Max 50 chars                                        |
+| config        | JSON          | Yes      | Component-specific Template config    | Shape discriminated by `componentType` (see above)  |
+| updatedBy     | string        | Yes      | User ID of last editor                | Valid user ID                                       |
+| updatedAt     | timestamp     | Yes      | Last modification time (epoch)        | Client-assigned; server-assigned [Phase 2+]         |
 
 #### DataField Entity
 
-**Purpose:** Stores configurable attributes and metadata for assets
+**Purpose:** An instance of a DataField Component, attached to a TreeNode, storing one typed value.
 
-| Field        | Type          | Required | Description                      | Constraints                                                 |
-| ------------ | ------------- | -------- | -------------------------------- | ----------------------------------------------------------- |
-| id           | string (UUID) | Yes      | Unique identifier                | Generated client-side and used as canonical ID              |
-| fieldName    | string        | Yes      | Display label                    | Max 50 chars, user-editable                                 |
-| parentNodeId | string        | Yes      | Parent TreeNode reference        | Must exist in TreeNode table                                |
-| fieldValue   | string \      | null     | Yes                              | Stored value (any type as string)                           |
-| cardOrder    | number        | Yes      | Display ordering within DataCard | Auto-assigned on creation                                   |
-| updatedBy    | string        | Yes      | User ID of last editor           | Valid user ID                                               |
-| updatedAt    | timestamp     | Yes      | Last modification time (epoch)   | Client-assigned; server-assigned [Phase 2+] |
-| deletedAt    | timestamp \   | null     | Yes                              | Soft delete timestamp                                       |
+| Field         | Type          | Required | Description                             | Constraints                                                 |
+| ------------- | ------------- | -------- | --------------------------------------- | ----------------------------------------------------------- |
+| id            | string (UUID) | Yes      | Unique identifier                       | Generated client-side; canonical ID                         |
+| templateId    | string (UUID) | Yes      | Reference to `DataFieldTemplate.id`     | Must exist in `DataFieldTemplate` table                     |
+| componentType | string        | Yes      | Denormalized from Template for dispatch | Must match Template's `componentType`                       |
+| fieldName     | string        | Yes      | Display label                           | Snapshot of Template `label` at creation; max 50 chars      |
+| parentNodeId  | string        | Yes      | Parent TreeNode reference               | Must exist in TreeNode table                                |
+| value         | JSON \| null  | Yes      | Typed value; shape discriminated by `componentType` | See per-Component value shapes above            |
+| cardOrder     | number        | Yes      | Display ordering within DataCard        | Auto-assigned on creation                                   |
+| updatedBy     | string        | Yes      | User ID of last editor                  | Valid user ID                                               |
+| updatedAt     | timestamp     | Yes      | Last modification time (epoch)          | Client-assigned; server-assigned [Phase 2+]                 |
+| deletedAt     | timestamp \| null | Yes  | Soft delete timestamp                   | —                                                           |
 
-#### DataFieldHistory Entity [DONE] (minimal — value changes only; `fieldName` logging [Phase 2+])
+#### DataFieldHistory Entity (typed per componentType; minimal — value changes only; broader property tracking [Phase 2+])
 
-**Purpose:** Immutable append-only audit log of changes to a single `DataField`'s properties (value changes only; broader property tracking [Phase 2+])
+**Purpose:** Immutable append-only audit log of `DataField.value` changes. Typed as a discriminated union over `componentType` so `prevValue` / `newValue` carry the Component's value shape.
 
-| Field        | Type          | Required | Description                          | Constraints                           |
-| ------------ | ------------- | -------- | ------------------------------------ | ------------------------------------- |
-| id           | string        | Yes      | Primary key                          | Composite key `${dataFieldId}:${rev}` |
-| dataFieldId  | string (UUID) | Yes      | Reference to `DataField.id`          | Must exist in `DataField` table       |
-| parentNodeId | string (UUID) | Yes      | Reference to owning `TreeNode`       | Denormalized for easy queries         |
-| action       | enum          | Yes      | "create" \                           | "update" \                            |
-| property     | string        | Yes      | Changed property                     | Fixed: "fieldValue"; other properties [Phase 2+]           |
-| prevValue    | string \      | null     | Yes                                  | Previous value                        |
-| newValue     | string \      | null     | Yes                                  | New value                             |
-| updatedBy    | string        | Yes      | Editor identifier                    | Constant "localUser"; real user IDs [Phase 2+] |
-| updatedAt    | timestamp     | Yes      | When the change occurred (epoch)     | Client-assigned; server-assigned [Phase 2+]            |
-| rev          | number        | Yes      | Monotonic revision per `dataFieldId` | Starts at 0 for create                |
+**Shared fields**:
+| Field         | Type          | Required | Description                          | Constraints                                    |
+| ------------- | ------------- | -------- | ------------------------------------ | ---------------------------------------------- |
+| id            | string        | Yes      | Primary key                          | Composite key `${dataFieldId}:${rev}`          |
+| dataFieldId   | string (UUID) | Yes      | Reference to `DataField.id`          | Must exist in `DataField` table                |
+| parentNodeId  | string (UUID) | Yes      | Reference to owning `TreeNode`       | Denormalized for easy queries                  |
+| componentType | string        | Yes      | Discriminator                        | Matches `DataField.componentType`              |
+| action        | enum          | Yes      | `"create" \| "update" \| "delete"`   | —                                              |
+| property      | string        | Yes      | Changed property                     | Fixed: `"value"`; other properties [Phase 2+]  |
+| updatedBy     | string        | Yes      | Editor identifier                    | Constant "localUser"; real user IDs [Phase 2+] |
+| updatedAt     | timestamp     | Yes      | When the change occurred (epoch)     | Client-assigned; server-assigned [Phase 2+]    |
+| rev           | number        | Yes      | Monotonic revision per `dataFieldId` | Starts at 0 for create                         |
+
+**Typed value fields** (`prevValue` and `newValue` shapes, by `componentType`):
+| componentType    | prevValue / newValue shape                                              |
+| ---------------- | ----------------------------------------------------------------------- |
+| `text-kv`        | `string \| null`                                                        |
+| `enum-kv`        | `string \| null`                                                        |
+| `measurement-kv` | `number \| null`                                                        |
+| `single-image`   | `{ blobId, mimeType, width, height, byteSize, caption? } \| null`       |
+
+Reversion and audit are central to the app, so the history record must preserve the Component-typed value exactly as stored on the DataField at that revision.
 
 **Indexes**:
 
 - treeNodes: by parentId, by updatedAt
-- dataFields: by parentNodeId, by updatedAt
+- dataFieldTemplates: by componentType, by updatedAt
+- dataFields: by parentNodeId, by updatedAt, by templateId
 - dataFieldHistory: by dataFieldId, by updatedAt
+- imageBlobs: by blobId (primary)
 
 **Entity Relationships**:
 
@@ -317,6 +455,9 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 - TreeNode has 0..n child TreeNodes
 - TreeNode has 0..n DataFields
 - DataField belongs to exactly 1 TreeNode
+- DataField references exactly 1 DataFieldTemplate
+- DataFieldTemplate has 0..n DataFields (one-to-many)
+- `single-image` DataField references exactly 1 `imageBlobs` row per non-null value
 
 **Sorting policy**:
 
@@ -340,7 +481,7 @@ Data Fields are selected from a library. The string value of "fieldName" is used
 - **Primary Storage**: [DONE] Local browser storage for offline-first capability. All operations persist locally first.
 - **Cloud Sync**: [DONE] Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
 - **Sync Triggers**: [DONE] Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
-- **Single-user environment**: [DONE] Uses constant `updatedBy` "localUser". Only `fieldValue` changes are logged, not `fieldName` changes. [Phase 2+]: real user identity, `fieldName` change logging.
+- **Single-user environment**: [DONE] Uses constant `updatedBy` "localUser". Only `value` changes are logged, not `fieldName`/`componentType`/`templateId` changes. [Phase 2+]: real user identity, broader property change logging.
 
 ## Storage Architecture [DONE]
 
@@ -388,9 +529,11 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
 [
   {
     "id": "660e8400-e29b-41d4-a716-446655440004",
+    "templateId": "tpl_serial_number",
+    "componentType": "text-kv",
     "fieldName": "Serial Number",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
-    "fieldValue": "HVAC-2024-001",
+    "value": "HVAC-2024-001",
     "cardOrder": 0,
     "updatedBy": "user123",
     "updatedAt": 1709856000000,
@@ -398,9 +541,11 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
   },
   {
     "id": "660e8400-e29b-41d4-a716-446655440005",
+    "templateId": "tpl_status",
+    "componentType": "enum-kv",
     "fieldName": "Status",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
-    "fieldValue": "In Service",
+    "value": "In Service",
     "cardOrder": 1,
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
@@ -417,8 +562,9 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
     "id": "660e8400-e29b-41d4-a716-446655440004:0",
     "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
+    "componentType": "text-kv",
     "action": "create",
-    "property": "fieldValue",
+    "property": "value",
     "prevValue": null,
     "newValue": "HVAC-2024-001",
     "updatedBy": "localUser",
@@ -429,8 +575,9 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
     "id": "660e8400-e29b-41d4-a716-446655440004:1",
     "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
     "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
+    "componentType": "text-kv",
     "action": "update",
-    "property": "fieldValue",
+    "property": "value",
     "prevValue": "HVAC-2024-001",
     "newValue": "HVAC-2025-002",
     "updatedBy": "localUser",
@@ -449,6 +596,7 @@ Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (ope
 **Visual identity: deliberately "unstyled."** The app should look like a well-structured document, not a themed product UI. Black borders, minimal colour, no rounded cards, no gradients, no drop shadows on primary elements. The visual hierarchy comes from typography weight, indentation, and whitespace — not from decorative styling. This makes the information itself the foreground, which suits a data-heavy maintenance tool.
 
 **What "unstyled" means in practice:**
+
 - Borders are solid black (`--border-default`), uniform weight (`--border-width: 1.5px`)
 - Backgrounds are white or near-white; colour is reserved for interactive affordances (accent blue for focus/links, red for destructive actions, yellow for preview state)
 - Typography is a single family (Inter) at a compact size scale (9–18px), with weight doing the work of visual hierarchy (bold titles, regular body)
@@ -456,6 +604,7 @@ Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (ope
 - Animations are fast and functional (100–150ms), not decorative
 
 **Three-layer design token system** (`src/styles/tokens.css`):
+
 1. **Primitives** — raw palette values (`--color-gray-600: #666`)
 2. **Semantic tokens** — purpose-mapped references (`--text-muted: var(--color-gray-600)`)
 3. **Component tokens** — local overrides in CSS modules, referencing semantic tokens
