@@ -17,7 +17,14 @@ import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList, type FieldListHandle } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
+import { TEMPLATE_IDS } from '../../data/services/seedTemplates';
 import styles from './TreeNode.module.css';
+
+const DEFAULT_TEMPLATE_IDS = [
+    TEMPLATE_IDS.typeOf,
+    TEMPLATE_IDS.description,
+    TEMPLATE_IDS.tags,
+] as const;
 
 // Re-export for backwards compatibility
 export type { ConstructionField } from './types';
@@ -114,6 +121,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                     nodeId={props.id}
                     handleRef={fieldListHandle}
                     isConstruction={true}
+                    initialTemplateIds={DEFAULT_TEMPLATE_IDS}
                 />
                 
                 {/* Cancel/Create buttons at the very bottom */}

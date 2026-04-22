@@ -28,26 +28,74 @@ export type TreeNode = {
 // ============================================================================
 
 /**
- * Component type discriminator. Phase 1 ships only `text-kv`.
- * Future: `enum-kv`, `measurement-kv`, `single-image`, `composite-kv`, etc.
+ * Component type discriminator. Phase 1 Components per SPEC.
  */
-export type ComponentType = "text-kv";
+export type ComponentType = "text-kv" | "enum-kv" | "measurement-kv" | "single-image";
 
-/**
- * Per-component config shape. Discriminated on `componentType` so future
- * variants can widen this union without breaking `text-kv` callers.
- */
+// Per-Component config shapes
 export type TextKvConfig = {
   maxLength?: number;
   multiline?: boolean;
   placeholder?: string;
 };
 
-export type DataFieldTemplateConfig = TextKvConfig;
+export type EnumKvConfig = {
+  options: string[];
+  allowOther?: boolean;
+  default?: string;
+};
+
+export type MeasurementKvConfig = {
+  units: string;
+  decimals?: number;
+  nominalMin?: number;
+  nominalMax?: number;
+  warnLow?: number;
+  warnHigh?: number;
+  absoluteMin?: number;
+  absoluteMax?: number;
+};
+
+export type SingleImageConfig = {
+  maxSizeMB?: number;
+  requireCaption?: boolean;
+  aspectHint?: string;
+};
 
 /**
- * Template for a DataField kind. Seeding is intentionally skipped in this
- * plan; templates are written only by the follow-up SPEC templates plan.
+ * Union of Template configs, discriminated externally by Template.componentType.
+ * Narrow on `template.componentType === "text-kv"` etc. before accessing config.
+ */
+export type DataFieldTemplateConfig =
+  | TextKvConfig
+  | EnumKvConfig
+  | MeasurementKvConfig
+  | SingleImageConfig;
+
+// Per-Component value shapes (a DataField's `value` is one of these, or null)
+export type TextKvValue = string;
+export type EnumKvValue = string;
+export type MeasurementKvValue = number;
+export type SingleImageValue = {
+  blobId: string;
+  mimeType: string;
+  width: number;
+  height: number;
+  byteSize: number;
+  caption?: string;
+};
+
+/**
+ * Union of DataField value types, discriminated by DataField.componentType.
+ */
+export type DataFieldValue =
+  | TextKvValue
+  | EnumKvValue
+  | MeasurementKvValue
+  | SingleImageValue;
+
+/**
+ * Template for a DataField kind.
  */
 export type DataFieldTemplate = {
   id: ID;
@@ -59,15 +107,9 @@ export type DataFieldTemplate = {
 };
 
 /**
- * Typed value of a DataField. Phase 1 only has string (text-kv).
- * Future components widen this union.
- */
-export type DataFieldValue = string;
-
-/**
  * Instance of a Template attached to a TreeNode. `fieldName` is snapshotted
- * from `Template.label` at creation time so later label edits don't rewrite
- * user-visible data.
+ * from `Template.label` at creation time so later Template label edits don't
+ * rewrite user-visible data.
  */
 export type DataField = {
   id: ID;
@@ -86,23 +128,14 @@ export type DataField = {
 // Soft Delete Helper Functions
 // ============================================================================
 
-/**
- * Check if an entity has been soft deleted.
- */
 export function isSoftDeleted(entity: SoftDeletable): boolean {
   return entity.deletedAt !== null;
 }
 
-/**
- * Filter to only active (non-deleted) entities.
- */
 export function filterActive<T extends SoftDeletable>(entities: T[]): T[] {
   return entities.filter(e => e.deletedAt === null);
 }
 
-/**
- * Filter to only soft-deleted entities.
- */
 export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
   return entities.filter(e => e.deletedAt !== null);
 }
@@ -111,9 +144,6 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // History
 // ============================================================================
 
-/**
- * Shared fields across all history variants.
- */
 type DataFieldHistoryShared = {
   id: string; // `${dataFieldId}:${rev}`
   dataFieldId: ID;
@@ -125,17 +155,35 @@ type DataFieldHistoryShared = {
   rev: number; // monotonic per dataFieldId, start 0 on create
 };
 
-/**
- * History entry for text-kv fields.
- */
 export type TextKvHistory = DataFieldHistoryShared & {
   componentType: "text-kv";
-  prevValue: string | null;
-  newValue: string | null;
+  prevValue: TextKvValue | null;
+  newValue: TextKvValue | null;
+};
+
+export type EnumKvHistory = DataFieldHistoryShared & {
+  componentType: "enum-kv";
+  prevValue: EnumKvValue | null;
+  newValue: EnumKvValue | null;
+};
+
+export type MeasurementKvHistory = DataFieldHistoryShared & {
+  componentType: "measurement-kv";
+  prevValue: MeasurementKvValue | null;
+  newValue: MeasurementKvValue | null;
+};
+
+export type SingleImageHistory = DataFieldHistoryShared & {
+  componentType: "single-image";
+  prevValue: SingleImageValue | null;
+  newValue: SingleImageValue | null;
 };
 
 /**
- * Discriminated union on `componentType`. Phase 1 has only the text-kv
- * variant; future variants extend the union here.
+ * Discriminated union on `componentType`. Per SPEC §Typed value fields.
  */
-export type DataFieldHistory = TextKvHistory;
+export type DataFieldHistory =
+  | TextKvHistory
+  | EnumKvHistory
+  | MeasurementKvHistory
+  | SingleImageHistory;

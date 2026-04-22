@@ -1,23 +1,31 @@
 /**
- * DataField - Editable field row with label:value pairs.
- * 
- * Orchestrates the field display, editing, and details sections.
- * Edit logic is delegated to useFieldEdit hook for reusability.
+ * DataField - Thin dispatcher: renders the chevron + label + Component-specific
+ * body (via componentType switch) + optional DataFieldDetails.
+ *
+ * The owning rootRef is created here so outside-click detection inside each
+ * renderer covers the entire row (chevron, label, value), not just the value
+ * column.
  */
 
-import { component$, $, PropFunction } from '@builder.io/qwik';
+import { component$, useSignal, $, type PropFunction, type Signal } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
 import { getSnackbarService } from '../../services/snackbar';
 import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
+import { TextKvField } from './TextKvField';
+import { EnumKvField } from './EnumKvField';
+import { MeasurementKvField } from './MeasurementKvField';
+import { SingleImageField } from './SingleImageField';
+import type { ComponentType, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
     fieldName: string;
-    fieldValue: string | null;
+    templateId: string;
+    componentType: ComponentType;
+    value: DataFieldValue | null;
     onDeleted$?: PropFunction<() => void>;
     onUpdated$?: PropFunction<() => void>;
 };
@@ -25,42 +33,14 @@ export type DataFieldProps = {
 export const DataField = component$<DataFieldProps>((props) => {
     const appState = useAppState();
     const { toggleFieldDetailsExpanded$ } = useAppTransitions();
-    
-    // Get details expansion state from FSM (persisted)
+
+    const rootRef = useSignal<HTMLElement>();
+
     const detailsState = selectors.getDataFieldDetailsState(appState, props.id);
     const isDetailsExpanded = detailsState === 'EXPANDED';
-    
-    // Edit state and handlers from hook
-    const {
-        isEditing,
-        displayValue,
-        isPreviewActive,
-        hasValue,
-        editValue,
-        editInputRef,
-        rootRef,
-        valuePointerDown$,
-        valueKeyDown$,
-        inputPointerDown$,
-        inputBlur$,
-        inputKeyDown$,
-        inputChange$,
-        setPreview$,
-        revert$,
-        clearPreview$,
-    } = useFieldEdit({
-        fieldId: props.id,
-        initialValue: props.fieldValue,
-        onUpdated$: props.onUpdated$,
-    });
 
     const toggleDetails$ = $(() => {
-        const wasExpanded = selectors.getDataFieldDetailsState(appState, props.id) === 'EXPANDED';
         toggleFieldDetailsExpanded$(props.id);
-        // Clear preview when collapsing details
-        if (wasExpanded) {
-            clearPreview$();
-        }
     });
 
     const handleDelete$ = $(async () => {
@@ -89,13 +69,22 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const labelId = `field-label-${props.id}`;
 
+    // Used by DataFieldDetails for metadata and (future) history-value preview.
+    const currentDisplayValue =
+        props.value === null || props.value === undefined
+            ? null
+            : typeof props.value === 'string'
+                ? props.value
+                : typeof props.value === 'number'
+                    ? String(props.value)
+                    : '[image]';
+
     return (
-        <div 
-            class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded, 'no-caret']} 
+        <div
+            class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded, 'no-caret']}
             ref={rootRef}
         >
             <div class={[styles.datafield, 'no-caret']}>
-                {/* Column 1: Details chevron */}
                 <button
                     type="button"
                     class={styles.datafieldChevron}
@@ -105,55 +94,64 @@ export const DataField = component$<DataFieldProps>((props) => {
                 >
                     {isDetailsExpanded ? '▾' : '▸'}
                 </button>
-                
-                {/* Column 2: Field name */}
+
                 <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
-                
-                {/* Column 3: Field value (edit or display mode) */}
-                {isEditing ? (
-                    <input
-                        ref={editInputRef}
-                        class={[styles.datafieldValue, editValue.value && styles.datafieldValueUnderlined]}
-                        value={editValue.value}
-                        onInput$={(e) => inputChange$((e.target as HTMLInputElement).value)}
-                        onPointerDown$={inputPointerDown$}
-                        onBlur$={inputBlur$}
-                        onKeyDown$={inputKeyDown$}
-                        aria-labelledby={labelId}
-                        autoFocus
-                    />
-                ) : (
-                    <div 
-                        class={[
-                            styles.datafieldValue, 
-                            hasValue && styles.datafieldValueUnderlined, 
-                            styles.datafieldValueEditable,
-                            isPreviewActive && styles.datafieldValuePreview,
-                            'no-caret',
-                        ]} 
-                        onPointerDown$={valuePointerDown$}
-                        onKeyDown$={valueKeyDown$}
-                        tabIndex={0}
-                        role="button"
-                        aria-labelledby={labelId}
-                        aria-description="Press Enter to edit"
-                    >
-                        {displayValue || <span class={styles.datafieldPlaceholder}>Empty</span>}
-                    </div>
-                )}
-                
-                {/* Columns 4-6: DataFieldDetails when expanded */}
+
+                {renderBody(props, rootRef)}
+
                 {isDetailsExpanded && (
                     <DataFieldDetails
                         fieldId={props.id}
                         fieldName={props.fieldName}
-                        currentValue={displayValue}
+                        templateId={props.templateId}
+                        componentType={props.componentType}
+                        currentValue={currentDisplayValue}
                         onDelete$={handleDelete$}
-                        onPreviewChange$={setPreview$}
-                        onRevert$={revert$}
                     />
                 )}
             </div>
         </div>
     );
 });
+
+function renderBody(
+    props: DataFieldProps,
+    rootRef: Signal<HTMLElement | undefined>,
+) {
+    switch (props.componentType) {
+        case 'text-kv':
+            return (
+                <TextKvField
+                    id={props.id}
+                    fieldName={props.fieldName}
+                    value={(props.value as string | null) ?? null}
+                    rootRef={rootRef}
+                    onUpdated$={props.onUpdated$}
+                />
+            );
+        case 'enum-kv':
+            return (
+                <EnumKvField
+                    id={props.id}
+                    fieldName={props.fieldName}
+                    templateId={props.templateId}
+                    value={(props.value as string | null) ?? null}
+                    rootRef={rootRef}
+                    onUpdated$={props.onUpdated$}
+                />
+            );
+        case 'measurement-kv':
+            return (
+                <MeasurementKvField
+                    id={props.id}
+                    fieldName={props.fieldName}
+                    templateId={props.templateId}
+                    value={(props.value as number | null) ?? null}
+                    rootRef={rootRef}
+                    onUpdated$={props.onUpdated$}
+                />
+            );
+        case 'single-image':
+            return <SingleImageField id={props.id} fieldName={props.fieldName} />;
+    }
+}

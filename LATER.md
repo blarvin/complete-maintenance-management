@@ -77,35 +77,30 @@ Spec called for a breadcrumb in `TreeNodeDetails` (`"Ancestor1 / Ancestor2 / Par
 
 ## DataField Component Library
 
-The Component/Template/Instance spine landed in Phase 1. Phase 1 ships only `text-kv`; additional Components extend the `ComponentType` discriminated union and widen `DataFieldValue` / `DataFieldHistory` accordingly.
+The Component/Template/Instance spine plus the 4 Phase-1 Components (`text-kv`, `enum-kv`, `measurement-kv`, `single-image`-as-stub) landed in Phase 1. Open Phase-1 Component work (multiline textarea, allowOther, real single-image with blobs, history preview/revert) is tracked in ISSUES.md.
 
-### Additional Components (not yet specced)
+### Phase-2 Components (not yet specced)
 
-- `enum-kv` — dropdown from predefined options
-- `measurement-kv` — numeric value + unit, plus unit conversion
-- `single-image` — one image with preview/upload
-- `number-kv` — numerical values without units
+- `number-kv` — numerical values without units (distinct from measurement-kv)
 - `date-kv` — date/datetime picker
 - `image-carousel` — multiple images, carousel UI
 - `image-grid` — multiple images, grid UI
 - `image-aggregator` — derived gallery across descendants
 - `composite-kv` — recursive Template configs (fields containing fields)
 
+### Phase-2 Component features
+
+- **Unit conversion** for `measurement-kv`
+- **Option styling** (badges / colors) for `enum-kv`
+- **Typeahead / flip-up** behavior for the CreateDataField combo box and the enum-kv picker
+
 ### Template Library Enhancements
 
 - **`componentVersion` field** on Template (per-template contract versioning)
-- **User-authored Templates + Template-builder UI** — currently only dev-written Templates
+- **User-authored Templates + Template-builder UI** — currently only dev-seeded Templates
 - **Template sharing scope** — private / workspace / global, plus moderation
-- **Firestore blob sync** — needed once `single-image` lands
+- **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md)
 - **Orphaned-blob GC** — needed once blobs are in play
-
-### Refactoring Strategy (for when the second Component type arrives)
-
-1. Extract shared layout/grid into `FieldRow` wrapper component
-2. Split `DataField.tsx` into per-`componentType` renderers; dispatch on `field.componentType` (the scaffolding is there but only has a `text-kv` branch today)
-3. Each component type implements: display mode, edit mode, validation
-
-The Template/Instance plumbing is already in place; adding `enum-kv` only requires widening `ComponentType`, extending `DataFieldTemplateConfig`, widening `DataFieldValue` and the history union, and adding a renderer branch.
 
 ### Media / Image Fields
 

@@ -13,6 +13,7 @@
 
 import { useSignal, useVisibleTask$, useTask$, $, type QRL, type Signal } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
+import { getTemplateQueries } from '../data/queries';
 import { generateId } from '../utils/id';
 
 /** Pending form state for localStorage */
@@ -70,20 +71,45 @@ export type UsePendingFormsOptions = {
     onSaved$: QRL<() => void | Promise<void>>;
     /** Signal containing current max cardOrder from persisted fields (for calculating next cardOrder) */
     maxPersistedCardOrder$: Signal<number>;
+    /** Template IDs to pre-populate as locked-in pending forms. Used for construction defaults. */
+    initialTemplateIds?: readonly string[];
 };
 
 export function usePendingForms(options: UsePendingFormsOptions) {
     const forms = useSignal<PendingForm[]>([]);
     const initialized = useSignal(false);
 
-    // Load pending forms from LS on mount
-    useVisibleTask$(({ track }) => {
-        track(() => options.maxPersistedCardOrder$.value);
+    // Load pending forms from LS on mount, or seed from initialTemplateIds.
+    useVisibleTask$(async ({ track }) => {
+        const maxPersisted = track(() => options.maxPersistedCardOrder$.value);
 
         if (initialized.value) return;
 
         const stored = loadPendingForms(options.nodeId);
-        forms.value = stored;
+        if (stored.length > 0) {
+            forms.value = stored;
+            initialized.value = true;
+            return;
+        }
+
+        // Only seed defaults when nothing persisted and nothing pending in LS.
+        if (options.initialTemplateIds && options.initialTemplateIds.length > 0 && maxPersisted < 0) {
+            const templateQueries = getTemplateQueries();
+            const seeded: PendingForm[] = [];
+            for (let i = 0; i < options.initialTemplateIds.length; i++) {
+                const tplId = options.initialTemplateIds[i];
+                const tpl = await templateQueries.getTemplateById(tplId);
+                if (!tpl) continue;
+                seeded.push({
+                    id: generateId(),
+                    templateId: tpl.id,
+                    templateLabel: tpl.label,
+                    cardOrder: i,
+                    saved: true,
+                });
+            }
+            forms.value = seeded;
+        }
         initialized.value = true;
     });
 

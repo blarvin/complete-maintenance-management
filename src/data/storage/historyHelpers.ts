@@ -21,18 +21,32 @@ export function createHistoryEntry(params: {
   rev: number;
 }): DataFieldHistory {
   const { dataFieldId, parentNodeId, componentType, action, prevValue, newValue, rev } = params;
-  // Phase 1 only has text-kv; when new variants land, branch on componentType.
-  return {
+  const base = {
     id: `${dataFieldId}:${rev}`,
     dataFieldId,
     parentNodeId,
-    componentType,
     action,
-    property: 'value',
-    prevValue,
-    newValue,
+    property: 'value' as const,
     updatedBy: getCurrentUserId(),
     updatedAt: now(),
     rev,
   };
+  // TS discriminated-union narrowing: per-branch literal componentType.
+  switch (componentType) {
+    case 'text-kv':
+      return { ...base, componentType: 'text-kv', prevValue: prevValue as string | null, newValue: newValue as string | null };
+    case 'enum-kv':
+      return { ...base, componentType: 'enum-kv', prevValue: prevValue as string | null, newValue: newValue as string | null };
+    case 'measurement-kv':
+      return { ...base, componentType: 'measurement-kv', prevValue: prevValue as number | null, newValue: newValue as number | null };
+    case 'single-image':
+      return {
+        ...base,
+        componentType: 'single-image',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        prevValue: prevValue as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        newValue: newValue as any,
+      };
+  }
 }

@@ -192,15 +192,47 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Pattern**: DataField is split into three entities:
 
-1. **Template** (`DataFieldTemplate`) — declares `componentType` (discriminated union; Phase 1 has only `"text-kv"`), a human label, and per-component `config`. Stored in its own Dexie table and Firestore collection (`dataFieldTemplates`).
+1. **Template** (`DataFieldTemplate`) — declares `componentType` (discriminated union over the 4 Phase-1 Components: `text-kv`, `enum-kv`, `measurement-kv`, `single-image`), a human label, and per-Component `config`. Stored in its own Dexie table and Firestore collection (`dataFieldTemplates`).
 2. **Instance** (`DataField`) — attaches a Template to a TreeNode with a typed `value: DataFieldValue | null`. Snapshots `fieldName` and `componentType` from the Template at creation so later Template label edits don't rewrite persisted user data.
-3. **History** (`DataFieldHistory`) — discriminated union on `componentType`; `property` is always `"value"`; `prevValue` / `newValue` widen with the union as new components are added. Phase 1 variant is `TextKvHistory`.
+3. **History** (`DataFieldHistory`) — discriminated union on `componentType`; `property` is always `"value"`; `prevValue` / `newValue` carry the Component's value shape (string for text/enum, number for measurement, image-metadata for single-image).
 
-**No seed on boot**: the `templates` table ships empty. A follow-up plan writes the first Templates (the 4 SPEC fields). This was a deliberate choice: the old `DATAFIELD_LIBRARY` constant was a prototype bootstrap and not worth persisting as seed rows — a clean empty state is simpler than a seed-once guard key.
+**Seeding on boot**: `src/data/services/seedTemplates.ts` writes 6 dev-Templates (Description, Type Of, Tags, Status, Weight, Main Image — one per componentType plus defaults) idempotently, guarded by a `syncMetadata.templatesSeededVersion` key. Seeds write directly to `db.templates` with no sync-queue enqueue: every client seeds identically, so propagating them as sync ops would be N redundant writes per N clients. Called from `initializeStorage()` after `initializeQueries()` but before `initializeSyncManager()` so queries are ready but the first-sync push doesn't see seed rows.
 
 **Command shape**: writes go through `ADD_FIELD_FROM_TEMPLATE` (creates an instance of a Template on a node) and `CREATE_NODE_WITH_FIELDS` (whose `defaults` is `{ templateId }[]`). The older freeform `ADD_FIELD` is gone — there's no path to create a DataField without a Template.
 
 **Schema v3 upgrade-clear**: `db.ts` `version(3)` upgrade function clears every table. `fieldValue` is gone from the row shape, and no migration path was worth writing for prototype data. Firestore emulator should be wiped alongside.
+
+---
+
+### DataField Component Dispatcher
+
+**Pattern**: `DataField.tsx` is a thin dispatcher. It owns the row layout (chevron, label, details-expansion) and switches on `field.componentType` to render one of four per-Component renderers:
+
+- `TextKvField.tsx` — text-kv
+- `EnumKvField.tsx` — enum-kv (reuses CreateDataField's dropdown styles)
+- `MeasurementKvField.tsx` — measurement-kv (with `measurementState.ts` pure function for ok/warn/alarm state)
+- `SingleImageField.tsx` — single-image stub (Phase 1 placeholder only)
+
+Sub-components render their own value column only; the dispatcher wraps them.
+
+**Shared `rootRef`**: outside-click cancel needs to cover the entire DataField row (chevron + label + value), not just the value column. The dispatcher creates a single `Signal<HTMLElement | undefined>` and passes it down to each sub-component, which passes it into `useFieldEdit`. This is why `useFieldEdit` takes `rootRef` as an option rather than creating its own.
+
+**Component-specific Template config is fetched inside the renderer** via `getTemplateQueries().getTemplateById()` wrapped in `useResource$`. For renderers that need the Template to compute display (enum options, measurement units/ranges), the resource is tracked on `props.templateId` so it re-fetches if the field's Template changes (rare but possible post-Phase-1).
+
+---
+
+### Generic `useFieldEdit<T>`
+
+**Pattern**: `useFieldEdit<T extends DataFieldValue>` is parameterized on the stored value type T. The edit buffer is always a `Signal<string>` (user types into a text input regardless of T); callers supply `parse: (raw: string) => T | null` to convert on save and `format: (value: T | null) => string` to render for display and seed the edit buffer on begin.
+
+- **text-kv**: identity parse/format, with `trim() === ''` → `null`.
+- **measurement-kv**: `parseFloat` parse (throws on NaN, caught in `save$` → Snackbar error), `toFixed(decimals)` format. Optional `validate: (value: T | null) => void` callback rejects out-of-absolute-range values.
+- **enum-kv**: doesn't use `useFieldEdit` — the dropdown pick is a one-step save, not a text-buffer edit.
+- **single-image**: stub, no edit flow.
+
+The `save$` flow: parse → validate (if provided) → `getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', ... })` → Snackbar with Undo action. Parse/validate errors surface as a Snackbar error variant and leave edit mode open.
+
+**Preview/revert from history was removed** during the Component split — it was tightly coupled to the old monolithic `useFieldEdit` and hoisting it across the Component boundary is deferred (see ISSUES.md).
 
 ---
 

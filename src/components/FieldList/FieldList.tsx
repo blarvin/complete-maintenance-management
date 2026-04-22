@@ -41,6 +41,8 @@ export type FieldListProps = {
     handleRef?: Signal<FieldListHandle | null>;
     /** When true, operates in construction mode (defer IDB writes) */
     isConstruction?: boolean;
+    /** Template IDs to pre-populate as locked-in pending forms (construction defaults). */
+    initialTemplateIds?: readonly string[];
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
@@ -59,6 +61,7 @@ export const FieldList = component$<FieldListProps>((props) => {
         mode: props.isConstruction ? 'construction' : 'display',
         onSaved$: reload$,
         maxPersistedCardOrder$: maxPersistedCardOrder,
+        initialTemplateIds: props.initialTemplateIds,
     });
 
     useVisibleTask$(() => {
@@ -118,7 +121,9 @@ export const FieldList = component$<FieldListProps>((props) => {
                             key={item.field.id}
                             id={item.field.id}
                             fieldName={item.field.fieldName}
-                            fieldValue={item.field.value}
+                            templateId={item.field.templateId}
+                            componentType={item.field.componentType}
+                            value={item.field.value}
                             onDeleted$={handleFieldDeleted$}
                         />
                     );
@@ -129,6 +134,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                             id={item.form.id}
                             initialTemplateId={item.form.templateId}
                             initialTemplateLabel={item.form.templateLabel}
+                            locked={item.form.saved === true}
                             onSave$={save$}
                             onCancel$={cancel$}
                             onChange$={change$}

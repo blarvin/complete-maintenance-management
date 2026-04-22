@@ -1,0 +1,32 @@
+.input {
+    width: 6ch;
+    text-align: right;
+}
+
+.units {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin-left: var(--space-1);
+}
+
+.state_ok {
+    background: rgba(16, 185, 129, 0.08); /* subtle green */
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_warn {
+    background: rgba(245, 158, 11, 0.12); /* subtle amber */
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_alarm {
+    background: rgba(239, 68, 68, 0.12); /* subtle red */
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_none {
+    /* no coloring */
+}

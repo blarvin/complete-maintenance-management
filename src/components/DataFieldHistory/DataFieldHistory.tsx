@@ -1,35 +1,36 @@
 /**
- * DataFieldHistory - Inline expandable history showing previous field values.
- * Expands in-place within DataFieldDetails (accordion pattern, not a popover).
- * Shows historical entries in a scrollable list, max ~8 rows.
- * Selection is cancelled by closing history (chevron) or collapsing field details.
+ * DataFieldHistory - Read-only inline history list. Preview/revert were removed
+ * during the Component split; restoring them is tracked in ISSUES.md.
  */
 
-import { component$, useSignal, $, PropFunction } from '@builder.io/qwik';
-import type { DataFieldHistory as HistoryEntry } from '../../data/models';
+import { component$ } from '@builder.io/qwik';
+import type { ComponentType, DataFieldHistory as HistoryEntry } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
 export type DataFieldHistoryProps = {
     fieldId: string;
     history: HistoryEntry[];
+    componentType: ComponentType;
+    units?: string;
     isOpen: boolean;
-    onToggle$: PropFunction<() => void>;
-    onPreviewChange$: PropFunction<(value: string | null) => void>;
 };
 
-export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
-    const selectedRev = useSignal<number | null>(null);
+function formatHistoryValue(entry: HistoryEntry, units: string): string {
+    if (entry.newValue === null || entry.newValue === undefined) return '';
+    switch (entry.componentType) {
+        case 'text-kv':
+        case 'enum-kv':
+            return String(entry.newValue);
+        case 'measurement-kv':
+            return `${entry.newValue} ${units}`.trim();
+        case 'single-image':
+            return '[image]';
+    }
+}
 
-    // All entries in reverse chronological order (most recent first)
+export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     const allEntries = [...props.history].reverse();
 
-    const selectEntry$ = $((entry: HistoryEntry) => {
-        selectedRev.value = entry.rev;
-        // Preview the newValue from that history entry
-        props.onPreviewChange$(entry.newValue);
-    });
-
-    // Format date as dd/mm/yyyy, hh:mm
     const formatDateTime = (ts: number): string => {
         const d = new Date(ts);
         const day = d.getDate().toString().padStart(2, '0');
@@ -40,34 +41,30 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
         return `${day}/${month}/${year}, ${hours}:${mins}`;
     };
 
-    // Check if we have any history to show
     const hasHistory = props.history.length > 0;
+    const units = props.units ?? '';
 
     return (
         <div class={[styles.historyWrapper, 'no-caret']}>
-            {/* Scrollable history list */}
             {props.isOpen && hasHistory && (
-                <div class={[styles.historyList, 'no-caret']} role="listbox" aria-label="Field value history">
-                    {allEntries.map((entry) => (
-                        <button
-                            key={entry.id}
-                            type="button"
-                            class={[
-                                styles.historyRow,
-                                selectedRev.value === entry.rev && styles.historyRowSelected,
-                            ]}
-                            onClick$={() => selectEntry$(entry)}
-                            role="option"
-                            aria-selected={selectedRev.value === entry.rev}
-                        >
-                            <span class={styles.historyValue}>
-                                {entry.newValue || <em>Empty</em>}
-                            </span>
-                            <span class={styles.historyMeta}>
-                                {formatDateTime(entry.updatedAt)} {entry.updatedBy}
-                            </span>
-                        </button>
-                    ))}
+                <div class={[styles.historyList, 'no-caret']} role="list" aria-label="Field value history">
+                    {allEntries.map((entry) => {
+                        const formatted = formatHistoryValue(entry, units);
+                        return (
+                            <div
+                                key={entry.id}
+                                class={styles.historyRow}
+                                role="listitem"
+                            >
+                                <span class={styles.historyValue}>
+                                    {formatted || <em>Empty</em>}
+                                </span>
+                                <span class={styles.historyMeta}>
+                                    {formatDateTime(entry.updatedAt)} {entry.updatedBy}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

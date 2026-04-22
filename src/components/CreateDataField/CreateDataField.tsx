@@ -12,6 +12,11 @@ import { getTemplateQueries } from '../../data/queries';
 import type { DataFieldTemplate } from '../../data/models';
 import styles from './CreateDataField.module.css';
 
+/**
+ * CreateDataField - Template picker for creating a new field, OR read-only
+ * display when the pending form is already locked in (construction defaults).
+ */
+
 export type CreateDataFieldProps = {
     /** Unique ID for this form instance (used for keying, LS tracking) */
     id: string;
@@ -19,6 +24,8 @@ export type CreateDataFieldProps = {
     initialTemplateId?: string;
     /** Pre-selected template label (snapshot) */
     initialTemplateLabel?: string;
+    /** When true, render as read-only (locked-in construction default). */
+    locked?: boolean;
     /** Called when user picks a template */
     onSave$: PropFunction<(id: string, templateId: string, templateLabel: string) => void>;
     /** Called when user cancels */
@@ -78,6 +85,25 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
             }
         }
     });
+
+    if (props.locked) {
+        return (
+            <div class={styles.constructionWrapper}>
+                <div class={styles.construction}>
+                    <span class={styles.inputName}>{selectedLabel.value}</span>
+                </div>
+                <div class={styles.actions}>
+                    <button
+                        type="button"
+                        class={[styles.actionButton, styles.cancelButton]}
+                        onClick$={cancel$}
+                    >
+                        Remove
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div class={styles.constructionWrapper}>

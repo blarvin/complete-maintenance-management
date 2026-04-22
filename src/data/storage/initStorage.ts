@@ -22,6 +22,7 @@ import { subscribeNodeIndex } from '../nodeIndexSubscriber';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
+import { seedTemplates } from '../services/seedTemplates';
 
 let initialized = false;
 
@@ -75,6 +76,9 @@ export async function initializeStorage(): Promise<void> {
     // Initialize CQRS command bus and query layer
     initializeCommandBus(idbAdapter);
     initializeQueries(idbAdapter);
+
+    // Seed dev Templates (idempotent; no sync enqueue).
+    await seedTemplates();
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);
