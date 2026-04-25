@@ -1,8 +1,15 @@
 /* DataField component styles */
 
+/* Opt-in to FieldList's shared grid via subgrid. Each row inherits the parent's
+   6 column tracks, so labels (col 2) align across every participating field in
+   the card. Non-kv Components that don't want this layout can decline subgrid
+   and lay out within their own `grid-column: 1 / -1` cell. */
 .datafieldWrapper {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;
+    font-size: var(--text-sm);
     position: relative;
     /* Caret handling via .no-caret class in JSX */
 }
@@ -12,25 +19,6 @@
 .datafieldWrapperExpanded {
     background: var(--bg-expanded);
     border-radius: var(--radius-sm);
-}
-
-/* 6-column grid layout:
-   Col 1: Details chevron (18px)
-   Col 2: Field name (60px) 
-   Col 3: Field value (1fr - flexible)
-   Col 4: Date/Time/User metadata (auto - content width)
-   Col 5: Spacer (1fr - flexible)
-   Col 6: History chevron (18px)
-   
-   Columns 4-6 only have content when expanded.
-*/
-.datafield {
-    display: grid;
-    grid-template-columns: var(--chevron-col-width) var(--label-width) minmax(0, 1fr) auto minmax(0, 1fr) var(--chevron-col-width);
-    font-size: var(--text-sm);
-    gap: var(--space-2);
-    align-items: baseline;
-    /* Caret handling via .no-caret class in JSX */
 }
 
 /* Construction mode field - same as datafield but without the chevron column */

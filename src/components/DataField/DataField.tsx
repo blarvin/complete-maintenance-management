@@ -84,32 +84,30 @@ export const DataField = component$<DataFieldProps>((props) => {
             class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded, 'no-caret']}
             ref={rootRef}
         >
-            <div class={[styles.datafield, 'no-caret']}>
-                <button
-                    type="button"
-                    class={styles.datafieldChevron}
-                    onClick$={toggleDetails$}
-                    aria-expanded={isDetailsExpanded}
-                    aria-label={isDetailsExpanded ? 'Collapse field details' : 'Expand field details'}
-                >
-                    {isDetailsExpanded ? '▾' : '▸'}
-                </button>
+            <button
+                type="button"
+                class={styles.datafieldChevron}
+                onClick$={toggleDetails$}
+                aria-expanded={isDetailsExpanded}
+                aria-label={isDetailsExpanded ? 'Collapse field details' : 'Expand field details'}
+            >
+                {isDetailsExpanded ? '▾' : '▸'}
+            </button>
 
-                <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
+            <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
 
-                {renderBody(props, rootRef)}
+            {renderBody(props, rootRef)}
 
-                {isDetailsExpanded && (
-                    <DataFieldDetails
-                        fieldId={props.id}
-                        fieldName={props.fieldName}
-                        templateId={props.templateId}
-                        componentType={props.componentType}
-                        currentValue={currentDisplayValue}
-                        onDelete$={handleDelete$}
-                    />
-                )}
-            </div>
+            {isDetailsExpanded && (
+                <DataFieldDetails
+                    fieldId={props.id}
+                    fieldName={props.fieldName}
+                    templateId={props.templateId}
+                    componentType={props.componentType}
+                    currentValue={currentDisplayValue}
+                    onDelete$={handleDelete$}
+                />
+            )}
         </div>
     );
 });

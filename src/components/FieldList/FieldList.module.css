@@ -1,12 +1,34 @@
 /* FieldList component styles */
 
+/* Shared row track for all field rows in a card. Defining columns once here
+   lets opt-in rows align across each other via `grid-template-columns: subgrid`.
+   Col 2 is `minmax(--label-width, auto)` so the column sizes to the widest
+   label across all participating rows (rather than truncating long labels
+   into the value column). */
 .fieldList {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
+    display: grid;
+    grid-template-columns:
+        var(--chevron-col-width)                       /* 1: details chevron */
+        minmax(var(--label-width), auto)               /* 2: label (auto-grows to longest) */
+        minmax(0, 1fr)                                 /* 3: value */
+        auto                                           /* 4: metadata / button group */
+        minmax(0, 1fr)                                 /* 5: spacer */
+        var(--chevron-col-width);                      /* 6: history chevron */
+    row-gap: var(--space-3);
+    column-gap: var(--space-2);
+    align-items: baseline;
+}
+
+/* Default: any non-participating child (CreateDataField, add button, future
+   Components that decline subgrid) gets the full row. They keep whatever
+   internal layout they want. */
+.fieldList > * {
+    grid-column: 1 / -1;
 }
 
 .addButton {
+    grid-column: 1 / -1;
+    justify-self: start;
     font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-secondary);

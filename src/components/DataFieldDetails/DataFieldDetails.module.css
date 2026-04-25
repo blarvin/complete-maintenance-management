@@ -106,10 +106,11 @@
     outline-offset: 1px;
 }
 
-/* Actions row - spans all 6 columns, creating a new row */
+/* Actions row - skips the leading details-chevron column so the delete
+   button aligns under the label column. */
 .actionsRow {
-    grid-column: 1 / -1;
-    padding: var(--space-2) 0 var(--space-2) 22px; /* Align with label column (skip chevron) */
+    grid-column: 2 / -1;
+    padding: var(--space-2) 0;
     /* Caret handling via .no-caret class in JSX */
 }
 
@@ -135,11 +136,11 @@
     outline-offset: var(--focus-offset);
 }
 
-/* History list row - spans all 6 columns */
+/* History list row - starts at the value column and ends just before the
+   trailing history-chevron column, so its right edge lines up with the
+   metadata above. Grid-column placement replaces the previous padding-math
+   hack against the (now auto-sized) label column. */
 .historyRow {
-    grid-column: 1 / -1;
-    /* Left: align with Field Value column (chevron + gap + label + gap).
-       Right: leave chevron column so metadata aligns with col 5 above. */
-    padding: 0 calc(var(--chevron-col-width) - var(--border-width-thin) - var(--space-4)) 0 calc(var(--chevron-col-width) + var(--space-2) + var(--label-width) + var(--space-2) - var(--border-width-thin) - var(--space-4));
+    grid-column: 3 / -2;
     /* Caret handling via .no-caret class in JSX */
 }
