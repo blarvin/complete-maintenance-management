@@ -100,7 +100,7 @@ This structure enables users to construct, explore, and understand detailed hier
 ## DataField Management
 
 - **Double-Tap to edit**: [DONE] Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
-- **Create Data Field**: [DONE] A "+" button at bottom of DataCard opens a dropdown to select from the DataField Library (Templates table). Creation is selection-only; users cannot author new Templates in Phase 1. [Phase 2+]: user-authored Templates.
+- **Create Data Fields (Composer)**: A "+ Add Fields" button at bottom of the DataCard expands the **Field Composer**: an inline section (within the DataCard) showing every available Template as a row in a single list. Each row has a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that Template (rendered with its real Component). Save commits every checked row as a real DataField on the node; Cancel discards them. See "Field Composer" below.
 - **Delete Data Field**: [DONE] Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
     - **Soft Delete**: [DONE] DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
     - A `DataFieldHistory` entry with `action: "delete"`, `property: "value"`, and `newValue: null` is written only after the undo window elapses.
@@ -223,6 +223,41 @@ All interactive elements are keyboard-accessible. This is a core quality bar, no
 ### DataField Reordering
 
 Users can reorder DataFields within a DataCard. Reordering updates `cardOrder` for all affected fields and persists immediately. Detailed UX/interaction design TBD.
+
+### Field Composer
+
+The Field Composer is a unified inline UI for adding one or more DataFields to a TreeNode. It replaces both the legacy single-pick dropdown (display mode) and the bare default-fields list (construction mode) — they share the same composer surface.
+
+#### When the composer is visible
+
+- **Display mode** (existing node, viewing its DataCard): no composer by default. Clicking **+ Add Fields** opens it. Save or Cancel dismisses it; the button returns. One composer at a time.
+- **Construction mode** (new node, before Save): the composer is visible by default. The seeded default Templates ("Type Of", "Description", "Tags") appear as **locked checked rows** — checkbox visibly checked but disabled, so the user can't uncheck them. The user can still check additional Templates as normal.
+
+#### Layout
+
+The composer is a single inline-expanded section within the DataCard, distinguished from persisted fields by a **dashed border** around the whole zone. It contains:
+
+1. **In-situ Template list** — every available Template appears as a row, sorted alphabetically by label. Each row has a checkbox.
+   - **Unchecked row**: checkbox + Template label only.
+   - **Checked row**: checkbox + a live, editable preview of that Template, rendered with its actual Component (TextKvField, EnumKvField, MeasurementKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full Component preview; unchecking collapses it back to label-only.
+   - **Locked checked row** (construction mode defaults only): rendered as a checked row, but the checkbox is disabled.
+   - The preview is fully editable: the user can set the value, etc. Nothing is persisted to storage until **Save**.
+   - Rows transition smoothly (~200ms) on toggle. On check, the *checkbox* is anchored in the viewport so a tall preview (single-image especially) doesn't shove the user's place off-screen.
+   - (Grouping rows by `category` into collapsible sections is [Phase 2+], deferred until Template count makes a flat list unwieldy.)
+2. **Sticky Save / Cancel footer** — pinned to the bottom of the viewport while the composer is in view, so a long list doesn't bury the actions. Save disabled (display mode) when no rows are checked.
+
+#### Interactions
+
+- **Existing persisted fields remain visible and editable** above the composer. Edits to existing fields commit immediately as today; edits inside the composer are pending until Save.
+- **Save** persists every checked row as a `DataField` (executing `ADD_FIELD_FROM_TEMPLATE` per row), in **alphabetical order** (matching the visual order in the composer), with each new field assigned a `cardOrder` greater than every already-persisted field on the card. New fields appear at the bottom of the FieldList in the same order they previewed in. After Save, the composer collapses.
+- **Cancel** discards every pending row. If any rows had been checked, a Snackbar with Undo follows (`"N fields discarded"` — Undo re-opens the composer with the same rows checked and the same entered values).
+- **Click-away does not dismiss the composer.** Pending work is preserved across in-app navigation; the composer is dismissed only by Save or Cancel. (Pending state across reload is best-effort via existing localStorage scaffolding.)
+- **Construction mode**: Save here is implicit in node creation. The node's "Save" button finalises the node *and* the composer's batch in one transaction. Cancel discards the in-progress node entirely, as today.
+- **No reorder of pending rows** in this round. Commit order is alphabetical. Reorder of fields (pending and persisted) is designed together as a future task.
+
+#### Why one composer for both modes
+
+Construction-mode "pending forms" and display-mode "newly-added field draft" are the same shape: a set of pending DataField drafts attached to a node, batch-committed on finalize. Unifying them collapses two parallel UI paths into one and removes the awkward "single-row picker" intermediate state.
 
 ### DataField Components, Templates, and Library
 
