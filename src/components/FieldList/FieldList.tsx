@@ -12,8 +12,10 @@
 import { component$, $, useSignal, useComputed$, useVisibleTask$, type Signal, type QRL } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
 import { FieldComposer, type FieldComposerHandle } from '../FieldComposer/FieldComposer';
+import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
 import type { PendingForm } from '../../hooks/usePendingForms';
+import { LEGACY_ADD_FIELD_ENABLED } from '../../constants';
 import styles from './FieldList.module.css';
 
 /** Handle for external access to FieldList composer methods (construction mode). */
@@ -127,6 +129,14 @@ export const FieldList = component$<FieldListProps>((props) => {
                 >
                     + Add Fields
                 </button>
+            )}
+
+            {LEGACY_ADD_FIELD_ENABLED && !props.isConstruction && (
+                <CreateDataField
+                    nodeId={props.nodeId}
+                    currentMaxCardOrder={maxPersistedCardOrder.value}
+                    onCreated$={reload$}
+                />
             )}
         </div>
     );

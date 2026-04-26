@@ -1,10 +1,20 @@
-/* CreateDataField component styles */
+/* CreateDataField (legacy "+ Add Field") styles. Self-contained — does not
+   participate in the FieldList subgrid. Sits below the composer block. */
+
+.legacyWrapper {
+    grid-column: 1 / -1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
 
 .addButton {
+    justify-self: start;
+    align-self: flex-start;
     font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text-secondary);
-    /* Reset button defaults */
     background: none;
     border: none;
     padding: 0;
@@ -22,120 +32,22 @@
     outline-offset: var(--focus-offset);
 }
 
-/* Construction mode wrapper */
-.constructionWrapper {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-}
-
-/* Construction mode - grid layout: chevron | field name | value */
-.construction {
-    display: grid;
-    grid-template-columns: var(--chevron-col-width) minmax(100px, 1fr) minmax(80px, 1fr);
-    font-size: var(--text-sm);
-    gap: var(--space-2);
-    align-items: baseline;
-}
-
-/* Hollow chevron button */
-.chevronButton {
-    width: var(--chevron-col-width);
-    height: var(--chevron-col-width);
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.chevronButton:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-}
-
-/* CSS triangle - hollow style using stroke-only border trick */
-.chevron {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-right: var(--border-width) solid var(--text-muted);
-    border-bottom: var(--border-width) solid var(--text-muted);
-    transform: rotate(-45deg);
-    transition: transform var(--duration-normal) ease;
-}
-
-/* Rotate when open - points down */
-.chevronOpen {
-    transform: rotate(45deg);
-}
-
-.chevronButton:hover .chevron {
-    border-color: var(--text-secondary);
-}
-
-/* Combo box wrapper for dropdown positioning */
-.comboBoxWrapper {
-    position: relative;
-}
-
-/* Field name input - wider */
-.inputName {
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    border: 0;
-    outline: none;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: var(--text-primary);
-    border-bottom: var(--border-width-thin) solid var(--border-input);
-}
-
-.inputName:focus {
-    border-bottom-color: var(--accent);
-}
-
-/* Value input */
-.inputValue {
-    width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
-    border: 0;
-    outline: none;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: var(--text-secondary);
-    border-bottom: var(--border-width-thin) solid var(--border-input);
-}
-
-.inputValue:focus {
-    border-bottom-color: var(--accent);
-}
-
-/* Dropdown menu - position:fixed escapes all parent containers */
 .dropdown {
-    position: fixed;
-    /* top, left, width set via inline style */
+    align-self: flex-start;
     background: var(--bg-surface);
     border: var(--border-width-thin) solid var(--border-muted);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-dropdown);
     z-index: var(--z-dropdown);
-    max-height: 150px;
+    min-width: 200px;
+    max-height: 200px;
     overflow-y: auto;
 }
 
 .dropdownItem {
     display: block;
     width: 100%;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-2) var(--space-4);
     border: none;
     background: transparent;
     text-align: left;
@@ -152,40 +64,4 @@
 .dropdownItem:focus-visible {
     background: var(--bg-active);
     outline: none;
-}
-
-/* Action row with Save/Cancel buttons - right aligned */
-.actions {
-    display: flex;
-    gap: var(--space-4);
-    justify-content: flex-end;
-    margin-top: var(--space-1);
-}
-
-.actionButton {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    background: none;
-    border: var(--border-width-thin) solid var(--border-input);
-    padding: var(--space-1) var(--space-4);
-    cursor: pointer;
-    font-family: inherit;
-}
-
-.actionButton:hover {
-    background: var(--bg-hover);
-}
-
-.actionButton:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-}
-
-.cancelButton {
-    border-color: var(--text-disabled);
-    color: var(--text-muted);
-}
-
-.cancelButton:hover {
-    background: var(--bg-muted);
 }
