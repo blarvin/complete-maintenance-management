@@ -99,23 +99,6 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         currentValue.value = options.initialValue;
     });
 
-    // Cancel edit on outside click — but in pendingMode, auto-commit to the
-    // pending row so typed values aren't lost when the user clicks Save in the
-    // composer footer (or moves to another row).
-    useOnDocument('pointerdown', $(async (ev: Event) => {
-        if (appState.editingFieldId !== options.fieldId) return;
-        const container = rootRef.value;
-        const target = ev.target as Node | null;
-        if (container && target && !container.contains(target)) {
-            if (options.pendingMode) {
-                await save$();
-            } else {
-                stopFieldEdit$();
-                editValue.value = options.format(currentValue.value);
-            }
-        }
-    }));
-
     // === Edit Flow Handlers ===
 
     const beginEdit$ = $(() => {
@@ -178,6 +161,23 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         stopFieldEdit$();
         editValue.value = options.format(currentValue.value);
     });
+
+    // Cancel edit on outside click — but in pendingMode, auto-commit to the
+    // pending row so typed values aren't lost when the user clicks Save in the
+    // composer footer (or moves to another row).
+    useOnDocument('pointerdown', $(async (ev: Event) => {
+        if (appState.editingFieldId !== options.fieldId) return;
+        const container = rootRef.value;
+        const target = ev.target as Node | null;
+        if (container && target && !container.contains(target)) {
+            if (options.pendingMode) {
+                await save$();
+            } else {
+                stopFieldEdit$();
+                editValue.value = options.format(currentValue.value);
+            }
+        }
+    }));
 
     // === Input Event Handlers ===
 

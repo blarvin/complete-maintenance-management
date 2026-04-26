@@ -21,12 +21,31 @@ export type PendingForm = {
     value: DataFieldValue | null;
 };
 
+/** Build a fresh PendingForm from a Template. Used by composer toggle and seed loaders. */
+export const pendingFormFromTemplate = (template: DataFieldTemplate): PendingForm => ({
+    id: generateId(),
+    templateId: template.id,
+    componentType: template.componentType,
+    fieldName: template.label,
+    value: null,
+});
+
 const getPendingFormsKey = (nodeId: string) => `pendingFields:${nodeId}`;
 
 const loadPendingForms = (nodeId: string): PendingForm[] => {
     try {
         const stored = localStorage.getItem(getPendingFormsKey(nodeId));
-        return stored ? JSON.parse(stored) : [];
+        if (!stored) return [];
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(
+            (f): f is PendingForm =>
+                f && typeof f === 'object' &&
+                typeof f.id === 'string' &&
+                typeof f.templateId === 'string' &&
+                typeof f.componentType === 'string' &&
+                typeof f.fieldName === 'string'
+        );
     } catch {
         return [];
     }
@@ -91,14 +110,7 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         if (existing) {
             forms.value = forms.value.filter(f => f.templateId !== template.id);
         } else {
-            const newForm: PendingForm = {
-                id: generateId(),
-                templateId: template.id,
-                componentType: template.componentType,
-                fieldName: template.label,
-                value: null,
-            };
-            forms.value = [...forms.value, newForm];
+            forms.value = [...forms.value, pendingFormFromTemplate(template)];
         }
     });
 
@@ -107,8 +119,11 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
     });
 
     const commitAll$ = $(async (currentMaxCardOrder: number): Promise<number> => {
-        const batch = [...forms.value].sort((a, b) =>
-            a.fieldName.localeCompare(b.fieldName)
+        // Drop malformed entries (e.g. legacy localStorage drafts from the old
+        // pre-composer shape that lack templateId/fieldName).
+        const valid = forms.value.filter(f => f && f.templateId && typeof f.fieldName === 'string');
+        const batch = [...valid].sort((a, b) =>
+            (a.fieldName ?? '').localeCompare(b.fieldName ?? '')
         );
         if (batch.length === 0) return 0;
 

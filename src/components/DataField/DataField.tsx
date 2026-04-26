@@ -17,7 +17,7 @@ import { TextKvField } from './TextKvField';
 import { EnumKvField } from './EnumKvField';
 import { MeasurementKvField } from './MeasurementKvField';
 import { SingleImageField } from './SingleImageField';
-import type { ComponentType, DataFieldValue } from '../../data/models';
+import type { ComponentType, DataFieldValue, SingleImageValue } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
@@ -70,14 +70,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     const labelId = `field-label-${props.id}`;
 
     // Used by DataFieldDetails for metadata and (future) history-value preview.
-    const currentDisplayValue =
-        props.value === null || props.value === undefined
-            ? null
-            : typeof props.value === 'string'
-                ? props.value
-                : typeof props.value === 'number'
-                    ? String(props.value)
-                    : '[image]';
+    const currentDisplayValue = displayPreview(props.componentType, props.value);
 
     return (
         <div
@@ -111,6 +104,24 @@ export const DataField = component$<DataFieldProps>((props) => {
         </div>
     );
 });
+
+/**
+ * Best-effort string preview of a DataField value, dispatched on componentType.
+ * Used by metadata/history surfaces that need a uniform string view of the
+ * current value across all Component types.
+ */
+function displayPreview(componentType: ComponentType, value: DataFieldValue | null): string | null {
+    if (value === null || value === undefined) return null;
+    switch (componentType) {
+        case 'text-kv':
+        case 'enum-kv':
+            return value as string;
+        case 'measurement-kv':
+            return String(value as number);
+        case 'single-image':
+            return (value as SingleImageValue).caption ?? '[image]';
+    }
+}
 
 function renderBody(
     props: DataFieldProps,
@@ -150,6 +161,14 @@ function renderBody(
                 />
             );
         case 'single-image':
-            return <SingleImageField id={props.id} fieldName={props.fieldName} />;
+            return (
+                <SingleImageField
+                    id={props.id}
+                    fieldName={props.fieldName}
+                    value={(props.value as SingleImageValue | null) ?? null}
+                    rootRef={rootRef}
+                    onUpdated$={props.onUpdated$}
+                />
+            );
     }
 }

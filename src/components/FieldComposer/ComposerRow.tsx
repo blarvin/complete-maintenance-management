@@ -12,7 +12,7 @@ import { TextKvField } from '../DataField/TextKvField';
 import { EnumKvField } from '../DataField/EnumKvField';
 import { MeasurementKvField } from '../DataField/MeasurementKvField';
 import { SingleImageField } from '../DataField/SingleImageField';
-import type { DataFieldTemplate, DataFieldValue } from '../../data/models';
+import type { DataFieldTemplate, DataFieldValue, SingleImageValue } from '../../data/models';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import styles from './ComposerRow.module.css';
 
@@ -109,6 +109,9 @@ const RowBody = component$<RowBodyProps>((props) => {
                 <SingleImageField
                     id={props.pendingForm.id}
                     fieldName={props.template.label}
+                    value={(props.pendingForm.value as SingleImageValue | null) ?? null}
+                    rootRef={props.rootRef}
+                    pendingMode={{ onChange$: onChange$ as QRL<(value: SingleImageValue | null) => void> }}
                 />
             );
     }

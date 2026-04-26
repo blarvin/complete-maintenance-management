@@ -4,7 +4,7 @@
  * Renders inputs for name/subtitle and uses FieldList (composer-mode) for the
  * field batch. On Save:
  *   1. props.onCreate$ creates the empty node.
- *   2. Inside its `afterNodeCreated$` callback we run FieldList.commitAllComposer$
+ *   2. Inside its `afterNodeCreated$` callback we run FieldList handle commitAll$
  *      so the in-flight composer rows become real DataFields against the new
  *      node id while the FieldList is still mounted.
  */
@@ -52,7 +52,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
         const handle = fieldListHandle.value;
         const afterNodeCreated$ = handle
             ? $(async () => {
-                  await handle.commitAllComposer$(-1);
+                  await handle.commitAll$(-1);
               })
             : undefined;
 
@@ -65,7 +65,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
 
     const handleCancel$ = $(async () => {
         if (fieldListHandle.value) {
-            await fieldListHandle.value.discardComposer$();
+            await fieldListHandle.value.discardAll$();
         }
         await props.onCancel$();
     });

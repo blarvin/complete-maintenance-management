@@ -26,7 +26,8 @@
       "Bash(npx vite *)",
       "Bash(xargs grep *)",
       "Bash(kill %1)",
-      "Bash(git ls-tree *)"
+      "Bash(git ls-tree *)",
+      "Bash(xargs cat *)"
     ],
     "deny": [
       "Read(.env*)",

@@ -1,35 +1,29 @@
 /**
- * FieldList - Manages and renders the list of DataFields for a node.
+ * FieldList - Renders persisted DataFields for a node and mounts the
+ * FieldComposerSlot (and optionally the legacy "+ Add Field" surface).
  *
- * Responsibilities:
- * - Fetches persisted fields from DB (useTreeNodeFields)
- * - Renders the FieldComposer (in-situ Template picker that doubles as form)
- * - Provides "+ Add Fields" button to open the composer
- * - In construction mode, exposes a handle so the parent node Save can drive
- *   the composer's commit and Undo can re-seed it.
+ * Composer orchestration (open state, restore plumbing, handle exposure) lives
+ * inside FieldComposerSlot — FieldList just hosts and forwards reload events.
+ * Construction-mode parents pass `handleRef` through to drive commit/discard
+ * externally from the node's Save button.
  */
 
-import { component$, $, useSignal, useComputed$, useVisibleTask$, type Signal, type QRL } from '@builder.io/qwik';
+import { component$, $, useComputed$, type Signal } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
-import { FieldComposer, type FieldComposerHandle } from '../FieldComposer/FieldComposer';
+import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
-import type { PendingForm } from '../../hooks/usePendingForms';
 import { LEGACY_ADD_FIELD_ENABLED } from '../../constants';
 import styles from './FieldList.module.css';
 
-/** Handle for external access to FieldList composer methods (construction mode). */
-export type FieldListHandle = {
-    commitAllComposer$: QRL<(currentMaxCardOrderOverride?: number) => Promise<number>>;
-    discardComposer$: QRL<() => Promise<PendingForm[]>>;
-    restoreComposerWith$: QRL<(rows: PendingForm[]) => void>;
-};
+/** Re-export so existing TreeNodeConstruction imports keep working. */
+export type FieldListHandle = FieldComposerSlotHandle;
 
 export type FieldListProps = {
     nodeId: string;
-    /** Optional signal to receive the FieldList handle for external control */
+    /** Optional signal to receive the composer slot's handle. */
     handleRef?: Signal<FieldListHandle | null>;
-    /** When true, operates in construction mode (composer open by default, Save hidden in composer). */
+    /** When true, operates in construction mode (composer open by default). */
     isConstruction?: boolean;
     /** Template IDs to pre-populate as locked-in composer rows (construction defaults). */
     initialTemplateIds?: readonly string[];
@@ -46,50 +40,8 @@ export const FieldList = component$<FieldListProps>((props) => {
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
-    const composerOpen = useSignal<boolean>(!!props.isConstruction);
-    const composerHandle = useSignal<FieldComposerHandle | null>(null);
-    const restoreSeed = useSignal<PendingForm[] | undefined>(undefined);
-
-    useVisibleTask$(() => {
-        if (props.handleRef) {
-            const commitAllComposer$ = $(async (override?: number) => {
-                if (!composerHandle.value) return 0;
-                const max = override !== undefined ? override : maxPersistedCardOrder.value;
-                const count = await composerHandle.value.commitAll$(max);
-                if (count > 0) await reload$();
-                return count;
-            });
-            const discardComposer$ = $(async () => {
-                if (!composerHandle.value) return [] as PendingForm[];
-                return await composerHandle.value.discardAll$();
-            });
-            const restoreComposerWith$ = $((rows: PendingForm[]) => {
-                restoreSeed.value = rows;
-                composerOpen.value = true;
-            });
-            props.handleRef.value = { commitAllComposer$, discardComposer$, restoreComposerWith$ };
-        }
-    });
-
     const handleFieldDeleted$ = $(() => {
         reload$();
-    });
-
-    const handleAddFields$ = $(() => {
-        restoreSeed.value = undefined;
-        composerOpen.value = true;
-    });
-
-    const handleComposerDismiss$ = $(() => {
-        composerOpen.value = false;
-        restoreSeed.value = undefined;
-        // Reload in case commit added persisted fields.
-        reload$();
-    });
-
-    const handleRequestRestore$ = $((rows: PendingForm[]) => {
-        restoreSeed.value = rows;
-        composerOpen.value = true;
     });
 
     return (
@@ -106,30 +58,14 @@ export const FieldList = component$<FieldListProps>((props) => {
                 />
             ))}
 
-            {composerOpen.value && (
-                <FieldComposer
-                    key={restoreSeed.value ? 'restored' : 'fresh'}
-                    nodeId={props.nodeId}
-                    currentMaxCardOrder={maxPersistedCardOrder.value}
-                    lockedTemplateIds={props.initialTemplateIds}
-                    isConstruction={props.isConstruction}
-                    restoreSeed={restoreSeed.value}
-                    onDismiss$={handleComposerDismiss$}
-                    handleRef={composerHandle}
-                    onRequestRestore$={handleRequestRestore$}
-                />
-            )}
-
-            {!composerOpen.value && !props.isConstruction && (
-                <button
-                    type="button"
-                    class={styles.addButton}
-                    onClick$={handleAddFields$}
-                    aria-label="Add fields"
-                >
-                    + Add Fields
-                </button>
-            )}
+            <FieldComposerSlot
+                nodeId={props.nodeId}
+                currentMaxCardOrder={maxPersistedCardOrder.value}
+                initialTemplateIds={props.initialTemplateIds}
+                isConstruction={props.isConstruction}
+                onCommitted$={reload$}
+                handleRef={props.handleRef}
+            />
 
             {LEGACY_ADD_FIELD_ENABLED && !props.isConstruction && (
                 <CreateDataField

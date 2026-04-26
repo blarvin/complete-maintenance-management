@@ -1,3 +1,71 @@
+/* SingleImageField — chunky placeholder box + caption.
+   The block spans the value, metadata, and spacer columns of the FieldList
+   subgrid (cols 3 to -2) to give the image card visual weight. */
+
+.imageBlock {
+    grid-column: 3 / -2;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-self: start;
+    padding: var(--space-2) 0;
+}
+
+.imageBox {
+    width: 100%;
+    height: 120px;
+    background: var(--bg-expanded, #f3f3f3);
+    border: var(--border-width-thin) dashed var(--border-default);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.imageBox:hover {
+    background: var(--bg-hover, var(--bg-expanded));
+}
+
+.imageBox:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+.uploadLink {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-decoration: underline;
+    transition: font-weight 60ms ease;
+}
+
+.uploadLinkFlash {
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.caption {
+    font-size: var(--text-sm);
+    font-style: italic;
+    cursor: pointer;
+    min-height: 1.4em;
+}
+
+.captionPlaceholder {
+    color: var(--text-placeholder);
+    font-style: italic;
+}
+
+.captionInput {
+    font-size: var(--text-sm);
+    font-style: italic;
+    width: 100%;
+}
+
+/* Legacy class — kept so the old DataField.tsx renderer (when not yet wired to
+   pass `value`) still compiles if referenced. Safe to remove later. */
 .placeholder {
     color: var(--text-placeholder);
     font-style: italic;

@@ -23,8 +23,7 @@ import {
 } from '@builder.io/qwik';
 import { getTemplateQueries } from '../../data/queries';
 import { getSnackbarService } from '../../services/snackbar';
-import { usePendingForms, type PendingForm } from '../../hooks/usePendingForms';
-import { generateId } from '../../utils/id';
+import { usePendingForms, pendingFormFromTemplate, type PendingForm } from '../../hooks/usePendingForms';
 import type { DataFieldTemplate } from '../../data/models';
 import { ComposerRow } from './ComposerRow';
 import styles from './FieldComposer.module.css';
@@ -62,14 +61,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
             const seeded: PendingForm[] = [];
             for (const tid of props.lockedTemplateIds) {
                 const tpl = await tq.getTemplateById(tid);
-                if (!tpl) continue;
-                seeded.push({
-                    id: generateId(),
-                    templateId: tpl.id,
-                    componentType: tpl.componentType,
-                    fieldName: tpl.label,
-                    value: null,
-                });
+                if (tpl) seeded.push(pendingFormFromTemplate(tpl));
             }
             return seeded;
         }
