@@ -1,0 +1,66 @@
+/* FieldComposer - dashed-bordered zone spanning the FieldList grid. The
+   inner .rows container re-establishes its own subgrid track so ComposerRow
+   children can opt in (matching the parent FieldList's column tracks). */
+
+.composer {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2);
+}
+
+.rows {
+    display: grid;
+    grid-template-columns:
+        var(--chevron-col-width)
+        minmax(var(--label-width), auto)
+        minmax(0, 1fr)
+        auto
+        minmax(0, 1fr)
+        var(--chevron-col-width);
+    row-gap: var(--space-3);
+    column-gap: var(--space-2);
+    align-items: baseline;
+}
+
+.empty {
+    grid-column: 1 / -1;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: var(--space-2);
+}
+
+.footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    background: var(--bg-card, var(--bg-base));
+    padding: var(--space-2) 0 0 0;
+    border-top: 1px solid var(--border-subtle, transparent);
+}
+
+.saveBtn,
+.cancelBtn {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: var(--bg-base);
+    cursor: pointer;
+}
+
+.saveBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saveBtn:hover:not(:disabled),
+.cancelBtn:hover {
+    background: var(--bg-hover, var(--bg-expanded));
+}

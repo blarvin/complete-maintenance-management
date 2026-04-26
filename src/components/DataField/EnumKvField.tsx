@@ -6,7 +6,7 @@
  * Phase 1 MVP only shows the fixed options list.
  */
 
-import { component$, useSignal, useResource$, Resource, useVisibleTask$, $, type PropFunction, type Signal } from '@builder.io/qwik';
+import { component$, useSignal, useResource$, Resource, useVisibleTask$, $, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useOnDocument } from '@builder.io/qwik';
 import { getTemplateQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
@@ -24,6 +24,8 @@ export type EnumKvFieldProps = {
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
+    pendingMode?: { onChange$: QRL<(value: string | null) => void> };
 };
 
 export const EnumKvField = component$<EnumKvFieldProps>((props) => {
@@ -61,6 +63,13 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     const pick$ = $(async (option: string) => {
         const fieldId = props.id;
         const prev = currentValue.value;
+        if (props.pendingMode) {
+            await props.pendingMode.onChange$(option);
+            currentValue.value = option;
+            close$();
+            if (props.onUpdated$) await props.onUpdated$();
+            return;
+        }
         try {
             await getCommandBus().execute({
                 type: 'UPDATE_FIELD_VALUE',

@@ -23,7 +23,9 @@
       "Bash(cd:*)",
       "Bash(grep -E \"\\\\.tsx$\")",
       "Bash(npm run *)",
-      "Bash(npx vite *)"
+      "Bash(npx vite *)",
+      "Bash(xargs grep *)",
+      "Bash(kill %1)"
     ],
     "deny": [
       "Read(.env*)",

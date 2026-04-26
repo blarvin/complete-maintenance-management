@@ -7,13 +7,15 @@
  * and users can see the shape; value is always null in Phase 1.
  */
 
-import { component$ } from '@builder.io/qwik';
+import { component$, type QRL } from '@builder.io/qwik';
 import styles from './DataField.module.css';
 import imageStyles from './SingleImageField.module.css';
 
 export type SingleImageFieldProps = {
     id: string;
     fieldName: string;
+    /** Accepted for composer parity; the Phase 1 stub never produces a value. */
+    pendingMode?: { onChange$: QRL<(value: null) => void> };
 };
 
 export const SingleImageField = component$<SingleImageFieldProps>((_props) => {

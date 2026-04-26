@@ -1,47 +1,35 @@
 /**
  * FieldList - Manages and renders the list of DataFields for a node.
- * 
+ *
  * Responsibilities:
  * - Fetches persisted fields from DB (useTreeNodeFields)
- * - Manages pending field forms (usePendingForms)
- * - Renders DataField for persisted fields
- * - Renders CreateDataField for pending forms
- * - Provides "+ Add Field" button
- * - Merges persisted + pending and sorts by cardOrder
- * 
- * This component owns all field-related logic, making DataCard a pure
- * animation container. Works identically for UC and display modes.
+ * - Renders the FieldComposer (in-situ Template picker that doubles as form)
+ * - Provides "+ Add Fields" button to open the composer
+ * - In construction mode, exposes a handle so the parent node Save can drive
+ *   the composer's commit and Undo can re-seed it.
  */
 
-import { component$, $, useComputed$, useVisibleTask$, type Signal, type QRL } from '@builder.io/qwik';
+import { component$, $, useSignal, useComputed$, useVisibleTask$, type Signal, type QRL } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
-import { CreateDataField } from '../CreateDataField/CreateDataField';
+import { FieldComposer, type FieldComposerHandle } from '../FieldComposer/FieldComposer';
 import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
-import { usePendingForms, type PendingForm } from '../../hooks/usePendingForms';
-import type { DataField as DataFieldRecord } from '../../data/models';
+import type { PendingForm } from '../../hooks/usePendingForms';
 import styles from './FieldList.module.css';
 
-/** Maximum pending forms allowed per FieldList */
-const MAX_PENDING_FORMS = 30;
-
-/** Unified field item for rendering */
-type FieldItem = 
-    | { type: 'persisted'; field: DataFieldRecord }
-    | { type: 'pending'; form: PendingForm };
-
-/** Handle for external access to FieldList methods */
+/** Handle for external access to FieldList composer methods (construction mode). */
 export type FieldListHandle = {
-    saveAllPending$: QRL<() => Promise<number>>;
-    getSavedFields$: QRL<() => PendingForm[]>;
+    commitAllComposer$: QRL<(currentMaxCardOrderOverride?: number) => Promise<number>>;
+    discardComposer$: QRL<() => Promise<PendingForm[]>>;
+    restoreComposerWith$: QRL<(rows: PendingForm[]) => void>;
 };
 
 export type FieldListProps = {
     nodeId: string;
     /** Optional signal to receive the FieldList handle for external control */
     handleRef?: Signal<FieldListHandle | null>;
-    /** When true, operates in construction mode (defer IDB writes) */
+    /** When true, operates in construction mode (composer open by default, Save hidden in composer). */
     isConstruction?: boolean;
-    /** Template IDs to pre-populate as locked-in pending forms (construction defaults). */
+    /** Template IDs to pre-populate as locked-in composer rows (construction defaults). */
     initialTemplateIds?: readonly string[];
 };
 
@@ -56,103 +44,90 @@ export const FieldList = component$<FieldListProps>((props) => {
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
-    const { forms: pendingForms, add$, save$, cancel$, change$, saveAllPending$ } = usePendingForms({
-        nodeId: props.nodeId,
-        mode: props.isConstruction ? 'construction' : 'display',
-        onSaved$: reload$,
-        maxPersistedCardOrder$: maxPersistedCardOrder,
-        initialTemplateIds: props.initialTemplateIds,
-    });
+    const composerOpen = useSignal<boolean>(!!props.isConstruction);
+    const composerHandle = useSignal<FieldComposerHandle | null>(null);
+    const restoreSeed = useSignal<PendingForm[] | undefined>(undefined);
 
     useVisibleTask$(() => {
         if (props.handleRef) {
-            const getSavedFields$ = $(() => {
-                return pendingForms.value.filter(f => f.saved === true && f.templateId);
+            const commitAllComposer$ = $(async (override?: number) => {
+                if (!composerHandle.value) return 0;
+                const max = override !== undefined ? override : maxPersistedCardOrder.value;
+                const count = await composerHandle.value.commitAll$(max);
+                if (count > 0) await reload$();
+                return count;
             });
-            props.handleRef.value = { saveAllPending$, getSavedFields$ };
+            const discardComposer$ = $(async () => {
+                if (!composerHandle.value) return [] as PendingForm[];
+                return await composerHandle.value.discardAll$();
+            });
+            const restoreComposerWith$ = $((rows: PendingForm[]) => {
+                restoreSeed.value = rows;
+                composerOpen.value = true;
+            });
+            props.handleRef.value = { commitAllComposer$, discardComposer$, restoreComposerWith$ };
         }
-    });
-
-    // Build unified list sorted by cardOrder
-    const unifiedList = useComputed$<FieldItem[]>(() => {
-        const items: FieldItem[] = [];
-        
-        // Add persisted fields
-        if (fields.value) {
-            for (const field of fields.value) {
-                items.push({ type: 'persisted', field });
-            }
-        }
-        
-        // Add pending forms
-        for (const form of pendingForms.value) {
-            items.push({ type: 'pending', form });
-        }
-        
-        // Sort by cardOrder
-        items.sort((a, b) => {
-            const orderA = a.type === 'persisted' ? a.field.cardOrder : a.form.cardOrder;
-            const orderB = b.type === 'persisted' ? b.field.cardOrder : b.form.cardOrder;
-            return orderA - orderB;
-        });
-        
-        return items;
     });
 
     const handleFieldDeleted$ = $(() => {
         reload$();
     });
 
-    const handleAddField$ = $(() => {
-        if (pendingForms.value.length < MAX_PENDING_FORMS) {
-            add$();
-        }
+    const handleAddFields$ = $(() => {
+        restoreSeed.value = undefined;
+        composerOpen.value = true;
     });
 
-    const canAddMore = pendingForms.value.length < MAX_PENDING_FORMS;
+    const handleComposerDismiss$ = $(() => {
+        composerOpen.value = false;
+        restoreSeed.value = undefined;
+        // Reload in case commit added persisted fields.
+        reload$();
+    });
+
+    const handleRequestRestore$ = $((rows: PendingForm[]) => {
+        restoreSeed.value = rows;
+        composerOpen.value = true;
+    });
 
     return (
         <div class={styles.fieldList}>
-            {/* Unified list sorted by cardOrder */}
-            {unifiedList.value.map((item) => {
-                if (item.type === 'persisted') {
-                    return (
-                        <DataField
-                            key={item.field.id}
-                            id={item.field.id}
-                            fieldName={item.field.fieldName}
-                            templateId={item.field.templateId}
-                            componentType={item.field.componentType}
-                            value={item.field.value}
-                            onDeleted$={handleFieldDeleted$}
-                        />
-                    );
-                } else {
-                    return (
-                        <CreateDataField
-                            key={item.form.id}
-                            id={item.form.id}
-                            initialTemplateId={item.form.templateId}
-                            initialTemplateLabel={item.form.templateLabel}
-                            locked={item.form.saved === true}
-                            onSave$={save$}
-                            onCancel$={cancel$}
-                            onChange$={change$}
-                        />
-                    );
-                }
-            })}
-            
-            {/* Add Field button */}
-            <button
-                type="button"
-                class={styles.addButton}
-                onClick$={handleAddField$}
-                disabled={!canAddMore}
-                aria-label={canAddMore ? "Add new field" : "Maximum fields reached"}
-            >
-                + Add Field
-            </button>
+            {fields.value && fields.value.map((field) => (
+                <DataField
+                    key={field.id}
+                    id={field.id}
+                    fieldName={field.fieldName}
+                    templateId={field.templateId}
+                    componentType={field.componentType}
+                    value={field.value}
+                    onDeleted$={handleFieldDeleted$}
+                />
+            ))}
+
+            {composerOpen.value && (
+                <FieldComposer
+                    key={restoreSeed.value ? 'restored' : 'fresh'}
+                    nodeId={props.nodeId}
+                    currentMaxCardOrder={maxPersistedCardOrder.value}
+                    lockedTemplateIds={props.initialTemplateIds}
+                    isConstruction={props.isConstruction}
+                    restoreSeed={restoreSeed.value}
+                    onDismiss$={handleComposerDismiss$}
+                    handleRef={composerHandle}
+                    onRequestRestore$={handleRequestRestore$}
+                />
+            )}
+
+            {!composerOpen.value && !props.isConstruction && (
+                <button
+                    type="button"
+                    class={styles.addButton}
+                    onClick$={handleAddFields$}
+                    aria-label="Add fields"
+                >
+                    + Add Fields
+                </button>
+            )}
         </div>
     );
 });

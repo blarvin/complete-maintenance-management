@@ -6,7 +6,7 @@
  * number parse/format. Validation rejects NaN and out-of-absolute-range values.
  */
 
-import { component$, useResource$, Resource, type PropFunction, type Signal } from '@builder.io/qwik';
+import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { getTemplateQueries } from '../../data/queries';
 import type { MeasurementKvConfig } from '../../data/models';
@@ -21,6 +21,8 @@ export type MeasurementKvFieldProps = {
     value: number | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
+    pendingMode?: { onChange$: QRL<(value: number | null) => void> };
 };
 
 function makeFormat(decimals: number, units: string) {
@@ -110,6 +112,7 @@ const MeasurementKvBody = component$<MeasurementKvFieldProps & { config: Measure
         validate: makeValidate(config),
         rootRef: props.rootRef,
         onUpdated$: props.onUpdated$,
+        pendingMode: props.pendingMode,
     });
 
     const labelId = `field-label-${props.id}`;

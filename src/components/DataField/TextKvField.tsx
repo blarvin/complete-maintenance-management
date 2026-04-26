@@ -5,7 +5,7 @@
  * the single-line input regardless of config.multiline.
  */
 
-import { component$, type PropFunction, type Signal } from '@builder.io/qwik';
+import { component$, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import styles from './DataField.module.css';
 
@@ -15,6 +15,8 @@ export type TextKvFieldProps = {
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
+    pendingMode?: { onChange$: QRL<(value: string | null) => void> };
 };
 
 const formatText = (v: string | null): string => v ?? '';
@@ -43,6 +45,7 @@ export const TextKvField = component$<TextKvFieldProps>((props) => {
         parse: parseText,
         rootRef: props.rootRef,
         onUpdated$: props.onUpdated$,
+        pendingMode: props.pendingMode,
     });
 
     const labelId = `field-label-${props.id}`;

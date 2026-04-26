@@ -1,0 +1,36 @@
+/* ComposerRow - participates in the FieldList subgrid so labels align with
+   persisted DataField rows above. Checkbox lives in the chevron column,
+   label in the label column, value (when checked) in the value column. */
+
+.row {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;
+    font-size: var(--text-sm);
+    transition: max-height 200ms ease, opacity 200ms ease;
+    overflow-anchor: auto;
+}
+
+.checkbox {
+    justify-self: center;
+    cursor: pointer;
+    margin: 0;
+}
+
+.checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.label {
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .row {
+        transition: none;
+    }
+}
