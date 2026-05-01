@@ -8,7 +8,7 @@
  * Uses discriminated union on `nodeState` for type safety.
  */
 
-import type { PropFunction } from '@builder.io/qwik';
+import type { PropFunction, QRL } from '@builder.io/qwik';
 
 /**
  * Display states for TreeNode (read-only modes)
@@ -33,7 +33,12 @@ export type ConstructionField = {
 export type CreateNodePayload = {
     nodeName: string;
     nodeSubtitle: string;
-    fields: ConstructionField[];
+    /**
+     * Optional callback fired after the node is persisted but before the
+     * construction UI unmounts. Used by TreeNodeConstruction to drive
+     * FieldComposer's commitAll$ at the right moment.
+     */
+    afterNodeCreated$?: QRL<(nodeId: string) => void | Promise<void>>;
 };
 
 /**

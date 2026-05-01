@@ -1,0 +1,25 @@
+/* FieldComposerSlot — only owns the "+ Add Fields" trigger button styling.
+   The composer itself owns its own layout. */
+
+.addButton {
+    grid-column: 1 / -1;
+    justify-self: start;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.addButton:hover:not(:disabled) {
+    text-decoration: underline;
+}
+
+.addButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -8,6 +8,14 @@
 export const USER_ID = "localUser" as const;
 
 /**
+ * Feature flag (no real FF system): when true, FieldList shows the legacy
+ * single-pick "+ Add Field" surface BELOW the new FieldComposer. Toggle to
+ * compare the two add-field UXs side-by-side. Set to false to ship with only
+ * the composer.
+ */
+export const LEGACY_ADD_FIELD_ENABLED = true;
+
+/**
  * Firestore collection names.
  */
 export const COLLECTIONS = {

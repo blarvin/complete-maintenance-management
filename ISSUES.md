@@ -50,4 +50,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Nomenclature: DataField vs DataFieldValue** — Inconsistent across code and docs. Pick one, rename, done.
 - **Remove unused `nodeId` prop from DataCard** — Trivial cleanup.
 - **Double underline while editing** — DataField value has a visible affordance underline plus the browser's input underline while editing. Pick one.
+- **`pendingMode` boilerplate across DataField Components** — TextKv/EnumKv/MeasurementKv/SingleImage each repeat near-identical `pendingMode` wiring into `useFieldEdit` (and Enum has its own click-away path). Don't abstract until a 5th component lands and the pattern is clear — premature now would obscure more than it shares.
+- **`useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
 

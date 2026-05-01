@@ -37,6 +37,12 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
     rootRef: Signal<HTMLElement | undefined>;
     /** Called after save or revert completes. */
     onUpdated$?: QRL<() => void>;
+    /**
+     * When set, save$ does NOT dispatch UPDATE_FIELD_VALUE or show a Snackbar.
+     * Instead it forwards the parsed value to onChange$. Used by FieldComposer
+     * for in-flight (un-persisted) Template previews.
+     */
+    pendingMode?: { onChange$: QRL<(value: T | null) => void> };
 };
 
 export type UseFieldEditResult<T extends DataFieldValue> = {
@@ -93,17 +99,6 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         currentValue.value = options.initialValue;
     });
 
-    // Cancel edit on outside click
-    useOnDocument('pointerdown', $((ev: Event) => {
-        if (appState.editingFieldId !== options.fieldId) return;
-        const container = rootRef.value;
-        const target = ev.target as Node | null;
-        if (container && target && !container.contains(target)) {
-            stopFieldEdit$();
-            editValue.value = options.format(currentValue.value);
-        }
-    }));
-
     // === Edit Flow Handlers ===
 
     const beginEdit$ = $(() => {
@@ -126,6 +121,15 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
                 variant: 'error',
                 message: err instanceof Error ? err.message : 'Invalid value',
             });
+            return;
+        }
+        if (options.pendingMode) {
+            await options.pendingMode.onChange$(newVal);
+            currentValue.value = newVal;
+            stopFieldEdit$();
+            if (options.onUpdated$) {
+                await options.onUpdated$();
+            }
             return;
         }
         try {
@@ -158,17 +162,38 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         editValue.value = options.format(currentValue.value);
     });
 
+    // Cancel edit on outside click — but in pendingMode, auto-commit to the
+    // pending row so typed values aren't lost when the user clicks Save in the
+    // composer footer (or moves to another row).
+    useOnDocument('pointerdown', $(async (ev: Event) => {
+        if (appState.editingFieldId !== options.fieldId) return;
+        const container = rootRef.value;
+        const target = ev.target as Node | null;
+        if (container && target && !container.contains(target)) {
+            if (options.pendingMode) {
+                await save$();
+            } else {
+                stopFieldEdit$();
+                editValue.value = options.format(currentValue.value);
+            }
+        }
+    }));
+
     // === Input Event Handlers ===
 
     const inputChange$ = $((value: string) => {
         editValue.value = value;
     });
 
-    const inputBlur$ = $(() => {
+    const inputBlur$ = $(async () => {
         if (Date.now() < suppressBlurUntil.value) return;
         if (appState.editingFieldId === options.fieldId) {
-            stopFieldEdit$();
-            editValue.value = options.format(currentValue.value);
+            if (options.pendingMode) {
+                await save$();
+            } else {
+                stopFieldEdit$();
+                editValue.value = options.format(currentValue.value);
+            }
         }
     });
 

@@ -1,45 +1,56 @@
 /**
- * usePendingForms - Hook for managing pending DataField forms with localStorage persistence.
+ * usePendingForms — Hook backing the FieldComposer batch.
  *
- * A pending form represents a user-chosen Template that hasn't yet been turned into a
- * persisted DataField. In display mode, picking a template flushes through
- * ADD_FIELD_FROM_TEMPLATE immediately. In construction mode (new node), the pick is
- * held in localStorage until the user clicks Create, which creates the node + fields
- * atomically via CREATE_NODE_WITH_FIELDS.
- *
- * Phase 1 ships with an empty templates table (no seeding), so pending forms will
- * typically be empty until the follow-up SPEC templates plan lands.
+ * A pending form is a Template the user has checked in the composer plus an
+ * in-flight (not yet persisted) value. The batch lives in localStorage keyed by
+ * nodeId so picking a few Templates, navigating away, and coming back keeps the
+ * draft. commitAll$ turns the batch into real DataFields via the command bus.
  */
 
-import { useSignal, useVisibleTask$, useTask$, $, type QRL, type Signal } from '@builder.io/qwik';
+import { useSignal, useVisibleTask$, useTask$, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
-import { getTemplateQueries } from '../data/queries';
+import type { DataFieldTemplate, DataFieldValue, ComponentType } from '../data/models';
 import { generateId } from '../utils/id';
 
-/** Pending form state for localStorage */
+/** A pending (un-persisted) Template instance with its in-progress value. */
 export type PendingForm = {
     id: string;
     templateId: string;
-    /** Snapshot of template label at selection time, for display */
-    templateLabel: string;
-    cardOrder: number;
-    saved?: boolean; // Marks forms "locked in" during construction mode
+    componentType: ComponentType;
+    fieldName: string;
+    value: DataFieldValue | null;
 };
 
-/** LS key for pending forms */
+/** Build a fresh PendingForm from a Template. Used by composer toggle and seed loaders. */
+export const pendingFormFromTemplate = (template: DataFieldTemplate): PendingForm => ({
+    id: generateId(),
+    templateId: template.id,
+    componentType: template.componentType,
+    fieldName: template.label,
+    value: null,
+});
+
 const getPendingFormsKey = (nodeId: string) => `pendingFields:${nodeId}`;
 
-/** Load pending forms from localStorage */
 const loadPendingForms = (nodeId: string): PendingForm[] => {
     try {
         const stored = localStorage.getItem(getPendingFormsKey(nodeId));
-        return stored ? JSON.parse(stored) : [];
+        if (!stored) return [];
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(
+            (f): f is PendingForm =>
+                f && typeof f === 'object' &&
+                typeof f.id === 'string' &&
+                typeof f.templateId === 'string' &&
+                typeof f.componentType === 'string' &&
+                typeof f.fieldName === 'string'
+        );
     } catch {
         return [];
     }
 };
 
-/** Save pending forms to localStorage */
 const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
     try {
         if (forms.length === 0) {
@@ -52,188 +63,106 @@ const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
     }
 };
 
-/**
- * Extract saved pending forms from localStorage for batch creation.
- * Used by useNodeCreation.complete$() to get all forms marked as saved during construction.
- */
-export function getSavedFieldsFromLocalStorage(nodeId: string): PendingForm[] {
-    const forms = loadPendingForms(nodeId);
-    return forms
-        .filter(f => f.saved === true && f.templateId)
-        .sort((a, b) => a.cardOrder - b.cardOrder);
-}
-
 export type UsePendingFormsOptions = {
     nodeId: string;
-    /** Mode: 'construction' = defer IDB writes, 'display' = write immediately */
-    mode: 'construction' | 'display';
-    /** Called after a form is successfully saved to DB. Typically reloads the field list. */
-    onSaved$: QRL<() => void | Promise<void>>;
-    /** Signal containing current max cardOrder from persisted fields (for calculating next cardOrder) */
-    maxPersistedCardOrder$: Signal<number>;
-    /** Template IDs to pre-populate as locked-in pending forms. Used for construction defaults. */
-    initialTemplateIds?: readonly string[];
+    /**
+     * Async loader for the initial batch (e.g. construction defaults, Undo restore).
+     * Called from the hook's mount task only when localStorage has no draft for nodeId,
+     * so a stored draft always wins over fresh defaults.
+     */
+    initialSeedLoader$?: QRL<() => Promise<PendingForm[]>>;
 };
 
-export function usePendingForms(options: UsePendingFormsOptions) {
+export type UsePendingFormsResult = {
+    forms: Signal<PendingForm[]>;
+    togglePending$: ReturnType<typeof $<(template: DataFieldTemplate) => void>>;
+    setPendingValue$: ReturnType<typeof $<(formId: string, value: DataFieldValue | null) => void>>;
+    commitAll$: ReturnType<typeof $<(currentMaxCardOrder: number) => Promise<number>>>;
+    discardAll$: ReturnType<typeof $<() => PendingForm[]>>;
+    restoreAll$: ReturnType<typeof $<(rows: PendingForm[]) => void>>;
+};
+
+export function usePendingForms(options: UsePendingFormsOptions): UsePendingFormsResult {
     const forms = useSignal<PendingForm[]>([]);
     const initialized = useSignal(false);
 
-    // Load pending forms from LS on mount, or seed from initialTemplateIds.
-    useVisibleTask$(async ({ track }) => {
-        const maxPersisted = track(() => options.maxPersistedCardOrder$.value);
-
+    useVisibleTask$(async () => {
         if (initialized.value) return;
-
         const stored = loadPendingForms(options.nodeId);
         if (stored.length > 0) {
             forms.value = stored;
-            initialized.value = true;
-            return;
-        }
-
-        // Only seed defaults when nothing persisted and nothing pending in LS.
-        if (options.initialTemplateIds && options.initialTemplateIds.length > 0 && maxPersisted < 0) {
-            const templateQueries = getTemplateQueries();
-            const seeded: PendingForm[] = [];
-            for (let i = 0; i < options.initialTemplateIds.length; i++) {
-                const tplId = options.initialTemplateIds[i];
-                const tpl = await templateQueries.getTemplateById(tplId);
-                if (!tpl) continue;
-                seeded.push({
-                    id: generateId(),
-                    templateId: tpl.id,
-                    templateLabel: tpl.label,
-                    cardOrder: i,
-                    saved: true,
-                });
-            }
-            forms.value = seeded;
+        } else if (options.initialSeedLoader$) {
+            const seeded = await options.initialSeedLoader$();
+            if (seeded.length > 0) forms.value = seeded;
         }
         initialized.value = true;
     });
 
-    // Save pending forms to LS when they change
     useTask$(({ track }) => {
         const currentForms = track(() => forms.value);
-        if (typeof localStorage !== 'undefined') {
+        if (typeof localStorage !== 'undefined' && initialized.value) {
             savePendingForms(options.nodeId, currentForms);
         }
     });
 
-    /**
-     * Add a new empty pending form slot (user hasn't picked a template yet).
-     * Returns the new form's ID so the UI can focus its picker.
-     */
-    const add$ = $(async () => {
-        const maxPersisted = options.maxPersistedCardOrder$.value;
-        const maxPending = forms.value.length > 0
-            ? Math.max(...forms.value.map(f => f.cardOrder))
-            : -1;
-        const nextOrder = Math.max(maxPersisted, maxPending) + 1;
-
-        const newForm: PendingForm = {
-            id: generateId(),
-            templateId: '',
-            templateLabel: '',
-            cardOrder: nextOrder,
-        };
-        forms.value = [...forms.value, newForm];
-    });
-
-    /**
-     * Save a pending form — user picked a template.
-     * In construction mode, locks it in localStorage. In display mode, writes to IDB immediately.
-     */
-    const save$ = $(async (formId: string, templateId: string, templateLabel: string) => {
-        if (!templateId) {
-            // No template picked - cancel the form
-            const base = options.maxPersistedCardOrder$.value + 1;
-            forms.value = forms.value
-                .filter(f => f.id !== formId)
-                .map((f, i) => ({ ...f, cardOrder: base + i }));
-            return;
+    const togglePending$ = $((template: DataFieldTemplate) => {
+        const existing = forms.value.find(f => f.templateId === template.id);
+        if (existing) {
+            forms.value = forms.value.filter(f => f.templateId !== template.id);
+        } else {
+            forms.value = [...forms.value, pendingFormFromTemplate(template)];
         }
-
-        const form = forms.value.find(f => f.id === formId);
-        const cardOrder = form?.cardOrder;
-
-        if (options.mode === 'construction') {
-            forms.value = forms.value.map(f =>
-                f.id === formId
-                    ? { ...f, templateId, templateLabel, saved: true }
-                    : f
-            );
-            return;
-        }
-
-        await getCommandBus().execute({
-            type: 'ADD_FIELD_FROM_TEMPLATE',
-            payload: { nodeId: options.nodeId, templateId, cardOrder },
-        });
-        forms.value = forms.value.filter(f => f.id !== formId);
-        await options.onSaved$();
     });
 
-    /**
-     * Cancel a pending form without saving.
-     */
-    const cancel$ = $((formId: string) => {
-        const base = options.maxPersistedCardOrder$.value + 1;
-        forms.value = forms.value
-            .filter(f => f.id !== formId)
-            .map((f, i) => ({ ...f, cardOrder: base + i }));
+    const setPendingValue$ = $((formId: string, value: DataFieldValue | null) => {
+        forms.value = forms.value.map(f => f.id === formId ? { ...f, value } : f);
     });
 
-    /**
-     * Update the template selection in a pending form (for LS tracking).
-     */
-    const change$ = $((formId: string, templateId: string, templateLabel: string) => {
-        forms.value = forms.value.map(f =>
-            f.id === formId ? { ...f, templateId, templateLabel } : f
+    const commitAll$ = $(async (currentMaxCardOrder: number): Promise<number> => {
+        // Drop malformed entries (e.g. legacy localStorage drafts from the old
+        // pre-composer shape that lack templateId/fieldName).
+        const valid = forms.value.filter(f => f && f.templateId && typeof f.fieldName === 'string');
+        const batch = [...valid].sort((a, b) =>
+            (a.fieldName ?? '').localeCompare(b.fieldName ?? '')
         );
-    });
-
-    /**
-     * Save all pending forms that have a template selected.
-     * In construction mode: marks as saved. In display mode: writes to IDB.
-     * Returns the number of forms saved.
-     */
-    const saveAllPending$ = $(async (): Promise<number> => {
-        const formsToSave = forms.value.filter(f => f.templateId);
-        if (formsToSave.length === 0) return 0;
-
-        if (options.mode === 'construction') {
-            forms.value = forms.value.map(f =>
-                f.templateId
-                    ? { ...f, saved: true }
-                    : f
-            );
-            return formsToSave.length;
-        }
+        if (batch.length === 0) return 0;
 
         const commandBus = getCommandBus();
-        await Promise.all(
-            formsToSave.map(f =>
-                commandBus.execute({
-                    type: 'ADD_FIELD_FROM_TEMPLATE',
-                    payload: { nodeId: options.nodeId, templateId: f.templateId, cardOrder: f.cardOrder },
-                })
-            )
-        );
+        for (let i = 0; i < batch.length; i++) {
+            const row = batch[i];
+            const cardOrder = currentMaxCardOrder + i + 1;
+            const created = await commandBus.execute({
+                type: 'ADD_FIELD_FROM_TEMPLATE',
+                payload: { nodeId: options.nodeId, templateId: row.templateId, cardOrder },
+            });
+            if (row.value !== null && row.value !== undefined && created) {
+                await commandBus.execute({
+                    type: 'UPDATE_FIELD_VALUE',
+                    payload: { fieldId: created.id, newValue: row.value },
+                });
+            }
+        }
 
         forms.value = [];
-        await options.onSaved$();
+        return batch.length;
+    });
 
-        return formsToSave.length;
+    const discardAll$ = $((): PendingForm[] => {
+        const cleared = forms.value;
+        forms.value = [];
+        return cleared;
+    });
+
+    const restoreAll$ = $((rows: PendingForm[]) => {
+        forms.value = rows;
     });
 
     return {
         forms,
-        add$,
-        save$,
-        cancel$,
-        change$,
-        saveAllPending$,
+        togglePending$,
+        setPendingValue$,
+        commitAll$,
+        discardAll$,
+        restoreAll$,
     };
 }

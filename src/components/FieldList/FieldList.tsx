@@ -1,47 +1,31 @@
 /**
- * FieldList - Manages and renders the list of DataFields for a node.
- * 
- * Responsibilities:
- * - Fetches persisted fields from DB (useTreeNodeFields)
- * - Manages pending field forms (usePendingForms)
- * - Renders DataField for persisted fields
- * - Renders CreateDataField for pending forms
- * - Provides "+ Add Field" button
- * - Merges persisted + pending and sorts by cardOrder
- * 
- * This component owns all field-related logic, making DataCard a pure
- * animation container. Works identically for UC and display modes.
+ * FieldList - Renders persisted DataFields for a node and mounts the
+ * FieldComposerSlot (and optionally the legacy "+ Add Field" surface).
+ *
+ * Composer orchestration (open state, restore plumbing, handle exposure) lives
+ * inside FieldComposerSlot — FieldList just hosts and forwards reload events.
+ * Construction-mode parents pass `handleRef` through to drive commit/discard
+ * externally from the node's Save button.
  */
 
-import { component$, $, useComputed$, useVisibleTask$, type Signal, type QRL } from '@builder.io/qwik';
+import { component$, $, useComputed$, type Signal } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
+import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
-import { usePendingForms, type PendingForm } from '../../hooks/usePendingForms';
-import type { DataField as DataFieldRecord } from '../../data/models';
+import { LEGACY_ADD_FIELD_ENABLED } from '../../constants';
 import styles from './FieldList.module.css';
 
-/** Maximum pending forms allowed per FieldList */
-const MAX_PENDING_FORMS = 30;
-
-/** Unified field item for rendering */
-type FieldItem = 
-    | { type: 'persisted'; field: DataFieldRecord }
-    | { type: 'pending'; form: PendingForm };
-
-/** Handle for external access to FieldList methods */
-export type FieldListHandle = {
-    saveAllPending$: QRL<() => Promise<number>>;
-    getSavedFields$: QRL<() => PendingForm[]>;
-};
+/** Re-export so existing TreeNodeConstruction imports keep working. */
+export type FieldListHandle = FieldComposerSlotHandle;
 
 export type FieldListProps = {
     nodeId: string;
-    /** Optional signal to receive the FieldList handle for external control */
+    /** Optional signal to receive the composer slot's handle. */
     handleRef?: Signal<FieldListHandle | null>;
-    /** When true, operates in construction mode (defer IDB writes) */
+    /** When true, operates in construction mode (composer open by default). */
     isConstruction?: boolean;
-    /** Template IDs to pre-populate as locked-in pending forms (construction defaults). */
+    /** Template IDs to pre-populate as locked-in composer rows (construction defaults). */
     initialTemplateIds?: readonly string[];
 };
 
@@ -56,103 +40,40 @@ export const FieldList = component$<FieldListProps>((props) => {
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
-    const { forms: pendingForms, add$, save$, cancel$, change$, saveAllPending$ } = usePendingForms({
-        nodeId: props.nodeId,
-        mode: props.isConstruction ? 'construction' : 'display',
-        onSaved$: reload$,
-        maxPersistedCardOrder$: maxPersistedCardOrder,
-        initialTemplateIds: props.initialTemplateIds,
-    });
-
-    useVisibleTask$(() => {
-        if (props.handleRef) {
-            const getSavedFields$ = $(() => {
-                return pendingForms.value.filter(f => f.saved === true && f.templateId);
-            });
-            props.handleRef.value = { saveAllPending$, getSavedFields$ };
-        }
-    });
-
-    // Build unified list sorted by cardOrder
-    const unifiedList = useComputed$<FieldItem[]>(() => {
-        const items: FieldItem[] = [];
-        
-        // Add persisted fields
-        if (fields.value) {
-            for (const field of fields.value) {
-                items.push({ type: 'persisted', field });
-            }
-        }
-        
-        // Add pending forms
-        for (const form of pendingForms.value) {
-            items.push({ type: 'pending', form });
-        }
-        
-        // Sort by cardOrder
-        items.sort((a, b) => {
-            const orderA = a.type === 'persisted' ? a.field.cardOrder : a.form.cardOrder;
-            const orderB = b.type === 'persisted' ? b.field.cardOrder : b.form.cardOrder;
-            return orderA - orderB;
-        });
-        
-        return items;
-    });
-
     const handleFieldDeleted$ = $(() => {
         reload$();
     });
 
-    const handleAddField$ = $(() => {
-        if (pendingForms.value.length < MAX_PENDING_FORMS) {
-            add$();
-        }
-    });
-
-    const canAddMore = pendingForms.value.length < MAX_PENDING_FORMS;
-
     return (
         <div class={styles.fieldList}>
-            {/* Unified list sorted by cardOrder */}
-            {unifiedList.value.map((item) => {
-                if (item.type === 'persisted') {
-                    return (
-                        <DataField
-                            key={item.field.id}
-                            id={item.field.id}
-                            fieldName={item.field.fieldName}
-                            templateId={item.field.templateId}
-                            componentType={item.field.componentType}
-                            value={item.field.value}
-                            onDeleted$={handleFieldDeleted$}
-                        />
-                    );
-                } else {
-                    return (
-                        <CreateDataField
-                            key={item.form.id}
-                            id={item.form.id}
-                            initialTemplateId={item.form.templateId}
-                            initialTemplateLabel={item.form.templateLabel}
-                            locked={item.form.saved === true}
-                            onSave$={save$}
-                            onCancel$={cancel$}
-                            onChange$={change$}
-                        />
-                    );
-                }
-            })}
-            
-            {/* Add Field button */}
-            <button
-                type="button"
-                class={styles.addButton}
-                onClick$={handleAddField$}
-                disabled={!canAddMore}
-                aria-label={canAddMore ? "Add new field" : "Maximum fields reached"}
-            >
-                + Add Field
-            </button>
+            {fields.value && fields.value.map((field) => (
+                <DataField
+                    key={field.id}
+                    id={field.id}
+                    fieldName={field.fieldName}
+                    templateId={field.templateId}
+                    componentType={field.componentType}
+                    value={field.value}
+                    onDeleted$={handleFieldDeleted$}
+                />
+            ))}
+
+            <FieldComposerSlot
+                nodeId={props.nodeId}
+                currentMaxCardOrder={maxPersistedCardOrder.value}
+                initialTemplateIds={props.initialTemplateIds}
+                isConstruction={props.isConstruction}
+                onCommitted$={reload$}
+                handleRef={props.handleRef}
+            />
+
+            {LEGACY_ADD_FIELD_ENABLED && !props.isConstruction && (
+                <CreateDataField
+                    nodeId={props.nodeId}
+                    currentMaxCardOrder={maxPersistedCardOrder.value}
+                    onCreated$={reload$}
+                />
+            )}
         </div>
     );
 });

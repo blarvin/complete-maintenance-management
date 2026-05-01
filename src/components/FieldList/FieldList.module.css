@@ -26,26 +26,4 @@
     grid-column: 1 / -1;
 }
 
-.addButton {
-    grid-column: 1 / -1;
-    justify-self: start;
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--text-secondary);
-    /* Reset button defaults */
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    text-align: left;
-    font-family: inherit;
-}
-
-.addButton:hover:not(:disabled) {
-    text-decoration: underline;
-}
-
-.addButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+/* "+ Add Fields" trigger now lives in FieldComposerSlot.module.css. */

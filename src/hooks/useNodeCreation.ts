@@ -14,18 +14,20 @@ import { $, type QRL } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
-import { getSavedFieldsFromLocalStorage } from './usePendingForms';
 
 /**
  * Payload for completing node creation.
  * Matches what TreeNodeConstruction emits via onCreate$.
  *
- * Fields are passed as Template references; the handler instantiates each one.
+ * Fields are now created by FieldComposer/commitAllComposer$ — the optional
+ * afterNodeCreated$ callback runs after the empty node exists so callers can
+ * commit any in-flight composer batch before the construction UI unmounts.
  */
 export type CreateNodePayload = {
     nodeName: string;
     nodeSubtitle: string;
-    fields: { templateId: string }[];
+    /** Optional async hook fired after the node is persisted, before FSM transitions out. */
+    afterNodeCreated$?: QRL<(nodeId: string) => void | Promise<void>>;
 };
 
 export type UseNodeCreationOptions = {
@@ -77,8 +79,8 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
     const cancel$ = $(async () => {
         const ucData = appState.underConstruction;
         if (ucData) {
-            // Clear localStorage (no IDB cleanup needed)
-            localStorage.removeItem(`pendingFields:${ucData.id}`);
+            // Clear any pending composer draft for this nodeId.
+            try { localStorage.removeItem(`pendingFields:${ucData.id}`); } catch { /* ignore */ }
         }
         await cancelConstruction$();
     });
@@ -88,20 +90,10 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
      * All fields marked as "saved" during construction are created together with the node.
      */
     const complete$ = $(async (payload: CreateNodePayload) => {
-        console.log('[complete$] Received payload:', JSON.stringify(payload));
-
         const ucData = appState.underConstruction;
-        console.log('[complete$] ucData:', ucData);
-        if (!ucData) {
-            console.log('[complete$] No ucData, returning early!');
-            return;
-        }
+        if (!ucData) return;
 
-        // Get all saved fields from localStorage
-        const savedFields = getSavedFieldsFromLocalStorage(ucData.id);
-        console.log('[complete$] Saved fields from localStorage:', savedFields.length);
-
-        // Create node + all fields atomically
+        // Create empty node first; FieldComposer (via afterNodeCreated$) commits its batch.
         await getCommandBus().execute({
             type: 'CREATE_NODE_WITH_FIELDS',
             payload: {
@@ -109,19 +101,18 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
                 parentId: ucData.parentId,
                 nodeName: payload.nodeName || 'Untitled',
                 nodeSubtitle: payload.nodeSubtitle || '',
-                defaults: savedFields.map(f => ({ templateId: f.templateId })),
+                defaults: [],
             },
         });
 
-        console.log('[complete$] Node and fields created atomically');
+        if (payload.afterNodeCreated$) {
+            await payload.afterNodeCreated$(ucData.id);
+        }
 
-        // Clear localStorage
-        localStorage.removeItem(`pendingFields:${ucData.id}`);
+        try { localStorage.removeItem(`pendingFields:${ucData.id}`); } catch { /* ignore */ }
 
         await completeConstruction$();
-        console.log('[complete$] completeConstruction$ done, calling onCreated$');
         await options.onCreated$();
-        console.log('[complete$] onCreated$ done, complete$ finished');
     });
 
     return {
