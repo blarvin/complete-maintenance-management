@@ -21,6 +21,22 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
 - **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
 
+### Style & Layout (visual audit 2026-05-01)
+
+- **Parent header narrower than its children** — In Branch view, parent TreeNode row's left edge sits ~38px to the left of child rows; left edges should align so the hierarchy reads as one column.
+- **DataCard body left-edge misaligned with parent header** — Card panel + Add-Sub-Asset start ~38px right of the parent header, again breaking the column.
+- **Up-arrow button visually detached** — The "↑" sits in its own bordered box separate from the title bar in Branch view; should feel attached or at least share the header's border treatment.
+- **Field-detail row: timestamp and author are run together** — Renders "26/04/2026, 10:50localUser" with no separator/spacing; needs a delimiter or layout break.
+- **Field-detail row: redundant "◀" at right edge** — When a field row is expanded the left-side caret already shows "▼"; the right-side "◀" is duplicate and crowds the timestamp on mobile.
+- **DataField values underlined like links** — Reads as a hyperlink; pick a different "tappable / editable" affordance.
+- **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
+- **Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
+- **Composer doesn't filter out already-present fields** — "Status:" (and others) appear in the composer checklist even when the card already has a Status row, allowing duplicate adds.
+- **Composer pre-checked + disabled rows have no explanation** — Description / Tags / Type Of are pre-checked and grayed in the construction-view composer with no "(required)" label or tooltip; reads as broken rather than enforced.
+- **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
+- **Three "Add Field" affordances visible at once** — With `LEGACY_ADD_FIELD_ENABLED=true` and the composer open, both "+ Add Fields" and "+ Add Field" render alongside the open composer panel. Hide the legacy entry while the composer is open (or kill the flag once the composer is trusted).
+- **Massive horizontal whitespace at desktop widths** — Content column is fixed-narrow and centered; ≥1200px viewports waste most of the screen. Consider a max-width bump or a side panel.
+
 ---
 
 ## Features
