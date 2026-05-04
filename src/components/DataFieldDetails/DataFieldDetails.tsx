@@ -75,15 +75,16 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
 
             <button
                 type="button"
-                class={styles.historyChevron}
+                class={[
+                    styles.historyChevron,
+                    isHistoryOpen.value ? styles.historyChevronDown : styles.historyChevronLeft,
+                ]}
                 onClick$={toggleHistory$}
                 aria-expanded={isHistoryOpen.value}
                 aria-label={isHistoryOpen.value ? 'Close field history' : 'Open field history'}
                 disabled={!hasHistory}
                 title={!hasHistory ? 'No history available' : 'View field history'}
-            >
-                {isHistoryOpen.value ? '▾' : '◂'}
-            </button>
+            />
 
             {isHistoryOpen.value && hasHistory && (
                 <DataFieldHistory

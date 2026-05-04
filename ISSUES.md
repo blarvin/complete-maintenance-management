@@ -23,10 +23,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ### Style & Layout
 
-1.) **"Main Image" Field-detail row: timestamp and author are run together** — Renders "26/04/2026, 10:50localUser" with no separator/spacing; should be to the right, aligned with metadata in other Data Fields. Current value metadata should have a row just like in other templates.
-
-2.) **"Main Image" Field-history chevron** -- should be on the far-right. And aligned with the sub-grid of other Data Field's history chevrons.
-
 3.) **DataField values underlined like links** — Reads as a hyperlink; pick a different "tappable / editable" affordance.
 
 4.) **Text entry caret should be visible while entering text in fields** But not appear when click anywhere else. This applies to Under Construction, pending fields, etc.
@@ -39,17 +35,11 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 8.) **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
 
-9.) **historyRow should cover 3rd column to 5th column of datafieldWrapper** And include same 4px padding as datafieldWrapper on both ends. It does not need a fourth column (the historChevron's column).
-
-10.) **metadata and historyMeta should align vertically** They should be in the 5th column of datafieldWrapper and 3rd column of historyRow respectively. This way they should both appear to live in the same datafiedWrapper column. They should align at the right, and have the same font size. 
-
-11.) **"Main Image" template does not need its template name displayed at left.**  The image and caption are enough. Preview and final. 
-
 12.) **Selecting a Field template for adding should focus its first text value entry field active for text entry** In both the Add Fields composer pending state, and the Add Field pending state.
 
 13.) **Editing a persisted Field Value by double-click, second double-click should cancel if no change was made** Right now a second double click seems to save and sync (snackbar says "Field updated".)
 
-14.) **datafieldChevron centerline should horizintally align with the centerline of the top row of text in datafieldWrapper** This may be tricky, as some DF components may not have a top row of text, may have different text formatting, etc.
+14.) **datafieldChevron centerline should horizintally align with the centerline of the top row of text in datafieldWrapper** This may be tricky, as some DF components may not have a top row of text, may have different text formatting, etc. 
 
 ---
 

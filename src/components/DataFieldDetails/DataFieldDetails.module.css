@@ -74,21 +74,45 @@
 }
 
 
-/* History chevron button — pinned to the trailing chevron column. */
+/* History chevron button — pinned to the trailing chevron column. CSS
+   triangle (border-trick) centered onto adjacent text's cap-center, same
+   approach as `.datafieldChevron` so both align across the row. */
 .historyChevron {
     grid-column: history-chevron;
+    align-self: baseline;
+    width: var(--chevron-col-width);
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     padding: 0;
     margin: 0;
-    font-size: var(--field-chevron-size);
     color: var(--border-default);
     cursor: pointer;
-    width: var(--chevron-col-width);
-    text-align: center;
-    line-height: 1;
-    font-family: inherit;
-    transform: translateY(var(--field-chevron-y-shift));
+    transform: translateY(0.15em);
+}
+
+.historyChevron::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+/* Left-pointing (closed) */
+.historyChevronLeft::before {
+    border-width: var(--field-chevron-size) calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0;
+    border-right-color: currentColor;
+}
+
+/* Down-pointing (open) */
+.historyChevronDown::before {
+    border-width: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0 var(--field-chevron-size);
+    border-top-color: currentColor;
 }
 
 .historyChevron:disabled {
@@ -103,6 +127,7 @@
 .historyChevron:focus-visible {
     outline: var(--focus-ring);
     outline-offset: 1px;
+    border-radius: var(--radius-sm);
 }
 
 /* Actions row - subgrids the parent's columns from `label` onward so each
@@ -116,8 +141,11 @@
     /* Caret handling via .no-caret class in JSX */
 }
 
+/* Span label → metadata (3 tracks) so the button's natural width never
+   forces the shared `label` track to grow — otherwise expanding any
+   field's details would push every label in the card to the right. */
 .deleteButton {
-    grid-column: label;
+    grid-column: label / metadata;
     justify-self: start;
     background: none;
     border: var(--border-width-thin) solid var(--destructive);

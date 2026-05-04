@@ -83,12 +83,9 @@
   --container-min: 240px;
   --chevron-col-width: 24px;
   --node-chevron-size: 28px;
-  --field-chevron-size: 22px;
-  /* Vertical nudge to bring the field-chevron glyph's visual center onto the
-     label's text centerline. Glyphs like ▶ sit centered on the em-box (not
-     the baseline), so baseline-aligned chevrons render lower than the text.
-     Tune per-component via override if a row has a different top element. */
-  --field-chevron-y-shift: 2px;
+  /* Field chevrons are CSS triangles (border-trick), sized in px so the
+     visual size is independent of font scaling. */
+  --field-chevron-size: 5px;
   --label-width: 50px;
   --child-indent: 32px;
   --datacard-indent: 30px;

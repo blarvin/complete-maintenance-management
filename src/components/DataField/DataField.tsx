@@ -72,20 +72,29 @@ export const DataField = component$<DataFieldProps>((props) => {
     // Used by DataFieldDetails for metadata and (future) history-value preview.
     const currentDisplayValue = displayPreview(props.componentType, props.value);
 
+    const isImageVariant = props.componentType === 'single-image';
+
     return (
         <div
-            class={[styles.datafieldWrapper, isDetailsExpanded && styles.datafieldWrapperExpanded, 'no-caret']}
+            class={[
+                styles.datafieldWrapper,
+                isDetailsExpanded && styles.datafieldWrapperExpanded,
+                isImageVariant && styles.datafieldWrapperImage,
+                'no-caret',
+            ]}
             ref={rootRef}
         >
             <button
                 type="button"
-                class={styles.datafieldChevron}
+                class={[
+                    styles.datafieldChevron,
+                    isDetailsExpanded ? styles.datafieldChevronDown : styles.datafieldChevronRight,
+                ]}
                 onClick$={toggleDetails$}
                 aria-expanded={isDetailsExpanded}
                 aria-label={isDetailsExpanded ? 'Collapse field details' : 'Expand field details'}
-            >
-                {isDetailsExpanded ? '▾' : '▸'}
-            </button>
+            />
+
 
             {props.componentType !== 'single-image' && (
                 <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
