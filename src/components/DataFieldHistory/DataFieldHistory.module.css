@@ -1,41 +1,44 @@
-/* DataFieldHistory component styles - inline accordion pattern */
+/* DataFieldHistory — each entry is a direct subgrid child of the parent
+   `datafieldWrapper` (no intermediate padded container). The full subgrid
+   chain is `fieldList → datafieldWrapper → entry`, three deep. Because no
+   level introduces horizontal padding or its own track sizing, the named
+   columns (value, spacer, metadata, history-chevron) propagate uninterrupted
+   — historyValue under value, historyMeta under metadata, pixel-perfect.
 
+   The wrapper + list use `display: contents` so they don't introduce a
+   layout box; entries become subgrid items of `datafieldWrapper` directly.
+
+   Visual: current value row (datafieldWrapper.expanded) is grey-tinted via
+   `--bg-expanded`; historical entries paint white over that to differentiate. */
 .historyWrapper {
-    /* Wrapper for the history list */
-    /* Caret handling via .no-caret class in JSX */
+    display: contents;
 }
-
-/* Scrollable history list - max ~8 rows visible */
 .historyList {
-    display: flex;
-    flex-direction: column;
-    max-height: calc(8 * 24px); /* ~8 rows at 24px each */
-    overflow-y: auto;
-    border: var(--border-width-thin) solid var(--border-muted);
-    border-radius: var(--radius-sm);
-    background: var(--bg-surface);
-    /* Caret handling via .no-caret class in JSX */
+    display: contents;
 }
 
-/* Individual history row */
+/* Each entry occupies a new row of the outer grid, subgridding the
+   value | spacer | metadata triplet (chevron columns excluded from the
+   grid area). The two horizontal box-shadows paint extra strips of
+   `--bg-surface` past the row's left and right edges — purely visual
+   bleed, no layout impact — giving the text breathing room from the bg
+   edge without altering any column widths or shifting subgrid alignment. */
 .historyRow {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: var(--space-2);
+    grid-template-columns: subgrid;
+    grid-column: value / history-chevron;
+    box-shadow:
+        calc(-1 * var(--space-4)) 0 0 0 var(--bg-surface),
+        var(--space-4) 0 0 0 var(--bg-surface);
     align-items: baseline;
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-2) 0;
     font-size: var(--text-sm);
     border: none;
-    border-bottom: var(--border-width-thin) solid var(--border-subtle);
-    background: transparent;
+    border-top: var(--border-width-thin) solid var(--border-subtle);
+    background: var(--bg-surface);
     text-align: left;
     cursor: pointer;
     font-family: inherit;
-    width: 100%;
-}
-
-.historyRow:last-child {
-    border-bottom: none;
 }
 
 .historyRow:hover {
@@ -49,7 +52,6 @@
 
 .historyRowSelected {
     background: var(--bg-selected);
-    border-color: var(--color-blue-300);
 }
 
 .historyRowSelected:hover {
@@ -57,16 +59,17 @@
 }
 
 .historyValue {
+    grid-column: value;     /* aligns with outer `value` */
     color: var(--text-secondary);
     overflow-wrap: break-word;
     min-width: 0;
 }
 
 .historyMeta {
-    grid-column: 3;
+    grid-column: metadata;  /* aligns with outer `metadata` */
     text-align: right;
-    color: var(--text-muted);
-    font-size: var(--text-xs);
+    color: var(--text-metadata);
+    font-size: var(--text-sm); /* match .metadata above for visual alignment */
     overflow-wrap: break-word;
     min-width: 0;
 }

@@ -71,8 +71,6 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
 
     return (
         <div class={[styles.inlineWrapper, 'no-caret']}>
-            <span class={[styles.spacer, 'no-caret']}></span>
-
             <span class={[styles.metadata, 'no-caret']}>{metadataText}</span>
 
             <button
@@ -88,15 +86,13 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
             </button>
 
             {isHistoryOpen.value && hasHistory && (
-                <div class={[styles.historyRow, 'no-caret']}>
-                    <DataFieldHistory
-                        fieldId={props.fieldId}
-                        history={history.value}
-                        componentType={props.componentType}
-                        units={units}
-                        isOpen={isHistoryOpen.value}
-                    />
-                </div>
+                <DataFieldHistory
+                    fieldId={props.fieldId}
+                    history={history.value}
+                    componentType={props.componentType}
+                    units={units}
+                    isOpen={isHistoryOpen.value}
+                />
             )}
 
             <div class={[styles.actionsRow, 'no-caret']}>

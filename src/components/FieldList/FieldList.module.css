@@ -1,19 +1,34 @@
 /* FieldList component styles */
 
-/* Shared row track for all field rows in a card. Defining columns once here
-   lets opt-in rows align across each other via `grid-template-columns: subgrid`.
-   Col 2 is `minmax(--label-width, auto)` so the column sizes to the widest
-   label across all participating rows (rather than truncating long labels
-   into the value column). */
+/* Shared row track for all field rows in a card. Named grid lines define the
+   contract — opt-in rows align across each other via `grid-template-columns:
+   subgrid` and reference columns by name (e.g. `grid-column: value` or
+   `grid-column: value / history-chevron`).
+
+   Track sizing notes:
+   - `label` is `minmax(--label-width, auto)` so the column sizes to the widest
+     label across all participating rows (rather than truncating long labels).
+   - `value` and `spacer` are both `minmax(0, 1fr)` and split remaining
+     width 50/50. `spacer` lives BETWEEN `value` and `metadata` — the
+     elastic spacer pushes `metadata` flush against the trailing chevron
+     so timestamps right-align across every row.
+   - `metadata` is `auto` so it sizes to the widest metadata content.
+   - `details-chevron` and `history-chevron` are fixed `--chevron-col-width`.
+
+   History entries (DataFieldHistory) are direct subgrid children of
+   `datafieldWrapper`. Each entry spans `value / history-chevron`, picking
+   up the same value | spacer | metadata triplet so entry value sits
+   under live value and entry metadata sits under live metadata. */
 .fieldList {
     display: grid;
     grid-template-columns:
-        var(--chevron-col-width)                       /* 1: details chevron */
-        minmax(var(--label-width), auto)               /* 2: label (auto-grows to longest) */
-        minmax(0, 1fr)                                 /* 3: value */
-        auto                                           /* 4: metadata / button group */
-        minmax(0, 1fr)                                 /* 5: spacer */
-        var(--chevron-col-width);                      /* 6: history chevron */
+        [details-chevron] var(--chevron-col-width)
+        [label]           minmax(var(--label-width), auto)
+        [value]           minmax(0, 1fr)
+        [spacer]          minmax(0, 1fr)
+        [metadata]        auto
+        [history-chevron] var(--chevron-col-width)
+        [end];
     row-gap: var(--space-3);
     column-gap: var(--space-2);
     align-items: baseline;

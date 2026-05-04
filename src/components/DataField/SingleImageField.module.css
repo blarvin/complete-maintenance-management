@@ -1,9 +1,15 @@
-/* SingleImageField — chunky placeholder box + caption.
-   The block spans the value, metadata, and spacer columns of the FieldList
-   subgrid (cols 3 to -2) to give the image card visual weight. */
+/* SingleImageField — placeholder box + caption.
+   Sits in the `value` column so metadata and history-chevron can flow into
+   their normal cells on the same row, aligned with other templates. */
 
+/* Spans value through history-chevron (the full grid except the leading
+   details-chevron + label cells) so the image + caption claim row 1 to
+   themselves. This forces metadata + history-chevron + historical entries
+   to auto-flow into rows 2+ — image stays compact at top, metadata and
+   history list sit below it as their own rows, separated by the parent
+   grid's row-gap. */
 .imageBlock {
-    grid-column: 3 / -2;
+    grid-column: label / history-chevron;
     display: flex;
     flex-direction: column;
     gap: var(--space-2);

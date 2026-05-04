@@ -21,28 +21,42 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
 - **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
 
-### Style & Layout (visual audit 2026-05-01)
+### Style & Layout
 
-- **Parent header narrower than its children** — In Branch view, parent TreeNode row's left edge sits ~38px to the left of child rows; left edges should align so the hierarchy reads as one column.
-- **DataCard body left-edge misaligned with parent header** — Card panel + Add-Sub-Asset start ~38px right of the parent header, again breaking the column.
-- **Up-arrow button visually detached** — The "↑" sits in its own bordered box separate from the title bar in Branch view; should feel attached or at least share the header's border treatment.
-- **Field-detail row: timestamp and author are run together** — Renders "26/04/2026, 10:50localUser" with no separator/spacing; needs a delimiter or layout break.
-- **Field-detail row: redundant "◀" at right edge** — When a field row is expanded the left-side caret already shows "▼"; the right-side "◀" is duplicate and crowds the timestamp on mobile.
-- **DataField values underlined like links** — Reads as a hyperlink; pick a different "tappable / editable" affordance.
-- **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
-- **Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
-- **Composer doesn't filter out already-present fields** — "Status:" (and others) appear in the composer checklist even when the card already has a Status row, allowing duplicate adds.
-- **Composer pre-checked + disabled rows have no explanation** — Description / Tags / Type Of are pre-checked and grayed in the construction-view composer with no "(required)" label or tooltip; reads as broken rather than enforced.
-- **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
-- **Three "Add Field" affordances visible at once** — With `LEGACY_ADD_FIELD_ENABLED=true` and the composer open, both "+ Add Fields" and "+ Add Field" render alongside the open composer panel. Hide the legacy entry while the composer is open (or kill the flag once the composer is trusted).
-- **Massive horizontal whitespace at desktop widths** — Content column is fixed-narrow and centered; ≥1200px viewports waste most of the screen. Consider a max-width bump or a side panel.
+1.) **"Main Image" Field-detail row: timestamp and author are run together** — Renders "26/04/2026, 10:50localUser" with no separator/spacing; should be to the right, aligned with metadata in other Data Fields. Current value metadata should have a row just like in other templates.
+
+2.) **"Main Image" Field-history chevron** -- should be on the far-right. And aligned with the sub-grid of other Data Field's history chevrons.
+
+3.) **DataField values underlined like links** — Reads as a hyperlink; pick a different "tappable / editable" affordance.
+
+4.) **Text entry caret should be visible while entering text in fields** But not appear when click anywhere else. This applies to Under Construction, pending fields, etc.
+
+5.) **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
+
+6.) **Under Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
+
+7.) **Composer pre-checked + disabled rows have no explanation** — Description / Tags / Type Of are pre-checked and grayed in the construction-view composer with no "(required)" label or tooltip; reads as broken rather than enforced.
+
+8.) **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
+
+9.) **historyRow should cover 3rd column to 5th column of datafieldWrapper** And include same 4px padding as datafieldWrapper on both ends. It does not need a fourth column (the historChevron's column).
+
+10.) **metadata and historyMeta should align vertically** They should be in the 5th column of datafieldWrapper and 3rd column of historyRow respectively. This way they should both appear to live in the same datafiedWrapper column. They should align at the right, and have the same font size. 
+
+11.) **"Main Image" template does not need its template name displayed at left.**  The image and caption are enough. Preview and final. 
+
+12.) **Selecting a Field template for adding should focus its first text value entry field active for text entry** In both the Add Fields composer pending state, and the Add Field pending state.
+
+13.) **Editing a persisted Field Value by double-click, second double-click should cancel if no change was made** Right now a second double click seems to save and sync (snackbar says "Field updated".)
+
+14.) **datafieldChevron centerline should horizintally align with the centerline of the top row of text in datafieldWrapper** This may be tricky, as some DF components may not have a top row of text, may have different text formatting, etc.
 
 ---
 
 ## Features
 
 - **Delete with undo** — Confirmation dialog (with descendant/field counts for nodes), Snackbar toast after delete, 5s undo window. Applies to both TreeNode and DataField delete. Requires a global Snackbar component (single-slot, auto-dismiss, optional action button). Blocks full cascade-delete work in LATER.md.
-- **Node metadata in TreeNodeDetails** — Show `createdAt`, last `updatedAt`, last `updatedBy`. These belong in TreeNodeDetails, not as DataFields on the card.
+- **Node metadata in TreeNodeDetails** — Show `createdAt`, last `updatedAt`, last `updatedBy`.
 - **Inline rename of NodeTitle and NodeSubtitle** — Decide UX (double-tap like DataFields? edit button?), then wire up. Currently nodes are rename-less after creation.
 - **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
 - **DataField picker keyboard + clickaway** — In the CreateDataField combo box and the enum-kv picker: Up/Down to move, Enter to pick, click-outside or tab-away to close. Touch path must keep working. (Typeahead and flip-up are in LATER.md.)
@@ -68,4 +82,3 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Double underline while editing** — DataField value has a visible affordance underline plus the browser's input underline while editing. Pick one.
 - **`pendingMode` boilerplate across DataField Components** — TextKv/EnumKv/MeasurementKv/SingleImage each repeat near-identical `pendingMode` wiring into `useFieldEdit` (and Enum has its own click-away path). Don't abstract until a 5th component lands and the pattern is clear — premature now would obscure more than it shares.
 - **`useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
-

@@ -6,11 +6,6 @@
     /* Caret handling via .no-caret class in JSX */
 }
 
-/* Column 4: Spacer - flexible empty space (or button group) */
-.spacer {
-    /* Empty spacer column - caret handled via .no-caret class in JSX */
-}
-
 /* Button group containing CANCEL + REVERT */
 .buttonGroup {
     display: flex;
@@ -67,17 +62,21 @@
     outline-offset: var(--focus-offset);
 }
 
-/* Column 5: Metadata (date/time/user) - aligns with history entries */
+/* Metadata (date/time/user) — pinned to its named column so it stays right
+   of the value regardless of how wide the value cell is. */
 .metadata {
+    grid-column: metadata;
     font-size: var(--text-sm);
-    color: var(--color-gray-700);
+    color: var(--text-metadata);
     align-self: baseline;
     text-align: right;
     /* Caret handling via .no-caret class in JSX */
 }
 
-/* Column 6: History chevron button */
+
+/* History chevron button — pinned to the trailing chevron column. */
 .historyChevron {
+    grid-column: history-chevron;
     background: none;
     border: none;
     padding: 0;
@@ -89,7 +88,7 @@
     text-align: center;
     line-height: 1;
     font-family: inherit;
-    align-self: baseline;
+    transform: translateY(var(--field-chevron-y-shift));
 }
 
 .historyChevron:disabled {
@@ -106,15 +105,20 @@
     outline-offset: 1px;
 }
 
-/* Actions row - skips the leading details-chevron column so the delete
-   button aligns under the label column. */
+/* Actions row - subgrids the parent's columns from `label` onward so each
+   action button can pin to a specific column (currently delete in `label`,
+   future buttons in `value`/`metadata`/etc.). */
 .actionsRow {
-    grid-column: 2 / -1;
+    grid-column: label / end;
+    display: grid;
+    grid-template-columns: subgrid;
     padding: var(--space-2) 0;
     /* Caret handling via .no-caret class in JSX */
 }
 
 .deleteButton {
+    grid-column: label;
+    justify-self: start;
     background: none;
     border: var(--border-width-thin) solid var(--destructive);
     color: var(--destructive);
@@ -136,11 +140,6 @@
     outline-offset: var(--focus-offset);
 }
 
-/* History list row - starts at the value column and ends just before the
-   trailing history-chevron column, so its right edge lines up with the
-   metadata above. Grid-column placement replaces the previous padding-math
-   hack against the (now auto-sized) label column. */
-.historyRow {
-    grid-column: 3 / -2;
-    /* Caret handling via .no-caret class in JSX */
-}
+/* History list container removed — historical entries are now direct
+   subgrid children of `datafieldWrapper`. See DataFieldHistory.module.css
+   for entry-row styling. */

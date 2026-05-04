@@ -87,7 +87,9 @@ export const DataField = component$<DataFieldProps>((props) => {
                 {isDetailsExpanded ? '▾' : '▸'}
             </button>
 
-            <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
+            {props.componentType !== 'single-image' && (
+                <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
+            )}
 
             {renderBody(props, rootRef)}
 
