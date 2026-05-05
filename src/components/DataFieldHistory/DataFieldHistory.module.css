@@ -19,24 +19,17 @@
 
 /* Each entry occupies a new row of the outer grid, subgridding the
    value | spacer | metadata triplet (chevron columns excluded from the
-   grid area). The two horizontal box-shadows paint extra strips of
-   `--bg-surface` past the row's left and right edges — purely visual
-   bleed, no layout impact — giving the text breathing room from the bg
-   edge without altering any column widths or shifting subgrid alignment.
-
-   No vertical padding: padding would pump up the history-row track
-   height and leave row 0 (live value, no padding) visibly shorter, which
-   in turn made the shadow's top edge appear above row 0's content as a
-   white sliver. Keeping every row's intrinsic height equal (text
-   line-box only) keeps the shadow flush. Vertical separation between
-   rows comes from the parent grid's `row-gap` + `border-top`. */
+   grid area). Left/right breathing room past the row edges is painted
+   by ::before / ::after pseudo-elements, absolutely positioned and
+   constrained to this row's height via top:0/bottom:0 — so they cannot
+   leak vertically into adjacent rows or the chevron column above.
+   Layout untouched: the pseudos sit outside the row's column track and
+   subgrid alignment of historyValue / historyMeta is unaffected. */
 .historyRow {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: value / history-chevron;
-    box-shadow:
-        calc(-1 * var(--space-4)) 0 0 0 var(--bg-surface),
-        var(--space-4) 0 0 0 var(--bg-surface);
+    position: relative;
     align-items: baseline;
     font-size: var(--text-sm);
     border: none;
@@ -45,6 +38,25 @@
     text-align: left;
     cursor: pointer;
     font-family: inherit;
+}
+
+.historyRow::before,
+.historyRow::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--space-4);
+    background: var(--bg-surface);
+    pointer-events: none;
+}
+
+.historyRow::before {
+    right: 100%;
+}
+
+.historyRow::after {
+    left: 100%;
 }
 
 .historyRow:hover {
