@@ -142,3 +142,17 @@ input.datafieldValue {
     margin: 0 calc(-1 * var(--space-1));
     border-radius: var(--radius-sm);
 }
+
+/* Mobile: metadata wraps to its own row beneath the value (see
+   DataFieldDetails.module.css and DataFieldHistory.module.css for the
+   matching overrides). Value spans through the metadata column so it
+   gets the full horizontal budget; chevrons and label stay pinned to
+   row 1 so the disclosure controls remain adjacent to the value. */
+@media (max-width: 600px) {
+    .datafieldChevron { grid-row: 1; }
+    .datafieldLabel { grid-row: 1; }
+    .datafieldValue {
+        grid-column: value / history-chevron;
+        grid-row: 1;
+    }
+}

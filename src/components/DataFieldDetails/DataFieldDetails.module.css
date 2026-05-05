@@ -171,3 +171,17 @@
 /* History list container removed — historical entries are now direct
    subgrid children of `datafieldWrapper`. See DataFieldHistory.module.css
    for entry-row styling. */
+
+/* Mobile: metadata drops to its own row beneath the value, still
+   right-aligned to the original metadata column edge (the
+   `history-chevron` line). historyChevron stays pinned to row 1 next
+   to the value. Spanning `value / history-chevron` keeps the right
+   edge of the text at the same x as the desktop layout, so the
+   metadata column alignment contract still holds visually. */
+@media (max-width: 600px) {
+    .metadata {
+        grid-column: value / history-chevron;
+        grid-row: 2;
+    }
+    .historyChevron { grid-row: 1; }
+}

@@ -91,3 +91,18 @@
     overflow-wrap: break-word;
     min-width: 0;
 }
+
+/* Mobile: same two-row treatment as the live row — historyValue takes
+   the full value→history-chevron span on row 1, historyMeta drops to
+   row 2 right-aligned. Left edges of all values and right edges of
+   all metadata stay aligned across live + history rows. */
+@media (max-width: 600px) {
+    .historyValue {
+        grid-column: value / history-chevron;
+        grid-row: 1;
+    }
+    .historyMeta {
+        grid-column: value / history-chevron;
+        grid-row: 2;
+    }
+}
