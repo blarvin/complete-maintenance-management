@@ -21,8 +21,9 @@ export type MeasurementKvFieldProps = {
     value: number | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
-    pendingMode?: { onChange$: QRL<(value: number | null) => void> };
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange$.
+     *  `autoFocus` is set only for the row the user just ticked. */
+    pendingMode?: { onChange$: QRL<(value: number | null) => void>; autoFocus?: boolean };
 };
 
 function makeFormat(decimals: number, units: string) {

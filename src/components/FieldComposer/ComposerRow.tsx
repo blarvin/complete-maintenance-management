@@ -21,6 +21,10 @@ export type ComposerRowProps = {
     checked: boolean;
     locked?: boolean;
     pendingForm?: PendingForm;
+    /** True only for the row the user JUST ticked — drives auto-focus / pick-list
+     *  open. Seeded rows (construction defaults, restored Undo) are false so the
+     *  composer opens with no field stealing focus. */
+    autoFocus?: boolean;
     onToggle$: QRL<(template: DataFieldTemplate) => void>;
     onValueChange$: QRL<(formId: string, value: DataFieldValue | null) => void>;
 };
@@ -50,6 +54,7 @@ export const ComposerRow = component$<ComposerRowProps>((props) => {
                 <RowBody
                     template={props.template}
                     pendingForm={props.pendingForm}
+                    autoFocus={!!props.autoFocus}
                     rootRef={rootRef}
                     onValueChange$={props.onValueChange$}
                 />
@@ -61,6 +66,7 @@ export const ComposerRow = component$<ComposerRowProps>((props) => {
 type RowBodyProps = {
     template: DataFieldTemplate;
     pendingForm: PendingForm;
+    autoFocus: boolean;
     rootRef: Signal<HTMLElement | undefined>;
     onValueChange$: QRL<(formId: string, value: DataFieldValue | null) => void>;
 };
@@ -70,6 +76,7 @@ const RowBody = component$<RowBodyProps>((props) => {
     const onChange$ = $((value: DataFieldValue | null) => {
         return props.onValueChange$(formId, value);
     });
+    const autoFocus = props.autoFocus;
 
     switch (props.template.componentType) {
         case 'text-kv':
@@ -79,7 +86,7 @@ const RowBody = component$<RowBodyProps>((props) => {
                     fieldName={props.template.label}
                     value={(props.pendingForm.value as string | null) ?? null}
                     rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void> }}
+                    pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void>, autoFocus }}
                 />
             );
         case 'enum-kv':
@@ -90,7 +97,7 @@ const RowBody = component$<RowBodyProps>((props) => {
                     templateId={props.template.id}
                     value={(props.pendingForm.value as string | null) ?? null}
                     rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void> }}
+                    pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void>, autoFocus }}
                 />
             );
         case 'measurement-kv':
@@ -101,7 +108,7 @@ const RowBody = component$<RowBodyProps>((props) => {
                     templateId={props.template.id}
                     value={(props.pendingForm.value as number | null) ?? null}
                     rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: number | null) => void> }}
+                    pendingMode={{ onChange$: onChange$ as QRL<(value: number | null) => void>, autoFocus }}
                 />
             );
         case 'single-image':
@@ -111,7 +118,7 @@ const RowBody = component$<RowBodyProps>((props) => {
                     fieldName={props.template.label}
                     value={(props.pendingForm.value as SingleImageValue | null) ?? null}
                     rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: SingleImageValue | null) => void> }}
+                    pendingMode={{ onChange$: onChange$ as QRL<(value: SingleImageValue | null) => void>, autoFocus }}
                 />
             );
     }

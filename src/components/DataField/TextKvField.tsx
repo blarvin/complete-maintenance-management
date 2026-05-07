@@ -15,8 +15,9 @@ export type TextKvFieldProps = {
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
-    pendingMode?: { onChange$: QRL<(value: string | null) => void> };
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange$.
+     *  `autoFocus` is set only for the row the user just ticked. */
+    pendingMode?: { onChange$: QRL<(value: string | null) => void>; autoFocus?: boolean };
 };
 
 const formatText = (v: string | null): string => v ?? '';

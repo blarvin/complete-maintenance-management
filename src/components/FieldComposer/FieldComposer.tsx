@@ -68,7 +68,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
         return [];
     });
 
-    const { forms, togglePending$, setPendingValue$, commitAll$, discardAll$ } = usePendingForms({
+    const { forms, lastToggledId, togglePending$, setPendingValue$, commitAll$, discardAll$ } = usePendingForms({
         nodeId: props.nodeId,
         initialSeedLoader$,
     });
@@ -127,6 +127,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
                                         checked={!!pf}
                                         locked={lockedSet.has(tpl.id)}
                                         pendingForm={pf}
+                                        autoFocus={!!pf && pf.id === lastToggledId.value}
                                         onToggle$={togglePending$}
                                         onValueChange$={setPendingValue$}
                                     />

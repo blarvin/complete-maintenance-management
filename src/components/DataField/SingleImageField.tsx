@@ -35,7 +35,9 @@ export type SingleImageFieldProps = {
     value: SingleImageValue | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
-    pendingMode?: { onChange$: QRL<(value: SingleImageValue | null) => void> };
+    /** `autoFocus` is set only for the row the user just ticked — focuses the
+     *  caption input on mount; seeded rows leave it false. */
+    pendingMode?: { onChange$: QRL<(value: SingleImageValue | null) => void>; autoFocus?: boolean };
 };
 
 const formatCaption = (v: SingleImageValue | null): string => v?.caption ?? '';
@@ -82,7 +84,7 @@ export const SingleImageField = component$<SingleImageFieldProps>((props) => {
 
     return (
         <div style="display: contents">
-            <div class={imageStyles.imageBlock}>
+            <div class={[imageStyles.imageBlock, props.pendingMode && imageStyles.imageBlockPending]}>
                 <div
                     class={imageStyles.imageBox}
                     onPointerDown$={handleUploadTap$}

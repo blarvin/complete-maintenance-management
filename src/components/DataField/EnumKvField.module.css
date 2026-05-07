@@ -1,0 +1,19 @@
+/* Floating popover for enum-kv option list. position: fixed so it sits in
+   the viewport coordinate system — does not affect grid row height in the
+   FieldComposer or push siblings down. JS sets `top` / `left` from the
+   trigger's getBoundingClientRect on open, with horizontal clamping so it
+   never goes off-screen. */
+.popover {
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 160px;
+    max-width: min(280px, calc(100vw - 16px));
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--bg-surface);
+    border: var(--border-width-thin) solid var(--border-muted);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-dropdown);
+    z-index: var(--z-dropdown);
+}

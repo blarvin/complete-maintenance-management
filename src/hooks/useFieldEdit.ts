@@ -41,8 +41,13 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
      * When set, save$ does NOT dispatch UPDATE_FIELD_VALUE or show a Snackbar.
      * Instead it forwards the parsed value to onChange$. Used by FieldComposer
      * for in-flight (un-persisted) Template previews.
+     *
+     * `autoFocus` (composer only): true when this row is the one the user just
+     * ticked. The hook auto-enters edit mode and focuses the input on mount.
+     * Seeded rows (construction defaults / Undo restore) pass false so nothing
+     * steals focus when the composer opens.
      */
-    pendingMode?: { onChange$: QRL<(value: T | null) => void> };
+    pendingMode?: { onChange$: QRL<(value: T | null) => void>; autoFocus?: boolean };
 };
 
 export type UseFieldEditResult<T extends DataFieldValue> = {
@@ -97,6 +102,25 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // Sync initial value on mount
     useVisibleTask$(() => {
         currentValue.value = options.initialValue;
+    });
+
+    // Auto-enter edit mode on mount when used in the FieldComposer (pendingMode)
+    // with no value yet — i.e., the user just checked the row's box. Mirrors the
+    // EnumKvField auto-open UX: tick → ready to type. Outside-click / blur in
+    // pendingMode commits the (possibly empty) value back to the pending row, so
+    // dismissing without typing leaves the row checked with a null value.
+    useVisibleTask$(({ cleanup }) => {
+        if (!options.pendingMode?.autoFocus) return;
+        if (options.initialValue !== null) return;
+        if (appState.editingFieldId === options.fieldId) return;
+        startFieldEdit$(options.fieldId);
+        editValue.value = options.format(null);
+        previewValue.value = null;
+        const t = setTimeout(() => {
+            editInputRef.value?.focus();
+            editInputRef.value?.select?.();
+        }, 0);
+        cleanup(() => clearTimeout(t));
     });
 
     // === Edit Flow Handlers ===

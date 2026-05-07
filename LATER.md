@@ -1,6 +1,6 @@
 # LATER.md — Deferred Work
 
-Work intentionally deferred beyond Phase 1. Grouped by theme. For active issues see ISSUES.md; for product scope see SPECIFICATION.md; for architectural notes on what _is_ built see IMPLEMENTATION.md.
+Work intentionally deferred beyond Phase 1. Grouped by theme. For active issues see ISSUES.md; for product scope see SPECIFICATION.md; for architectural notes on what *is* built see IMPLEMENTATION.md.
 
 ---
 
@@ -8,7 +8,7 @@ Work intentionally deferred beyond Phase 1. Grouped by theme. For active issues 
 
 Scope exclusions that keep the Phase 1 MVP small:
 
-- **Skip `virtualParents`** — focus on basic parent-child relationships only
+- **Skip `virtualParents*`* — focus on basic parent-child relationships only
 - **Skip `componentVersion`** — Template + `componentType` landed; version field deferred
 - **Skip `customProperties`** — basic node and DataField types only
 - **Skip `isRequired`** — no required-field validation
@@ -96,7 +96,7 @@ The Component/Template/Instance spine plus the 4 Phase-1 Components (`text-kv`, 
 
 ### Template Library Enhancements
 
-- **`componentVersion` field** on Template (per-template contract versioning)
+- `**componentVersion` field** on Template (per-template contract versioning)
 - **User-authored Templates + Template-builder UI** — currently only dev-seeded Templates
 - **Template sharing scope** — private / workspace / global, plus moderation
 - **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md)
@@ -159,6 +159,15 @@ Currently, DataCard expansion repositions siblings via layout reflow (not physic
 
 ---
 
+
+
+## Ideas and Thoughts
+**Deep Copied Nodes and Fields Warning** If we ever have a deep-copy feature, we should warn the user that each pasted value has been copied over and should be verified. Also, the copied nodes and fields will not be linked to the original nodes and fields.
+
+---
+
+
+
 ## Destructive Operations
 
 ### Cascade Delete
@@ -201,7 +210,7 @@ Phase 1 implements minimal append-only history for `DataField.dataValue` in `dat
 
 ### getFieldHistory and Soft-Deleted Fields
 
-Currently history for soft-deleted fields is only _implicitly_ hidden (UI never requests it). Add explicit adapter check: `getFieldHistory(dataFieldId)` should return `[]` when the DataField's `deletedAt` is set. Needed for direct API use or a future restore/admin UI.
+Currently history for soft-deleted fields is only *implicitly* hidden (UI never requests it). Add explicit adapter check: `getFieldHistory(dataFieldId)` should return `[]` when the DataField's `deletedAt` is set. Needed for direct API use or a future restore/admin UI.
 
 ---
 

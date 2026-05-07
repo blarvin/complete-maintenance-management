@@ -27,7 +27,8 @@
       "Bash(xargs grep *)",
       "Bash(kill %1)",
       "Bash(git ls-tree *)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "PowerShell(npm run *)"
     ],
     "deny": [
       "Read(.env*)",

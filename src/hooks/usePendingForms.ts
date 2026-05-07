@@ -75,6 +75,13 @@ export type UsePendingFormsOptions = {
 
 export type UsePendingFormsResult = {
     forms: Signal<PendingForm[]>;
+    /**
+     * The id of the most recently user-toggled-on form. Composer uses this to
+     * decide whether to auto-focus a row's value input on mount: only the row
+     * the user just ticked should jump into edit mode. Seeded rows (construction
+     * locks, Undo restore) leave it null so nothing steals focus on open.
+     */
+    lastToggledId: Signal<string | null>;
     togglePending$: ReturnType<typeof $<(template: DataFieldTemplate) => void>>;
     setPendingValue$: ReturnType<typeof $<(formId: string, value: DataFieldValue | null) => void>>;
     commitAll$: ReturnType<typeof $<(currentMaxCardOrder: number) => Promise<number>>>;
@@ -84,6 +91,7 @@ export type UsePendingFormsResult = {
 
 export function usePendingForms(options: UsePendingFormsOptions): UsePendingFormsResult {
     const forms = useSignal<PendingForm[]>([]);
+    const lastToggledId = useSignal<string | null>(null);
     const initialized = useSignal(false);
 
     useVisibleTask$(async () => {
@@ -109,8 +117,11 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         const existing = forms.value.find(f => f.templateId === template.id);
         if (existing) {
             forms.value = forms.value.filter(f => f.templateId !== template.id);
+            if (lastToggledId.value === existing.id) lastToggledId.value = null;
         } else {
-            forms.value = [...forms.value, pendingFormFromTemplate(template)];
+            const fresh = pendingFormFromTemplate(template);
+            forms.value = [...forms.value, fresh];
+            lastToggledId.value = fresh.id;
         }
     });
 
@@ -159,6 +170,7 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
 
     return {
         forms,
+        lastToggledId,
         togglePending$,
         setPendingValue$,
         commitAll$,

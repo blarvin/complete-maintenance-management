@@ -16,6 +16,14 @@
     align-self: start;
 }
 
+/* Composer (pending) variant — the row still renders the textual label in
+   the `label` column, so the image preview must start at `value` to avoid
+   overlapping it. End at `history-chevron` so the preview spans the same
+   wide right portion (value + spacer + metadata) that persisted fields use. */
+.imageBlockPending {
+    grid-column: value / history-chevron;
+}
+
 .imageBox {
     width: 100%;
     height: 120px;
