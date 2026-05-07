@@ -104,7 +104,10 @@
     color: var(--text-secondary);
 }
 
-.datafieldValueUnderlined {
+/* Underline shows only while focused — both the focusable display element
+   (Enter/Space to edit) and the active edit input. No at-rest affordance. */
+.datafieldValueEditable:focus,
+input.datafieldValue:focus {
     text-decoration: underline;
 }
 
@@ -124,10 +127,11 @@ input.datafieldValue {
     margin: 0;
     font: inherit;
     color: inherit;
-    border-bottom: var(--border-width-thin) solid var(--border-input);
-    /* show underline even when empty */
-    user-select: text; /* Allow text selection in edit inputs */
+    user-select: text;
     cursor: text;
+    /* Override inherited `caret-color: transparent` from .no-caret ancestors —
+       we need a visible caret while actively inputting a value. */
+    caret-color: auto;
 }
 
 .datafieldPlaceholder {

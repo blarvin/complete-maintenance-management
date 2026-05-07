@@ -11,6 +11,7 @@ import { useOnDocument, useOnWindow } from '@builder.io/qwik';
 import { getTemplateQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import { getSnackbarService } from '../../services/snackbar';
+import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { EnumKvConfig } from '../../data/models';
@@ -34,6 +35,8 @@ export type EnumKvFieldProps = {
 export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     const appState = useAppState();
     const { startFieldEdit$, stopFieldEdit$ } = useAppTransitions();
+
+    const { checkDoubleTap$ } = useDoubleTap();
 
     const isOpen = useSignal(false);
     const currentValue = useSignal<string | null>(props.value);
@@ -181,6 +184,14 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
         return () => clearTimeout(t);
     });
 
+    const handleTriggerPointerDown$ = $(async (ev: PointerEvent | MouseEvent) => {
+        if (isOpen.value) return;
+        const x = ev.clientX ?? 0;
+        const y = ev.clientY ?? 0;
+        const isDouble = await checkDoubleTap$(x, y);
+        if (isDouble) open$();
+    });
+
     const handleTriggerKeyDown$ = $((e: KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
             e.preventDefault();
@@ -227,7 +238,7 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
                     styles.datafieldValueEditable,
                     'no-caret',
                 ]}
-                onClick$={open$}
+                onPointerDown$={handleTriggerPointerDown$}
                 onKeyDown$={handleTriggerKeyDown$}
                 tabIndex={0}
                 role="button"
