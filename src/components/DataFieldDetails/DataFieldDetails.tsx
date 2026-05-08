@@ -10,6 +10,7 @@
 import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@builder.io/qwik';
 import { getFieldQueries, getTemplateQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
+import { storageEventBus } from '../../data/storageEventBus';
 import type { ComponentType, DataFieldHistory as HistoryEntry, DataFieldTemplate, MeasurementKvConfig } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
@@ -42,6 +43,21 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         } finally {
             isLoaded.value = true;
         }
+    });
+
+    // Re-fetch history whenever this field is written to, so newly-saved values
+    // appear immediately while Details is open (history panel may be open too).
+    useVisibleTask$(({ cleanup }) => {
+        const unsubscribe = storageEventBus.subscribe(async (event) => {
+            if (event.type !== 'FIELD_WRITTEN') return;
+            if (event.field.id !== props.fieldId) return;
+            try {
+                history.value = await getFieldQueries().getFieldHistory(props.fieldId);
+            } catch (e) {
+                console.error('Failed to refresh field history:', e);
+            }
+        });
+        cleanup(() => unsubscribe());
     });
 
     const handleDelete$ = $(() => {

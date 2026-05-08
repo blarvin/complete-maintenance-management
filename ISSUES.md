@@ -23,10 +23,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ### Style & Layout
 
-3.) **DataField values underlined like links** — Reads as a hyperlink; pick a different "tappable / editable" affordance.
-
-4.) **Text entry caret should be visible while entering text in fields** But not appear when click anywhere else. This applies to Under Construction, pending fields, etc.
-
 5.) **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
 
 6.) **Under Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
@@ -35,11 +31,11 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 8.) **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
 
-12.) **Selecting a Field template for adding should focus its first text value entry field active for text entry** In both the Add Fields composer pending state, and the Add Field pending state.
+### History
 
-13.) **Editing a persisted Field Value by double-click, second double-click should cancel if no change was made** Right now a second double click seems to save and sync (snackbar says "Field updated".)
+1.) **UPDATE gate for Field Value** - If it doesnt actually change, dont write history, dont sync, etc. 
 
-14.) **datafieldChevron centerline should horizintally align with the centerline of the top row of text in datafieldWrapper** This may be tricky, as some DF components may not have a top row of text, may have different text formatting, etc. 
+2.) **Editing a persisted Field Value by double-click, second double-click should cancel** Second double-tap/double-click should always cancel the edit. Right now a second double click seems to save and sync (snackbar says "Field updated".)
 
 ---
 

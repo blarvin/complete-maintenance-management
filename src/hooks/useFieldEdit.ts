@@ -156,6 +156,11 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
             }
             return;
         }
+        // No-op gate: if value didn't change, skip dispatch (no history, no sync, no snackbar).
+        if (newVal === prevVal) {
+            stopFieldEdit$();
+            return;
+        }
         try {
             await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId, newValue: newVal } });
             currentValue.value = newVal;
@@ -238,7 +243,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         suppressBlurUntil.value = Date.now() + BLUR_SUPPRESS_WINDOW_MS;
         const isDouble = await checkDoubleTap$(x, y);
         if (isDouble) {
-            await save$();
+            cancel$();
         }
     });
 
