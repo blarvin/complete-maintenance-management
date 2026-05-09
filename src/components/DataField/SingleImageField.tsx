@@ -13,6 +13,7 @@
 
 import { component$, useSignal, $, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
+import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import type { SingleImageValue } from '../../data/models';
 import styles from './DataField.module.css';
 import imageStyles from './SingleImageField.module.css';
@@ -63,6 +64,7 @@ export const SingleImageField = component$<SingleImageFieldProps>((props) => {
         displayValue,
         hasValue,
         editValue,
+        currentValue,
         editInputRef,
         valuePointerDown$,
         valueKeyDown$,
@@ -79,6 +81,8 @@ export const SingleImageField = component$<SingleImageFieldProps>((props) => {
         onUpdated$: props.onUpdated$,
         pendingMode: props.pendingMode,
     });
+
+    useFieldValueSync<SingleImageValue>(props.id, currentValue);
 
     const labelId = `field-label-${props.id}`;
 

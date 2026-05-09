@@ -142,16 +142,18 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         for (let i = 0; i < batch.length; i++) {
             const row = batch[i];
             const cardOrder = currentMaxCardOrder + i + 1;
-            const created = await commandBus.execute({
+            // Pass initialValue through so creation writes a single history
+            // row carrying the user-entered value, instead of a null create
+            // followed by an update (which produced an "Empty" history row).
+            await commandBus.execute({
                 type: 'ADD_FIELD_FROM_TEMPLATE',
-                payload: { nodeId: options.nodeId, templateId: row.templateId, cardOrder },
+                payload: {
+                    nodeId: options.nodeId,
+                    templateId: row.templateId,
+                    cardOrder,
+                    initialValue: row.value ?? null,
+                },
             });
-            if (row.value !== null && row.value !== undefined && created) {
-                await commandBus.execute({
-                    type: 'UPDATE_FIELD_VALUE',
-                    payload: { fieldId: created.id, newValue: row.value },
-                });
-            }
         }
 
         forms.value = [];

@@ -261,7 +261,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         templateId: template.id,
         componentType: template.componentType,
         fieldName: template.label,
-        value: null,
+        value: input.initialValue ?? null,
         cardOrder: order,
         updatedBy: userId,
         updatedAt: ts,

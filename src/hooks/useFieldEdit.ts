@@ -2,16 +2,19 @@
  * useFieldEdit<T> - Generic hook for DataField edit state across Components.
  *
  * Parameterized on the typed value T (string for text/enum, number for
- * measurement, etc). The edit signal is always a string (user types into a text
- * input); `parse` converts it to T | null on save, `format` converts T | null
- * back to display string.
+ * measurement, etc). The edit signal is always a string (user types into a
+ * text input); `parse` converts it to T | null on save, `format` converts
+ * T | null back to display string.
  *
  * Handles:
  * - Edit mode state (via appState FSM)
- * - Double-tap to edit/save
+ * - Double-tap to edit; double-tap-while-editing cancels
  * - Focus management + outside-click cancel
- * - Preview mode for historical values
- * - Snackbar + error handling on save/revert
+ * - No-op gate: identical newVal/prevVal skips dispatch (no history, no sync)
+ * - Snackbar + error handling on save
+ *
+ * Cross-component writes (e.g. revert from DataFieldHistory) update the
+ * renderer's `currentValue` via `useFieldValueSync`, not through this hook.
  */
 
 import { useSignal, $, useVisibleTask$, useOnDocument, type Signal, type QRL } from '@builder.io/qwik';
@@ -35,7 +38,7 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
     validate?: (value: T | null) => void;
     /** Ref to the outer DataField row; used for outside-click cancel. Owned by the dispatcher. */
     rootRef: Signal<HTMLElement | undefined>;
-    /** Called after save or revert completes. */
+    /** Called after save completes. */
     onUpdated$?: QRL<() => void>;
     /**
      * When set, save$ does NOT dispatch UPDATE_FIELD_VALUE or show a Snackbar.
@@ -53,7 +56,6 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
 export type UseFieldEditResult<T extends DataFieldValue> = {
     isEditing: boolean;
     displayValue: string;
-    isPreviewActive: boolean;
     hasValue: boolean;
     editValue: Signal<string>;
     currentValue: Signal<T | null>;
@@ -68,9 +70,6 @@ export type UseFieldEditResult<T extends DataFieldValue> = {
     inputBlur$: QRL<() => void>;
     inputKeyDown$: QRL<(e: KeyboardEvent) => void>;
     inputChange$: QRL<(value: string) => void>;
-    setPreview$: QRL<(value: T | null) => void>;
-    revert$: QRL<(value: T | null) => Promise<void>>;
-    clearPreview$: QRL<() => void>;
 };
 
 export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOptions<T>): UseFieldEditResult<T> {
@@ -86,10 +85,8 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     const {
         current: currentValue,
         edit: editValue,
-        preview: previewValue,
         displayValue,
         hasValue,
-        isPreviewActive,
     } = useEditableValue<T>(options.initialValue, options.format);
 
     const { checkDoubleTap$ } = useDoubleTap();
@@ -98,11 +95,6 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         editInputRef,
         () => appState.editingFieldId === options.fieldId
     );
-
-    // Sync initial value on mount
-    useVisibleTask$(() => {
-        currentValue.value = options.initialValue;
-    });
 
     // Auto-enter edit mode on mount when used in the FieldComposer (pendingMode)
     // with no value yet — i.e., the user just checked the row's box. Mirrors the
@@ -115,7 +107,6 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         if (appState.editingFieldId === options.fieldId) return;
         startFieldEdit$(options.fieldId);
         editValue.value = options.format(null);
-        previewValue.value = null;
         const t = setTimeout(() => {
             editInputRef.value?.focus();
             editInputRef.value?.select?.();
@@ -129,7 +120,6 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         if (appState.editingFieldId === options.fieldId) return;
         startFieldEdit$(options.fieldId);
         editValue.value = options.format(currentValue.value);
-        previewValue.value = null;
     });
 
     const save$ = $(async () => {
@@ -156,7 +146,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
             }
             return;
         }
-        // No-op gate: if value didn't change, skip dispatch (no history, no sync, no snackbar).
+        // No-op gate: identical value skips dispatch (no history, no sync, no snackbar).
         if (newVal === prevVal) {
             stopFieldEdit$();
             return;
@@ -267,29 +257,9 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         }
     });
 
-    // === Preview/Revert Handlers ===
-
-    const setPreview$ = $((value: T | null) => {
-        previewValue.value = value;
-    });
-
-    const clearPreview$ = $(() => {
-        previewValue.value = null;
-    });
-
-    const revert$ = $(async (value: T | null) => {
-        await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId: options.fieldId, newValue: value } });
-        currentValue.value = value;
-        previewValue.value = null;
-        if (options.onUpdated$) {
-            await options.onUpdated$();
-        }
-    });
-
     return {
         isEditing,
         displayValue,
-        isPreviewActive,
         hasValue,
         editValue,
         currentValue,
@@ -304,8 +274,5 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         inputBlur$,
         inputKeyDown$,
         inputChange$,
-        setPreview$,
-        revert$,
-        clearPreview$,
     };
 }

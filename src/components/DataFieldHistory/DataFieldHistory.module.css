@@ -76,6 +76,39 @@
     background: var(--bg-selected-hover);
 }
 
+/* Floats out of normal flow so the row's height is unchanged when the button
+   appears, and so no grid column has to be reserved for it. Sits in the left
+   gutter (the ::before band) of the selected row, vertically centered. */
+.revertButton {
+    position: absolute;
+    top: 50%;
+    right: 103%;
+    transform: translateY(-50%);
+    margin-right: 4px;
+    appearance: none;
+    background: var(--bg-surface);
+    border: var(--border-width-thin) solid var(--border-strong);
+    border-radius: 50%;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1;
+    padding: 0;
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.revertButton:hover {
+    background: var(--bg-hover-subtle);
+}
+.revertButton:focus-visible {
+    outline: var(--border-width-thin) solid var(--border-strong);
+    outline-offset: 1px;
+}
+
 .historyValue {
     grid-column: value;     /* aligns with outer `value` */
     color: var(--text-secondary);

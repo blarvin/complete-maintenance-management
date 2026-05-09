@@ -12,6 +12,7 @@ import { getTemplateQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import { getSnackbarService } from '../../services/snackbar';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
+import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { EnumKvConfig } from '../../data/models';
@@ -44,10 +45,7 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     const popoverRef = useSignal<HTMLElement>();
     const popoverPos = useSignal<{ top: number; left: number }>({ top: 0, left: 0 });
 
-    useVisibleTask$(({ track }) => {
-        track(() => props.value);
-        currentValue.value = props.value;
-    });
+    useFieldValueSync<string>(props.id, currentValue);
 
     const isEditing = selectors.getDataFieldState(appState, props.id) === 'EDITING';
 

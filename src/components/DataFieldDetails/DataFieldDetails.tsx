@@ -79,7 +79,9 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         ? `${editAt}  ${editBy}`
         : '...';
 
-    const hasHistory = history.value.length > 0;
+    // The most recent entry duplicates the live value and is hidden by
+    // DataFieldHistory; require at least 2 entries before enabling the chevron.
+    const hasHistory = history.value.length > 1;
 
     const units = template.value?.componentType === 'measurement-kv'
         ? (template.value.config as MeasurementKvConfig).units

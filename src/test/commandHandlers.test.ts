@@ -138,4 +138,23 @@ describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
     expect(history[0].property).toBe('value');
     expect(history[0].newValue).toBeNull();
   });
+
+  it('honors initialValue: field starts populated and writes one history entry carrying that value', async () => {
+    // Composer flow used to call create (with null) then update (with value),
+    // producing a leading "Empty" history row. Now creates a single entry.
+    await createNode('n1');
+    await seedTemplate('tpl_weight', 'measurement-kv', 'Weight', { units: 'kg' });
+
+    const field = await getCommandBus().execute({
+      type: 'ADD_FIELD_FROM_TEMPLATE',
+      payload: { nodeId: 'n1', templateId: 'tpl_weight', initialValue: 42 },
+    });
+
+    expect(field.value).toBe(42);
+
+    const history = await db.history.where('dataFieldId').equals(field.id).toArray();
+    expect(history).toHaveLength(1);
+    expect(history[0].action).toBe('create');
+    expect(history[0].newValue).toBe(42);
+  });
 });

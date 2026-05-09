@@ -14,7 +14,7 @@ export type Command =
   | { type: 'CREATE_EMPTY_NODE'; payload: { id: string; parentId: string | null } }
   | { type: 'UPDATE_NODE'; payload: { id: string; updates: { nodeName?: string; nodeSubtitle?: string } } }
   | { type: 'DELETE_NODE'; payload: { id: string } }
-  | { type: 'ADD_FIELD_FROM_TEMPLATE'; payload: { nodeId: string; templateId: string; cardOrder?: number } }
+  | { type: 'ADD_FIELD_FROM_TEMPLATE'; payload: { nodeId: string; templateId: string; cardOrder?: number; initialValue?: DataFieldValue | null } }
   | { type: 'UPDATE_FIELD_VALUE'; payload: { fieldId: string; newValue: DataFieldValue | null } }
   | { type: 'DELETE_FIELD'; payload: { fieldId: string } }
   | { type: 'RESTORE_FIELD'; payload: { fieldId: string } }

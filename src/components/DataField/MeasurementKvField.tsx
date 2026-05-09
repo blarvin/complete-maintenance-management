@@ -8,6 +8,7 @@
 
 import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
+import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { getTemplateQueries } from '../../data/queries';
 import type { MeasurementKvConfig } from '../../data/models';
 import { computeMeasurementState, type MeasurementState } from './measurementState';
@@ -94,7 +95,6 @@ const MeasurementKvBody = component$<MeasurementKvFieldProps & { config: Measure
     const {
         isEditing,
         displayValue,
-        isPreviewActive,
         hasValue,
         editValue,
         editInputRef,
@@ -115,6 +115,8 @@ const MeasurementKvBody = component$<MeasurementKvFieldProps & { config: Measure
         onUpdated$: props.onUpdated$,
         pendingMode: props.pendingMode,
     });
+
+    useFieldValueSync<number>(props.id, currentValue);
 
     const labelId = `field-label-${props.id}`;
 
@@ -148,7 +150,6 @@ const MeasurementKvBody = component$<MeasurementKvFieldProps & { config: Measure
                 styles.datafieldValue,
                 hasValue && styles.datafieldValueUnderlined,
                 styles.datafieldValueEditable,
-                isPreviewActive && styles.datafieldValuePreview,
                 measurementStyles[`state_${state}`],
                 'no-caret',
             ]}

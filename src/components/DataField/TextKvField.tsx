@@ -7,6 +7,7 @@
 
 import { component$, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
+import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import styles from './DataField.module.css';
 
 export type TextKvFieldProps = {
@@ -29,9 +30,9 @@ export const TextKvField = component$<TextKvFieldProps>((props) => {
     const {
         isEditing,
         displayValue,
-        isPreviewActive,
         hasValue,
         editValue,
+        currentValue,
         editInputRef,
         valuePointerDown$,
         valueKeyDown$,
@@ -48,6 +49,8 @@ export const TextKvField = component$<TextKvFieldProps>((props) => {
         onUpdated$: props.onUpdated$,
         pendingMode: props.pendingMode,
     });
+
+    useFieldValueSync<string>(props.id, currentValue);
 
     const labelId = `field-label-${props.id}`;
 
@@ -69,7 +72,6 @@ export const TextKvField = component$<TextKvFieldProps>((props) => {
                 styles.datafieldValue,
                 hasValue && styles.datafieldValueUnderlined,
                 styles.datafieldValueEditable,
-                isPreviewActive && styles.datafieldValuePreview,
                 'no-caret',
             ]}
             onPointerDown$={valuePointerDown$}

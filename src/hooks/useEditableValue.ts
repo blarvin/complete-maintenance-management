@@ -1,9 +1,12 @@
 /**
- * useEditableValue - Generic hook for managing current / edit / preview state.
+ * useEditableValue - Holds the current/committed value and the in-progress
+ * edit buffer for a DataField renderer.
  *
- * Current and preview are stored as typed T | null. The edit signal stays as a
- * string because the user types into a text input; callers parse it on save.
- * Displayed value is derived via a `format` callback.
+ * `current` is typed `T | null`; `edit` is always a string because the user
+ * types into a text input. Callers parse on save and format for display.
+ *
+ * The earlier preview/revert overlay (used by an old per-history-row preview
+ * UX) was retired when revert moved to a direct write from DataFieldHistory.
  */
 
 import { useSignal, type Signal } from '@builder.io/qwik';
@@ -13,14 +16,10 @@ export type UseEditableValueResult<T> = {
     current: Signal<T | null>;
     /** In-progress edit buffer (always a string; callers parse on save). */
     edit: Signal<string>;
-    /** Overlay value for previewing historical entries. */
-    preview: Signal<T | null>;
-    /** Formatted display string (preview takes precedence over current). */
+    /** Formatted display string for `current`. */
     displayValue: string;
-    /** True when current or preview has a non-null value. */
+    /** True when `current` has a non-null, non-empty formatted value. */
     hasValue: boolean;
-    /** True when preview is overlaying current. */
-    isPreviewActive: boolean;
 };
 
 export function useEditableValue<T>(
@@ -29,12 +28,9 @@ export function useEditableValue<T>(
 ): UseEditableValueResult<T> {
     const current = useSignal<T | null>(initialValue);
     const edit = useSignal<string>('');
-    const preview = useSignal<T | null>(null);
 
-    const active = preview.value !== null ? preview.value : current.value;
-    const displayValue = format(active);
-    const hasValue = active !== null && active !== undefined && displayValue !== '';
-    const isPreviewActive = preview.value !== null;
+    const displayValue = format(current.value);
+    const hasValue = current.value !== null && current.value !== undefined && displayValue !== '';
 
-    return { current, edit, preview, displayValue, hasValue, isPreviewActive };
+    return { current, edit, displayValue, hasValue };
 }

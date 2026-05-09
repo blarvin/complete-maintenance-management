@@ -261,7 +261,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       templateId: template.id,
       componentType: template.componentType,
       fieldName: template.label, // snapshot
-      value: null,
+      value: input.initialValue ?? null,
       cardOrder: order,
       updatedBy: userId,
       updatedAt: timestamp,
@@ -299,7 +299,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Field created in IDB:', field.id, field.fieldName);
-    storageEventBus.emit({ type: 'FIELD_WRITTEN', field });
+    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id: field.id, parentNodeId: field.parentNodeId, value: field.value, deletedAt: field.deletedAt } });
     return createResult(field);
   }
 
@@ -350,7 +350,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Field updated in IDB:', id, input.value);
-    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, deletedAt: field.deletedAt } });
+    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, value: input.value, deletedAt: field.deletedAt } });
     return createResult(undefined);
   }
 
@@ -399,7 +399,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
 
     console.log('[IDBAdapter] Field soft-deleted in IDB:', id);
-    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, deletedAt: timestamp } });
+    storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id, parentNodeId: field.parentNodeId, value: field.value, deletedAt: timestamp } });
     return createResult(undefined);
   }
 

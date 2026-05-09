@@ -14,7 +14,7 @@ import type { TreeNode, DataField } from './models';
 export type StorageEvent =
   | { type: 'NODE_WRITTEN'; node: Pick<TreeNode, 'id' | 'parentId' | 'nodeName' | 'deletedAt'> }
   | { type: 'NODE_HARD_DELETED'; nodeId: string }
-  | { type: 'FIELD_WRITTEN'; field: Pick<DataField, 'id' | 'parentNodeId' | 'deletedAt'> }
+  | { type: 'FIELD_WRITTEN'; field: Pick<DataField, 'id' | 'parentNodeId' | 'value' | 'deletedAt'> }
   | { type: 'FIELD_DELETED'; fieldId: string };
 
 // ---------------------------------------------------------------------------

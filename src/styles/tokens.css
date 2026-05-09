@@ -42,7 +42,6 @@
   --bg-hover: var(--color-gray-200);
   --bg-hover-subtle: rgba(0, 0, 0, 0.03);
   --bg-active: rgba(0, 0, 0, 0.05);
-  --bg-preview: var(--color-yellow-100);
   --bg-selected: var(--color-blue-100);
   --bg-selected-hover: var(--color-blue-200);
   --bg-expanded: var(--color-gray-300);

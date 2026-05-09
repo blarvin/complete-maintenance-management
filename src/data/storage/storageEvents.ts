@@ -17,5 +17,4 @@ export function dispatchStorageChangeEvent(): void {
     detail: { timestamp: now() }
   });
   window.dispatchEvent(event);
-  console.log('[StorageEvents] Dispatched storage-change event');
 }

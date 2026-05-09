@@ -139,14 +139,6 @@ input.datafieldValue {
     font-style: italic;
 }
 
-/* Preview state - when showing a historical value before revert */
-.datafieldValuePreview {
-    background: var(--bg-preview);
-    padding: 0 var(--space-1);
-    margin: 0 calc(-1 * var(--space-1));
-    border-radius: var(--radius-sm);
-}
-
 /* Mobile: metadata wraps to its own row beneath the value (see
    DataFieldDetails.module.css and DataFieldHistory.module.css for the
    matching overrides). Value spans through the metadata column so it

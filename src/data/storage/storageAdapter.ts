@@ -45,6 +45,10 @@ export type StorageFieldCreate = {
   parentNodeId: string;
   templateId: string;
   cardOrder?: number;
+  /** Optional initial value. When provided, the create-event history row
+   *  carries this value instead of null, avoiding a redundant "Empty" entry
+   *  followed by an immediate update. */
+  initialValue?: DataFieldValue | null;
 };
 
 export type StorageFieldUpdate = {

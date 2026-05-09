@@ -41,7 +41,7 @@ describe('syncSubscriber', () => {
 
   it('calls triggerSync on FIELD_WRITTEN', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', deletedAt: null } });
+    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
@@ -54,8 +54,8 @@ describe('syncSubscriber', () => {
   it('calls triggerSync once per event for rapid emits', () => {
     subscribeSyncTrigger();
     const events: StorageEvent[] = [
-      { type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', deletedAt: null } },
-      { type: 'FIELD_WRITTEN', field: { id: 'f2', parentNodeId: 'n1', deletedAt: null } },
+      { type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', value: null, deletedAt: null } },
+      { type: 'FIELD_WRITTEN', field: { id: 'f2', parentNodeId: 'n1', value: null, deletedAt: null } },
       { type: 'NODE_WRITTEN', node: { id: 'n1', parentId: null, nodeName: 'X', deletedAt: null } },
     ];
     for (const e of events) bus.emit(e);
@@ -65,11 +65,11 @@ describe('syncSubscriber', () => {
 
   it('unsubscribe stops triggering sync', () => {
     const unsub = subscribeSyncTrigger();
-    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', deletedAt: null } });
+    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
 
     unsub();
-    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f2', parentNodeId: 'n1', deletedAt: null } });
+    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f2', parentNodeId: 'n1', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce(); // still 1, not 2
   });
 });

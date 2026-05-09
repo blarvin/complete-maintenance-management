@@ -37,12 +37,13 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
   });
 
   bus.register('ADD_FIELD_FROM_TEMPLATE', async (cmd) => {
-    const { nodeId, templateId, cardOrder } = cmd.payload;
+    const { nodeId, templateId, cardOrder, initialValue } = cmd.payload;
     const result = await adapter.createField({
       id: generateId(),
       parentNodeId: nodeId,
       templateId,
       cardOrder,
+      initialValue,
     });
     return result.data;
   });
