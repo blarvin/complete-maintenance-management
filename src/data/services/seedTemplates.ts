@@ -15,7 +15,7 @@ import type { DataFieldTemplate } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
-const SEED_VERSION = 1;
+const SEED_VERSION = 2;
 const SEED_KEY = 'templatesSeededVersion';
 
 /**
@@ -44,7 +44,7 @@ const SEEDS: SeedRow[] = [
     id: TEMPLATE_IDS.typeOf,
     componentType: 'text-kv',
     label: 'Type Of',
-    config: {},
+    config: { maxWords: 2 },
   },
   {
     id: TEMPLATE_IDS.tags,
@@ -82,10 +82,12 @@ export async function seedTemplates(): Promise<void> {
   const timestamp = now();
   const userId = getCurrentUserId();
 
+  // Upsert (not skip-if-exists): a SEED_VERSION bump is the signal that the
+  // canonical seed config has changed and existing rows should be overwritten.
+  // Templates aren't user-edited yet, so this is safe; revisit when Templates
+  // become editable.
   await db.transaction('rw', [db.templates, db.syncMetadata], async () => {
     for (const seed of SEEDS) {
-      const existing = await db.templates.get(seed.id);
-      if (existing) continue;
       const row: DataFieldTemplate = {
         ...seed,
         updatedBy: userId,

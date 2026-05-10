@@ -22,7 +22,7 @@ describe('seedTemplates', () => {
       'Weight',
     ]);
     const meta = await db.syncMetadata.get('templatesSeededVersion');
-    expect(meta?.value).toBe(1);
+    expect(meta?.value).toBe(2);
   });
 
   it('is idempotent on second call', async () => {

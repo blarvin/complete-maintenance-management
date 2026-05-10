@@ -37,6 +37,8 @@ export type TextKvConfig = {
   maxLength?: number;
   multiline?: boolean;
   placeholder?: string;
+  /** When set, save rejects values whose word count exceeds this limit. */
+  maxWords?: number;
 };
 
 export type EnumKvConfig = {

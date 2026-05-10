@@ -69,6 +69,11 @@ button {
 /* Caret fix - apply to interactive non-input elements */
 .no-caret {
     user-select: none;
+    -webkit-user-select: none;
+    /* Android Chrome's double-tap-on-text would otherwise initiate word
+       selection, stealing focus from a just-opened input and dismissing the
+       on-screen keyboard mid-edit. */
+    -webkit-touch-callout: none;
     cursor: default;
     caret-color: transparent;
 }

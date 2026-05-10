@@ -114,12 +114,16 @@ input.datafieldValue:focus {
 /* Non-button focusable element - caret handled via .no-caret class in JSX */
 .datafieldValueEditable {
     cursor: pointer;
-    /* Disables mobile double-tap-zoom and the 300ms click delay so the JS
-       double-tap-to-edit gesture isn't fighting a browser zoom gesture (which
-       on iOS dismissed the keyboard right after autoFocus opened it). */
-    touch-action: manipulation;
+    /* `none` (not `manipulation`) is required: Android Chrome interprets
+       double-tap on long text as a word-selection gesture even with
+       user-select: none, and the resulting selection focus dismisses the
+       just-opened keyboard. `none` disables every native touch gesture on this
+       element; the page still scrolls fine when touched outside the value. */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
-
 /* Under-construction: value inputs mimic final text appearance */
 input.datafieldValue {
     appearance: none;
@@ -137,6 +141,33 @@ input.datafieldValue {
        we need a visible caret while actively inputting a value. */
     caret-color: auto;
     touch-action: manipulation;
+}
+
+/* Multi-line variant for text-kv Templates with config.multiline (e.g.
+   Description). The textarea must occupy a height comparable to the wrapped
+   display value: replacing wrapped text with a 1-line input collapses the
+   row, scrolls the page, and Android dismisses the just-opened keyboard. */
+textarea.datafieldTextarea {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    user-select: text;
+    cursor: text;
+    caret-color: auto;
+    touch-action: manipulation;
+    width: 100%;
+    resize: vertical;
+    /* `field-sizing: content` (Chromium 123+) auto-grows to fit content; the
+       min-height fallback keeps multi-line feel on browsers without it. */
+    field-sizing: content;
+    min-height: calc(var(--text-sm) * 1.4 * 4);
+    line-height: 1.4;
 }
 
 .datafieldPlaceholder {

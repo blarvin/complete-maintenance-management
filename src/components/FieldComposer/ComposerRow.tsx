@@ -84,6 +84,7 @@ const RowBody = component$<RowBodyProps>((props) => {
                 <TextKvField
                     id={props.pendingForm.id}
                     fieldName={props.template.label}
+                    templateId={props.template.id}
                     value={(props.pendingForm.value as string | null) ?? null}
                     rootRef={props.rootRef}
                     pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void>, autoFocus }}

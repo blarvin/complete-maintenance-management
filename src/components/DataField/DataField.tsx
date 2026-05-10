@@ -144,6 +144,7 @@ function renderBody(
                 <TextKvField
                     id={props.id}
                     fieldName={props.fieldName}
+                    templateId={props.templateId}
                     value={(props.value as string | null) ?? null}
                     rootRef={rootRef}
                     onUpdated$={props.onUpdated$}
