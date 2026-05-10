@@ -114,6 +114,10 @@ input.datafieldValue:focus {
 /* Non-button focusable element - caret handled via .no-caret class in JSX */
 .datafieldValueEditable {
     cursor: pointer;
+    /* Disables mobile double-tap-zoom and the 300ms click delay so the JS
+       double-tap-to-edit gesture isn't fighting a browser zoom gesture (which
+       on iOS dismissed the keyboard right after autoFocus opened it). */
+    touch-action: manipulation;
 }
 
 /* Under-construction: value inputs mimic final text appearance */
@@ -132,6 +136,7 @@ input.datafieldValue {
     /* Override inherited `caret-color: transparent` from .no-caret ancestors —
        we need a visible caret while actively inputting a value. */
     caret-color: auto;
+    touch-action: manipulation;
 }
 
 .datafieldPlaceholder {

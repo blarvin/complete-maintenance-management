@@ -38,6 +38,7 @@
     text-align: left;
     cursor: pointer;
     font-family: inherit;
+    touch-action: manipulation;
 }
 
 .historyRow::before,
