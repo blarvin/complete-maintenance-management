@@ -4,7 +4,7 @@ import {
     getFirestore,
     connectFirestoreEmulator,
     persistentLocalCache,
-    persistentSingleTabManager,
+    persistentMultipleTabManager,
     memoryLocalCache,
 } from "firebase/firestore";
 
@@ -51,12 +51,17 @@ function shouldUseEmulator(): boolean {
     return false;
 }
 
-// Initialize Firestore only once (handle HMR gracefully)
+// Initialize Firestore only once (handle HMR gracefully).
+// Multi-tab tab manager (not single-tab): single-tab mode uses an exclusive
+// IDB lock that intermittently fails to acquire (e.g. against a stale lock
+// from a not-cleanly-closed prior session), forcing every page load into
+// memory cache mode and re-fetching all docs from the server. Multi-tab uses
+// leader election and works whether one tab is open or many.
 function getDb() {
     try {
         return initializeFirestore(app, {
             localCache: isBrowser
-                ? persistentLocalCache({ tabManager: persistentSingleTabManager(undefined) })
+                ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
                 : memoryLocalCache(),
         });
     } catch {
