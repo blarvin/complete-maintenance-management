@@ -12,6 +12,7 @@
 
 import { useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
 import { getNodeQueries } from '../data/queries';
+import { initializeStorage } from '../data/storage/initStorage';
 import type { TreeNode } from '../data/models';
 import { useStorageChangeListener } from './useStorageChangeListener';
 import { useAsyncOperation, runAsync } from './useAsyncOperation';
@@ -21,12 +22,15 @@ export function useRootViewData() {
     const op = useAsyncOperation();
 
     const load$ = $(async () => {
-        console.log('[useRootViewData] load$ called');
+        // Awaiting init here closes the race where this hook's task fires
+        // before initializeQueries() has run; without it, getNodeQueries()
+        // throws, runAsync swallows it, and the UI sits empty until the next
+        // storage-change event (which on cold reload only arrives after the
+        // first Firestore pull — multiple seconds on slow mobile networks).
+        await initializeStorage();
         await runAsync(op, async () => {
             const fetchedNodes = await getNodeQueries().getRootNodes();
-            console.log('[useRootViewData] Fetched', fetchedNodes.length, 'root nodes');
             nodes.value = fetchedNodes;
-            console.log('[useRootViewData] nodes.value set to', nodes.value.length, 'nodes');
         });
     });
 

@@ -23,14 +23,28 @@ import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
 import { seedTemplates } from '../services/seedTemplates';
+import { dispatchStorageChangeEvent } from './storageEvents';
 
 let initialized = false;
+/**
+ * Memoized init promise. All callers share the same promise so concurrent
+ * `await initializeStorage()` calls (e.g. one from useInitStorage and one from
+ * useRootViewData) never re-enter the init body and do duplicate work.
+ */
+let initPromise: Promise<void> | null = null;
 
 /**
  * Initialize storage and sync.
- * Should be called once on client-side app startup.
+ * Idempotent: safe to call from multiple hooks; first call does the work,
+ * subsequent calls return the same promise.
  */
-export async function initializeStorage(): Promise<void> {
+export function initializeStorage(): Promise<void> {
+  if (initPromise) return initPromise;
+  initPromise = doInitializeStorage();
+  return initPromise;
+}
+
+async function doInitializeStorage(): Promise<void> {
   if (initialized) {
     console.log('[Storage] Already initialized');
     return;
@@ -97,10 +111,15 @@ export async function initializeStorage(): Promise<void> {
 
     initialized = true;
     console.log('[Storage] Initialization complete');
+    // Belt-and-suspenders: any data hook whose first load$ ran before queries
+    // were ready will now retry via its storage-change listener and render
+    // from IDB immediately, instead of waiting for the first Firestore pull.
+    dispatchStorageChangeEvent();
   } catch (err) {
     console.error('[Storage] Initialization failed:', err);
     // Don't throw - app should still work offline with empty IDB
     initialized = true;
+    dispatchStorageChangeEvent();
   }
 }
 
@@ -173,5 +192,6 @@ export function isStorageInitialized(): boolean {
 export async function clearStorage(): Promise<void> {
   await db.delete();
   initialized = false;
+  initPromise = null;
   console.log('[Storage] Cleared all data');
 }

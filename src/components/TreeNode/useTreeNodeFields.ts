@@ -9,6 +9,7 @@
 
 import { useSignal, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
 import { getFieldQueries } from '../../data/queries';
+import { initializeStorage } from '../../data/storage/initStorage';
 import type { DataField } from '../../data/models';
 import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
 import { useAsyncOperation, runAsync } from '../../hooks/useAsyncOperation';
@@ -47,6 +48,7 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
     // Defined before useVisibleTask$ so it can be referenced in the event handler
     const reload$ = $(async () => {
         if (!currentEnabled.value) return;
+        await initializeStorage();
         await runAsync(op, async () => {
             fields.value = await getFieldQueries().getFieldsForNode(currentNodeId.value);
         });
@@ -64,6 +66,9 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
             return;
         }
 
+        // Await storage init to avoid the race where this task fires before
+        // initializeQueries() runs (see useRootViewData.ts for the full story).
+        await initializeStorage();
         await runAsync(op, async () => {
             fields.value = await getFieldQueries().getFieldsForNode(nodeId);
         });
