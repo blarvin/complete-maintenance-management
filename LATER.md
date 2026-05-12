@@ -75,42 +75,41 @@ Spec called for a breadcrumb in `TreeNodeDetails` (`"Ancestor1 / Ancestor2 / Par
 
 ---
 
-## DataField Component Library
+## DataField Components & FieldDefinition Library
 
-The Component/Template/Instance spine plus the 4 Phase-1 Components (`text-kv`, `enum-kv`, `measurement-kv`, `single-image`-as-stub) landed in Phase 1. Open Phase-1 Component work (multiline textarea, allowOther, real single-image with blobs, history preview/revert) is tracked in ISSUES.md.
+The FieldComponent / FieldDefinition / DataField spine plus the 4 Phase-1 FieldComponents (`text-kv`, `enum-kv`, `measurement-kv`, `single-image`-as-stub) landed in Phase 1. The FieldDefinition Authoring UI + crowdsourced shared Library is specced in SPECIFICATION.md and tracked in ISSUES.md. Open Phase-1 FieldComponent work (multiline textarea, allowOther, real single-image with blobs, history preview/revert) is tracked in ISSUES.md.
 
-### Phase-2 Components (not yet specced)
+### Phase-2 FieldComponents (not yet specced)
 
 - `number-kv` — numerical values without units (distinct from measurement-kv)
 - `date-kv` — date/datetime picker
 - `image-carousel` — multiple images, carousel UI
 - `image-grid` — multiple images, grid UI
 - `image-aggregator` — derived gallery across descendants
-- `composite-kv` — recursive Template configs (fields containing fields)
+- `composite-kv` — recursive FieldDefinition configs (fields containing fields)
 
-### Phase-2 Component features
+### Phase-2 FieldComponent features
 
 - **Unit conversion** for `measurement-kv`
 - **Option styling** (badges / colors) for `enum-kv`
-- **Typeahead / flip-up** behavior for the CreateDataField combo box and the enum-kv picker
 
-### Template Library Enhancements
+### FieldDefinition Library — Phase-2 enhancements
 
-- `**componentVersion` field** on Template (per-template contract versioning)
-- **User-authored Templates + Template-builder UI** — currently only dev-seeded Templates
-- **Template sharing scope** — private / workspace / global, plus moderation
-- **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md)
-- **Orphaned-blob GC** — needed once blobs are in play
+The Phase-1 model is "authoring is contributing": one global pool, all FieldDefinitions sync to every client, no scope toggle, no edit/delete by end users (see SPECIFICATION.md → "DataField Components, Field Definitions, and Library"). Beyond that:
+
+- **`componentVersion` field** on FieldDefinition (per-FieldComponent contract versioning) — only relevant once FieldComponent config schemas evolve.
+- **User-facing edit & delete of FieldDefinitions** with real ownership rules ("you can delete / edit your own"). Phase-1 edit semantics are "edit = fork → mint new FieldDefinition"; delete is admin-only via direct Firestore writes.
+- **Label uniqueness, dedup, merge flows** — Phase 1 allows duplicate labels; the Composer's live-preview row is the disambiguation affordance.
+- **Composer discovery UX**: typeahead filter, `category` grouping into collapsible sections, dropdown-flip behaviour, popularity ranking, "recently added" sort.
+- **Moderation / promotion to canonical** for crowdsourced entries — flagged-content workflow, dev curation.
+- **Dedicated Library view** (a TreeNode stack under the app's main menu) for browsing / managing FieldDefinitions outside the Composer.
+- **Templates (composite sets of FieldDefinitions)** — e.g. "HPU with Accumulator". The reserved word "Template" is mortgaged for this future feature; distinct, larger scope than the FieldDefinition Library itself.
+- **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md).
+- **Orphaned-blob GC** — needed once blobs are in play.
 
 ### Media / Image Fields
 
 Media upload, preview, storage, and caching are out of scope for Phase 1. All fields treated as text.
-
-### DataField Creation Enhancements
-
-- **Typeahead filtering** on combo box — filter prefab list as user types (currently requires chevron click)
-- **Dropdown flip behavior** — flip upward if insufficient space below
-- **Custom entry + auto-library** — user-entered field names added to their personal library of previously used fields
 
 ### DataField Reordering UI
 

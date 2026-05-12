@@ -15,13 +15,10 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-- No text entry caret when editing dataField names or values - it should only have active blinking caret when in editing state
-- Double underline when editing dataField values. There must be a better way.
-- **DataFieldHistory written lazily** — History entries are created when the field is re-opened, not on save. Should emit on commit so history is never missing after a reload.
 - **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
 - **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
 
-### Style & Layout
+### UX
 
 5.) **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
 
@@ -33,25 +30,29 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ### History
 
-1.) **UPDATE gate for Field Value** - If it doesnt actually change, dont write history, dont sync, etc. 
-
-2.) **Editing a persisted Field Value by double-click, second double-click should cancel** Second double-tap/double-click should always cancel the edit. Right now a second double click seems to save and sync (snackbar says "Field updated".)
-
 ---
 
 ## Features
+
+### FieldDefinition Library (specced — see SPECIFICATION.md → "DataField Components, Field Definitions, and Library")
+
+Implementation order is sequential; each step lands before the next.
+
+1. **Rename Template → FieldDefinition** — Mechanical rename per the Migration table in SPEC: `DataFieldTemplate` → `FieldDefinition`, `templates` Dexie table → `fieldDefinitions`, `templateId` → `fieldDefinitionId`, `TEMPLATE_IDS` → `FIELD_DEFINITION_IDS`, `seedTemplates.ts` → `seedFieldDefinitions.ts`, `ADD_FIELD_FROM_TEMPLATE` → `ADD_FIELD_FROM_DEFINITION`, etc. One PR, low risk because instance `fieldName` is already snapshotted.
+2. **Add `authorId` to FieldDefinition** — `"appDeveloper"` on seeds, `getCurrentUserId()` (currently `"localUser"`) on user-authored writes. Not surfaced in UI yet.
+3. **Wire `fieldDefinitions` through the sync layer** — IDBAdapter push/pull, FirestoreAdapter push/pull, SyncQueueManager enqueue on user-authored writes, LWW conflict resolution. Seed path stays local-only and skip-syncs as today.
+4. **FieldDefinition Authoring UI** — "+ New Field Definition…" affordance in the Field Composer expanding into an inline form (FieldComponent picker, label, component-specific config, measurement invariant validation). Save commits the FieldDefinition and immediately materialises a pre-checked Composer row for it. New pending-state hook (working name `useFieldDefinitionDraft`), distinct from `usePendingForms`.
+5. **Revisit edit/delete decisions** — at the tail of the work, check whether multi-user identity has landed; if not, the Phase-1 "no edit, admin-only delete" stance remains.
+
+### Other
 
 - **Delete with undo** — Confirmation dialog (with descendant/field counts for nodes), Snackbar toast after delete, 5s undo window. Applies to both TreeNode and DataField delete. Requires a global Snackbar component (single-slot, auto-dismiss, optional action button). Blocks full cascade-delete work in LATER.md.
 - **Node metadata in TreeNodeDetails** — Show `createdAt`, last `updatedAt`, last `updatedBy`.
 - **Inline rename of NodeTitle and NodeSubtitle** — Decide UX (double-tap like DataFields? edit button?), then wire up. Currently nodes are rename-less after creation.
 - **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
-- **DataField picker keyboard + clickaway** — In the CreateDataField combo box and the enum-kv picker: Up/Down to move, Enter to pick, click-outside or tab-away to close. Touch path must keep working. (Typeahead and flip-up are in LATER.md.)
-- **Restore history preview + revert** — Lost in the Component split. DataFieldDetails shows the history list read-only today. Needs a way to hoist preview/revert across the Component boundary — probably by having each renderer expose `setPreview$`/`revert$` up to DataField via a shared context or ref.
-- **text-kv multiline textarea** — SPEC says `config.multiline: true` renders a `<textarea>` with Cmd/Ctrl+Enter to save. Currently always a single-line input. Description Template is seeded with `multiline: true` so this is visible.
 - **enum-kv allowOther support** — When `config.allowOther === true`, dropdown should append "Other…" that reveals an inline text input. Currently the dropdown only shows the fixed options list.
 - **Real single-image Component** — Replace the "Image upload coming soon" stub with: Dexie `imageBlobs` table, file picker, preview + full-size modal, MIME/size validation, caption input when `requireCaption`. Firestore blob sync and orphaned-blob GC are separate follow-ups (see LATER.md).
-- **Reconstitute broader adapter + sync test coverage** — `dbSchema`, `DeltaSync`, `firestoreAdapter`, `FullCollectionSync`, `idbAdapter`, `ServerAuthorityResolver`, `serviceLayer`, `syncManager`, `createNodeService` test files were deleted in the Template refactor. Narrow coverage for `seedTemplates`, `ADD_FIELD_FROM_TEMPLATE` handlers, and `measurementState` has been reconstituted; adapter/sync layer coverage is still missing.
-- **Measurement config invariant validation** — Only relevant once user-authored Templates land: enforce `absoluteMin ≤ warnLow ≤ nominalMin ≤ nominalMax ≤ warnHigh ≤ absoluteMax` at Template creation time.
+- **Reconstitute broader adapter + sync test coverage** — `dbSchema`, `DeltaSync`, `firestoreAdapter`, `FullCollectionSync`, `idbAdapter`, `ServerAuthorityResolver`, `serviceLayer`, `syncManager`, `createNodeService` test files were deleted in the Template refactor. Narrow coverage for `seedTemplates`, `ADD_FIELD_FROM_TEMPLATE` handlers, and `measurementState` has been reconstituted; adapter/sync layer coverage is still missing. Worth restoring *before* (3) FieldDefinition sync wiring so the new code lands with coverage in place.
 - **Tab focus order audit** — Walk the app with keyboard only; fix any jumps that land in weird places after Tab across views.
 - **CreateNodeButton child UX** — Spec says n+1 buttons between children; LATER.md flags this as cluttered. Decide: keep interleaved buttons, switch to a single "Add sub-asset" that appends (or inserts relative to a selection), or something else. Then update spec + implementation to match.
 - NodeDetails should show createdAt, createdBy, and last edit date
