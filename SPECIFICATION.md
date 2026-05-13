@@ -6,7 +6,7 @@ Asset maintenance and management app for physical assets (vehicles, buildings, i
 
 Unlike common tree view UIs where each node only has a name, this app has four levels of knowledge structure:
 
-- Level I: Nodes represent things and their constituent parts. The structure, what parent and child hierarchical relationships ARE the first level of information.
+- Level I: Nodes represent things and their constituent parts. The structure, parent and child hierarchical relationships ARE the first level of information.
 - Level II: Data pertaining directly to one Node; facts, attributes, properties, characteristics, etc. of the Node itself. Each Node has one Data Card containing any number of Data Fields (facts about that thing). The Node's own Title and Subtitle are on this level conceptually, but reside above the Data Card in a Node Header.
 - Level III: Each Data Field has a Field Details section containing context (e.g., metadata) and management actions (e.g., delete).
 - Level IV: Each Data Field has a user‑facing history of previous Field values.
@@ -28,47 +28,47 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ### Views
 
-- **ROOT View**: [DONE] Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom.
-- **BRANCH View**: [DONE] One parent TreeNode (isParent state) at top, followed by indented children below. Children are visually indented by `--child-indent`.
+- **ROOT View**: Listview of top-level TreeNodes (each in isRoot state) + "Create New Asset" button at the bottom.
+- **BRANCH View**: One parent TreeNode (isParent state) at top, followed by indented children below. Children are visually indented by `--child-indent`.
 
 ### Core component hierarchy
 
-- **TreeNode**: [DONE] Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
-- **NodeTitle**: [DONE] Displays the current node's `nodeName` (bold).
-- **NodeSubtitle**: [DONE] Simple description or location string
-- **DataCard**: [DONE] Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Expands/collapses with an animated slide-down, triggered by a chevron button on the TreeNode body to the right of NodeSubtitle. Animation must be content-aware (no fixed heights). See IMPLEMENTATION.md → DataCard Animation for technique.
-- **DataField**: [DONE] Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed.
-- **DataFieldDetails**: [DONE] Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
-- **CreateDataFieldButton**: [DONE] Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
-- **UpButton**: [DONE] On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
-- **CreateNodeButton**: [DONE] Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
-- **TreeNodeDetails**: [DONE] Expandable section (simple chevron and label "Tree Node Details") containing details, actions, and settings pertaining to the whole TreeNode. DELETE button only for now; Rename and Move [Phase 2+].
+- **TreeNode**: Main component with NodeTitle, NodeSubtitle, DataCard, CardExpandButton. Should appear as a horizontal row with two nested rows (NodeTitle and NodeSubtitle components), optimized for vertical scrolling lists.
+- **NodeTitle**: Displays the current node's `nodeName` (bold).
+- **NodeSubtitle**: Simple description or location string
+- **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + "Add New Field" button + node metadata section. Expands/collapses with an animated slide-down, triggered by a chevron button on the TreeNode body to the right of NodeSubtitle. Animation must be content-aware (no fixed heights). See IMPLEMENTATION.md → DataCard Animation for technique.
+- **DataField**: Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed.
+- **DataFieldDetails**: Expandable section (simple chevron) with Field Value history, edit history, creation details, etc., and a delete feature for the Data Field.
+- **CreateDataFieldButton**: Button at the bottom of the DataCard to create a new Data Field for the node on its DataCard.
+- **UpButton**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
+- **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
+- **TreeNodeDetails**: Expandable section (simple chevron and label "Tree Node Details") containing details, actions, and settings pertaining to the whole TreeNode. DELETE button only for now; Rename and Move [Phase 2+].
 - **Snackbar**: Global transient notification toast. See Snackbar & Undo section below for full spec.
 
-## TreeNode States [DONE]
+## TreeNode States
 
 - **isRoot**: Top-level nodes on ROOT view. Full width, no children shown, no "Up" button, abbreviated DataCard (first 6 DataFields by updatedAt, or all if fewer than 6). All TreeNodes are in this state at ROOT view.
 - **isParent**: Current node being viewed at top of BRANCH view. Full width, children shown below, "Up" button, full DataCard. One TreeNode is in this state at top of BRANCH view.
 - **isChild**: Child nodes under current parent. Narrower (indented) on the left, no children shown, full DataCard. Any number of first-child TreeNodes appear in this state below the current isParent instance in the BRANCH view.
 - **isUnderConstruction**: New node requiring setup with in-situ fillable Name and Subtitle fields. Replaces CreateNodeButton button in-place as either isRoot or isChild. The isUnderConstruction node's DataCard state is also set to isUnderConstruction.
 
-## DataCard States [DONE]
+## DataCard States
 
 - **isExpanded**: DataCard is open/closed. Persisted to local storage.
 - **isUnderConstruction**: Default Data Field values are active for entry in-situ (though not required). TreeNodeDetails not shown. CreateDataFieldButton in last row and functions as normal. "Save" and "Cancel" buttons at the bottom.
 
-## DataField States [DONE]
+## DataField States
 
 - **isMetadataExpanded**: Field Details area is expanded/collapsed. Persisted to local storage.
 - **isEditing**: Data Field is active for editing (active input field). Not persisted - component-local state only.
 
-## CreateNodeButton Contextual Variants [DONE]
+## CreateNodeButton Contextual Variants
 
 - **root** (ROOT view): Large button styled to mimic a ROOT node at the bottom of ROOT view. Aria-label/title: "Create New Asset".
 - **child** (BRANCH view): Small inline buttons aligned with the children indent gutter. For n child nodes, render n+1 buttons (between, above, below child nodes). Aria-label/title: "Create New Sub‑Asset Here". Clicking creates a `TreeNode` in isChild state and inserts it at the button's position.
 - **State on Create** New node appears in `isUnderConstruction` state with in‑situ Name and Subtitle fields.
 
-### State Transitions (use finite state machine pattern) [DONE]
+### State Transitions (use finite state machine pattern)
 
 - isRoot → isParent (navigate to BRANCH VIEW)
 - isChild → isParent (navigate deeper)
@@ -77,12 +77,12 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ## User Experience pathways
 
-### Navigation Logic ... handled client-side without URL changes [DONE]
+### Navigation Logic ... handled client-side without URL changes
 
 - **Down-tree**: Move down the tree by tapping any child node. Takes user to isParent state for that node.
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
 
-### Node Creation [DONE]
+### Node Creation
 
 - **Create Node**: CreateNodeButton Creates a new TreeNode in isUnderConstruction state, as a child of the current parent (including ROOT). On the BRANCH view, multiple child variant instances appear between the isChild instances of TreeNode.
 - **Node Construction UI/UX**: In isUnderConstruction state, user must enter "Name" (nodeName) and "Subtitle" (nodeSubtitle) in their respective places on the TreeNode. Name is required; empty names are not allowed.
@@ -91,18 +91,18 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ### Node Deletion
 
-- **Delete Tree Node**: [DONE] Button available in TreeNodeDetails section of DataCard.
-- [DONE] Deleting any `TreeNode` performs a **soft delete**: sets `deletedAt` timestamp on the node. Children are implicitly hidden (not cascade soft-deleted) — queries filter out children of soft-deleted parents.
-- [DONE] During deletion, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
-- [DONE] Root (tree) deletion uses the same soft delete mechanism.
+- **Delete Tree Node**: Button available in TreeNodeDetails section of DataCard.
+- Deleting any `TreeNode` performs a **soft delete**: sets `deletedAt` timestamp on the node. Children are implicitly hidden (not cascade soft-deleted) — queries filter out children of soft-deleted parents.
+- During deletion, no new `DataFieldHistory` entries are written; manual per‑field deletes do write a `delete` history entry (see DataField Management).
+- Root (tree) deletion uses the same soft delete mechanism.
 - Confirmation dialog summarizing counts (nodes, fields) before proceeding. Snackbar with Undo follows (see Snackbar & Undo).
 
 ## DataField Management
 
-- **Double-Tap to edit**: [DONE] Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
+- **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
 - **Create Data Fields (Composer)**: A "+ Add Fields" button at bottom of the DataCard expands the **Field Composer**: an inline section (within the DataCard) showing every available FieldDefinition as a row in a single list. Each row has a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that FieldDefinition (rendered with its real FieldComponent). Save commits every checked row as a real DataField on the node; Cancel discards them. The Composer also hosts the "+ New Field Definition…" authoring affordance. See "Field Composer" and "DataField Components, Field Definitions, and Library" below.
-- **Delete Data Field**: [DONE] Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
-  - **Soft Delete**: [DONE] DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
+- **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
+  - **Soft Delete**: DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
   - A `DataFieldHistory` entry with `action: "delete"`, `property: "value"`, and `newValue: null` is written only after the undo window elapses.
 
 ## Snackbar & Undo
@@ -120,13 +120,16 @@ A single global Snackbar component provides transient feedback and brief undo fo
 
 ### Variants
 
+
 | Variant             | Use                                                          | Default duration | ARIA                                    |
 | ------------------- | ------------------------------------------------------------ | ---------------- | --------------------------------------- |
 | `success` (default) | Save/delete confirmations with optional Undo                 | 5s               | `role="status"`, `aria-live="polite"`   |
 | `error`             | Immediate storage-op failures (IDB write, quota, validation) | 8s               | `role="alert"`, `aria-live="assertive"` |
 | `info`              | Neutral notices (reserved; not used in Phase 1)              | 5s               | `role="status"`, `aria-live="polite"`   |
 
+
 ### When the Snackbar appears
+
 
 | Trigger                      | Variant | Message                                | Action                                 |
 | ---------------------------- | ------- | -------------------------------------- | -------------------------------------- |
@@ -134,6 +137,7 @@ A single global Snackbar component provides transient feedback and brief undo fo
 | DataField deleted            | success | "Field deleted"                        | Undo — clears `deletedAt`              |
 | TreeNode deleted             | success | "Node deleted" (with descendant count) | Undo — clears `deletedAt`              |
 | Immediate storage-op failure | error   | From `StorageError.describeForUser()`  | Retry (if the op is retryable) or none |
+
 
 Background sync failures are **not** surfaced — `SyncQueueManager` retries silently. Sync-status and pull-applied notifications are deferred (see LATER.md).
 
@@ -191,15 +195,15 @@ interface ToastInput {
 
 ### Loading states
 
-- **BranchView**: [DONE] Shows "Loading..." while the parent node and children are fetched from storage.
+- **BranchView**: Shows "Loading..." while the parent node and children are fetched from storage.
 - **RootView**: Should show an equivalent loading indicator while root nodes load. Currently renders empty until data arrives (see ISSUES.md).
-- **DataFieldHistory**: [DONE] History entries load on expand; the component renders once data is available.
+- **DataFieldHistory**: History entries load on expand; the component renders once data is available.
 
 ### Error states
 
 Storage operations can fail (IndexedDB quota, corrupt data, Firestore unavailable). Error handling is currently minimal:
 
-- [DONE] `StorageError` contract normalises adapter failures with typed codes (`not-found`, `validation`, `conflict`, `unavailable`, `internal`) and a `retryable` flag.
+- `StorageError` contract normalises adapter failures with typed codes (`not-found`, `validation`, `conflict`, `unavailable`, `internal`) and a `retryable` flag.
 - User-facing error feedback will use the Snackbar to surface brief error messages when storage operations fail. The `StorageError.describeForUser()` helper provides Snackbar-friendly messages.
 - No retry UI or explicit error/retry states in components — Firestore's offline persistence and IndexedDB reliability absorb most failures in practice.
 
@@ -207,7 +211,7 @@ Storage operations can fail (IndexedDB quota, corrupt data, Firestore unavailabl
 
 The sync system operates silently in the background. There is no user-facing indication of sync status, online/offline state, or data staleness. [Phase 2+]: consider a subtle status indicator (e.g. offline badge, last-synced timestamp).
 
-## Keyboard & Accessibility [DONE]
+## Keyboard & Accessibility
 
 All interactive elements are keyboard-accessible. This is a core quality bar, not a feature.
 
@@ -238,14 +242,13 @@ The Field Composer is a unified inline UI for adding one or more DataFields to a
 The composer is a single inline-expanded section within the DataCard, distinguished from persisted fields by a **dashed border** around the whole zone. It contains:
 
 1. **In-situ FieldDefinition list** — every active FieldDefinition appears as a row, sorted alphabetically by label. Each row has a checkbox. A **"+ New Field Definition…"** affordance appears as the final row, expanding inline into the authoring form (see FieldDefinition Authoring UI).
-   - **Unchecked row**: checkbox + FieldDefinition label only.
-   - **Checked row**: checkbox + a live, editable preview of that FieldDefinition, rendered with its actual FieldComponent (TextKvField, EnumKvField, MeasurementKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full FieldComponent preview; unchecking collapses it back to label-only.
-   - **Locked checked row** (construction mode defaults only): rendered as a checked row, but the checkbox is disabled.
-   - The preview is fully editable: the user can set the value, etc. Nothing is persisted to storage until **Save**.
-   - Rows transition smoothly (~200ms) on toggle. On check, the _checkbox_ is anchored in the viewport so a tall preview (single-image especially) doesn't shove the user's place off-screen.
-   - (Grouping rows by `category` into collapsible sections is [Phase 2+], deferred until FieldDefinition count makes a flat list unwieldy.)
-
-1. **Sticky Save / Cancel footer** — pinned to the bottom of the viewport while the composer is in view, so a long list doesn't bury the actions. Save disabled (display mode) when no rows are checked.
+  - **Unchecked row**: checkbox + FieldDefinition label only.
+  - **Checked row**: checkbox + a live, editable preview of that FieldDefinition, rendered with its actual FieldComponent (TextKvField, EnumKvField, MeasurementKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full FieldComponent preview; unchecking collapses it back to label-only.
+  - **Locked checked row** (construction mode defaults only): rendered as a checked row, but the checkbox is disabled.
+  - The preview is fully editable: the user can set the value, etc. Nothing is persisted to storage until **Save**.
+  - Rows transition smoothly (~200ms) on toggle. On check, the *checkbox* is anchored in the viewport so a tall preview (single-image especially) doesn't shove the user's place off-screen.
+  - (Grouping rows by `category` into collapsible sections is [Phase 2+], deferred until FieldDefinition count makes a flat list unwieldy.)
+2. **Sticky Save / Cancel footer** — pinned to the bottom of the viewport while the composer is in view, so a long list doesn't bury the actions. Save disabled (display mode) when no rows are checked.
 
 #### Interactions
 
@@ -253,7 +256,7 @@ The composer is a single inline-expanded section within the DataCard, distinguis
 - **Save** persists every checked row as a `DataField` (executing `ADD_FIELD_FROM_DEFINITION` per row — renamed from `ADD_FIELD_FROM_TEMPLATE`), in **alphabetical order** (matching the visual order in the composer), with each new field assigned a `cardOrder` greater than every already-persisted field on the card. New fields appear at the bottom of the FieldList in the same order they previewed in. After Save, the composer collapses.
 - **Cancel** discards every pending row. If any rows had been checked, a Snackbar with Undo follows (`"N fields discarded"` — Undo re-opens the composer with the same rows checked and the same entered values).
 - **Click-away does not dismiss the composer.** Pending work is preserved across in-app navigation; the composer is dismissed only by Save or Cancel. (Pending state across reload is best-effort via existing localStorage scaffolding.)
-- **Construction mode**: Save here is implicit in node creation. The node's "Save" button finalises the node _and_ the composer's batch in one transaction. Cancel discards the in-progress node entirely, as today.
+- **Construction mode**: Save here is implicit in node creation. The node's "Save" button finalises the node *and* the composer's batch in one transaction. Cancel discards the in-progress node entirely, as today.
 - **No reorder of pending rows** in this round. Commit order is alphabetical. Reorder of fields (pending and persisted) is designed together as a future task.
 
 #### Why one composer for both modes
@@ -264,30 +267,28 @@ Construction-mode "pending forms" and display-mode "newly-added field draft" are
 
 The two pending-state shapes inside the Composer are distinct:
 
-- **Pending DataField draft** (`pendingForm` in `usePendingForms`) — a checked row holds an in-progress _value_ for an existing FieldDefinition. Committed by Save → writes a `DataField`.
-- **Pending FieldDefinition draft** — the "+ New Field Definition…" form holds an in-progress _FieldDefinition_ (componentType, label, config). Committed by Save → writes a `FieldDefinition`, then _immediately_ spawns a pre-checked pending DataField draft for it at the same row position.
+- **Pending DataField draft** (`pendingForm` in `usePendingForms`) — a checked row holds an in-progress *value* for an existing FieldDefinition. Committed by Save → writes a `DataField`.
+- **Pending FieldDefinition draft** — the "+ New Field Definition…" form holds an in-progress *FieldDefinition* (componentType, label, config). Committed by Save → writes a `FieldDefinition`, then *immediately* spawns a pre-checked pending DataField draft for it at the same row position.
 
 These are deliberately separate hooks/states because a DataField cannot exist without a FieldDefinition to anchor it.
 
-## DataField Components, Field Definitions, and Library
+## DataField Components and Crowdsourced Library
 
 ### Conceptual hierarchy
 
-Four concepts, four layers — each is the precondition for the next:
+Three concepts, three layers — each is the precondition for the next:
 
 1. **FieldComponent** — dev-authored code: a renderer + value type + config schema, identified by `componentType` (e.g. `"text-kv"`, `"enum-kv"`). The closed set is owned by the dev team; users cannot create FieldComponents.
-2. **FieldPrototype** — informal term for a FieldComponent with its config knobs surfaced but not yet filled in: the "blank authoring form" the UI presents. Not persisted; no record exists until the user gives it a label and saves it as a FieldDefinition. (This term may rarely appear in code — it names the in-UI transient state, not a stored entity.)
-3. **FieldDefinition** — a persisted, named, fully-configured kind of field: `{ componentType, label, config, authorId, … }`. FieldDefinitions populate the Library and are what users pick from in the Field Composer. Both dev-seeded entries and every user-authored entry are FieldDefinitions — there is no other species.
-4. **DataField** — an instance of a FieldDefinition, attached to a TreeNode, holding one typed `value`. Snapshots `fieldName` from the FieldDefinition's `label` at creation, so the rare cases of FieldDefinition change don't rewrite user data.
+2. **FieldDefinition** — a persisted, named, fully-configured kind of field: `{ componentType, label, config, authorId, … }`. FieldDefinitions populate the Library and are what users pick from in the Field Composer. Both dev-seeded entries and every user-authored entry are FieldDefinitions — there is no other species.
+3. **DataField** — an instance of a FieldDefinition, attached to a TreeNode, holding one typed `value`. Snapshots `fieldName` from the FieldDefinition's `label` at creation, so the rare cases of FieldDefinition change don't rewrite user data.
 
 ```
 FieldComponent (code)
-   └── FieldPrototype (in-UI transient: Component + open config form)
-         └── FieldDefinition (persisted Library entry: Component + label + config)
-               └── DataField (instance on a TreeNode: above + value + parent)
+  └── FieldDefinition (persisted Library entry: Component + label + config)
+       └── DataField (instance on a TreeNode: above + value + parent)
 ```
 
-The word **Template** is reserved for a future feature: a _set_ of FieldDefinitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the FieldDefinition Library work; nothing in Phase 1 of this surface uses the word "Template" — anywhere it appears today (`templates` table, `DataFieldTemplate`, `TEMPLATE_IDS`, `templateId`) is a legacy artefact to be renamed (see Migration & Naming below).
+The word **Template** is reserved for a future feature: a *set* of FieldDefinitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the FieldDefinition Library work; nothing in Phase 1 of this surface uses the word "Template" — anywhere it appears today (`templates` table, `DataFieldTemplate`, `TEMPLATE_IDS`, `templateId`) is a legacy artefact to be renamed (see Migration & Naming below).
 
 ### Phase 1 FieldComponents
 
@@ -327,7 +328,7 @@ Privacy implication for the user: labels may carry proprietary information (e.g.
 
 The Composer renders **every active FieldDefinition** sorted alphabetically by `label` — one row per entry, no scope filters, no categories, no search box. Phase-1 simplicity: a flat list is fine while the Library is small. Typeahead filtering, `category` grouping, and dropdown-flip behaviour all remain deferred. [Phase 2+]
 
-**Placement of a newly authored entry**: When a user authors a FieldDefinition from inside the Composer, the new row appears **at the position where it was minted** (i.e. wherever the "+ New Field Definition…" affordance was when the user clicked it), pre-checked and ready to receive a value. On the _next_ opening of the Composer the entry takes its normal alphabetical place — this avoids both losing the user's place during the authoring → fill-value flow, and bespoke "recently created" sort logic.
+**Placement of a newly authored entry**: When a user authors a FieldDefinition from inside the Composer, the new row appears **at the position where it was minted** (i.e. wherever the "+ New Field Definition…" affordance was when the user clicked it, at the top of the Composer's pick list for now), pre-checked and ready to receive a value. On the *next* opening of the Composer the entry takes its normal alphabetical place — this avoids both losing the user's place during the authoring → fill-value flow, and bespoke "recently created" sort logic.
 
 ### FieldDefinition Authoring UI
 
@@ -341,7 +342,7 @@ Clicking the affordance expands an inline authoring form in-place:
 4. **Save** — commits the FieldDefinition (sync-queued for upload with `authorId: <currentUserId>`, currently `"localUser"`), collapses the authoring form, and **immediately materialises a checked Composer row** at the same position, so the user can fill in the value and proceed to the batch Save in one continuous motion.
 5. **Cancel** — discards the in-progress authoring form. No FieldDefinition is written. The Composer returns to its prior state.
 
-The authoring form has **its own pending-state shape**: it is _not_ a `pendingForm` from `usePendingForms`, because no DataField exists yet — the FieldDefinition has to commit first before a DataField draft can attach to it. The hook surface for this state is a separate concern; naming TBD during implementation (working name: `useFieldDefinitionDraft`).
+The authoring form has **its own pending-state shape**: it is *not* a `pendingForm` from `usePendingForms`, because no DataField exists yet — the FieldDefinition has to commit first before a DataField draft can attach to it. The hook surface for this state is a separate concern; naming TBD during implementation (working name: `useFieldDefinitionDraft`).
 
 ### Edit / Delete Semantics for FieldDefinitions
 
@@ -370,6 +371,7 @@ The current implementation uses the legacy term "Template" throughout. Renaming 
 
 Mechanical renames (one PR, low risk because instance `fieldName` is already snapshotted):
 
+
 | From                                | To                                                                                                       |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `DataFieldTemplate` (type)          | `FieldDefinition`                                                                                        |
@@ -380,7 +382,8 @@ Mechanical renames (one PR, low risk because instance `fieldName` is already sna
 | `seedTemplates.ts` (file)           | `seedFieldDefinitions.ts`                                                                                |
 | `getTemplateQueries` / etc.         | `getFieldDefinitionQueries` / etc.                                                                       |
 | `pendingFormFromTemplate`           | `pendingFormFromFieldDefinition`                                                                         |
-| `Template` in UI copy               | "Field Definition" or "Library Field" (user-facing wording TBD; keep the _type_ name consistent in code) |
+| `Template` in UI copy               | "Field Definition" or "Library Field" (user-facing wording TBD; keep the *type* name consistent in code) |
+
 
 Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "Composer" is correct.
 
@@ -397,7 +400,7 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 - **Templates** (composite sets of FieldDefinitions, e.g. "HPU with Accumulator") — distinct, larger feature.
 - **Composer discovery UX**: typeahead filter, category grouping, popularity ranking, "recently added" sort, dropdown-flip behaviour.
 - **Moderation / promotion to canonical** for crowdsourced entries.
-- **`componentVersion`** for per-FieldComponent contract versioning — only matters once config schemas evolve.
+- `**componentVersion`** for per-FieldComponent contract versioning — only matters once config schemas evolve.
 - **User-facing edit/delete** of FieldDefinitions with real ownership rules.
 - **Label uniqueness / dedup / merge** flows.
 - **Dedicated Library view** (the "TreeNode stack under the app's main menu").
@@ -410,11 +413,13 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 
 **FieldDefinition config**:
 
+
 | Field       | Type    | Default | Notes                     |
 | ----------- | ------- | ------- | ------------------------- |
 | maxLength   | number? | 500     | Hard limit on input       |
 | multiline   | boolean | false   | `true` renders a textarea |
 | placeholder | string? | —       | Shown when value is empty |
+
 
 **Instance value**: `string | null`
 
@@ -430,11 +435,13 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 
 **FieldDefinition config**:
 
+
 | Field      | Type     | Default | Notes                                     |
 | ---------- | -------- | ------- | ----------------------------------------- |
 | options    | string[] | —       | **Required.** Selectable values.          |
 | allowOther | boolean  | false   | If `true`, user may enter an ad-hoc value |
 | default    | string?  | —       | Pre-selected on new instance              |
+
 
 **Instance value**: `string | null` — must match an `options` entry unless `allowOther`.
 
@@ -450,6 +457,7 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 
 **FieldDefinition config**:
 
+
 | Field       | Type    | Required | Notes                                              |
 | ----------- | ------- | -------- | -------------------------------------------------- |
 | units       | string  | Yes      | Canonical unit label (e.g. `"PSI"`, `"°C"`, `"A"`) |
@@ -460,6 +468,7 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 | warnHigh    | number? | No       | Above this is a warning state                      |
 | absoluteMin | number? | No       | Input rejected below this                          |
 | absoluteMax | number? | No       | Input rejected above this                          |
+
 
 **Config invariants** (enforced at FieldDefinition authoring time):
 `absoluteMin ≤ warnLow ≤ nominalMin ≤ nominalMax ≤ warnHigh ≤ absoluteMax`. Any subset may be omitted; provided values must satisfy the chain.
@@ -478,11 +487,13 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 
 **FieldDefinition config**:
 
+
 | Field          | Type    | Default | Notes                                     |
 | -------------- | ------- | ------- | ----------------------------------------- |
 | maxSizeMB      | number  | 5       | Reject uploads above this size            |
 | requireCaption | boolean | false   | Caption shown and required                |
 | aspectHint     | string? | —       | e.g. `"4:3"` — display hint, not enforced |
+
 
 **Instance value**:
 
@@ -511,6 +522,7 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 
 Phase 1 ships with a set of dev-seeded FieldDefinitions (`authorId: "appDeveloper"`) so the Library is non-empty on first run. The starter set is small and biased toward fields any asset is likely to have — the user-authoring path is expected to grow the Library from here.
 
+
 | Label          | componentType  | Notes                                               |
 | -------------- | -------------- | --------------------------------------------------- |
 | Description    | text-kv        | `multiline: true`                                   |
@@ -528,6 +540,7 @@ Phase 1 ships with a set of dev-seeded FieldDefinitions (`authorId: "appDevelope
 | Note           | text-kv        | `multiline: true`                                   |
 | Main Image     | single-image   | `requireCaption: false`                             |
 
+
 The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) are a subset of this list and are described under "Default DataFields at Node Creation" above.
 
 ### Empty State (ROOT View)
@@ -535,11 +548,12 @@ The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) a
 - Default welcome message "Create a new asset to get started"
 - CreateNodeButton shown (isRoot state)
 
-## Data Model [DONE]
+## Data Model
 
 #### TreeNode Entity
 
 **Purpose:** Represents physical assets or logical containers in a hierarchical structure
+
 
 | Field        | Type          | Required | Description                     | Constraints                                    |
 | ------------ | ------------- | -------- | ------------------------------- | ---------------------------------------------- |
@@ -551,43 +565,49 @@ The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) a
 | updatedAt    | timestamp     | Yes      | Last modification time (epoch)  | Client-assigned; server-assigned [Phase 2+]    |
 | deletedAt    | timestamp \   | null     | Yes                             | Soft delete timestamp                          |
 
+
 #### FieldDefinition Entity
 
 **Purpose:** A Library entry: a `componentType` + `config` + `label` that users pick from in the Field Composer. The persisted form of "what kind of field this is."
 
-| Field         | Type              | Required | Description                             | Constraints                                                                          |
-| ------------- | ----------------- | -------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
-| id            | string (UUID)     | Yes      | Unique identifier                       | Generated client-side; canonical ID. Seeds use stable string IDs (`fd_*`).           |
-| componentType | string            | Yes      | Which FieldComponent this entry targets | One of the Phase 1 componentTypes                                                    |
-| label         | string            | Yes      | User-facing field name                  | Max 50 chars; **uniqueness not enforced** in Phase 1                                 |
-| config        | JSON              | Yes      | FieldComponent-specific config          | Shape discriminated by `componentType` (see per-FieldComponent specs)                |
-| authorId      | string            | Yes      | Who created it                          | `"appDeveloper"` for seeds; `getCurrentUserId()` (currently `"localUser"`) otherwise |
-| updatedBy     | string            | Yes      | User ID of last editor                  | Valid user ID                                                                        |
-| updatedAt     | timestamp         | Yes      | Last modification time (epoch)          | Client-assigned; server-assigned [Phase 2+]                                          |
-| deletedAt     | timestamp \| null | Yes      | Soft delete (admin-only in Phase 1)     | No user write path sets this                                                         |
+
+| Field         | Type          | Required | Description                             | Constraints                                                                          |
+| ------------- | ------------- | -------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
+| id            | string (UUID) | Yes      | Unique identifier                       | Generated client-side; canonical ID. Seeds use stable string IDs (`fd_`*).           |
+| componentType | string        | Yes      | Which FieldComponent this entry targets | One of the Phase 1 componentTypes                                                    |
+| label         | string        | Yes      | User-facing field name                  | Max 50 chars; **uniqueness not enforced** in Phase 1                                 |
+| config        | JSON          | Yes      | FieldComponent-specific config          | Shape discriminated by `componentType` (see per-FieldComponent specs)                |
+| authorId      | string        | Yes      | Who created it                          | `"appDeveloper"` for seeds; `getCurrentUserId()` (currently `"localUser"`) otherwise |
+| updatedBy     | string        | Yes      | User ID of last editor                  | Valid user ID                                                                        |
+| updatedAt     | timestamp     | Yes      | Last modification time (epoch)          | Client-assigned; server-assigned [Phase 2+]                                          |
+| deletedAt     | timestamp \   | null     | Yes                                     | Soft delete (admin-only in Phase 1)                                                  |
+
 
 #### DataField Entity
 
 **Purpose:** An instance of a FieldDefinition, attached to a TreeNode, storing one typed value.
 
-| Field             | Type              | Required | Description                                         | Constraints                                                   |
-| ----------------- | ----------------- | -------- | --------------------------------------------------- | ------------------------------------------------------------- |
-| id                | string (UUID)     | Yes      | Unique identifier                                   | Generated client-side; canonical ID                           |
-| fieldDefinitionId | string (UUID)     | Yes      | Reference to `FieldDefinition.id`                   | Must exist in `fieldDefinitions` table                        |
-| componentType     | string            | Yes      | Denormalized from FieldDefinition for dispatch      | Must match the referenced FieldDefinition's `componentType`   |
-| fieldName         | string            | Yes      | Display label                                       | Snapshot of FieldDefinition `label` at creation; max 50 chars |
-| parentNodeId      | string            | Yes      | Parent TreeNode reference                           | Must exist in TreeNode table                                  |
-| value             | JSON \| null      | Yes      | Typed value, shape discriminated by `componentType` | See per-FieldComponent value shapes above                     |
-| cardOrder         | number            | Yes      | Display ordering within DataCard                    | Auto-assigned on creation                                     |
-| updatedBy         | string            | Yes      | User ID of last editor                              | Valid user ID                                                 |
-| updatedAt         | timestamp         | Yes      | Last modification time (epoch)                      | Client-assigned; server-assigned [Phase 2+]                   |
-| deletedAt         | timestamp \| null | Yes      | Soft delete timestamp                               | —                                                             |
+
+| Field             | Type          | Required | Description                                    | Constraints                                                   |
+| ----------------- | ------------- | -------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| id                | string (UUID) | Yes      | Unique identifier                              | Generated client-side; canonical ID                           |
+| fieldDefinitionId | string (UUID) | Yes      | Reference to `FieldDefinition.id`              | Must exist in `fieldDefinitions` table                        |
+| componentType     | string        | Yes      | Denormalized from FieldDefinition for dispatch | Must match the referenced FieldDefinition's `componentType`   |
+| fieldName         | string        | Yes      | Display label                                  | Snapshot of FieldDefinition `label` at creation; max 50 chars |
+| parentNodeId      | string        | Yes      | Parent TreeNode reference                      | Must exist in TreeNode table                                  |
+| value             | JSON \        | null     | Yes                                            | Typed value, shape discriminated by `componentType`           |
+| cardOrder         | number        | Yes      | Display ordering within DataCard               | Auto-assigned on creation                                     |
+| updatedBy         | string        | Yes      | User ID of last editor                         | Valid user ID                                                 |
+| updatedAt         | timestamp     | Yes      | Last modification time (epoch)                 | Client-assigned; server-assigned [Phase 2+]                   |
+| deletedAt         | timestamp \   | null     | Yes                                            | Soft delete timestamp                                         |
+
 
 #### DataFieldHistory Entity (typed per componentType; minimal — value changes only; broader property tracking [Phase 2+])
 
 **Purpose:** Immutable append-only audit log of `DataField.value` changes. Typed as a discriminated union over `componentType` so `prevValue` / `newValue` carry the Component's value shape.
 
 **Shared fields**:
+
 
 | Field         | Type          | Required | Description                          | Constraints                                    |
 | ------------- | ------------- | -------- | ------------------------------------ | ---------------------------------------------- |
@@ -601,14 +621,17 @@ The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) a
 | updatedAt     | timestamp     | Yes      | When the change occurred (epoch)     | Client-assigned; server-assigned [Phase 2+]    |
 | rev           | number        | Yes      | Monotonic revision per `dataFieldId` | Starts at 0 for create                         |
 
+
 **Typed value fields** (`prevValue` and `newValue` shapes, by `componentType`):
 
-| componentType    | prevValue / newValue shape                                  |
-| ---------------- | ----------------------------------------------------------- |
-| `text-kv`        | `string \                                                   |
-| `enum-kv`        | `string \                                                   |
-| `measurement-kv` | `number \                                                   |
-| `single-image`   | `{ blobId, mimeType, width, height, byteSize, caption? } \  |
+
+| componentType    | prevValue / newValue shape                                 |
+| ---------------- | ---------------------------------------------------------- |
+| `text-kv`        | `string \                                                  |
+| `enum-kv`        | `string \                                                  |
+| `measurement-kv` | `number \                                                  |
+| `single-image`   | `{ blobId, mimeType, width, height, byteSize, caption? } \ |
+
 
 Reversion and audit are central to the app, so the history record must preserve the Component-typed value exactly as stored on the DataField at that revision.
 
@@ -647,14 +670,14 @@ Reversion and audit are central to the app, so the history record must preserve 
 
 **Data Persistence**:
 
-- **Storage Abstraction**: [DONE] Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
+- **Storage Abstraction**: Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
 - **Stores**: `treeNodes`, `dataFields`, `dataFieldHistory`, `fieldDefinitions` (renamed from `templates`; sync wiring per FieldDefinition Library spec)
-- **Primary Storage**: [DONE] Local browser storage for offline-first capability. All operations persist locally first.
-- **Cloud Sync**: [DONE] Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
-- **Sync Triggers**: [DONE] Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
-- **Single-user environment**: [DONE] Uses constant `updatedBy` "localUser". Only `value` changes are logged, not `fieldName`/`componentType`/`fieldDefinitionId` changes. [Phase 2+]: real user identity, broader property change logging.
+- **Primary Storage**: Local browser storage for offline-first capability. All operations persist locally first.
+- **Cloud Sync**: Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
+- **Sync Triggers**: Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
+- **Single-user environment**: Uses constant `updatedBy` "localUser". Only `value` changes are logged, not `fieldName`/`componentType`/`fieldDefinitionId` changes. [Phase 2+]: real user identity, broader property change logging.
 
-## Storage Architecture [DONE]
+## Storage Architecture
 
 ### Storage Abstraction
 
@@ -670,7 +693,7 @@ Storage operations are abstracted through a backend-agnostic interface, enabling
   - Delta Sync: Pulls only changes since last sync (faster, used periodically)
 - **Sync Queue**: Local changes are enqueued and processed sequentially. Failed items are marked for retry.
 
-### Soft Deletion [DONE]
+### Soft Deletion
 
 Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps:
 
@@ -762,7 +785,7 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
 
 Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (open in browser to preview).
 
-### Style Guide [DONE]
+### Style Guide
 
 **Visual identity: deliberately "unstyled."** The app should look like a well-structured document, not a themed product UI. Black borders, minimal colour, no rounded cards, no gradients, no drop shadows on primary elements. The visual hierarchy comes from typography weight, indentation, and whitespace — not from decorative styling. This makes the information itself the foreground, which suits a data-heavy maintenance tool.
 
