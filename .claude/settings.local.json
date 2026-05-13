@@ -31,7 +31,11 @@
       "PowerShell(npm run *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
       "Bash(npm test *)",
-      "Bash(git -C C:/Users/blarv/Desktop/complete-maintenance-management diff SPECIFICATION.md)"
+      "Bash(git -C C:/Users/blarv/Desktop/complete-maintenance-management diff SPECIFICATION.md)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\blarv\\\\Desktop\\\\complete-maintenance-management\" -Recurse -Directory -Name)",
+      "Bash(Select-String -Pattern \"\\(components|DataCard|FieldComposer|CreateDataField|DataField\\)\")",
+      "Bash(grep -i \"\\\\.ts$\")",
+      "Bash(grep -n \"#### FieldComponent: \\\\`number-kv\\\\`\" \"C:\\\\Users\\\\blarv\\\\Desktop\\\\complete-maintenance-management\\\\SPECIFICATION.md\" -A 150)"
     ],
     "deny": [
       "Read(.env*)",

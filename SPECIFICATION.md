@@ -243,7 +243,7 @@ The composer is a single inline-expanded section within the DataCard, distinguis
 
 1. **In-situ FieldDefinition list** — every active FieldDefinition appears as a row, sorted alphabetically by label. Each row has a checkbox. A **"+ New Field Definition…"** affordance appears as the final row, expanding inline into the authoring form (see FieldDefinition Authoring UI).
   - **Unchecked row**: checkbox + FieldDefinition label only.
-  - **Checked row**: checkbox + a live, editable preview of that FieldDefinition, rendered with its actual FieldComponent (TextKvField, EnumKvField, MeasurementKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full FieldComponent preview; unchecking collapses it back to label-only.
+  - **Checked row**: checkbox + a live, editable preview of that FieldDefinition, rendered with its actual FieldComponent (TextKvField, EnumKvField, NumberKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full FieldComponent preview; unchecking collapses it back to label-only.
   - **Locked checked row** (construction mode defaults only): rendered as a checked row, but the checkbox is disabled.
   - The preview is fully editable: the user can set the value, etc. Nothing is persisted to storage until **Save**.
   - Rows transition smoothly (~200ms) on toggle. On check, the *checkbox* is anchored in the viewport so a tall preview (single-image especially) doesn't shove the user's place off-screen.
@@ -296,10 +296,10 @@ Four FieldComponents, defined per the per-Component specs further down this sect
 
 - `text-kv` — free-form text
 - `enum-kv` — selection from a fixed option list
-- `measurement-kv` — number with units and optional ranges
+- `number-kv` — number with units, display format, nominal value or range, alarm thresholds, and freshness expectation
 - `single-image` — one image attached to a field
 
-Additional FieldComponents (`number-kv`, `date-kv`, `composite-kv`, `image-carousel`, `image-grid`, `image-aggregator`, …) are deferred. [Phase 2+]
+Additional FieldComponents (`date-kv`, `composite-kv`, `image-carousel`, `image-grid`, `image-aggregator`, …) are deferred. [Phase 2+]
 
 ### The Library
 
@@ -336,9 +336,9 @@ The "+ New Field Definition…" affordance lives **inside the Field Composer**. 
 
 Clicking the affordance expands an inline authoring form in-place:
 
-1. **Pick FieldComponent** — segmented control with the four Phase-1 choices (`text-kv`, `enum-kv`, `measurement-kv`, `single-image`).
+1. **Pick FieldComponent** — segmented control with the four Phase-1 choices (`text-kv`, `enum-kv`, `number-kv`, `single-image`).
 2. **Enter label** — text input, max 50 chars, required (must be non-empty trimmed string).
-3. **Component-specific config** — form fields shaped by the chosen FieldComponent (see per-Component specs for the available knobs). Required config (e.g. `enum-kv.options` non-empty, `measurement-kv.units` non-empty) is enforced before Save. Measurement invariants (`absoluteMin ≤ warnLow ≤ nominalMin ≤ nominalMax ≤ warnHigh ≤ absoluteMax`) are validated here — this is the validation gate the SPEC has long promised.
+3. **Component-specific config** — form fields shaped by the chosen FieldComponent (see per-Component specs for the available knobs). Required config (e.g. `enum-kv.options` non-empty, `number-kv.unitsSymbol` non-empty) is enforced before Save. `number-kv` threshold invariants (`LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` in range mode; the equivalent chain across `(nominalValue ± tolerance)` in discrete mode) are validated here — this is the validation gate the SPEC has long promised.
 4. **Save** — commits the FieldDefinition (sync-queued for upload with `authorId: <currentUserId>`, currently `"localUser"`), collapses the authoring form, and **immediately materialises a checked Composer row** at the same position, so the user can fill in the value and proceed to the batch Save in one continuous motion.
 5. **Cancel** — discards the in-progress authoring form. No FieldDefinition is written. The Composer returns to its prior state.
 
@@ -348,7 +348,7 @@ The authoring form has **its own pending-state shape**: it is *not* a `pendingFo
 
 **Phase 1 ships with no user-facing edit or delete of FieldDefinitions.** This is a deliberate simplification, not an oversight — multi-user identity and permissions don't exist yet, so any edit/delete UX is premature.
 
-- **Edit is conceptually "fork"**: any future UI affordance that looks like "edit this FieldDefinition" (whether the change is to label, config, or both) **mints a new FieldDefinition** rather than mutating the existing one. The original is untouched; downstream DataField instances remain bound to it. This sidesteps cascading config changes (e.g. unit changes on a measurement) and avoids the question of which user is authorised to edit a given entry.
+- **Edit is conceptually "fork"**: any future UI affordance that looks like "edit this FieldDefinition" (whether the change is to label, config, or both) **mints a new FieldDefinition** rather than mutating the existing one. The original is untouched; downstream DataField instances remain bound to it. This sidesteps cascading config changes (e.g. unit changes on a `number-kv` field) and avoids the question of which user is authorised to edit a given entry.
 - **Delete is admin-only**: end users cannot delete FieldDefinitions — not their own, not others'. Bad or duplicate entries are removed by the dev team directly in Firestore. The `deletedAt` column exists on the entity for forward compatibility (and for the rare admin tombstone), but no client write path sets it in Phase 1. Soft-deleted FieldDefinitions are filtered out of the Composer listing.
 
 Per-user delete UX, ownership-based permissions ("you can delete your own"), config-edit-creates-fork affordances, and label-uniqueness / dedup logic are all deferred to LATER.md and revisited once real multi-user identity lands.
@@ -404,6 +404,11 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 - **User-facing edit/delete** of FieldDefinitions with real ownership rules.
 - **Label uniqueness / dedup / merge** flows.
 - **Dedicated Library view** (the "TreeNode stack under the app's main menu").
+- **`number-kv` per-instance metadata**: a user-set Valid-Until date on each entered value (distinct from the config-level `expectedRefreshSeconds`); per-instance Priority/Severity, Redaction Rule, Source. These belong on `DataField`, not in FieldDefinition `config`, and interact with history/audit in ways the other knobs don't.
+- **`number-kv` unit conversion at display time** (e.g. user-preferred metric/imperial). Storage stays canonical; display does the work.
+- **ISO-4217 currency-code picker** for `number-kv` `currencyCode`. Phase 1 is free-text.
+- **Recursive sub-field composition** — config values that are themselves FieldComponent instances (e.g. a fully-composed sub-`number-kv` for `expectedRefresh`). Phase 1 keeps such config as structured primitives.
+- **Reusable config sub-shape extraction** — naming and sharing sub-shapes (e.g. a "ThresholdSet" or "Freshness" used across multiple FieldComponents) once a second Component needs them. Premature in Phase 1.
 
 ### Per-FieldComponent specs
 
@@ -451,35 +456,72 @@ Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "C
 
 **Validation**: value ∈ `options` (or `allowOther === true`).
 
-#### FieldComponent: `measurement-kv`
+#### FieldComponent: `number-kv`
 
-**Purpose**: A numeric quantity with semantic units and optional operating ranges (Pressure, Temperature, Current, Flow Rate).
+**Purpose**: A numeric quantity with semantic units, display formatting, an expected nominal (range or discrete with tolerance), ISA-18.2-style alarm thresholds (L/LL/H/HH), and an optional freshness expectation. Covers Pressure, Temperature, Current, Voltage, Flow Rate, Weight, Power Rating, currency-denominated values, percentages, etc.
+
+This is the deliberately rich Component — its breadth of config exists to exercise the FieldDefinition authoring UI's progressive-disclosure and value-driven conditional reveal patterns. Other Components stay deliberately thin.
 
 **FieldDefinition config**:
 
 
-| Field       | Type    | Required | Notes                                              |
-| ----------- | ------- | -------- | -------------------------------------------------- |
-| units       | string  | Yes      | Canonical unit label (e.g. `"PSI"`, `"°C"`, `"A"`) |
-| decimals    | number? | No       | Display precision (default 2)                      |
-| nominalMin  | number? | No       | Lower bound of normal operating range              |
-| nominalMax  | number? | No       | Upper bound of normal operating range              |
-| warnLow     | number? | No       | Below this is a warning state                      |
-| warnHigh    | number? | No       | Above this is a warning state                      |
-| absoluteMin | number? | No       | Input rejected below this                          |
-| absoluteMax | number? | No       | Input rejected above this                          |
+| Field                    | Type     | Required | Notes                                                                                                  |
+| ------------------------ | -------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| `unitsSymbol`            | string   | Yes      | Short unit token affixed to the value (e.g. `"V"`, `"psi"`, `"°C"`, `"kg"`, `"%"`, `"$"`)              |
+| `unitsLongForm`          | string?  | No       | Full unit name shown in Field Details / authoring preview (e.g. `"Volts"`, `"pounds per square inch"`) |
+| `affixPosition`          | enum     | No       | `"prefix"` \| `"suffix"`. Default `"suffix"`. Currency typically `"prefix"`                             |
+| `decimals`               | number?  | No       | Display precision (default 2). Storage is full IEEE-754                                                |
+| `displayFormat`          | enum     | No       | `"decimal"` (default) \| `"scientific"` \| `"engineering"` \| `"percent"` \| `"currency"`              |
+| `currencyCode`           | string?  | Cond.    | **Required iff** `displayFormat === "currency"`. Free-text in Phase 1 (e.g. `"USD"`, `"EUR"`)          |
+| `nominalMode`            | enum     | No       | `"range"` (default) \| `"discrete"`. Switches which nominal fields apply                               |
+| `nominalMin`             | number?  | Cond.    | Range-mode only. Lower bound of expected operating range                                               |
+| `nominalMax`             | number?  | Cond.    | Range-mode only. Upper bound of expected operating range                                               |
+| `nominalValue`           | number?  | Cond.    | Discrete-mode only. Expected exact value                                                               |
+| `tolerance`              | number?  | Cond.    | Discrete-mode only. Acceptable ± deviation from `nominalValue`                                         |
+| `low` (`L`)              | number?  | No       | Below this is a warning state. ISA-18.2 "L" threshold                                                  |
+| `lowLow` (`LL`)          | number?  | No       | Below this is an alarm state and input is rejected. ISA-18.2 "LL" threshold                            |
+| `high` (`H`)             | number?  | No       | Above this is a warning state. ISA-18.2 "H" threshold                                                  |
+| `highHigh` (`HH`)        | number?  | No       | Above this is an alarm state and input is rejected. ISA-18.2 "HH" threshold                            |
+| `expectedRefreshSeconds` | number?  | No       | If set, a value older than this is rendered as **stale**. Stored in canonical seconds                  |
 
 
 **Config invariants** (enforced at FieldDefinition authoring time):
-`absoluteMin ≤ warnLow ≤ nominalMin ≤ nominalMax ≤ warnHigh ≤ absoluteMax`. Any subset may be omitted; provided values must satisfy the chain.
 
-**Instance value**: `number | null`. Units are **not** stored per-instance — they come from the FieldDefinition and are fixed for the field's life. Unit conversion [Phase 2+].
+- **Range mode**: `LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH`. Any subset may be omitted; provided values must satisfy the chain.
+- **Discrete mode**: `LL ≤ L ≤ (nominalValue − tolerance)` and `(nominalValue + tolerance) ≤ H ≤ HH`. `tolerance ≥ 0`. Any subset of thresholds may be omitted.
+- `decimals ≥ 0`. `expectedRefreshSeconds > 0` if set.
+- `displayFormat === "currency"` ⇒ `currencyCode` non-empty.
 
-**Edit UX**: Numeric input with fixed units label. Helper text summarizes nominal range if configured.
+**Authoring form — progressive disclosure**:
 
-**Display UX**: `{value} {units}` with visual state: **ok** (within nominal), **warn** (outside nominal but within warn range), **alarm** (outside warn range). Subtle background color on value in Phase 1.
+The `number-kv` authoring form is the canonical exercise for the progressive-disclosure + conditional-reveal patterns the wider FieldDefinition Authoring UI will use. Three tiers:
 
-**Validation**: within `[absoluteMin, absoluteMax]` if set. Warn/nominal are informational, not blocking.
+- **Required** (always visible): `unitsSymbol`. (Plus the cross-Component `label` and `componentType` from the surrounding authoring form.)
+- **Common** (visible, in a collapsible "Display & nominal" section, expanded by default): `unitsLongForm`, `affixPosition`, `decimals`, `displayFormat`, `nominalMode` and the inputs it reveals.
+- **Advanced** (collapsed by default, in an "Alarms & freshness" section): `low`, `lowLow`, `high`, `highHigh`, `expectedRefreshSeconds`.
+
+**Value-driven conditional reveal** within the form:
+
+- `displayFormat === "currency"` → reveal `currencyCode` input directly under it; **and** auto-default `affixPosition` to `"prefix"` (user can override).
+- `nominalMode === "range"` → show `nominalMin` and `nominalMax` inputs; hide `nominalValue` and `tolerance`.
+- `nominalMode === "discrete"` → show `nominalValue` and `tolerance` inputs; hide `nominalMin` and `nominalMax`.
+- `expectedRefreshSeconds` input pairs a numeric field with a unit picker (`sec` / `min` / `hr` / `day`); on Save the picker resolves to canonical seconds in storage.
+- Threshold inputs render as a single visual chain so the LL ≤ L ≤ … ≤ HH invariant reads at a glance; entering a value that violates the chain marks the offending input in error state and blocks Save with an inline message naming the broken link.
+
+**Instance value**: `number | null`. Units, format, thresholds, and refresh expectation are **not** stored per-instance — they come from the FieldDefinition and are fixed for the field's life (per the "edit-is-fork" rule). Unit conversion [Phase 2+].
+
+**Edit UX**: Numeric input with the units affix (prefix or suffix per config) shown statically. Helper text summarises the active nominal (range: `"Nominal 20–25 °C"`; discrete: `"Nominal 24 ±0.5 °C"`) if configured. For `displayFormat === "percent"`, the input accepts the underlying number (entering `0.42` displays as `42%`); for `displayFormat === "scientific"` / `"engineering"`, the input accepts decimal but the display formats it on blur.
+
+**Display UX**: `{prefix}{value}{suffix}` rendered per `displayFormat` and `decimals`. Visual state:
+
+- **stale** (precedence: shown if `expectedRefreshSeconds` set and `now − updatedAt > expectedRefreshSeconds`) — value rendered dimmed with a subtle "stale" affordance.
+- **alarm** — value outside `[LL, HH]` or outside the equivalent discrete-mode bounds. Strongest visual.
+- **warn** — value outside `[L, H]` (or the equivalent discrete-mode bounds) but inside `[LL, HH]`.
+- **ok** — value inside the nominal band.
+
+Stale takes precedence over alarm/warn/ok because freshness is a separate signal axis. Subtle background color on value in Phase 1; no icons.
+
+**Validation**: input rejected outside `[LL, HH]` (or outside the discrete equivalent) if those thresholds are set. `L`/`H` and the nominal band are informational, not blocking.
 
 #### FieldComponent: `single-image`
 
@@ -535,8 +577,8 @@ Phase 1 ships with a set of dev-seeded FieldDefinitions (`authorId: "appDevelope
 | Model          | text-kv        | Equipment model                                     |
 | Status         | enum-kv        | `options: ["In Service", "Maintenance", "Retired"]` |
 | Installed Date | text-kv        | ISO date; `date-kv` FieldComponent [Phase 2+]       |
-| Weight         | measurement-kv | `units: "kg"`                                       |
-| Power Rating   | measurement-kv | `units: "W"`                                        |
+| Weight         | number-kv      | `unitsSymbol: "kg", unitsLongForm: "kilograms"`     |
+| Power Rating   | number-kv      | `unitsSymbol: "W", unitsLongForm: "Watts"`          |
 | Note           | text-kv        | `multiline: true`                                   |
 | Main Image     | single-image   | `requireCaption: false`                             |
 
@@ -629,7 +671,7 @@ The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) a
 | ---------------- | ---------------------------------------------------------- |
 | `text-kv`        | `string \                                                  |
 | `enum-kv`        | `string \                                                  |
-| `measurement-kv` | `number \                                                  |
+| `number-kv`      | `number \                                                  |
 | `single-image`   | `{ blobId, mimeType, width, height, byteSize, caption? } \ |
 
 
