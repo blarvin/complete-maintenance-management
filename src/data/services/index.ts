@@ -15,16 +15,13 @@ import type { TreeNode, DataField, DataFieldHistory } from '../models';
 // TYPE RE-EXPORTS (backward compat)
 // ============================================================================
 
-/** @deprecated Use CreateNodeInput from '../commands/types' instead */
-export type { CreateNodeInput } from '../commands/types';
-
 /** @deprecated Use getCommandBus() for writes and getNodeQueries() for reads */
 export interface INodeService {
     getRootNodes(): Promise<TreeNode[]>;
     getNodeById(id: string): Promise<TreeNode | null>;
     getNodeWithChildren(id: string): Promise<{ node: TreeNode | null; children: TreeNode[] }>;
     getChildren(parentId: string): Promise<TreeNode[]>;
-    createWithFields(input: import('../commands/types').CreateNodeInput): Promise<void>;
+    createWithFields(input: { id: string; parentId: string | null; nodeName: string; nodeSubtitle: string; defaults: { fieldDefinitionId: string }[] }): Promise<void>;
     createEmptyNode(id: string, parentId: string | null): Promise<TreeNode>;
     updateNode(id: string, updates: { nodeName?: string; nodeSubtitle?: string }): Promise<void>;
     deleteNode(id: string): Promise<void>;

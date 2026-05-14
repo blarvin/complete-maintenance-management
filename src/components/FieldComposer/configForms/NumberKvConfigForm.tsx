@@ -28,7 +28,7 @@ import styles from './NumberKvConfigForm.module.css';
 
 export type NumberKvConfigFormProps = {
     config: NumberKvConfig;
-    onChange$: PropFunction<(cfg: NumberKvConfig) => void>;
+    onChange$: PropFunction<(cfg: NumberKvConfig, error: string | null) => void>;
 };
 
 type RefreshUnit = 'sec' | 'min' | 'hr' | 'day';
@@ -62,7 +62,8 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
     const refreshUnit = useSignal<RefreshUnit>(initialUnit);
 
     const update$ = $((patch: Partial<NumberKvConfig>) => {
-        return props.onChange$({ ...props.config, ...patch });
+        const newConfig = { ...props.config, ...patch };
+        return props.onChange$(newConfig, validateNumberKvConfig(newConfig));
     });
 
     const pickDisplayFormat$ = $((fmt: NumberKvDisplayFormat) => {

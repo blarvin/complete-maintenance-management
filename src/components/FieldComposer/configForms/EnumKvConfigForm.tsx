@@ -11,12 +11,16 @@ import styles from './ConfigForms.module.css';
 
 export type EnumKvConfigFormProps = {
     config: EnumKvConfig;
-    onChange$: PropFunction<(cfg: EnumKvConfig) => void>;
+    onChange$: PropFunction<(cfg: EnumKvConfig, error: string | null) => void>;
 };
 
 export const EnumKvConfigForm = component$<EnumKvConfigFormProps>((props) => {
     const update$ = $((patch: Partial<EnumKvConfig>) => {
-        return props.onChange$({ ...props.config, ...patch });
+        const newConfig = { ...props.config, ...patch };
+        const error = !newConfig.options || newConfig.options.length === 0
+            ? 'At least one option is required'
+            : null;
+        return props.onChange$(newConfig, error);
     });
 
     const setOptionAt$ = $((index: number, value: string) => {

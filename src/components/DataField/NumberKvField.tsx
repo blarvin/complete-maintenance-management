@@ -99,20 +99,12 @@ function makeValidate(config: NumberKvConfig) {
         // Hard rejection thresholds: outside [LL, HH] (range mode) or outside
         // the discrete equivalent. L/H and the nominal band are informational —
         // values there save fine, they just show warn/ok via the state class.
-        const { lowLow, highHigh, nominalValue, tolerance } = config;
+        const { lowLow, highHigh } = config;
         if (lowLow !== undefined && value < lowLow) {
             throw new Error(`Value must be ≥ ${lowLow} ${config.unitsSymbol}`);
         }
         if (highHigh !== undefined && value > highHigh) {
             throw new Error(`Value must be ≤ ${highHigh} ${config.unitsSymbol}`);
-        }
-        if (config.nominalMode === 'discrete' && nominalValue !== undefined) {
-            // No further rejection beyond LL/HH — discrete-mode L/H still gate
-            // visual state but don't block save. Authoring constrains LL/HH to
-            // sit at or outside (nominalValue ± tolerance), so the above already
-            // covers the discrete rejection bounds when authoring is honest.
-            // Suppress the unused-binding lint for `tolerance`:
-            void tolerance;
         }
     };
 }
@@ -160,7 +152,17 @@ export const NumberKvField = component$<NumberKvFieldProps>((props) => {
 const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>((props) => {
     const { config } = props;
     const decimals = config.decimals ?? 2;
-    const formatEdit = (v: number | null): string => v === null || v === undefined ? '' : v.toFixed(decimals);
+    const isPercent = config.displayFormat === 'percent';
+
+    const formatEdit = (v: number | null): string => {
+        if (v === null || v === undefined) return '';
+        return isPercent ? (v * 100).toFixed(decimals) : v.toFixed(decimals);
+    };
+
+    const parseEdit = (raw: string): number | null => {
+        const n = parseNumber(raw);
+        return isPercent && n !== null ? n / 100 : n;
+    };
 
     const {
         isEditing,
@@ -177,8 +179,8 @@ const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>
     } = useFieldEdit<number>({
         fieldId: props.id,
         initialValue: props.value,
-        format: formatEdit, // edit buffer shows bare number, units affix sits outside
-        parse: parseNumber,
+        format: formatEdit, // edit buffer shows bare number (×100 for percent), units affix sits outside
+        parse: parseEdit,
         validate: makeValidate(config),
         rootRef: props.rootRef,
         onUpdated$: props.onUpdated$,

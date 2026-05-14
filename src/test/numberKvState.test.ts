@@ -244,3 +244,41 @@ describe('validateNumberKvConfig - discrete-mode invariants', () => {
         expect(validateNumberKvConfig({ ...valid, high: 24.3 })).toMatch(/nominalValue.*high/);
     });
 });
+
+// Inline helpers that mirror NumberKvField.tsx NumberKvBody logic for percent round-trip.
+function makePercentHelpers(decimals: number) {
+    const format = (v: number | null) =>
+        v === null || v === undefined ? '' : (v * 100).toFixed(decimals);
+    const parse = (raw: string): number | null => {
+        const trimmed = raw.trim();
+        if (trimmed === '') return null;
+        const n = parseFloat(trimmed);
+        if (!Number.isFinite(n)) throw new Error(`"${raw}" is not a valid number`);
+        return n / 100;
+    };
+    return { format, parse };
+}
+
+describe('NumberKvField percent round-trip', () => {
+    const { format, parse } = makePercentHelpers(2);
+
+    it('format: stored 0.85 → edit buffer "85.00"', () => {
+        expect(format(0.85)).toBe('85.00');
+    });
+
+    it('parse: edit buffer "85" → stored 0.85', () => {
+        expect(parse('85')).toBeCloseTo(0.85);
+    });
+
+    it('round-trip: format → parse identity', () => {
+        expect(parse(format(0.42)!)).toBeCloseTo(0.42);
+    });
+
+    it('format null → empty string', () => {
+        expect(format(null)).toBe('');
+    });
+
+    it('parse empty string → null', () => {
+        expect(parse('')).toBeNull();
+    });
+});

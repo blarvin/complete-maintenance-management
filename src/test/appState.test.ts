@@ -83,7 +83,6 @@ describe('State Transitions', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             
@@ -161,7 +160,6 @@ describe('State Transitions', () => {
                     parentId: 'node-1',
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             
@@ -209,7 +207,6 @@ describe('State Transitions', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             
@@ -227,7 +224,6 @@ describe('State Transitions', () => {
                 parentId: null,
                 nodeName: '',
                 nodeSubtitle: '',
-                defaultFields: [{ fieldDefinitionId: 'fd_type_of' }],
             };
             
             transitions.startConstruction(state, ucData);
@@ -241,7 +237,6 @@ describe('State Transitions', () => {
                 parentId: null,
                 nodeName: 'Existing',
                 nodeSubtitle: '',
-                defaultFields: [],
             };
             const state = createTestState({ underConstruction: existingUC });
             
@@ -250,7 +245,6 @@ describe('State Transitions', () => {
                 parentId: null,
                 nodeName: '',
                 nodeSubtitle: '',
-                defaultFields: [],
             });
             
             // Should still be the existing one
@@ -266,7 +260,6 @@ describe('State Transitions', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             
@@ -290,7 +283,6 @@ describe('State Transitions', () => {
                     parentId: null,
                     nodeName: 'New Node',
                     nodeSubtitle: 'Subtitle',
-                    defaultFields: [],
                 },
             });
             
@@ -393,7 +385,6 @@ describe('State Selectors', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             
@@ -435,7 +426,6 @@ describe('State Selectors', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             
@@ -545,7 +535,6 @@ describe('State Selectors', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             expect(selectors.isUnderConstruction(state, 'new-node')).toBe(true);
@@ -558,7 +547,6 @@ describe('State Selectors', () => {
                     parentId: null,
                     nodeName: '',
                     nodeSubtitle: '',
-                    defaultFields: [],
                 },
             });
             expect(selectors.isUnderConstruction(state, 'other-node')).toBe(false);
@@ -601,7 +589,6 @@ describe('State Invariants', () => {
             parentId: null,
             nodeName: '',
             nodeSubtitle: '',
-            defaultFields: [],
         });
         
         transitions.startConstruction(state, {
@@ -609,7 +596,6 @@ describe('State Invariants', () => {
             parentId: null,
             nodeName: '',
             nodeSubtitle: '',
-            defaultFields: [],
         });
         
         expect(state.underConstruction?.id).toBe('first');
@@ -623,7 +609,6 @@ describe('State Invariants', () => {
                 parentId: 'node-1',
                 nodeName: '',
                 nodeSubtitle: '',
-                defaultFields: [],
             },
         });
         

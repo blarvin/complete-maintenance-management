@@ -3,21 +3,6 @@ import type { StorageAdapter } from '../storage/storageAdapter';
 import { generateId } from '../../utils/id';
 
 export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): void {
-  bus.register('CREATE_NODE_WITH_FIELDS', async (cmd) => {
-    const { id, parentId, nodeName, nodeSubtitle, defaults } = cmd.payload;
-    await adapter.createNode({ id, parentId, nodeName, nodeSubtitle });
-    // Sequential with explicit cardOrder by index: defaults arrive in user-intended order.
-    for (let i = 0; i < defaults.length; i++) {
-      const d = defaults[i];
-      await adapter.createField({
-        id: generateId(),
-        parentNodeId: id,
-        fieldDefinitionId: d.fieldDefinitionId,
-        cardOrder: i,
-      });
-    }
-  });
-
   bus.register('CREATE_EMPTY_NODE', async (cmd) => {
     const result = await adapter.createNode({
       id: cmd.payload.id,

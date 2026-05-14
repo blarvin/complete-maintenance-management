@@ -27,36 +27,39 @@ export class DeltaSync implements SyncStrategy {
     const since = await this.local.getLastSyncTimestamp();
     console.log('[DeltaSync] Pulling changes since', since);
 
+    // Load pending IDs once — avoids N queue fetches across all entities.
+    const pendingSet = await this.resolver.loadPendingSet();
+
     // Pull FieldDefinitions first so newer DataFields can reference them.
-    const fieldDefinitionsApplied = await this.syncFieldDefinitions(since);
-    const nodesApplied = await this.syncNodes(since);
-    const fieldsApplied = await this.syncFields(since);
+    const fieldDefinitionsApplied = await this.syncFieldDefinitions(since, pendingSet);
+    const nodesApplied = await this.syncNodes(since, pendingSet);
+    const fieldsApplied = await this.syncFields(since, pendingSet);
     const historyApplied = await this.syncHistory(since);
 
     console.log('[DeltaSync] Complete:', { nodesApplied, fieldsApplied, historyApplied, fieldDefinitionsApplied });
     return { nodesApplied, fieldsApplied, historyApplied, fieldDefinitionsApplied };
   }
 
-  private async syncNodes(since: number): Promise<number> {
+  private async syncNodes(since: number, pendingSet: Set<string>): Promise<number> {
     const nodes = await this.remote.pullEntitiesSince('node', since);
     console.log('[DeltaSync] Pulled', nodes.length, 'nodes');
 
     let applied = 0;
     for (const node of nodes) {
-      const result = await this.resolver.resolveNode(node as TreeNode);
+      const result = await this.resolver.resolveNode(node as TreeNode, pendingSet);
       if (result === 'applied') applied++;
     }
 
     return applied;
   }
 
-  private async syncFields(since: number): Promise<number> {
+  private async syncFields(since: number, pendingSet: Set<string>): Promise<number> {
     const fields = await this.remote.pullEntitiesSince('field', since);
     console.log('[DeltaSync] Pulled', fields.length, 'fields');
 
     let applied = 0;
     for (const field of fields) {
-      const result = await this.resolver.resolveField(field as DataField);
+      const result = await this.resolver.resolveField(field as DataField, pendingSet);
       if (result === 'applied') applied++;
     }
 
@@ -74,13 +77,13 @@ export class DeltaSync implements SyncStrategy {
     return history.length;
   }
 
-  private async syncFieldDefinitions(since: number): Promise<number> {
+  private async syncFieldDefinitions(since: number, pendingSet: Set<string>): Promise<number> {
     const definitions = await this.remote.pullFieldDefinitionsSince(since);
     console.log('[DeltaSync] Pulled', definitions.length, 'field definitions');
 
     let applied = 0;
     for (const def of definitions) {
-      const result = await this.resolver.resolveFieldDefinition(def);
+      const result = await this.resolver.resolveFieldDefinition(def, pendingSet);
       if (result === 'applied') applied++;
     }
     return applied;

@@ -68,7 +68,6 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             parentId: options.parentId,
             nodeName: '',
             nodeSubtitle: '',
-            defaultFields: [], // No longer used - TreeNodeConstruction handles defaults
         });
     });
 
@@ -93,15 +92,19 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         const ucData = appState.underConstruction;
         if (!ucData) return;
 
-        // Create empty node first; FieldComposer (via afterNodeCreated$) commits its batch.
-        await getCommandBus().execute({
-            type: 'CREATE_NODE_WITH_FIELDS',
+        const bus = getCommandBus();
+        await bus.execute({
+            type: 'CREATE_EMPTY_NODE',
+            payload: { id: ucData.id, parentId: ucData.parentId },
+        });
+        await bus.execute({
+            type: 'UPDATE_NODE',
             payload: {
                 id: ucData.id,
-                parentId: ucData.parentId,
-                nodeName: payload.nodeName || 'Untitled',
-                nodeSubtitle: payload.nodeSubtitle || '',
-                defaults: [],
+                updates: {
+                    nodeName: payload.nodeName || 'Untitled',
+                    nodeSubtitle: payload.nodeSubtitle || '',
+                },
             },
         });
 

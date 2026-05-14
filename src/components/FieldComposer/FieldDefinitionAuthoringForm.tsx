@@ -41,10 +41,11 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
         componentType,
         label,
         config,
-        errorMessage,
+        configError,
         pickComponentType$,
         setLabel$,
         setConfig$,
+        setConfigError$,
         cancel$,
         save$,
     } = useFieldDefinitionDraft();
@@ -61,10 +62,6 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
 
     return (
         <div class={styles.form}>
-            <p class={styles.privacy}>
-                Field definitions you create are shared with all users of this app.
-            </p>
-
             <div class={styles.section}>
                 <span class={styles.sectionLabel}>Component</span>
                 <div class={styles.segmented} role="radiogroup" aria-label="Pick a FieldComponent">
@@ -111,13 +108,13 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                     {componentType.value === 'enum-kv' && (
                         <EnumKvConfigForm
                             config={config.value as EnumKvConfig}
-                            onChange$={$((cfg: FieldDefinitionConfig) => setConfig$(cfg))}
+                            onChange$={$((cfg: EnumKvConfig, error: string | null) => { setConfig$(cfg); setConfigError$(error); })}
                         />
                     )}
                     {componentType.value === 'number-kv' && (
                         <NumberKvConfigForm
                             config={config.value as NumberKvConfig}
-                            onChange$={$((cfg: FieldDefinitionConfig) => setConfig$(cfg))}
+                            onChange$={$((cfg: NumberKvConfig, error: string | null) => { setConfig$(cfg); setConfigError$(error); })}
                         />
                     )}
                     {componentType.value === 'single-image' && (
@@ -129,10 +126,6 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                 </div>
             </div>
 
-            {errorMessage.value && (
-                <div class={styles.error} role="alert">{errorMessage.value}</div>
-            )}
-
             <div class={styles.actions}>
                 <button type="button" class={styles.cancelBtn} onClick$={handleCancel$}>
                     Cancel
@@ -140,6 +133,7 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                 <button
                     type="button"
                     class={styles.saveBtn}
+                    disabled={!label.value.trim() || !!configError.value}
                     onClick$={handleSave$}
                 >
                     Save

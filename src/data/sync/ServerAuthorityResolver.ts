@@ -18,66 +18,42 @@ export class ServerAuthorityResolver {
     private syncQueue: SyncQueueManager
   ) {}
 
-  /**
-   * Resolve a remote node against local state.
-   * Applies unconditionally unless entity is pending in sync queue.
-   */
-  async resolveNode(remote: TreeNode): Promise<ResolveResult> {
-    const isPending = await this.hasPendingSync(remote.id);
+  /** Load all pending entity IDs from the sync queue as a Set for O(1) lookup. */
+  async loadPendingSet(): Promise<Set<string>> {
+    const queue = await this.syncQueue.getSyncQueue();
+    return new Set(queue.map(item => item.entityId));
+  }
 
-    if (isPending) {
-      // Local change pending push - protect it
+  async resolveNode(remote: TreeNode, pendingSet?: Set<string>): Promise<ResolveResult> {
+    const set = pendingSet ?? await this.loadPendingSet();
+    if (set.has(remote.id)) {
       console.log('[Resolver] Skipped (pending local)', remote.id);
       return 'skipped';
     }
-
-    // Server is authority - apply unconditionally
     await this.local.applyRemoteUpdate('node', remote);
     console.log('[Resolver] Applied server node', remote.id);
     return 'applied';
   }
 
-  /**
-   * Resolve a remote field against local state.
-   * Applies unconditionally unless entity is pending in sync queue.
-   */
-  async resolveField(remote: DataField): Promise<ResolveResult> {
-    const isPending = await this.hasPendingSync(remote.id);
-
-    if (isPending) {
-      // Local change pending push - protect it
+  async resolveField(remote: DataField, pendingSet?: Set<string>): Promise<ResolveResult> {
+    const set = pendingSet ?? await this.loadPendingSet();
+    if (set.has(remote.id)) {
       console.log('[Resolver] Skipped (pending local)', remote.id);
       return 'skipped';
     }
-
-    // Server is authority - apply unconditionally
     await this.local.applyRemoteUpdate('field', remote);
     console.log('[Resolver] Applied server field', remote.id);
     return 'applied';
   }
 
-  /**
-   * Resolve a remote FieldDefinition against local state.
-   * Applies unconditionally unless entity is pending in sync queue.
-   */
-  async resolveFieldDefinition(remote: FieldDefinition): Promise<ResolveResult> {
-    const isPending = await this.hasPendingSync(remote.id);
-
-    if (isPending) {
+  async resolveFieldDefinition(remote: FieldDefinition, pendingSet?: Set<string>): Promise<ResolveResult> {
+    const set = pendingSet ?? await this.loadPendingSet();
+    if (set.has(remote.id)) {
       console.log('[Resolver] Skipped (pending local)', remote.id);
       return 'skipped';
     }
-
     await this.local.applyRemoteUpdate('fieldDefinition', remote);
     console.log('[Resolver] Applied server fieldDefinition', remote.id);
     return 'applied';
-  }
-
-  /**
-   * Check if an entity has pending changes in the sync queue.
-   */
-  private async hasPendingSync(entityId: string): Promise<boolean> {
-    const queue = await this.syncQueue.getSyncQueue();
-    return queue.some(item => item.entityId === entityId);
   }
 }

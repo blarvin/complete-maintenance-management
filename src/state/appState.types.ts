@@ -46,7 +46,6 @@ export type UnderConstructionData = {
     parentId: string | null;
     nodeName: string;
     nodeSubtitle: string;
-    defaultFields: { fieldDefinitionId: string }[];
 } | null;
 
 /**

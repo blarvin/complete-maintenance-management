@@ -2,7 +2,7 @@ import type { StorageAdapter } from '../storage/storageAdapter';
 import { CommandBus } from './commandBus';
 import { registerAllHandlers } from './handlers';
 
-export type { Command, CommandResultMap, CreateNodeInput } from './types';
+export type { Command, CommandResultMap } from './types';
 export { CommandBus } from './commandBus';
 
 let activeBus: CommandBus | null = null;

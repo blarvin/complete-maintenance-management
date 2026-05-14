@@ -133,10 +133,7 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
     const commitAll$ = $(async (currentMaxCardOrder: number): Promise<number> => {
         // Drop malformed entries (e.g. legacy localStorage drafts from the old
         // pre-composer shape that lack fieldDefinitionId/fieldName).
-        const valid = forms.value.filter(f => f && f.fieldDefinitionId && typeof f.fieldName === 'string');
-        const batch = [...valid].sort((a, b) =>
-            (a.fieldName ?? '').localeCompare(b.fieldName ?? '')
-        );
+        const batch = forms.value.filter(f => f && f.fieldDefinitionId && typeof f.fieldName === 'string');
         if (batch.length === 0) return 0;
 
         const commandBus = getCommandBus();

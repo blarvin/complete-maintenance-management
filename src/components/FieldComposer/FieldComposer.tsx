@@ -32,6 +32,7 @@ import {
     type PropFunction,
 } from '@builder.io/qwik';
 import { getFieldDefinitionQueries } from '../../data/queries';
+import { storageEventBus } from '../../data/storageEventBus';
 import { getSnackbarService } from '../../services/snackbar';
 import { usePendingForms, pendingFormFromFieldDefinition, type PendingForm } from '../../hooks/usePendingForms';
 import type { FieldDefinition } from '../../data/models';
@@ -101,6 +102,15 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
     const justCreated = useSignal<FieldDefinition[]>([]);
     const refreshKey = useSignal(0);
     const authoringOpen = useSignal(false);
+
+    useVisibleTask$(({ cleanup }) => {
+        const unsub = storageEventBus.subscribe((event) => {
+            if (event.type === 'FIELD_DEFINITION_WRITTEN') {
+                refreshKey.value++;
+            }
+        });
+        cleanup(() => unsub());
+    });
 
     const definitionsResource = useResource$<FieldDefinition[]>(async ({ track }) => {
         track(() => refreshKey.value);

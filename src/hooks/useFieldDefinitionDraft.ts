@@ -14,15 +14,14 @@
 import { useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
-import { validateNumberKvConfig } from '../components/DataField/numberKvState';
 import type {
     ComponentType,
-    EnumKvConfig,
     FieldDefinition,
     FieldDefinitionConfig,
+    TextKvConfig,
+    EnumKvConfig,
     NumberKvConfig,
     SingleImageConfig,
-    TextKvConfig,
 } from '../data/models';
 
 export type FieldDefinitionDraftPhase = 'idle' | 'authoring';
@@ -49,13 +48,16 @@ export type UseFieldDefinitionDraftResult = {
     componentType: Signal<ComponentType>;
     label: Signal<string>;
     config: Signal<FieldDefinitionConfig>;
-    errorMessage: Signal<string | null>;
+    /** Error from the component-specific config sub-form (e.g. invariant violations). */
+    configError: Signal<string | null>;
     start$: QRL<() => void>;
     pickComponentType$: QRL<(type: ComponentType) => void>;
     setLabel$: QRL<(value: string) => void>;
     setConfig$: QRL<(cfg: FieldDefinitionConfig) => void>;
+    /** Push a config-level error from the sub-form; null means valid. */
+    setConfigError$: QRL<(error: string | null) => void>;
     cancel$: QRL<() => void>;
-    /** Returns the new FieldDefinition, or null if validation failed. */
+    /** Returns the new FieldDefinition, or null if save is gated (label empty or config error). */
     save$: QRL<() => Promise<FieldDefinition | null>>;
 };
 
@@ -64,30 +66,32 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
     const componentType = useSignal<ComponentType>(DEFAULT_COMPONENT_TYPE);
     const label = useSignal<string>('');
     const config = useSignal<FieldDefinitionConfig>(defaultConfigFor(DEFAULT_COMPONENT_TYPE));
-    const errorMessage = useSignal<string | null>(null);
+    const configError = useSignal<string | null>(null);
 
     const start$ = $(() => {
         phase.value = 'authoring';
         componentType.value = DEFAULT_COMPONENT_TYPE;
         label.value = '';
         config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
-        errorMessage.value = null;
+        configError.value = null;
     });
 
     const pickComponentType$ = $((type: ComponentType) => {
         componentType.value = type;
         config.value = defaultConfigFor(type);
-        errorMessage.value = null;
+        configError.value = null;
     });
 
     const setLabel$ = $((value: string) => {
         label.value = value.slice(0, LABEL_MAX);
-        errorMessage.value = null;
     });
 
     const setConfig$ = $((cfg: FieldDefinitionConfig) => {
         config.value = cfg;
-        errorMessage.value = null;
+    });
+
+    const setConfigError$ = $((error: string | null) => {
+        configError.value = error;
     });
 
     const cancel$ = $(() => {
@@ -95,34 +99,12 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
         componentType.value = DEFAULT_COMPONENT_TYPE;
         label.value = '';
         config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
-        errorMessage.value = null;
+        configError.value = null;
     });
 
     const save$ = $(async (): Promise<FieldDefinition | null> => {
         const trimmed = label.value.trim();
-        if (trimmed === '') {
-            errorMessage.value = 'Label is required';
-            return null;
-        }
-        if (trimmed.length > LABEL_MAX) {
-            errorMessage.value = `Label must be ≤ ${LABEL_MAX} characters`;
-            return null;
-        }
-        if (componentType.value === 'enum-kv') {
-            const cfg = config.value as EnumKvConfig;
-            if (!cfg.options || cfg.options.length === 0) {
-                errorMessage.value = 'At least one option is required';
-                return null;
-            }
-        }
-        if (componentType.value === 'number-kv') {
-            const cfg = config.value as NumberKvConfig;
-            const invariant = validateNumberKvConfig(cfg);
-            if (invariant !== null) {
-                errorMessage.value = invariant;
-                return null;
-            }
-        }
+        if (!trimmed || configError.value) return null;
 
         try {
             const result = await getCommandBus().execute({
@@ -134,15 +116,13 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
                     config: config.value,
                 },
             });
-            // Reset back to idle for re-use.
             phase.value = 'idle';
             label.value = '';
             config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
             componentType.value = DEFAULT_COMPONENT_TYPE;
-            errorMessage.value = null;
+            configError.value = null;
             return result;
-        } catch (err) {
-            errorMessage.value = err instanceof Error ? err.message : 'Failed to create field definition';
+        } catch {
             return null;
         }
     });
@@ -152,11 +132,12 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
         componentType,
         label,
         config,
-        errorMessage,
+        configError,
         start$,
         pickComponentType$,
         setLabel$,
         setConfig$,
+        setConfigError$,
         cancel$,
         save$,
     };

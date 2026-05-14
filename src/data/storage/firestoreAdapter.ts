@@ -670,11 +670,6 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         }, { merge: true });
         break;
       }
-      case 'delete-fieldDefinition': {
-        // No soft-delete on FieldDefinitions in Phase 1; treat as hard delete.
-        // If/when we need soft delete, mirror field handling.
-        break;
-      }
       default:
         console.warn('[FirestoreAdapter] Unknown sync operation:', item.operation);
     }

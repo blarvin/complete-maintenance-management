@@ -12,13 +12,6 @@
     background: var(--bg-expanded, var(--bg-base));
 }
 
-.privacy {
-    margin: 0;
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    font-style: italic;
-}
-
 .section {
     display: flex;
     flex-direction: column;

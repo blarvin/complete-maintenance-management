@@ -1,16 +1,6 @@
 import type { ComponentType, DataField, DataFieldValue, FieldDefinition, FieldDefinitionConfig, TreeNode } from '../models';
 
-export type CreateNodeInput = {
-  id: string;
-  parentId: string | null;
-  nodeName: string;
-  nodeSubtitle: string;
-  /** FieldDefinition IDs to instantiate as default fields. */
-  defaults: { fieldDefinitionId: string }[];
-};
-
 export type Command =
-  | { type: 'CREATE_NODE_WITH_FIELDS'; payload: CreateNodeInput }
   | { type: 'CREATE_EMPTY_NODE'; payload: { id: string; parentId: string | null } }
   | { type: 'UPDATE_NODE'; payload: { id: string; updates: { nodeName?: string; nodeSubtitle?: string } } }
   | { type: 'DELETE_NODE'; payload: { id: string } }
@@ -22,7 +12,6 @@ export type Command =
   | { type: 'RESTORE_NODE'; payload: { id: string } };
 
 export type CommandResultMap = {
-  CREATE_NODE_WITH_FIELDS: void;
   CREATE_EMPTY_NODE: TreeNode;
   UPDATE_NODE: void;
   DELETE_NODE: void;

@@ -22,7 +22,6 @@ import { filterActive, filterDeleted } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { createHistoryEntry, computeNextRev } from './historyHelpers';
-import { computeCardOrderUpdates, sortByCardOrder } from '../utils/cardOrder';
 import { makeStorageError } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
 import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
@@ -528,21 +527,13 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.nodes.put(node);
       storageEventBus.emit({ type: 'NODE_WRITTEN', node });
     } else if (entityType === 'fieldDefinition') {
-      await db.fieldDefinitions.put(entity as FieldDefinition);
+      const def = entity as FieldDefinition;
+      await db.fieldDefinitions.put(def);
+      storageEventBus.emit({ type: 'FIELD_DEFINITION_WRITTEN', definition: { id: def.id, deletedAt: def.deletedAt } });
     } else {
       const incoming = entity as DataField;
       await db.fields.put(incoming);
-      const siblings = await db.fields.where('parentNodeId').equals(incoming.parentNodeId).toArray();
-      const active = filterActive(siblings);
-      const sorted = sortByCardOrder(active);
-      const updates = computeCardOrderUpdates(sorted);
-      if (updates.length > 0) {
-        await db.transaction('rw', db.fields, async () => {
-          for (const u of updates) {
-            await db.fields.update(u.id, { cardOrder: u.cardOrder });
-          }
-        });
-      }
+      storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id: incoming.id, parentNodeId: incoming.parentNodeId, value: incoming.value, deletedAt: incoming.deletedAt } });
     }
   }
 
