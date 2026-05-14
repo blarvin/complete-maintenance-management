@@ -5,10 +5,12 @@
  * discards with a Snackbar Undo.
  *
  * Modes:
- * - Display mode: Save and Cancel buttons in the sticky footer commit/discard.
- * - Construction mode: Save button hidden — the parent node's "Save" button
- *   drives commitAll$ via the handle. Locked FieldDefinitions pre-seed and
- *   can't be unchecked.
+ * - "display": batch-add path on existing nodes. Sticky Save and Cancel in the
+ *   footer; locked rows not used.
+ * - "construction": Composer is the body of the under-construction node's
+ *   DataCard. Save button hidden — the parent node's "Save" button drives
+ *   commitAll$ via the handle. Locked FieldDefinitions pre-seed and can't be
+ *   unchecked.
  */
 
 import {
@@ -28,6 +30,8 @@ import type { FieldDefinition } from '../../data/models';
 import { ComposerRow } from './ComposerRow';
 import styles from './FieldComposer.module.css';
 
+export type FieldComposerMode = 'display' | 'construction';
+
 export type FieldComposerHandle = {
     commitAll$: QRL<(currentMaxCardOrder: number) => Promise<number>>;
     discardAll$: QRL<() => PendingForm[]>;
@@ -35,12 +39,14 @@ export type FieldComposerHandle = {
 
 export type FieldComposerProps = {
     nodeId: string;
+    /** "display" (batch-add against an existing node) vs "construction" (Composer
+     *  bound to a new node's Save). */
+    mode: FieldComposerMode;
     /** Max cardOrder among already-persisted fields (used to size new fields after them). */
     currentMaxCardOrder: number;
-    /** FieldDefinitions that should be pre-checked and immutable (construction defaults). */
+    /** FieldDefinitions that should be pre-checked and immutable (construction defaults).
+     *  Ignored in display mode. */
     lockedFieldDefinitionIds?: readonly string[];
-    /** Hides the Save button — parent (construction node Save) drives commit. */
-    isConstruction?: boolean;
     /** Pre-seed the batch (e.g. Snackbar Undo restoring a cancelled draft). */
     restoreSeed?: PendingForm[];
     /** Called when the composer should close itself (after Save / Cancel). */
@@ -56,7 +62,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
         if (props.restoreSeed && props.restoreSeed.length > 0) {
             return props.restoreSeed;
         }
-        if (props.lockedFieldDefinitionIds && props.lockedFieldDefinitionIds.length > 0) {
+        if (props.mode === 'construction' && props.lockedFieldDefinitionIds && props.lockedFieldDefinitionIds.length > 0) {
             const fdq = getFieldDefinitionQueries();
             const seeded: PendingForm[] = [];
             for (const fid of props.lockedFieldDefinitionIds) {
@@ -106,7 +112,9 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
         });
     });
 
-    const lockedSet = new Set(props.lockedFieldDefinitionIds ?? []);
+    const lockedSet = new Set(
+        props.mode === 'construction' ? (props.lockedFieldDefinitionIds ?? []) : []
+    );
 
     return (
         <div class={styles.composer}>
@@ -142,7 +150,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
                 <button type="button" class={styles.cancelBtn} onClick$={handleCancel$}>
                     Cancel
                 </button>
-                {!props.isConstruction && (
+                {props.mode === 'display' && (
                     <button
                         type="button"
                         class={styles.saveBtn}

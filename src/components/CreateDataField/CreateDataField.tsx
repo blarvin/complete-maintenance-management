@@ -3,35 +3,37 @@
  *
  * Single-pick FieldDefinition dropdown: user clicks "+ Add Field", picks one
  * FieldDefinition, a DataField is created immediately via the command bus, the
- * dropdown closes. Click "+ Add Field" again to add another. Nothing else is
- * shared with the FieldComposer — this component is self-contained so it can
- * be turned on/off via the LEGACY_ADD_FIELD_ENABLED flag without touching the
- * composer code.
+ * dropdown closes. Click "+ Add Field" again to add another. Open state is
+ * shared with FieldComposerSlot via the parent-owned `activeSurface` signal so
+ * opening this dropdown automatically closes the Composer (and vice versa).
  */
 
 import {
     component$,
-    useSignal,
     useResource$,
     Resource,
     $,
     type PropFunction,
+    type Signal,
 } from '@builder.io/qwik';
 import { getFieldDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import type { FieldDefinition } from '../../data/models';
+import type { ActiveSurface } from '../FieldComposer/FieldComposerSlot';
 import styles from './CreateDataField.module.css';
 
 export type CreateDataFieldProps = {
     nodeId: string;
     /** Max cardOrder among already-persisted fields; new field is placed at +1. */
     currentMaxCardOrder: number;
+    /** Shared mutex with the Composer surface. */
+    activeSurface: Signal<ActiveSurface>;
     /** Called after a field is successfully created so the parent can reload. */
     onCreated$: PropFunction<() => void>;
 };
 
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
-    const isOpen = useSignal(false);
+    const isOpen = props.activeSurface.value === 'legacy';
 
     const definitionsResource = useResource$<FieldDefinition[]>(async () => {
         const list = await getFieldDefinitionQueries().listFieldDefinitions();
@@ -39,11 +41,11 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     });
 
     const toggle$ = $(() => {
-        isOpen.value = !isOpen.value;
+        props.activeSurface.value = props.activeSurface.value === 'legacy' ? 'none' : 'legacy';
     });
 
     const pick$ = $(async (def: FieldDefinition) => {
-        isOpen.value = false;
+        props.activeSurface.value = 'none';
         await getCommandBus().execute({
             type: 'ADD_FIELD_FROM_DEFINITION',
             payload: {
@@ -62,11 +64,11 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                 class={styles.addButton}
                 onClick$={toggle$}
                 aria-haspopup="listbox"
-                aria-expanded={isOpen.value}
+                aria-expanded={isOpen}
             >
                 + Add Field
             </button>
-            {isOpen.value && (
+            {isOpen && (
                 <div class={styles.dropdown} role="listbox" aria-label="Field definitions">
                     <Resource
                         value={definitionsResource}

@@ -100,7 +100,7 @@ This structure enables users to construct, explore, and understand detailed hier
 ## DataField Management
 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
-- **Create Data Fields (Composer)**: A "+ Add Fields" button at bottom of the DataCard expands the **Field Composer**: an inline section (within the DataCard) showing every available FieldDefinition as a row in a single list. Each row has a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that FieldDefinition (rendered with its real FieldComponent). Save commits every checked row as a real DataField on the node; Cancel discards them. The Composer also hosts the "+ New Field Definition…" authoring affordance. See "Field Composer" and "DataField Components, Field Definitions, and Library" below.
+- **Create Data Fields**: Two surfaces sit at the bottom of the DataCard in display mode. A legacy **+ Add Field** (singular) dropdown is the quick-add path — pick one FieldDefinition, the DataField is created immediately. A **+ Add Fields** (plural) button expands the **Field Composer** alongside it for batch-add and FieldDefinition authoring: an inline section showing every available FieldDefinition as a row in a single list, each with a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that FieldDefinition (rendered with its real FieldComponent). Save commits every checked row as a real DataField on the node; Cancel discards them. The Composer also hosts the "+ New Field Definition…" authoring affordance. See "Field Composer" and "DataField Components, Field Definitions, and Library" below.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
   - **Soft Delete**: DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
   - A `DataFieldHistory` entry with `action: "delete"`, `property: "value"`, and `newValue: null` is written only after the undo window elapses.
@@ -230,18 +230,18 @@ Users can reorder DataFields within a DataCard. Reordering updates `cardOrder` f
 
 ## Field Composer
 
-The Field Composer is a unified inline UI for adding one or more DataFields to a TreeNode. It replaces both the legacy single-pick dropdown (display mode) and the bare default-fields list (construction mode) — they share the same composer surface. The Composer is also the **single Phase-1 entry point for FieldDefinition authoring** (see FieldDefinition Authoring UI below).
+The Field Composer is a unified inline UI for adding one or more DataFields to a TreeNode. It replaces the bare default-fields list in construction mode and adds a batch-add + authoring surface in display mode, alongside the existing quick-add dropdown. The Composer is also the **single Phase-1 entry point for FieldDefinition authoring** (see FieldDefinition Authoring UI below).
 
 #### When the composer is visible
 
-- **Display mode** (existing node, viewing its DataCard): no composer by default. Clicking **+ Add Fields** opens it. Save or Cancel dismisses it; the button returns. One composer at a time.
+- **Display mode** (existing node, viewing its DataCard): the legacy single-pick **+ Add Field** dropdown remains for quick adds; a separate **+ Add Fields** (plural) button opens the inline Composer for batch-add and FieldDefinition authoring. Composer Save or Cancel dismisses it. Only one of the two surfaces is active at a time — opening one closes the other.
 - **Construction mode** (new node, before Save): the composer is visible by default. The seeded default FieldDefinitions ("Type Of", "Description", "Tags") appear as **locked checked rows** — checkbox visibly checked but disabled, so the user can't uncheck them. The user can still check additional FieldDefinitions as normal.
 
 #### Layout
 
 The composer is a single inline-expanded section within the DataCard, distinguished from persisted fields by a **dashed border** around the whole zone. It contains:
 
-1. **In-situ FieldDefinition list** — every active FieldDefinition appears as a row, sorted alphabetically by label. Each row has a checkbox. A **"+ New Field Definition…"** affordance appears as the final row, expanding inline into the authoring form (see FieldDefinition Authoring UI).
+1. **In-situ FieldDefinition list** — every active FieldDefinition appears as a row, sorted alphabetically by label. Each row has a checkbox. A **"+ New Field Definition…"** affordance appears as the first row, expanding inline into the authoring form (see FieldDefinition Authoring UI).
   - **Unchecked row**: checkbox + FieldDefinition label only.
   - **Checked row**: checkbox + a live, editable preview of that FieldDefinition, rendered with its actual FieldComponent (TextKvField, EnumKvField, NumberKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full FieldComponent preview; unchecking collapses it back to label-only.
   - **Locked checked row** (construction mode defaults only): rendered as a checked row, but the checkbox is disabled.

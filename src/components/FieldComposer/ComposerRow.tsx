@@ -5,9 +5,15 @@
  * the Component renderer in pendingMode so the user can fill in a value before
  * Save commits the batch. Locked rows render the same as checked but the
  * checkbox is disabled (construction-mode defaults).
+ *
+ * After a check/uncheck transition resolves, the row's checkbox is anchored
+ * in the viewport via scrollIntoView({ block: 'nearest' }) so a tall preview
+ * (single-image especially) doesn't shove the user's place off-screen. A
+ * smooth slide-in animation is tracked in LATER.md — the kvField renderers
+ * use `display: contents` wrappers which can't be transitioned.
  */
 
-import { component$, useSignal, $, type QRL, type Signal } from '@builder.io/qwik';
+import { component$, useSignal, useVisibleTask$, $, type QRL, type Signal } from '@builder.io/qwik';
 import { TextKvField } from '../DataField/TextKvField';
 import { EnumKvField } from '../DataField/EnumKvField';
 import { MeasurementKvField } from '../DataField/MeasurementKvField';
@@ -31,10 +37,22 @@ export type ComposerRowProps = {
 
 export const ComposerRow = component$<ComposerRowProps>((props) => {
     const rootRef = useSignal<HTMLElement>();
+    const checkboxRef = useSignal<HTMLInputElement>();
 
     const handleCheckboxChange$ = $(() => {
         if (props.locked) return;
         props.onToggle$(props.definition);
+    });
+
+    // Anchor the checkbox after a toggle so a tall preview (e.g. single-image)
+    // doesn't shove the user's place off-screen. Wait one frame past the
+    // ~200ms animation budget so layout has settled before scrolling.
+    useVisibleTask$(({ track, cleanup }) => {
+        track(() => props.checked);
+        const t = setTimeout(() => {
+            checkboxRef.value?.scrollIntoView({ block: 'nearest' });
+        }, 220);
+        cleanup(() => clearTimeout(t));
     });
 
     const labelId = `composer-label-${props.definition.id}`;
@@ -48,6 +66,7 @@ export const ComposerRow = component$<ComposerRowProps>((props) => {
                 disabled={props.locked}
                 onChange$={handleCheckboxChange$}
                 aria-labelledby={labelId}
+                ref={checkboxRef}
             />
             <label class={styles.label} id={labelId}>{props.definition.label}:</label>
             {props.checked && props.pendingForm && (

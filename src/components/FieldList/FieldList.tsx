@@ -2,15 +2,18 @@
  * FieldList - Renders persisted DataFields for a node and mounts the
  * FieldComposerSlot (and optionally the legacy "+ Add Field" surface).
  *
- * Composer orchestration (open state, restore plumbing, handle exposure) lives
- * inside FieldComposerSlot — FieldList just hosts and forwards reload events.
+ * Hosts the `activeSurface` mutex shared by the two display-mode add-field
+ * surfaces — opening one closes the other.
+ *
+ * Composer orchestration (open/restore plumbing, handle exposure) lives
+ * inside FieldComposerSlot; FieldList just hosts and forwards reload events.
  * Construction-mode parents pass `handleRef` through to drive commit/discard
  * externally from the node's Save button.
  */
 
-import { component$, $, useComputed$, type Signal } from '@builder.io/qwik';
+import { component$, $, useComputed$, useSignal, type Signal } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
-import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
+import { FieldComposerSlot, type FieldComposerSlotHandle, type ActiveSurface } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
 import { LEGACY_ADD_FIELD_ENABLED } from '../../constants';
@@ -40,9 +43,14 @@ export const FieldList = component$<FieldListProps>((props) => {
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
+    // Shared mutex for the two display-mode surfaces.
+    const activeSurface = useSignal<ActiveSurface>('none');
+
     const handleFieldDeleted$ = $(() => {
         reload$();
     });
+
+    const mode = props.isConstruction ? 'construction' : 'display';
 
     return (
         <div class={styles.fieldList}>
@@ -60,9 +68,10 @@ export const FieldList = component$<FieldListProps>((props) => {
 
             <FieldComposerSlot
                 nodeId={props.nodeId}
+                mode={mode}
                 currentMaxCardOrder={maxPersistedCardOrder.value}
                 initialFieldDefinitionIds={props.initialFieldDefinitionIds}
-                isConstruction={props.isConstruction}
+                activeSurface={activeSurface}
                 onCommitted$={reload$}
                 handleRef={props.handleRef}
             />
@@ -71,6 +80,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                 <CreateDataField
                     nodeId={props.nodeId}
                     currentMaxCardOrder={maxPersistedCardOrder.value}
+                    activeSurface={activeSurface}
                     onCreated$={reload$}
                 />
             )}

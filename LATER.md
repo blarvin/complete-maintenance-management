@@ -115,6 +115,10 @@ Media upload, preview, storage, and caching are out of scope for Phase 1. All fi
 
 Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Implementation will call the existing `computeCardOrderUpdates` helper (`src/data/utils/cardOrder.ts`) and write through the adapter. This is the point at which persisted gaps from deletions get compacted.
 
+### ComposerRow check/uncheck slide-in animation
+
+Spec (`§Field Composer → Layout`) calls for a ~200ms transition on the body when a row is checked/unchecked. The DataCard grid-template-rows trick doesn't compose with the existing kvField renderers (they wrap with `display: contents` so they can position into the FieldList subgrid, which can't be animated). Either flatten the kvField output for the composer (extra wrapper component per kind), or split the body into an animatable container that the kvField writes into. Until then the row's body appears/disappears immediately; the checkbox is still anchored in view via `scrollIntoView({ block: 'nearest' })` after toggle.
+
 ### cardOrder Compaction on Delete
 
 Currently deleting a field leaves a gap in `cardOrder`. Display sorts ascending so the gap is invisible. Revisit only if accumulated gaps become user-visible or cause ordering surprises — then compact on delete, accepting the write cost.
