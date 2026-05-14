@@ -23,7 +23,7 @@ import styles from './DataField.module.css';
 export type DataFieldProps = {
     id: string;
     fieldName: string;
-    templateId: string;
+    fieldDefinitionId: string;
     componentType: ComponentType;
     value: DataFieldValue | null;
     onDeleted$?: PropFunction<() => void>;
@@ -106,7 +106,7 @@ export const DataField = component$<DataFieldProps>((props) => {
                 <DataFieldDetails
                     fieldId={props.id}
                     fieldName={props.fieldName}
-                    templateId={props.templateId}
+                    fieldDefinitionId={props.fieldDefinitionId}
                     componentType={props.componentType}
                     currentValue={currentDisplayValue}
                     onDelete$={handleDelete$}
@@ -144,7 +144,7 @@ function renderBody(
                 <TextKvField
                     id={props.id}
                     fieldName={props.fieldName}
-                    templateId={props.templateId}
+                    fieldDefinitionId={props.fieldDefinitionId}
                     value={(props.value as string | null) ?? null}
                     rootRef={rootRef}
                     onUpdated$={props.onUpdated$}
@@ -155,7 +155,7 @@ function renderBody(
                 <EnumKvField
                     id={props.id}
                     fieldName={props.fieldName}
-                    templateId={props.templateId}
+                    fieldDefinitionId={props.fieldDefinitionId}
                     value={(props.value as string | null) ?? null}
                     rootRef={rootRef}
                     onUpdated$={props.onUpdated$}
@@ -166,7 +166,7 @@ function renderBody(
                 <MeasurementKvField
                     id={props.id}
                     fieldName={props.fieldName}
-                    templateId={props.templateId}
+                    fieldDefinitionId={props.fieldDefinitionId}
                     value={(props.value as number | null) ?? null}
                     rootRef={rootRef}
                     onUpdated$={props.onUpdated$}

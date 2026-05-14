@@ -30,7 +30,7 @@ export type FieldComposerSlotProps = {
     /** Max cardOrder among already-persisted fields (for placement). */
     currentMaxCardOrder: number;
     /** Construction defaults, pre-checked and immutable. */
-    initialTemplateIds?: readonly string[];
+    initialFieldDefinitionIds?: readonly string[];
     /** When true: composer opens by default, "+ Add Fields" trigger hidden,
      *  composer Save button hidden (parent drives commit). */
     isConstruction?: boolean;
@@ -88,7 +88,7 @@ export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
                     key={restoreSeed.value ? 'restored' : 'fresh'}
                     nodeId={props.nodeId}
                     currentMaxCardOrder={props.currentMaxCardOrder}
-                    lockedTemplateIds={props.initialTemplateIds}
+                    lockedFieldDefinitionIds={props.initialFieldDefinitionIds}
                     isConstruction={props.isConstruction}
                     restoreSeed={restoreSeed.value}
                     onDismiss$={handleDismiss$}

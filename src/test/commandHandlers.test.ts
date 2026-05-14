@@ -1,6 +1,6 @@
 /**
- * Narrow command-handler coverage for ADD_FIELD_FROM_TEMPLATE across all 4
- * Phase-1 componentTypes. Exercises the full happy path: seed a Template,
+ * Narrow command-handler coverage for ADD_FIELD_FROM_DEFINITION across all 4
+ * Phase-1 componentTypes. Exercises the full happy path: seed a FieldDefinition,
  * dispatch the command, assert the created DataField snapshots label and
  * componentType correctly and initializes value to null.
  *
@@ -12,15 +12,15 @@ import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { initializeCommandBus, getCommandBus, resetCommandBus } from '../data/commands';
 import { initializeQueries, resetQueries } from '../data/queries';
-import type { ComponentType, DataFieldTemplateConfig } from '../data/models';
+import type { ComponentType, FieldDefinitionConfig } from '../data/models';
 
-async function seedTemplate(
+async function seedDefinition(
   id: string,
   componentType: ComponentType,
   label: string,
-  config: DataFieldTemplateConfig,
+  config: FieldDefinitionConfig,
 ): Promise<void> {
-  await db.templates.put({
+  await db.fieldDefinitions.put({
     id,
     componentType,
     label,
@@ -41,12 +41,12 @@ async function createNode(id: string): Promise<void> {
   });
 }
 
-describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
+describe('ADD_FIELD_FROM_DEFINITION across Components', () => {
   beforeEach(async () => {
     await Promise.all([
       db.nodes.clear(),
       db.fields.clear(),
-      db.templates.clear(),
+      db.fieldDefinitions.clear(),
       db.history.clear(),
       db.syncQueue.clear(),
       db.syncMetadata.clear(),
@@ -58,30 +58,30 @@ describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
     initializeQueries(adapter);
   });
 
-  it('creates a text-kv DataField from a text-kv Template', async () => {
+  it('creates a text-kv DataField from a text-kv FieldDefinition', async () => {
     await createNode('n1');
-    await seedTemplate('tpl_desc', 'text-kv', 'Description', { multiline: true });
+    await seedDefinition('fd_desc', 'text-kv', 'Description', { multiline: true });
 
     const result = await getCommandBus().execute({
-      type: 'ADD_FIELD_FROM_TEMPLATE',
-      payload: { nodeId: 'n1', templateId: 'tpl_desc' },
+      type: 'ADD_FIELD_FROM_DEFINITION',
+      payload: { nodeId: 'n1', fieldDefinitionId: 'fd_desc' },
     });
 
     expect(result.fieldName).toBe('Description');
     expect(result.componentType).toBe('text-kv');
-    expect(result.templateId).toBe('tpl_desc');
+    expect(result.fieldDefinitionId).toBe('fd_desc');
     expect(result.value).toBeNull();
   });
 
-  it('creates an enum-kv DataField from an enum-kv Template', async () => {
+  it('creates an enum-kv DataField from an enum-kv FieldDefinition', async () => {
     await createNode('n1');
-    await seedTemplate('tpl_status', 'enum-kv', 'Status', {
+    await seedDefinition('fd_status', 'enum-kv', 'Status', {
       options: ['In Service', 'Maintenance', 'Retired'],
     });
 
     const result = await getCommandBus().execute({
-      type: 'ADD_FIELD_FROM_TEMPLATE',
-      payload: { nodeId: 'n1', templateId: 'tpl_status' },
+      type: 'ADD_FIELD_FROM_DEFINITION',
+      payload: { nodeId: 'n1', fieldDefinitionId: 'fd_status' },
     });
 
     expect(result.componentType).toBe('enum-kv');
@@ -89,16 +89,16 @@ describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
     expect(result.value).toBeNull();
   });
 
-  it('creates a measurement-kv DataField from a measurement-kv Template', async () => {
+  it('creates a measurement-kv DataField from a measurement-kv FieldDefinition', async () => {
     await createNode('n1');
-    await seedTemplate('tpl_weight', 'measurement-kv', 'Weight', {
+    await seedDefinition('fd_weight', 'measurement-kv', 'Weight', {
       units: 'kg',
       decimals: 2,
     });
 
     const result = await getCommandBus().execute({
-      type: 'ADD_FIELD_FROM_TEMPLATE',
-      payload: { nodeId: 'n1', templateId: 'tpl_weight' },
+      type: 'ADD_FIELD_FROM_DEFINITION',
+      payload: { nodeId: 'n1', fieldDefinitionId: 'fd_weight' },
     });
 
     expect(result.componentType).toBe('measurement-kv');
@@ -106,15 +106,15 @@ describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
     expect(result.value).toBeNull();
   });
 
-  it('creates a single-image DataField from a single-image Template', async () => {
+  it('creates a single-image DataField from a single-image FieldDefinition', async () => {
     await createNode('n1');
-    await seedTemplate('tpl_image', 'single-image', 'Main Image', {
+    await seedDefinition('fd_image', 'single-image', 'Main Image', {
       requireCaption: false,
     });
 
     const result = await getCommandBus().execute({
-      type: 'ADD_FIELD_FROM_TEMPLATE',
-      payload: { nodeId: 'n1', templateId: 'tpl_image' },
+      type: 'ADD_FIELD_FROM_DEFINITION',
+      payload: { nodeId: 'n1', fieldDefinitionId: 'fd_image' },
     });
 
     expect(result.componentType).toBe('single-image');
@@ -124,11 +124,11 @@ describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
 
   it('writes a create-history entry with componentType', async () => {
     await createNode('n1');
-    await seedTemplate('tpl_weight', 'measurement-kv', 'Weight', { units: 'kg' });
+    await seedDefinition('fd_weight', 'measurement-kv', 'Weight', { units: 'kg' });
 
     const field = await getCommandBus().execute({
-      type: 'ADD_FIELD_FROM_TEMPLATE',
-      payload: { nodeId: 'n1', templateId: 'tpl_weight' },
+      type: 'ADD_FIELD_FROM_DEFINITION',
+      payload: { nodeId: 'n1', fieldDefinitionId: 'fd_weight' },
     });
 
     const history = await db.history.where('dataFieldId').equals(field.id).toArray();
@@ -143,11 +143,11 @@ describe('ADD_FIELD_FROM_TEMPLATE across Components', () => {
     // Composer flow used to call create (with null) then update (with value),
     // producing a leading "Empty" history row. Now creates a single entry.
     await createNode('n1');
-    await seedTemplate('tpl_weight', 'measurement-kv', 'Weight', { units: 'kg' });
+    await seedDefinition('fd_weight', 'measurement-kv', 'Weight', { units: 'kg' });
 
     const field = await getCommandBus().execute({
-      type: 'ADD_FIELD_FROM_TEMPLATE',
-      payload: { nodeId: 'n1', templateId: 'tpl_weight', initialValue: 42 },
+      type: 'ADD_FIELD_FROM_DEFINITION',
+      payload: { nodeId: 'n1', fieldDefinitionId: 'fd_weight', initialValue: 42 },
     });
 
     expect(field.value).toBe(42);

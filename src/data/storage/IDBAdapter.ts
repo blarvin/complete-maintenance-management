@@ -12,12 +12,12 @@ import type {
   StorageResult,
   StorageNodeCreate,
   StorageNodeUpdate,
-  StorageTemplateCreate,
-  StorageTemplateUpdate,
+  StorageFieldDefinitionCreate,
+  StorageFieldDefinitionUpdate,
   StorageFieldCreate,
   StorageFieldUpdate,
 } from './storageAdapter';
-import type { TreeNode, DataField, DataFieldHistory, DataFieldTemplate } from '../models';
+import type { TreeNode, DataField, DataFieldHistory, FieldDefinition } from '../models';
 import { filterActive, filterDeleted } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
@@ -160,25 +160,25 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   // ============================================================================
-  // Template Operations
+  // FieldDefinition Operations
   // ============================================================================
 
-  async listTemplates(): Promise<StorageResult<DataFieldTemplate[]>> {
-    const templates = await db.templates.toArray();
-    templates.sort((a, b) => a.label.localeCompare(b.label));
-    return createResult(templates);
+  async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
+    const definitions = await db.fieldDefinitions.toArray();
+    definitions.sort((a, b) => a.label.localeCompare(b.label));
+    return createResult(definitions);
   }
 
-  async getTemplate(id: string): Promise<StorageResult<DataFieldTemplate | null>> {
-    const tpl = await db.templates.get(id);
-    return createResult(tpl ?? null);
+  async getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>> {
+    const def = await db.fieldDefinitions.get(id);
+    return createResult(def ?? null);
   }
 
-  async createTemplate(input: StorageTemplateCreate): Promise<StorageResult<DataFieldTemplate>> {
+  async createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>> {
     const timestamp = now();
     const userId = getCurrentUserId();
 
-    const template: DataFieldTemplate = {
+    const definition: FieldDefinition = {
       id: input.id,
       componentType: input.componentType,
       label: input.label,
@@ -187,35 +187,35 @@ export class IDBAdapter implements SyncableStorageAdapter {
       updatedAt: timestamp,
     };
 
-    await db.transaction('rw', db.templates, db.syncQueue, async () => {
-      await db.templates.put(template);
+    await db.transaction('rw', db.fieldDefinitions, db.syncQueue, async () => {
+      await db.fieldDefinitions.put(definition);
       await this.syncQueue.enqueue({
-        operation: 'create-template',
-        entityType: 'template',
-        entityId: template.id,
-        payload: template,
+        operation: 'create-fieldDefinition',
+        entityType: 'fieldDefinition',
+        entityId: definition.id,
+        payload: definition,
       });
     });
 
-    console.log('[IDBAdapter] Template created in IDB:', template.id, template.label);
-    return createResult(template);
+    console.log('[IDBAdapter] FieldDefinition created in IDB:', definition.id, definition.label);
+    return createResult(definition);
   }
 
-  async updateTemplate(id: string, updates: StorageTemplateUpdate): Promise<StorageResult<void>> {
+  async updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>> {
     const timestamp = now();
     const userId = getCurrentUserId();
 
-    await db.transaction('rw', db.templates, db.syncQueue, async () => {
-      await db.templates.update(id, {
+    await db.transaction('rw', db.fieldDefinitions, db.syncQueue, async () => {
+      await db.fieldDefinitions.update(id, {
         ...updates,
         updatedBy: userId,
         updatedAt: timestamp,
       });
-      const updated = await db.templates.get(id);
+      const updated = await db.fieldDefinitions.get(id);
       if (updated) {
         await this.syncQueue.enqueue({
-          operation: 'update-template',
-          entityType: 'template',
+          operation: 'update-fieldDefinition',
+          entityType: 'fieldDefinition',
           entityId: id,
           payload: updated,
         });
@@ -245,9 +245,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   async createField(input: StorageFieldCreate): Promise<StorageResult<DataField>> {
-    const template = await db.templates.get(input.templateId);
-    if (!template) {
-      throw makeStorageError('not-found', `Template not found: ${input.templateId}`, { retryable: false });
+    const definition = await db.fieldDefinitions.get(input.fieldDefinitionId);
+    if (!definition) {
+      throw makeStorageError('not-found', `FieldDefinition not found: ${input.fieldDefinitionId}`, { retryable: false });
     }
 
     const timestamp = now();
@@ -258,9 +258,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
     const field: DataField = {
       id: input.id,
       parentNodeId: input.parentNodeId,
-      templateId: template.id,
-      componentType: template.componentType,
-      fieldName: template.label, // snapshot
+      fieldDefinitionId: definition.id,
+      componentType: definition.componentType,
+      fieldName: definition.label, // snapshot
       value: input.initialValue ?? null,
       cardOrder: order,
       updatedBy: userId,
@@ -519,13 +519,13 @@ export class IDBAdapter implements SyncableStorageAdapter {
     await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: timestamp });
   }
 
-  async applyRemoteUpdate(entityType: 'node' | 'field' | 'template', entity: TreeNode | DataField | DataFieldTemplate): Promise<void> {
+  async applyRemoteUpdate(entityType: 'node' | 'field' | 'fieldDefinition', entity: TreeNode | DataField | FieldDefinition): Promise<void> {
     if (entityType === 'node') {
       const node = entity as TreeNode;
       await db.nodes.put(node);
       storageEventBus.emit({ type: 'NODE_WRITTEN', node });
-    } else if (entityType === 'template') {
-      await db.templates.put(entity as DataFieldTemplate);
+    } else if (entityType === 'fieldDefinition') {
+      await db.fieldDefinitions.put(entity as FieldDefinition);
     } else {
       const incoming = entity as DataField;
       await db.fields.put(incoming);
@@ -559,8 +559,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
     return await db.history.toArray();
   }
 
-  async getAllTemplates(): Promise<DataFieldTemplate[]> {
-    return await db.templates.toArray();
+  async getAllFieldDefinitions(): Promise<FieldDefinition[]> {
+    return await db.fieldDefinitions.toArray();
   }
 
   async applyRemoteHistory(history: DataFieldHistory): Promise<void> {

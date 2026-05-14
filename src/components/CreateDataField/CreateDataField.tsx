@@ -1,11 +1,12 @@
 /**
  * CreateDataField — Legacy "+ Add Field" surface.
  *
- * Single-pick Template dropdown: user clicks "+ Add Field", picks one Template,
- * a DataField is created immediately via the command bus, the dropdown closes.
- * Click "+ Add Field" again to add another. Nothing else is shared with the
- * FieldComposer — this component is self-contained so it can be turned on/off
- * via the LEGACY_ADD_FIELD_ENABLED flag without touching the composer code.
+ * Single-pick FieldDefinition dropdown: user clicks "+ Add Field", picks one
+ * FieldDefinition, a DataField is created immediately via the command bus, the
+ * dropdown closes. Click "+ Add Field" again to add another. Nothing else is
+ * shared with the FieldComposer — this component is self-contained so it can
+ * be turned on/off via the LEGACY_ADD_FIELD_ENABLED flag without touching the
+ * composer code.
  */
 
 import {
@@ -16,9 +17,9 @@ import {
     $,
     type PropFunction,
 } from '@builder.io/qwik';
-import { getTemplateQueries } from '../../data/queries';
+import { getFieldDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
-import type { DataFieldTemplate } from '../../data/models';
+import type { FieldDefinition } from '../../data/models';
 import styles from './CreateDataField.module.css';
 
 export type CreateDataFieldProps = {
@@ -32,8 +33,8 @@ export type CreateDataFieldProps = {
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     const isOpen = useSignal(false);
 
-    const templatesResource = useResource$<DataFieldTemplate[]>(async () => {
-        const list = await getTemplateQueries().listTemplates();
+    const definitionsResource = useResource$<FieldDefinition[]>(async () => {
+        const list = await getFieldDefinitionQueries().listFieldDefinitions();
         return [...list].sort((a, b) => a.label.localeCompare(b.label));
     });
 
@@ -41,13 +42,13 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
         isOpen.value = !isOpen.value;
     });
 
-    const pick$ = $(async (tpl: DataFieldTemplate) => {
+    const pick$ = $(async (def: FieldDefinition) => {
         isOpen.value = false;
         await getCommandBus().execute({
-            type: 'ADD_FIELD_FROM_TEMPLATE',
+            type: 'ADD_FIELD_FROM_DEFINITION',
             payload: {
                 nodeId: props.nodeId,
-                templateId: tpl.id,
+                fieldDefinitionId: def.id,
                 cardOrder: props.currentMaxCardOrder + 1,
             },
         });
@@ -66,26 +67,26 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                 + Add Field
             </button>
             {isOpen.value && (
-                <div class={styles.dropdown} role="listbox" aria-label="Field templates">
+                <div class={styles.dropdown} role="listbox" aria-label="Field definitions">
                     <Resource
-                        value={templatesResource}
+                        value={definitionsResource}
                         onPending={() => <div class={styles.dropdownItem}>Loading…</div>}
-                        onRejected={() => <div class={styles.dropdownItem}>Failed to load templates</div>}
-                        onResolved={(templates) => {
-                            if (templates.length === 0) {
-                                return <div class={styles.dropdownItem}>No templates available</div>;
+                        onRejected={() => <div class={styles.dropdownItem}>Failed to load field definitions</div>}
+                        onResolved={(definitions) => {
+                            if (definitions.length === 0) {
+                                return <div class={styles.dropdownItem}>No field definitions available</div>;
                             }
                             return (
                                 <>
-                                    {templates.map((tpl) => (
+                                    {definitions.map((def) => (
                                         <button
-                                            key={tpl.id}
+                                            key={def.id}
                                             type="button"
                                             class={styles.dropdownItem}
-                                            onClick$={() => pick$(tpl)}
+                                            onClick$={() => pick$(def)}
                                             role="option"
                                         >
-                                            {tpl.label}
+                                            {def.label}
                                         </button>
                                     ))}
                                 </>

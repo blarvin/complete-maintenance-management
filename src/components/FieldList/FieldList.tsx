@@ -25,8 +25,8 @@ export type FieldListProps = {
     handleRef?: Signal<FieldListHandle | null>;
     /** When true, operates in construction mode (composer open by default). */
     isConstruction?: boolean;
-    /** Template IDs to pre-populate as locked-in composer rows (construction defaults). */
-    initialTemplateIds?: readonly string[];
+    /** FieldDefinition IDs to pre-populate as locked-in composer rows (construction defaults). */
+    initialFieldDefinitionIds?: readonly string[];
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
@@ -51,7 +51,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                     key={field.id}
                     id={field.id}
                     fieldName={field.fieldName}
-                    templateId={field.templateId}
+                    fieldDefinitionId={field.fieldDefinitionId}
                     componentType={field.componentType}
                     value={field.value}
                     onDeleted$={handleFieldDeleted$}
@@ -61,7 +61,7 @@ export const FieldList = component$<FieldListProps>((props) => {
             <FieldComposerSlot
                 nodeId={props.nodeId}
                 currentMaxCardOrder={maxPersistedCardOrder.value}
-                initialTemplateIds={props.initialTemplateIds}
+                initialFieldDefinitionIds={props.initialFieldDefinitionIds}
                 isConstruction={props.isConstruction}
                 onCommitted$={reload$}
                 handleRef={props.handleRef}

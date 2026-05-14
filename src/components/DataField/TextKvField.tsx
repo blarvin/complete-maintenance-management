@@ -1,9 +1,10 @@
 /**
  * TextKvField - Renderer for text-kv DataFields.
  *
- * Free-form text. Reads the Template config to decide single-line `<input>` vs
- * multi-line `<textarea>` (`config.multiline`) and to apply per-template save
- * validation (`config.maxWords`). The textarea variant matters on mobile: a
+ * Free-form text. Reads the FieldDefinition config to decide single-line
+ * `<input>` vs multi-line `<textarea>` (`config.multiline`) and to apply
+ * per-definition save validation (`config.maxWords`). The textarea variant
+ * matters on mobile: a
  * wrapped, multi-line value collapsing to a 1-line input on edit shifts the row
  * height, which Android dismisses the keyboard for; a textarea preserves the
  * height and keeps the keyboard up.
@@ -12,14 +13,14 @@
 import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { getTemplateQueries } from '../../data/queries';
+import { getFieldDefinitionQueries } from '../../data/queries';
 import type { TextKvConfig } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type TextKvFieldProps = {
     id: string;
     fieldName: string;
-    templateId: string;
+    fieldDefinitionId: string;
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
@@ -52,16 +53,16 @@ const makeValidate = (config: TextKvConfig) => {
 };
 
 export const TextKvField = component$<TextKvFieldProps>((props) => {
-    const templateResource = useResource$(async ({ track }) => {
-        track(() => props.templateId);
-        const tpl = await getTemplateQueries().getTemplateById(props.templateId);
-        if (!tpl || tpl.componentType !== 'text-kv') return {} as TextKvConfig;
-        return tpl.config as TextKvConfig;
+    const configResource = useResource$(async ({ track }) => {
+        track(() => props.fieldDefinitionId);
+        const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
+        if (!def || def.componentType !== 'text-kv') return {} as TextKvConfig;
+        return def.config as TextKvConfig;
     });
 
     return (
         <Resource
-            value={templateResource}
+            value={configResource}
             onPending={() => <span class={styles.datafieldValue}>…</span>}
             onResolved={(config) => <TextKvBody {...props} config={config} />}
         />

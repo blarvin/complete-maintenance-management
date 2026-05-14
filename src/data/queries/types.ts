@@ -1,4 +1,4 @@
-import type { TreeNode, DataField, DataFieldHistory, DataFieldTemplate } from '../models';
+import type { TreeNode, DataField, DataFieldHistory, FieldDefinition } from '../models';
 
 export interface INodeQueries {
   getRootNodes(): Promise<TreeNode[]>;
@@ -13,8 +13,8 @@ export interface IFieldQueries {
   nextCardOrder(nodeId: string): Promise<number>;
 }
 
-export interface ITemplateQueries {
-  listTemplates(): Promise<DataFieldTemplate[]>;
-  getTemplateById(id: string): Promise<DataFieldTemplate | null>;
-  getTemplateByLabel(label: string): Promise<DataFieldTemplate | null>;
+export interface IFieldDefinitionQueries {
+  listFieldDefinitions(): Promise<FieldDefinition[]>;
+  getFieldDefinitionById(id: string): Promise<FieldDefinition | null>;
+  getFieldDefinitionByLabel(label: string): Promise<FieldDefinition | null>;
 }

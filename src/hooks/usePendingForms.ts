@@ -1,32 +1,33 @@
 /**
  * usePendingForms — Hook backing the FieldComposer batch.
  *
- * A pending form is a Template the user has checked in the composer plus an
- * in-flight (not yet persisted) value. The batch lives in localStorage keyed by
- * nodeId so picking a few Templates, navigating away, and coming back keeps the
- * draft. commitAll$ turns the batch into real DataFields via the command bus.
+ * A pending form is a FieldDefinition the user has checked in the composer plus
+ * an in-flight (not yet persisted) value. The batch lives in localStorage keyed
+ * by nodeId so picking a few FieldDefinitions, navigating away, and coming back
+ * keeps the draft. commitAll$ turns the batch into real DataFields via the
+ * command bus.
  */
 
 import { useSignal, useVisibleTask$, useTask$, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
-import type { DataFieldTemplate, DataFieldValue, ComponentType } from '../data/models';
+import type { FieldDefinition, DataFieldValue, ComponentType } from '../data/models';
 import { generateId } from '../utils/id';
 
-/** A pending (un-persisted) Template instance with its in-progress value. */
+/** A pending (un-persisted) FieldDefinition instance with its in-progress value. */
 export type PendingForm = {
     id: string;
-    templateId: string;
+    fieldDefinitionId: string;
     componentType: ComponentType;
     fieldName: string;
     value: DataFieldValue | null;
 };
 
-/** Build a fresh PendingForm from a Template. Used by composer toggle and seed loaders. */
-export const pendingFormFromTemplate = (template: DataFieldTemplate): PendingForm => ({
+/** Build a fresh PendingForm from a FieldDefinition. Used by composer toggle and seed loaders. */
+export const pendingFormFromFieldDefinition = (definition: FieldDefinition): PendingForm => ({
     id: generateId(),
-    templateId: template.id,
-    componentType: template.componentType,
-    fieldName: template.label,
+    fieldDefinitionId: definition.id,
+    componentType: definition.componentType,
+    fieldName: definition.label,
     value: null,
 });
 
@@ -42,7 +43,7 @@ const loadPendingForms = (nodeId: string): PendingForm[] => {
             (f): f is PendingForm =>
                 f && typeof f === 'object' &&
                 typeof f.id === 'string' &&
-                typeof f.templateId === 'string' &&
+                typeof f.fieldDefinitionId === 'string' &&
                 typeof f.componentType === 'string' &&
                 typeof f.fieldName === 'string'
         );
@@ -82,7 +83,7 @@ export type UsePendingFormsResult = {
      * locks, Undo restore) leave it null so nothing steals focus on open.
      */
     lastToggledId: Signal<string | null>;
-    togglePending$: ReturnType<typeof $<(template: DataFieldTemplate) => void>>;
+    togglePending$: ReturnType<typeof $<(definition: FieldDefinition) => void>>;
     setPendingValue$: ReturnType<typeof $<(formId: string, value: DataFieldValue | null) => void>>;
     commitAll$: ReturnType<typeof $<(currentMaxCardOrder: number) => Promise<number>>>;
     discardAll$: ReturnType<typeof $<() => PendingForm[]>>;
@@ -113,13 +114,13 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         }
     });
 
-    const togglePending$ = $((template: DataFieldTemplate) => {
-        const existing = forms.value.find(f => f.templateId === template.id);
+    const togglePending$ = $((definition: FieldDefinition) => {
+        const existing = forms.value.find(f => f.fieldDefinitionId === definition.id);
         if (existing) {
-            forms.value = forms.value.filter(f => f.templateId !== template.id);
+            forms.value = forms.value.filter(f => f.fieldDefinitionId !== definition.id);
             if (lastToggledId.value === existing.id) lastToggledId.value = null;
         } else {
-            const fresh = pendingFormFromTemplate(template);
+            const fresh = pendingFormFromFieldDefinition(definition);
             forms.value = [...forms.value, fresh];
             lastToggledId.value = fresh.id;
         }
@@ -131,8 +132,8 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
 
     const commitAll$ = $(async (currentMaxCardOrder: number): Promise<number> => {
         // Drop malformed entries (e.g. legacy localStorage drafts from the old
-        // pre-composer shape that lack templateId/fieldName).
-        const valid = forms.value.filter(f => f && f.templateId && typeof f.fieldName === 'string');
+        // pre-composer shape that lack fieldDefinitionId/fieldName).
+        const valid = forms.value.filter(f => f && f.fieldDefinitionId && typeof f.fieldName === 'string');
         const batch = [...valid].sort((a, b) =>
             (a.fieldName ?? '').localeCompare(b.fieldName ?? '')
         );
@@ -146,10 +147,10 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
             // row carrying the user-entered value, instead of a null create
             // followed by an update (which produced an "Empty" history row).
             await commandBus.execute({
-                type: 'ADD_FIELD_FROM_TEMPLATE',
+                type: 'ADD_FIELD_FROM_DEFINITION',
                 payload: {
                     nodeId: options.nodeId,
-                    templateId: row.templateId,
+                    fieldDefinitionId: row.fieldDefinitionId,
                     cardOrder,
                     initialValue: row.value ?? null,
                 },

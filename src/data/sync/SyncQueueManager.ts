@@ -13,7 +13,7 @@ import { now } from '../../utils/time';
 
 export type EnqueueParams = {
   operation: SyncOperation;
-  entityType: 'node' | 'field' | 'field-history' | 'template';
+  entityType: 'node' | 'field' | 'field-history' | 'fieldDefinition';
   entityId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any;

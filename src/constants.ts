@@ -20,7 +20,7 @@ export const LEGACY_ADD_FIELD_ENABLED = true;
  */
 export const COLLECTIONS = {
     NODES: "treeNodes",
-    TEMPLATES: "dataFieldTemplates",
+    FIELD_DEFINITIONS: "fieldDefinitions",
     FIELDS: "dataFields",
     HISTORY: "dataFieldHistory",
 } as const;
@@ -32,7 +32,7 @@ export const COLLECTIONS = {
  *   Power Rating, Current Reading, Note
  *
  * These were hardcoded strings used during early UI/UX development. The
- * Component/Template/Instance refactor replaced them with a `templates`
- * table populated by a follow-up plan. Kept here as a reminder of the
- * prototype set only.
+ * Component/FieldDefinition/Instance refactor replaced them with a
+ * `fieldDefinitions` table populated by a follow-up plan. Kept here as a
+ * reminder of the prototype set only.
  */

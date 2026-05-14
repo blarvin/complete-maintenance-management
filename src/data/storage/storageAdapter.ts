@@ -1,4 +1,4 @@
-import type { DataField, DataFieldHistory, DataFieldTemplate, DataFieldValue, DataFieldTemplateConfig, ComponentType, TreeNode } from "../models";
+import type { DataField, DataFieldHistory, FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, TreeNode } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -28,22 +28,22 @@ export type StorageNodeUpdate = {
   nodeSubtitle?: string;
 };
 
-export type StorageTemplateCreate = {
+export type StorageFieldDefinitionCreate = {
   id: string;
   componentType: ComponentType;
   label: string;
-  config: DataFieldTemplateConfig;
+  config: FieldDefinitionConfig;
 };
 
-export type StorageTemplateUpdate = {
+export type StorageFieldDefinitionUpdate = {
   label?: string;
-  config?: DataFieldTemplateConfig;
+  config?: FieldDefinitionConfig;
 };
 
 export type StorageFieldCreate = {
   id: string;
   parentNodeId: string;
-  templateId: string;
+  fieldDefinitionId: string;
   cardOrder?: number;
   /** Optional initial value. When provided, the create-event history row
    *  carries this value instead of null, avoiding a redundant "Empty" entry
@@ -71,11 +71,11 @@ export interface StorageAdapter {
     opts?: { cascade?: boolean } // Phase 1: expect cascade=false; leaf-only enforced upstream or inside adapter
   ): Promise<StorageResult<void>>;
 
-  // Template operations
-  listTemplates(): Promise<StorageResult<DataFieldTemplate[]>>;
-  getTemplate(id: string): Promise<StorageResult<DataFieldTemplate | null>>;
-  createTemplate(input: StorageTemplateCreate): Promise<StorageResult<DataFieldTemplate>>;
-  updateTemplate(id: string, updates: StorageTemplateUpdate): Promise<StorageResult<void>>;
+  // FieldDefinition operations
+  listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>>;
+  getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>>;
+  createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>>;
+  updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>>;
 
   // Data field operations
   listFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
@@ -107,13 +107,13 @@ export interface StorageAdapter {
 export interface SyncableStorageAdapter extends StorageAdapter {
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
-  applyRemoteUpdate(entityType: 'node' | 'field' | 'template', entity: TreeNode | DataField | DataFieldTemplate): Promise<void>;
+  applyRemoteUpdate(entityType: 'node' | 'field' | 'fieldDefinition', entity: TreeNode | DataField | FieldDefinition): Promise<void>;
 
   // Full collection retrieval methods
   getAllNodes(): Promise<TreeNode[]>;
   getAllFields(): Promise<DataField[]>;
   getAllHistory(): Promise<DataFieldHistory[]>;
-  getAllTemplates(): Promise<DataFieldTemplate[]>;
+  getAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
   // History sync methods
   applyRemoteHistory(history: DataFieldHistory): Promise<void>;
@@ -129,13 +129,13 @@ export interface SyncableStorageAdapter extends StorageAdapter {
  */
 export interface RemoteSyncAdapter {
   applySyncItem(item: SyncQueueItem): Promise<void>;
-  pullEntitiesSince(type: 'node' | 'field' | 'template', since: number): Promise<Array<TreeNode | DataField | DataFieldTemplate>>;
+  pullEntitiesSince(type: 'node' | 'field' | 'fieldDefinition', since: number): Promise<Array<TreeNode | DataField | FieldDefinition>>;
 
   // Full collection pull methods
   pullAllNodes(): Promise<TreeNode[]>;
   pullAllFields(): Promise<DataField[]>;
   pullAllHistory(): Promise<DataFieldHistory[]>;
-  pullAllTemplates(): Promise<DataFieldTemplate[]>;
+  pullAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
   // Delta sync methods
   pullHistorySince(since: number): Promise<DataFieldHistory[]>;

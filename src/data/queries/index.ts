@@ -1,7 +1,7 @@
 import type { StorageAdapter, StorageResult } from '../storage/storageAdapter';
-import type { INodeQueries, IFieldQueries, ITemplateQueries } from './types';
+import type { INodeQueries, IFieldQueries, IFieldDefinitionQueries } from './types';
 
-export type { INodeQueries, IFieldQueries, ITemplateQueries } from './types';
+export type { INodeQueries, IFieldQueries, IFieldDefinitionQueries } from './types';
 
 function unwrap<T>(result: StorageResult<T>): T {
   return result.data;
@@ -30,20 +30,20 @@ export function fieldQueriesFromAdapter(adapter: StorageAdapter): IFieldQueries 
   };
 }
 
-export function templateQueriesFromAdapter(adapter: StorageAdapter): ITemplateQueries {
+export function fieldDefinitionQueriesFromAdapter(adapter: StorageAdapter): IFieldDefinitionQueries {
   return {
-    listTemplates: async () => unwrap(await adapter.listTemplates()),
-    getTemplateById: async (id) => unwrap(await adapter.getTemplate(id)),
-    getTemplateByLabel: async (label) => {
-      const all = unwrap(await adapter.listTemplates());
-      return all.find(t => t.label === label) ?? null;
+    listFieldDefinitions: async () => unwrap(await adapter.listFieldDefinitions()),
+    getFieldDefinitionById: async (id) => unwrap(await adapter.getFieldDefinition(id)),
+    getFieldDefinitionByLabel: async (label) => {
+      const all = unwrap(await adapter.listFieldDefinitions());
+      return all.find(d => d.label === label) ?? null;
     },
   };
 }
 
 let activeNodeQueries: INodeQueries | null = null;
 let activeFieldQueries: IFieldQueries | null = null;
-let activeTemplateQueries: ITemplateQueries | null = null;
+let activeFieldDefinitionQueries: IFieldDefinitionQueries | null = null;
 
 export function getNodeQueries(): INodeQueries {
   if (!activeNodeQueries) throw new Error('Node queries not initialized. Call initializeQueries() first.');
@@ -55,15 +55,15 @@ export function getFieldQueries(): IFieldQueries {
   return activeFieldQueries;
 }
 
-export function getTemplateQueries(): ITemplateQueries {
-  if (!activeTemplateQueries) throw new Error('Template queries not initialized. Call initializeQueries() first.');
-  return activeTemplateQueries;
+export function getFieldDefinitionQueries(): IFieldDefinitionQueries {
+  if (!activeFieldDefinitionQueries) throw new Error('FieldDefinition queries not initialized. Call initializeQueries() first.');
+  return activeFieldDefinitionQueries;
 }
 
 export function initializeQueries(adapter: StorageAdapter): void {
   activeNodeQueries = nodeQueriesFromAdapter(adapter);
   activeFieldQueries = fieldQueriesFromAdapter(adapter);
-  activeTemplateQueries = templateQueriesFromAdapter(adapter);
+  activeFieldDefinitionQueries = fieldDefinitionQueriesFromAdapter(adapter);
 }
 
 export function setNodeQueries(q: INodeQueries): void {
@@ -74,12 +74,12 @@ export function setFieldQueries(q: IFieldQueries): void {
   activeFieldQueries = q;
 }
 
-export function setTemplateQueries(q: ITemplateQueries): void {
-  activeTemplateQueries = q;
+export function setFieldDefinitionQueries(q: IFieldDefinitionQueries): void {
+  activeFieldDefinitionQueries = q;
 }
 
 export function resetQueries(): void {
   activeNodeQueries = null;
   activeFieldQueries = null;
-  activeTemplateQueries = null;
+  activeFieldDefinitionQueries = null;
 }

@@ -227,7 +227,7 @@ describe('State Transitions', () => {
                 parentId: null,
                 nodeName: '',
                 nodeSubtitle: '',
-                defaultFields: [{ templateId: 'tpl_type_of' }],
+                defaultFields: [{ fieldDefinitionId: 'fd_type_of' }],
             };
             
             transitions.startConstruction(state, ucData);

@@ -1,6 +1,6 @@
 /**
  * FirestoreAdapter - Concrete implementation of StorageAdapter for Firestore.
- * 
+ *
  * Encapsulates all Firestore-specific operations behind the StorageAdapter interface,
  * enabling backend independence and architectural purity.
  */
@@ -19,9 +19,9 @@ import {
   FirestoreError,
   serverTimestamp,
 } from "firebase/firestore";
-import type { TreeNode, DataField, DataFieldHistory, DataFieldTemplate } from "../models";
+import type { TreeNode, DataField, DataFieldHistory, FieldDefinition } from "../models";
 import { filterDeleted } from "../models";
-import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageTemplateCreate, StorageTemplateUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
+import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageNodeCreate, StorageNodeUpdate, StorageFieldDefinitionCreate, StorageFieldDefinitionUpdate, StorageFieldCreate, StorageFieldUpdate } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
 import { getCurrentUserId } from "../../context/userContext";
@@ -180,13 +180,13 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const ts = now();
       const userId = getCurrentUserId();
       const ref = doc(db, COLLECTIONS.NODES, id);
-      
+
       await updateDoc(ref, {
         deletedAt: ts,
         updatedAt: ts,
         updatedBy: userId,
       });
-      
+
       return createResult(undefined);
     } catch (err) {
       if (isStorageError(err)) {
@@ -244,11 +244,11 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
 
   async createField(input: StorageFieldCreate): Promise<StorageResult<DataField>> {
     try {
-      const tplSnap = await getDoc(doc(db, COLLECTIONS.TEMPLATES, input.templateId));
-      if (!tplSnap.exists()) {
-        throw makeStorageError("not-found", `Template not found: ${input.templateId}`, { retryable: false });
+      const defSnap = await getDoc(doc(db, COLLECTIONS.FIELD_DEFINITIONS, input.fieldDefinitionId));
+      if (!defSnap.exists()) {
+        throw makeStorageError("not-found", `FieldDefinition not found: ${input.fieldDefinitionId}`, { retryable: false });
       }
-      const template = coerceTimestamps<DataFieldTemplate>(tplSnap.data());
+      const definition = coerceTimestamps<FieldDefinition>(defSnap.data());
 
       const ts = now();
       const userId = getCurrentUserId();
@@ -258,9 +258,9 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const field: DataField = {
         id: input.id,
         parentNodeId: input.parentNodeId,
-        templateId: template.id,
-        componentType: template.componentType,
-        fieldName: template.label,
+        fieldDefinitionId: definition.id,
+        componentType: definition.componentType,
+        fieldName: definition.label,
         value: input.initialValue ?? null,
         cardOrder: order,
         updatedBy: userId,
@@ -377,35 +377,35 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   }
 
   // ============================================================================
-  // Template Operations
+  // FieldDefinition Operations
   // ============================================================================
 
-  async listTemplates(): Promise<StorageResult<DataFieldTemplate[]>> {
+  async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
     try {
-      const snap = await getDocs(collection(db, COLLECTIONS.TEMPLATES));
-      const templates = snap.docs.map(d => coerceTimestamps<DataFieldTemplate>(d.data()));
-      templates.sort((a, b) => a.label.localeCompare(b.label));
-      return createResult(templates);
+      const snap = await getDocs(collection(db, COLLECTIONS.FIELD_DEFINITIONS));
+      const definitions = snap.docs.map(d => coerceTimestamps<FieldDefinition>(d.data()));
+      definitions.sort((a, b) => a.label.localeCompare(b.label));
+      return createResult(definitions);
     } catch (err) {
       const mapped = mapFirestoreError(err);
       throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
     }
   }
 
-  async getTemplate(id: string): Promise<StorageResult<DataFieldTemplate | null>> {
+  async getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>> {
     try {
-      const snap = await getDoc(doc(db, COLLECTIONS.TEMPLATES, id));
-      const tpl = snap.exists() ? coerceTimestamps<DataFieldTemplate>(snap.data()) : null;
-      return createResult(tpl);
+      const snap = await getDoc(doc(db, COLLECTIONS.FIELD_DEFINITIONS, id));
+      const def = snap.exists() ? coerceTimestamps<FieldDefinition>(snap.data()) : null;
+      return createResult(def);
     } catch (err) {
       const mapped = mapFirestoreError(err);
       throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
     }
   }
 
-  async createTemplate(input: StorageTemplateCreate): Promise<StorageResult<DataFieldTemplate>> {
+  async createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>> {
     try {
-      const template: DataFieldTemplate = {
+      const definition: FieldDefinition = {
         id: input.id,
         componentType: input.componentType,
         label: input.label,
@@ -413,17 +413,17 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         updatedBy: getCurrentUserId(),
         updatedAt: now(),
       };
-      await setDoc(doc(collection(db, COLLECTIONS.TEMPLATES), template.id), template);
-      return createResult(template);
+      await setDoc(doc(collection(db, COLLECTIONS.FIELD_DEFINITIONS), definition.id), definition);
+      return createResult(definition);
     } catch (err) {
       const mapped = mapFirestoreError(err);
       throw toStorageError(err, { code: mapped.code, retryable: mapped.retryable });
     }
   }
 
-  async updateTemplate(id: string, updates: StorageTemplateUpdate): Promise<StorageResult<void>> {
+  async updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>> {
     try {
-      const ref = doc(db, COLLECTIONS.TEMPLATES, id);
+      const ref = doc(db, COLLECTIONS.FIELD_DEFINITIONS, id);
       await updateDoc(ref, {
         ...updates,
         updatedBy: getCurrentUserId(),
@@ -511,13 +511,13 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const ts = now();
       const userId = getCurrentUserId();
       const ref = doc(db, COLLECTIONS.NODES, id);
-      
+
       await updateDoc(ref, {
         deletedAt: null, // Clear soft delete
         updatedAt: ts,
         updatedBy: userId,
       });
-      
+
       return createResult(undefined);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -559,13 +559,13 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       const ts = now();
       const userId = getCurrentUserId();
       const ref = doc(db, COLLECTIONS.FIELDS, id);
-      
+
       await updateDoc(ref, {
         deletedAt: null, // Clear soft delete
         updatedAt: ts,
         updatedBy: userId,
       });
-      
+
       return createResult(undefined);
     } catch (err) {
       const mapped = mapFirestoreError(err);
@@ -646,25 +646,25 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         });
         break;
       }
-      case 'create-template': {
-        const tpl = item.payload as DataFieldTemplate;
-        await setDoc(doc(db, COLLECTIONS.TEMPLATES, tpl.id), {
-          ...tpl,
+      case 'create-fieldDefinition': {
+        const def = item.payload as FieldDefinition;
+        await setDoc(doc(db, COLLECTIONS.FIELD_DEFINITIONS, def.id), {
+          ...def,
           updatedAt: serverTimestamp(),
         });
         break;
       }
-      case 'update-template': {
-        const tpl = item.payload as DataFieldTemplate;
-        await setDoc(doc(db, COLLECTIONS.TEMPLATES, tpl.id), {
-          ...tpl,
+      case 'update-fieldDefinition': {
+        const def = item.payload as FieldDefinition;
+        await setDoc(doc(db, COLLECTIONS.FIELD_DEFINITIONS, def.id), {
+          ...def,
           updatedAt: serverTimestamp(),
         }, { merge: true });
         break;
       }
-      case 'delete-template': {
-        // No soft-delete on templates in Phase 1; treat as hard delete.
-        // If/when we need soft delete for templates, mirror field handling.
+      case 'delete-fieldDefinition': {
+        // No soft-delete on FieldDefinitions in Phase 1; treat as hard delete.
+        // If/when we need soft delete, mirror field handling.
         break;
       }
       default:
@@ -675,10 +675,10 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   /**
    * Pull entities updated since the given timestamp from Firestore.
    */
-  async pullEntitiesSince(type: 'node' | 'field' | 'template', since: number): Promise<Array<TreeNode | DataField | DataFieldTemplate>> {
+  async pullEntitiesSince(type: 'node' | 'field' | 'fieldDefinition', since: number): Promise<Array<TreeNode | DataField | FieldDefinition>> {
     const collectionName =
       type === 'node' ? COLLECTIONS.NODES
-      : type === 'template' ? COLLECTIONS.TEMPLATES
+      : type === 'fieldDefinition' ? COLLECTIONS.FIELD_DEFINITIONS
       : COLLECTIONS.FIELDS;
     const q = query(
       collection(db, collectionName),
@@ -690,7 +690,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       return [];
     }
 
-    return snap.docs.map((docSnap) => coerceTimestamps<TreeNode | DataField | DataFieldTemplate>(docSnap.data()));
+    return snap.docs.map((docSnap) => coerceTimestamps<TreeNode | DataField | FieldDefinition>(docSnap.data()));
   }
 
   /**
@@ -721,11 +721,11 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   }
 
   /**
-   * Pull all templates from Firestore (full collection).
+   * Pull all FieldDefinitions from Firestore (full collection).
    */
-  async pullAllTemplates(): Promise<DataFieldTemplate[]> {
-    const snap = await getDocs(collection(db, COLLECTIONS.TEMPLATES));
-    return snap.docs.map(d => coerceTimestamps<DataFieldTemplate>(d.data()));
+  async pullAllFieldDefinitions(): Promise<FieldDefinition[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.FIELD_DEFINITIONS));
+    return snap.docs.map(d => coerceTimestamps<FieldDefinition>(d.data()));
   }
 
   /**

@@ -12,7 +12,7 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
       await adapter.createField({
         id: generateId(),
         parentNodeId: id,
-        templateId: d.templateId,
+        fieldDefinitionId: d.fieldDefinitionId,
         cardOrder: i,
       });
     }
@@ -36,12 +36,12 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     await adapter.deleteNode(cmd.payload.id);
   });
 
-  bus.register('ADD_FIELD_FROM_TEMPLATE', async (cmd) => {
-    const { nodeId, templateId, cardOrder, initialValue } = cmd.payload;
+  bus.register('ADD_FIELD_FROM_DEFINITION', async (cmd) => {
+    const { nodeId, fieldDefinitionId, cardOrder, initialValue } = cmd.payload;
     const result = await adapter.createField({
       id: generateId(),
       parentNodeId: nodeId,
-      templateId,
+      fieldDefinitionId,
       cardOrder,
       initialValue,
     });

@@ -8,17 +8,17 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@builder.io/qwik';
-import { getFieldQueries, getTemplateQueries } from '../../data/queries';
+import { getFieldQueries, getFieldDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
-import type { ComponentType, DataFieldHistory as HistoryEntry, DataFieldTemplate, MeasurementKvConfig } from '../../data/models';
+import type { ComponentType, DataFieldHistory as HistoryEntry, FieldDefinition, MeasurementKvConfig } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
 
 export type DataFieldDetailsProps = {
     fieldId: string;
     fieldName: string;
-    templateId: string;
+    fieldDefinitionId: string;
     componentType: ComponentType;
     currentValue: string | null;
     onDelete$: PropFunction<() => void>;
@@ -26,18 +26,18 @@ export type DataFieldDetailsProps = {
 
 export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     const history = useSignal<HistoryEntry[]>([]);
-    const template = useSignal<DataFieldTemplate | null>(null);
+    const definition = useSignal<FieldDefinition | null>(null);
     const isLoaded = useSignal(false);
     const isHistoryOpen = useSignal(false);
 
     useVisibleTask$(async () => {
         try {
-            const [h, tpl] = await Promise.all([
+            const [h, def] = await Promise.all([
                 getFieldQueries().getFieldHistory(props.fieldId),
-                getTemplateQueries().getTemplateById(props.templateId),
+                getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId),
             ]);
             history.value = h;
-            template.value = tpl;
+            definition.value = def;
         } catch (e) {
             console.error('Failed to load field details:', e);
         } finally {
@@ -83,8 +83,8 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     // DataFieldHistory; require at least 2 entries before enabling the chevron.
     const hasHistory = history.value.length > 1;
 
-    const units = template.value?.componentType === 'measurement-kv'
-        ? (template.value.config as MeasurementKvConfig).units
+    const units = definition.value?.componentType === 'measurement-kv'
+        ? (definition.value.config as MeasurementKvConfig).units
         : '';
 
     return (

@@ -21,10 +21,10 @@ export type DisplayNodeState = 'ROOT' | 'PARENT' | 'CHILD';
 export type TreeNodeState = DisplayNodeState | 'UNDER_CONSTRUCTION';
 
 /**
- * Field data for construction mode — references a Template to instantiate.
+ * Field data for construction mode — references a FieldDefinition to instantiate.
  */
 export type ConstructionField = {
-    templateId: string;
+    fieldDefinitionId: string;
 };
 
 /**

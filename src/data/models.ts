@@ -24,7 +24,7 @@ export type TreeNode = {
 };
 
 // ============================================================================
-// DataField Component / Template / Instance
+// DataField Component / FieldDefinition / Instance
 // ============================================================================
 
 /**
@@ -65,10 +65,10 @@ export type SingleImageConfig = {
 };
 
 /**
- * Union of Template configs, discriminated externally by Template.componentType.
- * Narrow on `template.componentType === "text-kv"` etc. before accessing config.
+ * Union of FieldDefinition configs, discriminated externally by FieldDefinition.componentType.
+ * Narrow on `definition.componentType === "text-kv"` etc. before accessing config.
  */
-export type DataFieldTemplateConfig =
+export type FieldDefinitionConfig =
   | TextKvConfig
   | EnumKvConfig
   | MeasurementKvConfig
@@ -97,26 +97,27 @@ export type DataFieldValue =
   | SingleImageValue;
 
 /**
- * Template for a DataField kind.
+ * FieldDefinition: a Library entry naming a fully-configured field kind.
+ * Persisted form of "what kind of field this is."
  */
-export type DataFieldTemplate = {
+export type FieldDefinition = {
   id: ID;
   componentType: ComponentType;
   label: string;
-  config: DataFieldTemplateConfig;
+  config: FieldDefinitionConfig;
   updatedBy: UserId;
   updatedAt: number;
 };
 
 /**
- * Instance of a Template attached to a TreeNode. `fieldName` is snapshotted
- * from `Template.label` at creation time so later Template label edits don't
- * rewrite user-visible data.
+ * Instance of a FieldDefinition attached to a TreeNode. `fieldName` is
+ * snapshotted from `FieldDefinition.label` at creation time so later
+ * FieldDefinition label edits don't rewrite user-visible data.
  */
 export type DataField = {
   id: ID;
   parentNodeId: ID;
-  templateId: ID;
+  fieldDefinitionId: ID;
   componentType: ComponentType;
   fieldName: string;
   value: DataFieldValue | null;

@@ -1,15 +1,16 @@
 /**
  * MeasurementKvField - Renderer for measurement-kv DataFields.
  *
- * Numeric value with fixed units from the Template. Display appends units and
- * colors based on ok / warn / alarm ranges. Edit flow reuses useFieldEdit with
- * number parse/format. Validation rejects NaN and out-of-absolute-range values.
+ * Numeric value with fixed units from the FieldDefinition. Display appends
+ * units and colors based on ok / warn / alarm ranges. Edit flow reuses
+ * useFieldEdit with number parse/format. Validation rejects NaN and
+ * out-of-absolute-range values.
  */
 
 import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { getTemplateQueries } from '../../data/queries';
+import { getFieldDefinitionQueries } from '../../data/queries';
 import type { MeasurementKvConfig } from '../../data/models';
 import { computeMeasurementState, type MeasurementState } from './measurementState';
 import styles from './DataField.module.css';
@@ -18,7 +19,7 @@ import measurementStyles from './MeasurementKvField.module.css';
 export type MeasurementKvFieldProps = {
     id: string;
     fieldName: string;
-    templateId: string;
+    fieldDefinitionId: string;
     value: number | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
@@ -65,17 +66,17 @@ function makeValidate(config: MeasurementKvConfig) {
 }
 
 export const MeasurementKvField = component$<MeasurementKvFieldProps>((props) => {
-    // Fetch Template for units + ranges.
-    const templateResource = useResource$(async ({ track }) => {
-        track(() => props.templateId);
-        const tpl = await getTemplateQueries().getTemplateById(props.templateId);
-        if (!tpl || tpl.componentType !== 'measurement-kv') return null;
-        return tpl.config as MeasurementKvConfig;
+    // Fetch FieldDefinition for units + ranges.
+    const configResource = useResource$(async ({ track }) => {
+        track(() => props.fieldDefinitionId);
+        const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
+        if (!def || def.componentType !== 'measurement-kv') return null;
+        return def.config as MeasurementKvConfig;
     });
 
     return (
         <Resource
-            value={templateResource}
+            value={configResource}
             onPending={() => <span class={styles.datafieldValue}>…</span>}
             onRejected={() => <span class={styles.datafieldValue}>—</span>}
             onResolved={(config) => {

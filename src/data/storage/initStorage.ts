@@ -22,7 +22,7 @@ import { subscribeNodeIndex } from '../nodeIndexSubscriber';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
-import { seedTemplates } from '../services/seedTemplates';
+import { seedFieldDefinitions } from '../services/seedFieldDefinitions';
 import { dispatchStorageChangeEvent } from './storageEvents';
 
 let initialized = false;
@@ -91,8 +91,8 @@ async function doInitializeStorage(): Promise<void> {
     initializeCommandBus(idbAdapter);
     initializeQueries(idbAdapter);
 
-    // Seed dev Templates (idempotent; no sync enqueue).
-    await seedTemplates();
+    // Seed dev FieldDefinitions (idempotent; no sync enqueue).
+    await seedFieldDefinitions();
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);
@@ -138,8 +138,8 @@ async function migrateFromFirestore(): Promise<void> {
     const nodes = await firestoreAdapter.pullAllNodes();
     console.log('[Migration] Found', nodes.length, 'nodes');
 
-    const templates = await firestoreAdapter.pullAllTemplates();
-    console.log('[Migration] Found', templates.length, 'templates');
+    const fieldDefinitions = await firestoreAdapter.pullAllFieldDefinitions();
+    console.log('[Migration] Found', fieldDefinitions.length, 'field definitions');
 
     const fields = await firestoreAdapter.pullAllFields();
     console.log('[Migration] Found', fields.length, 'fields');
@@ -148,12 +148,12 @@ async function migrateFromFirestore(): Promise<void> {
     console.log('[Migration] Found', history.length, 'history entries');
 
     // Bulk insert into IDB
-    await db.transaction('rw', [db.nodes, db.templates, db.fields, db.history, db.syncMetadata], async () => {
+    await db.transaction('rw', [db.nodes, db.fieldDefinitions, db.fields, db.history, db.syncMetadata], async () => {
       if (nodes.length > 0) {
         await db.nodes.bulkPut(nodes);
       }
-      if (templates.length > 0) {
-        await db.templates.bulkPut(templates);
+      if (fieldDefinitions.length > 0) {
+        await db.fieldDefinitions.bulkPut(fieldDefinitions);
       }
       if (fields.length > 0) {
         await db.fields.bulkPut(fields);

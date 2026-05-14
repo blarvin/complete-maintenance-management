@@ -1,14 +1,14 @@
 /**
  * EnumKvField - Renderer for enum-kv DataFields.
  *
- * Click/double-tap to open a dropdown of Template.config.options. Pick an
- * option to save; Escape / outside-click cancels. `allowOther` is deferred —
+ * Click/double-tap to open a dropdown of FieldDefinition.config.options. Pick
+ * an option to save; Escape / outside-click cancels. `allowOther` is deferred —
  * Phase 1 MVP only shows the fixed options list.
  */
 
 import { component$, useSignal, useResource$, Resource, useVisibleTask$, $, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useOnDocument, useOnWindow } from '@builder.io/qwik';
-import { getTemplateQueries } from '../../data/queries';
+import { getFieldDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import { getSnackbarService } from '../../services/snackbar';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
@@ -23,7 +23,7 @@ import enumStyles from './EnumKvField.module.css';
 export type EnumKvFieldProps = {
     id: string;
     fieldName: string;
-    templateId: string;
+    fieldDefinitionId: string;
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
@@ -70,10 +70,10 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     });
 
     const optionsResource = useResource$<string[]>(async ({ track }) => {
-        track(() => props.templateId);
-        const tpl = await getTemplateQueries().getTemplateById(props.templateId);
-        if (!tpl || tpl.componentType !== 'enum-kv') return [];
-        return (tpl.config as EnumKvConfig).options;
+        track(() => props.fieldDefinitionId);
+        const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
+        if (!def || def.componentType !== 'enum-kv') return [];
+        return (def.config as EnumKvConfig).options;
     });
 
     const open$ = $(() => {

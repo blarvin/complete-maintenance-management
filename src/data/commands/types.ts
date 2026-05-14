@@ -5,8 +5,8 @@ export type CreateNodeInput = {
   parentId: string | null;
   nodeName: string;
   nodeSubtitle: string;
-  /** Template IDs to instantiate as default fields. Empty until the follow-up SPEC templates plan lands. */
-  defaults: { templateId: string }[];
+  /** FieldDefinition IDs to instantiate as default fields. */
+  defaults: { fieldDefinitionId: string }[];
 };
 
 export type Command =
@@ -14,7 +14,7 @@ export type Command =
   | { type: 'CREATE_EMPTY_NODE'; payload: { id: string; parentId: string | null } }
   | { type: 'UPDATE_NODE'; payload: { id: string; updates: { nodeName?: string; nodeSubtitle?: string } } }
   | { type: 'DELETE_NODE'; payload: { id: string } }
-  | { type: 'ADD_FIELD_FROM_TEMPLATE'; payload: { nodeId: string; templateId: string; cardOrder?: number; initialValue?: DataFieldValue | null } }
+  | { type: 'ADD_FIELD_FROM_DEFINITION'; payload: { nodeId: string; fieldDefinitionId: string; cardOrder?: number; initialValue?: DataFieldValue | null } }
   | { type: 'UPDATE_FIELD_VALUE'; payload: { fieldId: string; newValue: DataFieldValue | null } }
   | { type: 'DELETE_FIELD'; payload: { fieldId: string } }
   | { type: 'RESTORE_FIELD'; payload: { fieldId: string } }
@@ -25,7 +25,7 @@ export type CommandResultMap = {
   CREATE_EMPTY_NODE: TreeNode;
   UPDATE_NODE: void;
   DELETE_NODE: void;
-  ADD_FIELD_FROM_TEMPLATE: DataField;
+  ADD_FIELD_FROM_DEFINITION: DataField;
   UPDATE_FIELD_VALUE: void;
   DELETE_FIELD: void;
   RESTORE_FIELD: void;
