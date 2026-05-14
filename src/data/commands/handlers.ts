@@ -36,6 +36,12 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     await adapter.deleteNode(cmd.payload.id);
   });
 
+  bus.register('CREATE_FIELD_DEFINITION', async (cmd) => {
+    const { id, componentType, label, config } = cmd.payload;
+    const result = await adapter.createFieldDefinition({ id, componentType, label, config });
+    return result.data;
+  });
+
   bus.register('ADD_FIELD_FROM_DEFINITION', async (cmd) => {
     const { nodeId, fieldDefinitionId, cardOrder, initialValue } = cmd.payload;
     const result = await adapter.createField({

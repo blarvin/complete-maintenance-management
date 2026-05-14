@@ -1,0 +1,116 @@
+/* FieldDefinitionAuthoringForm - inline form expanded in place of the
+   "+ New Field Definition…" affordance. Spans the Composer's row track. */
+
+.form {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: var(--border-width-thin) solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-expanded, var(--bg-base));
+}
+
+.privacy {
+    margin: 0;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.sectionLabel {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+}
+
+.segmented {
+    display: inline-flex;
+    border: var(--border-width-thin) solid var(--border-default);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    width: fit-content;
+}
+
+.segment {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    padding: var(--space-1) var(--space-3);
+    background: var(--bg-base);
+    border: none;
+    border-right: var(--border-width-thin) solid var(--border-default);
+    cursor: pointer;
+}
+
+.segment:last-child {
+    border-right: none;
+}
+
+.segmentActive {
+    background: var(--bg-hover, var(--bg-expanded));
+    font-weight: 600;
+}
+
+.labelInput {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    padding: var(--space-1);
+    border: var(--border-width-thin) solid var(--border-default);
+    border-radius: var(--radius-sm);
+    background: var(--bg-base);
+}
+
+.configHost {
+    /* Sub-forms render their own row stack inside. */
+}
+
+.stub {
+    font-size: var(--text-sm);
+    font-style: italic;
+    color: var(--text-secondary);
+    padding: var(--space-2);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-sm);
+}
+
+.error {
+    color: var(--color-error, #d33);
+    font-size: var(--text-sm);
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+}
+
+.saveBtn,
+.cancelBtn {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    padding: var(--space-1) var(--space-3);
+    border: var(--border-width-thin) solid var(--border-default);
+    background: var(--bg-base);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.saveBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saveBtn:hover:not(:disabled),
+.cancelBtn:hover {
+    background: var(--bg-hover, var(--bg-expanded));
+}

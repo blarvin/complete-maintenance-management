@@ -38,6 +38,27 @@
     padding: var(--space-2);
 }
 
+/* "+ New Field Definition…" affordance row — sits at the top of the picker
+   list. Clicking expands the FieldDefinitionAuthoringForm in place. */
+.affordance {
+    grid-column: 1 / -1;
+    justify-self: start;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: var(--space-1) 0;
+    cursor: pointer;
+    text-align: left;
+}
+
+.affordance:hover {
+    text-decoration: underline;
+    color: var(--text-primary);
+}
+
 .footer {
     position: sticky;
     bottom: 0;
