@@ -139,4 +139,5 @@ export interface RemoteSyncAdapter {
 
   // Delta sync methods
   pullHistorySince(since: number): Promise<DataFieldHistory[]>;
+  pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]>;
 }

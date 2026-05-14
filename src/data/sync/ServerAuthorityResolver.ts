@@ -7,7 +7,7 @@
  */
 
 import type { SyncableStorageAdapter } from '../storage/storageAdapter';
-import type { TreeNode, DataField } from '../models';
+import type { TreeNode, DataField, FieldDefinition } from '../models';
 import type { SyncQueueManager } from './SyncQueueManager';
 
 export type ResolveResult = 'applied' | 'skipped';
@@ -53,6 +53,23 @@ export class ServerAuthorityResolver {
     // Server is authority - apply unconditionally
     await this.local.applyRemoteUpdate('field', remote);
     console.log('[Resolver] Applied server field', remote.id);
+    return 'applied';
+  }
+
+  /**
+   * Resolve a remote FieldDefinition against local state.
+   * Applies unconditionally unless entity is pending in sync queue.
+   */
+  async resolveFieldDefinition(remote: FieldDefinition): Promise<ResolveResult> {
+    const isPending = await this.hasPendingSync(remote.id);
+
+    if (isPending) {
+      console.log('[Resolver] Skipped (pending local)', remote.id);
+      return 'skipped';
+    }
+
+    await this.local.applyRemoteUpdate('fieldDefinition', remote);
+    console.log('[Resolver] Applied server fieldDefinition', remote.id);
     return 'applied';
   }
 

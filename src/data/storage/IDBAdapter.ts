@@ -164,9 +164,10 @@ export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
 
   async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
-    const definitions = await db.fieldDefinitions.toArray();
-    definitions.sort((a, b) => a.label.localeCompare(b.label));
-    return createResult(definitions);
+    const all = await db.fieldDefinitions.toArray();
+    const active = filterActive(all);
+    active.sort((a, b) => a.label.localeCompare(b.label));
+    return createResult(active);
   }
 
   async getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>> {
@@ -183,8 +184,10 @@ export class IDBAdapter implements SyncableStorageAdapter {
       componentType: input.componentType,
       label: input.label,
       config: input.config,
+      authorId: userId,
       updatedBy: userId,
       updatedAt: timestamp,
+      deletedAt: null,
     };
 
     await db.transaction('rw', db.fieldDefinitions, db.syncQueue, async () => {

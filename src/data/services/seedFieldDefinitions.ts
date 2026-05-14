@@ -12,10 +12,11 @@
 
 import { db } from '../storage/db';
 import type { FieldDefinition } from '../models';
+import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
-const SEED_VERSION = 3;
+const SEED_VERSION = 4;
 const SEED_KEY = 'fieldDefinitionsSeededVersion';
 
 /**
@@ -31,7 +32,7 @@ export const FIELD_DEFINITION_IDS = {
   mainImage: 'fd_main_image',
 } as const;
 
-type SeedRow = Omit<FieldDefinition, 'updatedBy' | 'updatedAt'>;
+type SeedRow = Omit<FieldDefinition, 'authorId' | 'updatedBy' | 'updatedAt' | 'deletedAt'>;
 
 const SEEDS: SeedRow[] = [
   {
@@ -90,8 +91,10 @@ export async function seedFieldDefinitions(): Promise<void> {
     for (const seed of SEEDS) {
       const row: FieldDefinition = {
         ...seed,
+        authorId: AUTHOR_ID_APP_DEVELOPER,
         updatedBy: userId,
         updatedAt: timestamp,
+        deletedAt: null,
       };
       await db.fieldDefinitions.put(row);
     }

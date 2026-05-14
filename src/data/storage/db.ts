@@ -107,6 +107,28 @@ export class AppDatabase extends Dexie {
         tx.table('syncMetadata').clear(),
       ]);
     });
+
+    // Version 5: FieldDefinition gains `authorId` (sync wiring) and
+    // `deletedAt` (admin-only soft delete tombstone). Index both: authorId for
+    // future "my contributions" queries; deletedAt for filtered listings.
+    // Clear-on-upgrade — no migration path.
+    this.version(5).stores({
+      nodes: 'id, parentId, updatedAt, deletedAt',
+      fieldDefinitions: 'id, componentType, authorId, updatedAt, deletedAt',
+      fields: 'id, parentNodeId, fieldDefinitionId, componentType, cardOrder, updatedAt, deletedAt',
+      history: 'id, dataFieldId, parentNodeId, updatedAt, rev',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('nodes').clear(),
+        tx.table('fields').clear(),
+        tx.table('history').clear(),
+        tx.table('fieldDefinitions').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
   }
 }
 

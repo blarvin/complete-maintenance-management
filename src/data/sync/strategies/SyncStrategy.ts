@@ -11,6 +11,7 @@ export type SyncResult = {
   nodesApplied: number;
   fieldsApplied: number;
   historyApplied: number;
+  fieldDefinitionsApplied: number;
 };
 
 export interface SyncStrategy {

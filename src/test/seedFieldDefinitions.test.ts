@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../data/storage/db';
 import { seedFieldDefinitions, FIELD_DEFINITION_IDS } from '../data/services/seedFieldDefinitions';
+import { AUTHOR_ID_APP_DEVELOPER } from '../constants';
 
 describe('seedFieldDefinitions', () => {
   beforeEach(async () => {
@@ -22,7 +23,23 @@ describe('seedFieldDefinitions', () => {
       'Weight',
     ]);
     const meta = await db.syncMetadata.get('fieldDefinitionsSeededVersion');
-    expect(meta?.value).toBe(3);
+    expect(meta?.value).toBe(4);
+  });
+
+  it('stamps appDeveloper authorship and active soft-delete state on seeds', async () => {
+    await seedFieldDefinitions();
+    const all = await db.fieldDefinitions.toArray();
+    for (const row of all) {
+      expect(row.authorId).toBe(AUTHOR_ID_APP_DEVELOPER);
+      expect(row.deletedAt).toBeNull();
+    }
+  });
+
+  it('does not enqueue sync ops on the seed path', async () => {
+    await db.syncQueue.clear();
+    await seedFieldDefinitions();
+    const queueLen = await db.syncQueue.count();
+    expect(queueLen).toBe(0);
   });
 
   it('is idempotent on second call', async () => {

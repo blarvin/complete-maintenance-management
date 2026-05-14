@@ -99,14 +99,20 @@ export type DataFieldValue =
 /**
  * FieldDefinition: a Library entry naming a fully-configured field kind.
  * Persisted form of "what kind of field this is."
+ *
+ * `authorId` carries the user (or `"appDeveloper"` for seeds) that created the
+ * row; `deletedAt` is admin-only soft-delete (no end-user UI in Phase 1, but
+ * the field exists for forward compatibility and admin tombstones).
  */
 export type FieldDefinition = {
   id: ID;
   componentType: ComponentType;
   label: string;
   config: FieldDefinitionConfig;
+  authorId: UserId;
   updatedBy: UserId;
   updatedAt: number;
+  deletedAt: number | null;
 };
 
 /**

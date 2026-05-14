@@ -3,7 +3,7 @@
  *
  * Pulls only entities updated since the last sync timestamp.
  * Much faster than full collection sync for ongoing synchronization.
- * 
+ *
  * Relies on:
  * - Soft deletes (deletedAt field) to detect remote deletions
  * - Server timestamps for authoritative ordering
@@ -27,12 +27,14 @@ export class DeltaSync implements SyncStrategy {
     const since = await this.local.getLastSyncTimestamp();
     console.log('[DeltaSync] Pulling changes since', since);
 
+    // Pull FieldDefinitions first so newer DataFields can reference them.
+    const fieldDefinitionsApplied = await this.syncFieldDefinitions(since);
     const nodesApplied = await this.syncNodes(since);
     const fieldsApplied = await this.syncFields(since);
     const historyApplied = await this.syncHistory(since);
 
-    console.log('[DeltaSync] Complete:', { nodesApplied, fieldsApplied, historyApplied });
-    return { nodesApplied, fieldsApplied, historyApplied };
+    console.log('[DeltaSync] Complete:', { nodesApplied, fieldsApplied, historyApplied, fieldDefinitionsApplied });
+    return { nodesApplied, fieldsApplied, historyApplied, fieldDefinitionsApplied };
   }
 
   private async syncNodes(since: number): Promise<number> {
@@ -70,5 +72,17 @@ export class DeltaSync implements SyncStrategy {
     }
 
     return history.length;
+  }
+
+  private async syncFieldDefinitions(since: number): Promise<number> {
+    const definitions = await this.remote.pullFieldDefinitionsSince(since);
+    console.log('[DeltaSync] Pulled', definitions.length, 'field definitions');
+
+    let applied = 0;
+    for (const def of definitions) {
+      const result = await this.resolver.resolveFieldDefinition(def);
+      if (result === 'applied') applied++;
+    }
+    return applied;
   }
 }

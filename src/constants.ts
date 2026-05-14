@@ -8,6 +8,12 @@
 export const USER_ID = "localUser" as const;
 
 /**
+ * Reserved author id for dev-seeded FieldDefinitions. End-user content always
+ * uses `getCurrentUserId()` (currently `USER_ID`).
+ */
+export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
+
+/**
  * Feature flag (no real FF system): when true, FieldList shows the legacy
  * single-pick "+ Add Field" surface BELOW the new FieldComposer. Toggle to
  * compare the two add-field UXs side-by-side. Set to false to ship with only

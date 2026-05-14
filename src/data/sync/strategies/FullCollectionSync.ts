@@ -22,11 +22,12 @@ export class FullCollectionSync implements SyncStrategy {
   ) {}
 
   async sync(): Promise<SyncResult> {
+    const fieldDefinitionsApplied = await this.syncFieldDefinitions();
     const nodesApplied = await this.syncNodes();
     const fieldsApplied = await this.syncFields();
     const historyApplied = await this.syncHistory();
 
-    return { nodesApplied, fieldsApplied, historyApplied };
+    return { nodesApplied, fieldsApplied, historyApplied, fieldDefinitionsApplied };
   }
 
   private async syncNodes(): Promise<number> {
@@ -100,5 +101,23 @@ export class FullCollectionSync implements SyncStrategy {
 
     console.log('[FullCollectionSync] Synced', remoteHistory.length, 'history entries');
     return remoteHistory.length;
+  }
+
+  /**
+   * Sync FieldDefinitions full collection. Runs first so DataFields applied
+   * later in the same cycle can reference newly-arrived definitions.
+   *
+   * No hard-delete detection: FieldDefinitions are admin-only soft-delete
+   * (`deletedAt`); a row pulled with deletedAt set is the tombstone, and
+   * resolver.applyRemoteUpdate persists it. Pending local writes still win.
+   */
+  private async syncFieldDefinitions(): Promise<number> {
+    const remoteDefinitions = await this.remote.pullAllFieldDefinitions();
+    let applied = 0;
+    for (const def of remoteDefinitions) {
+      const result = await this.resolver.resolveFieldDefinition(def);
+      if (result === 'applied') applied++;
+    }
+    return applied;
   }
 }

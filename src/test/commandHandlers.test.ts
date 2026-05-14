@@ -25,8 +25,10 @@ async function seedDefinition(
     componentType,
     label,
     config,
+    authorId: 'test',
     updatedBy: 'test',
     updatedAt: Date.now(),
+    deletedAt: null,
   });
 }
 

@@ -382,7 +382,12 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
 
   async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
     try {
-      const snap = await getDocs(collection(db, COLLECTIONS.FIELD_DEFINITIONS));
+      // Firestore: filter soft-deleted server-side (deletedAt == null).
+      const q = query(
+        collection(db, COLLECTIONS.FIELD_DEFINITIONS),
+        where('deletedAt', '==', null),
+      );
+      const snap = await getDocs(q);
       const definitions = snap.docs.map(d => coerceTimestamps<FieldDefinition>(d.data()));
       definitions.sort((a, b) => a.label.localeCompare(b.label));
       return createResult(definitions);
@@ -405,13 +410,16 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
 
   async createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>> {
     try {
+      const userId = getCurrentUserId();
       const definition: FieldDefinition = {
         id: input.id,
         componentType: input.componentType,
         label: input.label,
         config: input.config,
-        updatedBy: getCurrentUserId(),
+        authorId: userId,
+        updatedBy: userId,
         updatedAt: now(),
+        deletedAt: null,
       };
       await setDoc(doc(collection(db, COLLECTIONS.FIELD_DEFINITIONS), definition.id), definition);
       return createResult(definition);
@@ -739,6 +747,19 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
     );
     const snap = await getDocs(q);
     return snap.docs.map(d => coerceTimestamps<DataFieldHistory>(d.data()));
+  }
+
+  /**
+   * Pull FieldDefinitions updated since the given timestamp from Firestore.
+   * Used for delta sync to fetch only new/changed Library entries.
+   */
+  async pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]> {
+    const q = query(
+      collection(db, COLLECTIONS.FIELD_DEFINITIONS),
+      where('updatedAt', '>', since)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => coerceTimestamps<FieldDefinition>(d.data()));
   }
 
   // ============================================================================
