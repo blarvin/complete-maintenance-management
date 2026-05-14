@@ -62,6 +62,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                     fieldDefinitionId={field.fieldDefinitionId}
                     componentType={field.componentType}
                     value={field.value}
+                    updatedAt={field.updatedAt}
                     onDeleted$={handleFieldDeleted$}
                 />
             ))}

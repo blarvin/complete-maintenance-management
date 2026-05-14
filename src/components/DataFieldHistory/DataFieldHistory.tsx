@@ -34,7 +34,7 @@ function formatHistoryValue(entry: HistoryEntry, units: string): string {
         case 'text-kv':
         case 'enum-kv':
             return String(entry.newValue);
-        case 'measurement-kv':
+        case 'number-kv':
             return `${entry.newValue} ${units}`.trim();
         case 'single-image':
             return '[image]';

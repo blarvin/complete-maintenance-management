@@ -37,8 +37,8 @@ export function createHistoryEntry(params: {
       return { ...base, componentType: 'text-kv', prevValue: prevValue as string | null, newValue: newValue as string | null };
     case 'enum-kv':
       return { ...base, componentType: 'enum-kv', prevValue: prevValue as string | null, newValue: newValue as string | null };
-    case 'measurement-kv':
-      return { ...base, componentType: 'measurement-kv', prevValue: prevValue as number | null, newValue: newValue as number | null };
+    case 'number-kv':
+      return { ...base, componentType: 'number-kv', prevValue: prevValue as number | null, newValue: newValue as number | null };
     case 'single-image':
       return {
         ...base,

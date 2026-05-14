@@ -1,13 +1,14 @@
 /**
  * Dev-seeded FieldDefinition rows.
  *
- * Six samples: one per Phase-1 Component plus the three default fields used at
- * new-node construction (Type Of, Description, Tags). Writes directly to
- * db.fieldDefinitions (no sync enqueue) because seeds are identical per-client —
- * propagating them as sync ops would create N writes per N clients with no gain.
+ * Phase-1 starter set covering each Component (text-kv, enum-kv, number-kv,
+ * single-image) plus the three default fields used at new-node construction
+ * (Type Of, Description, Tags). Writes directly to db.fieldDefinitions (no
+ * sync enqueue) — seeds are identical per-client, propagating them as sync
+ * ops would create N writes per N clients with no gain.
  *
- * Idempotent via a syncMetadata version key. Bump SEED_VERSION to force a reseed
- * pass (existing rows won't be re-created; only missing ones will be added).
+ * Idempotent via a syncMetadata version key. Bump SEED_VERSION to force a
+ * reseed pass.
  */
 
 import { db } from '../storage/db';
@@ -16,7 +17,7 @@ import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
-const SEED_VERSION = 4;
+const SEED_VERSION = 5;
 const SEED_KEY = 'fieldDefinitionsSeededVersion';
 
 /**
@@ -29,6 +30,7 @@ export const FIELD_DEFINITION_IDS = {
   tags: 'fd_tags',
   status: 'fd_status',
   weight: 'fd_weight',
+  powerRating: 'fd_power_rating',
   mainImage: 'fd_main_image',
 } as const;
 
@@ -61,9 +63,25 @@ const SEEDS: SeedRow[] = [
   },
   {
     id: FIELD_DEFINITION_IDS.weight,
-    componentType: 'measurement-kv',
+    componentType: 'number-kv',
     label: 'Weight',
-    config: { units: 'kg', decimals: 2 },
+    config: {
+      unitsSymbol: 'kg',
+      unitsLongForm: 'kilograms',
+      decimals: 2,
+      affixPosition: 'suffix',
+    },
+  },
+  {
+    id: FIELD_DEFINITION_IDS.powerRating,
+    componentType: 'number-kv',
+    label: 'Power Rating',
+    config: {
+      unitsSymbol: 'W',
+      unitsLongForm: 'Watts',
+      decimals: 1,
+      affixPosition: 'suffix',
+    },
   },
   {
     id: FIELD_DEFINITION_IDS.mainImage,

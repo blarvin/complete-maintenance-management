@@ -91,10 +91,10 @@ describe('ADD_FIELD_FROM_DEFINITION across Components', () => {
     expect(result.value).toBeNull();
   });
 
-  it('creates a measurement-kv DataField from a measurement-kv FieldDefinition', async () => {
+  it('creates a number-kv DataField from a number-kv FieldDefinition', async () => {
     await createNode('n1');
-    await seedDefinition('fd_weight', 'measurement-kv', 'Weight', {
-      units: 'kg',
+    await seedDefinition('fd_weight', 'number-kv', 'Weight', {
+      unitsSymbol: 'kg',
       decimals: 2,
     });
 
@@ -103,7 +103,7 @@ describe('ADD_FIELD_FROM_DEFINITION across Components', () => {
       payload: { nodeId: 'n1', fieldDefinitionId: 'fd_weight' },
     });
 
-    expect(result.componentType).toBe('measurement-kv');
+    expect(result.componentType).toBe('number-kv');
     expect(result.fieldName).toBe('Weight');
     expect(result.value).toBeNull();
   });
@@ -126,7 +126,7 @@ describe('ADD_FIELD_FROM_DEFINITION across Components', () => {
 
   it('writes a create-history entry with componentType', async () => {
     await createNode('n1');
-    await seedDefinition('fd_weight', 'measurement-kv', 'Weight', { units: 'kg' });
+    await seedDefinition('fd_weight', 'number-kv', 'Weight', { unitsSymbol: 'kg' });
 
     const field = await getCommandBus().execute({
       type: 'ADD_FIELD_FROM_DEFINITION',
@@ -135,7 +135,7 @@ describe('ADD_FIELD_FROM_DEFINITION across Components', () => {
 
     const history = await db.history.where('dataFieldId').equals(field.id).toArray();
     expect(history).toHaveLength(1);
-    expect(history[0].componentType).toBe('measurement-kv');
+    expect(history[0].componentType).toBe('number-kv');
     expect(history[0].action).toBe('create');
     expect(history[0].property).toBe('value');
     expect(history[0].newValue).toBeNull();
@@ -145,7 +145,7 @@ describe('ADD_FIELD_FROM_DEFINITION across Components', () => {
     // Composer flow used to call create (with null) then update (with value),
     // producing a leading "Empty" history row. Now creates a single entry.
     await createNode('n1');
-    await seedDefinition('fd_weight', 'measurement-kv', 'Weight', { units: 'kg' });
+    await seedDefinition('fd_weight', 'number-kv', 'Weight', { unitsSymbol: 'kg' });
 
     const field = await getCommandBus().execute({
       type: 'ADD_FIELD_FROM_DEFINITION',

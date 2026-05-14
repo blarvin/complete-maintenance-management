@@ -30,7 +30,7 @@ export type TreeNode = {
 /**
  * Component type discriminator. Phase 1 Components per SPEC.
  */
-export type ComponentType = "text-kv" | "enum-kv" | "measurement-kv" | "single-image";
+export type ComponentType = "text-kv" | "enum-kv" | "number-kv" | "single-image";
 
 // Per-Component config shapes
 export type TextKvConfig = {
@@ -47,15 +47,44 @@ export type EnumKvConfig = {
   default?: string;
 };
 
-export type MeasurementKvConfig = {
-  units: string;
-  decimals?: number;
-  nominalMin?: number;
-  nominalMax?: number;
-  warnLow?: number;
-  warnHigh?: number;
-  absoluteMin?: number;
-  absoluteMax?: number;
+export type NumberKvAffixPosition = "prefix" | "suffix";
+export type NumberKvDisplayFormat =
+  | "decimal"
+  | "scientific"
+  | "engineering"
+  | "percent"
+  | "currency";
+export type NumberKvNominalMode = "range" | "discrete";
+
+/**
+ * Configuration for `number-kv`. See SPEC §FieldComponent: number-kv for the
+ * authoritative knob list and config invariants.
+ *
+ * Invariants enforced at authoring time by `validateNumberKvConfig`:
+ *  - Range mode: LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH (provided subset).
+ *  - Discrete mode: LL ≤ L ≤ (nominalValue − tolerance) AND
+ *    (nominalValue + tolerance) ≤ H ≤ HH. tolerance ≥ 0.
+ *  - decimals ≥ 0. expectedRefreshSeconds > 0 if set.
+ *  - displayFormat === "currency" ⇒ currencyCode non-empty.
+ */
+export type NumberKvConfig = {
+  unitsSymbol: string;
+  unitsLongForm?: string;
+  affixPosition?: NumberKvAffixPosition; // default "suffix"
+  decimals?: number; // default 2
+  displayFormat?: NumberKvDisplayFormat; // default "decimal"
+  currencyCode?: string; // required iff displayFormat === "currency"
+  nominalMode?: NumberKvNominalMode; // default "range"
+  nominalMin?: number; // range mode
+  nominalMax?: number; // range mode
+  nominalValue?: number; // discrete mode
+  tolerance?: number; // discrete mode, ≥ 0
+  low?: number; // L
+  lowLow?: number; // LL
+  high?: number; // H
+  highHigh?: number; // HH
+  /** Canonical seconds. If set, values older than this go stale on display. */
+  expectedRefreshSeconds?: number;
 };
 
 export type SingleImageConfig = {
@@ -71,13 +100,13 @@ export type SingleImageConfig = {
 export type FieldDefinitionConfig =
   | TextKvConfig
   | EnumKvConfig
-  | MeasurementKvConfig
+  | NumberKvConfig
   | SingleImageConfig;
 
 // Per-Component value shapes (a DataField's `value` is one of these, or null)
 export type TextKvValue = string;
 export type EnumKvValue = string;
-export type MeasurementKvValue = number;
+export type NumberKvValue = number;
 export type SingleImageValue = {
   blobId: string;
   mimeType: string;
@@ -93,7 +122,7 @@ export type SingleImageValue = {
 export type DataFieldValue =
   | TextKvValue
   | EnumKvValue
-  | MeasurementKvValue
+  | NumberKvValue
   | SingleImageValue;
 
 /**
@@ -176,10 +205,10 @@ export type EnumKvHistory = DataFieldHistoryShared & {
   newValue: EnumKvValue | null;
 };
 
-export type MeasurementKvHistory = DataFieldHistoryShared & {
-  componentType: "measurement-kv";
-  prevValue: MeasurementKvValue | null;
-  newValue: MeasurementKvValue | null;
+export type NumberKvHistory = DataFieldHistoryShared & {
+  componentType: "number-kv";
+  prevValue: NumberKvValue | null;
+  newValue: NumberKvValue | null;
 };
 
 export type SingleImageHistory = DataFieldHistoryShared & {
@@ -194,5 +223,5 @@ export type SingleImageHistory = DataFieldHistoryShared & {
 export type DataFieldHistory =
   | TextKvHistory
   | EnumKvHistory
-  | MeasurementKvHistory
+  | NumberKvHistory
   | SingleImageHistory;

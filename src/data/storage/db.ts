@@ -129,6 +129,29 @@ export class AppDatabase extends Dexie {
         tx.table('syncMetadata').clear(),
       ]);
     });
+
+    // Version 6: `measurement-kv` componentType → `number-kv` (new richer
+    // config shape: unitsSymbol, displayFormat, nominal range/discrete, ISA
+    // L/LL/H/HH thresholds, expectedRefreshSeconds). Schema indexes
+    // unchanged; the rename lives in row payloads. Clear-on-upgrade — no
+    // migration path for prototype data.
+    this.version(6).stores({
+      nodes: 'id, parentId, updatedAt, deletedAt',
+      fieldDefinitions: 'id, componentType, authorId, updatedAt, deletedAt',
+      fields: 'id, parentNodeId, fieldDefinitionId, componentType, cardOrder, updatedAt, deletedAt',
+      history: 'id, dataFieldId, parentNodeId, updatedAt, rev',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('nodes').clear(),
+        tx.table('fields').clear(),
+        tx.table('history').clear(),
+        tx.table('fieldDefinitions').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
   }
 }
 

@@ -9,21 +9,22 @@ describe('seedFieldDefinitions', () => {
     await db.syncMetadata.clear();
   });
 
-  it('writes all 6 field definitions + version key on first call', async () => {
+  it('writes all 7 field definitions + version key on first call', async () => {
     await seedFieldDefinitions();
     const all = await db.fieldDefinitions.toArray();
-    expect(all).toHaveLength(6);
+    expect(all).toHaveLength(7);
     const labels = all.map(d => d.label).sort();
     expect(labels).toEqual([
       'Description',
       'Main Image',
+      'Power Rating',
       'Status',
       'Tags',
       'Type Of',
       'Weight',
     ]);
     const meta = await db.syncMetadata.get('fieldDefinitionsSeededVersion');
-    expect(meta?.value).toBe(4);
+    expect(meta?.value).toBe(5);
   });
 
   it('stamps appDeveloper authorship and active soft-delete state on seeds', async () => {
@@ -50,7 +51,7 @@ describe('seedFieldDefinitions', () => {
     // Second call should not rewrite rows.
     await seedFieldDefinitions();
     const secondAll = await db.fieldDefinitions.toArray();
-    expect(secondAll).toHaveLength(6);
+    expect(secondAll).toHaveLength(7);
     expect(secondAll[0].updatedAt).toBe(firstTimestamp);
   });
 
@@ -59,7 +60,8 @@ describe('seedFieldDefinitions', () => {
     const byId = new Map((await db.fieldDefinitions.toArray()).map(d => [d.id, d]));
     expect(byId.get(FIELD_DEFINITION_IDS.description)?.componentType).toBe('text-kv');
     expect(byId.get(FIELD_DEFINITION_IDS.status)?.componentType).toBe('enum-kv');
-    expect(byId.get(FIELD_DEFINITION_IDS.weight)?.componentType).toBe('measurement-kv');
+    expect(byId.get(FIELD_DEFINITION_IDS.weight)?.componentType).toBe('number-kv');
+    expect(byId.get(FIELD_DEFINITION_IDS.powerRating)?.componentType).toBe('number-kv');
     expect(byId.get(FIELD_DEFINITION_IDS.mainImage)?.componentType).toBe('single-image');
   });
 });

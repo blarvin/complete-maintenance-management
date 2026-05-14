@@ -16,7 +16,7 @@
 import { component$, useSignal, useVisibleTask$, $, type QRL, type Signal } from '@builder.io/qwik';
 import { TextKvField } from '../DataField/TextKvField';
 import { EnumKvField } from '../DataField/EnumKvField';
-import { MeasurementKvField } from '../DataField/MeasurementKvField';
+import { NumberKvField } from '../DataField/NumberKvField';
 import { SingleImageField } from '../DataField/SingleImageField';
 import type { FieldDefinition, DataFieldValue, SingleImageValue } from '../../data/models';
 import type { PendingForm } from '../../hooks/usePendingForms';
@@ -120,9 +120,9 @@ const RowBody = component$<RowBodyProps>((props) => {
                     pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void>, autoFocus }}
                 />
             );
-        case 'measurement-kv':
+        case 'number-kv':
             return (
-                <MeasurementKvField
+                <NumberKvField
                     id={props.pendingForm.id}
                     fieldName={props.definition.label}
                     fieldDefinitionId={props.definition.id}

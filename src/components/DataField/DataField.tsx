@@ -15,7 +15,7 @@ import { useAppState, useAppTransitions, selectors } from '../../state/appState'
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { TextKvField } from './TextKvField';
 import { EnumKvField } from './EnumKvField';
-import { MeasurementKvField } from './MeasurementKvField';
+import { NumberKvField } from './NumberKvField';
 import { SingleImageField } from './SingleImageField';
 import type { ComponentType, DataFieldValue, SingleImageValue } from '../../data/models';
 import styles from './DataField.module.css';
@@ -26,6 +26,9 @@ export type DataFieldProps = {
     fieldDefinitionId: string;
     componentType: ComponentType;
     value: DataFieldValue | null;
+    /** Epoch ms when this DataField was last written. Used by number-kv for
+     *  stale-state computation. */
+    updatedAt?: number;
     onDeleted$?: PropFunction<() => void>;
     onUpdated$?: PropFunction<() => void>;
 };
@@ -127,7 +130,7 @@ function displayPreview(componentType: ComponentType, value: DataFieldValue | nu
         case 'text-kv':
         case 'enum-kv':
             return value as string;
-        case 'measurement-kv':
+        case 'number-kv':
             return String(value as number);
         case 'single-image':
             return (value as SingleImageValue).caption ?? '[image]';
@@ -161,13 +164,14 @@ function renderBody(
                     onUpdated$={props.onUpdated$}
                 />
             );
-        case 'measurement-kv':
+        case 'number-kv':
             return (
-                <MeasurementKvField
+                <NumberKvField
                     id={props.id}
                     fieldName={props.fieldName}
                     fieldDefinitionId={props.fieldDefinitionId}
                     value={(props.value as number | null) ?? null}
+                    updatedAt={props.updatedAt}
                     rootRef={rootRef}
                     onUpdated$={props.onUpdated$}
                 />

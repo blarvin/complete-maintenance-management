@@ -1,0 +1,55 @@
+/* NumberKvField - input, prefix/suffix affixes, helper text, and state
+   classes for ok / warn / alarm / stale.
+
+   Stale is a separate axis (freshness) — rendered dim + italic to suggest
+   "this value is past its expected refresh interval". */
+
+.input {
+    width: 8ch;
+    text-align: right;
+}
+
+.affix {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    margin: 0 var(--space-1);
+}
+
+.helper {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    margin-left: var(--space-2);
+    font-style: italic;
+}
+
+.state_ok {
+    background: rgba(16, 185, 129, 0.08); /* subtle green */
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_warn {
+    background: rgba(245, 158, 11, 0.12); /* subtle amber */
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_alarm {
+    background: rgba(239, 68, 68, 0.12); /* subtle red */
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_stale {
+    /* Stale takes precedence over alarm/warn/ok — value's freshness, not its
+       magnitude. Dimmed + italic suggests "this number is past its sell-by". */
+    color: var(--text-secondary);
+    font-style: italic;
+    background: var(--bg-expanded, transparent);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}
+
+.state_none {
+    /* no coloring */
+}
