@@ -13,10 +13,11 @@
  */
 
 import { component$, $, type PropFunction } from '@builder.io/qwik';
-import type { ComponentType, EnumKvConfig, FieldDefinition, FieldDefinitionConfig, SingleImageConfig, TextKvConfig } from '../../data/models';
+import type { ComponentType, EnumKvConfig, FieldDefinition, FieldDefinitionConfig, NumberKvConfig, SingleImageConfig, TextKvConfig } from '../../data/models';
 import { useFieldDefinitionDraft } from '../../hooks/useFieldDefinitionDraft';
 import { TextKvConfigForm } from './configForms/TextKvConfigForm';
 import { EnumKvConfigForm } from './configForms/EnumKvConfigForm';
+import { NumberKvConfigForm } from './configForms/NumberKvConfigForm';
 import { SingleImageConfigForm } from './configForms/SingleImageConfigForm';
 import styles from './FieldDefinitionAuthoringForm.module.css';
 
@@ -114,9 +115,10 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                         />
                     )}
                     {componentType.value === 'number-kv' && (
-                        <div class={styles.stub}>
-                            Number field authoring lands in the next PR — pick another type to author here for now.
-                        </div>
+                        <NumberKvConfigForm
+                            config={config.value as NumberKvConfig}
+                            onChange$={$((cfg: FieldDefinitionConfig) => setConfig$(cfg))}
+                        />
                     )}
                     {componentType.value === 'single-image' && (
                         <SingleImageConfigForm
@@ -139,7 +141,6 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                     type="button"
                     class={styles.saveBtn}
                     onClick$={handleSave$}
-                    disabled={componentType.value === 'number-kv'}
                 >
                     Save
                 </button>

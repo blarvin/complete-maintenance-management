@@ -14,6 +14,7 @@
 import { useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
+import { validateNumberKvConfig } from '../components/DataField/numberKvState';
 import type {
     ComponentType,
     EnumKvConfig,
@@ -116,8 +117,9 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
         }
         if (componentType.value === 'number-kv') {
             const cfg = config.value as NumberKvConfig;
-            if (!cfg.unitsSymbol || cfg.unitsSymbol.trim() === '') {
-                errorMessage.value = 'unitsSymbol is required';
+            const invariant = validateNumberKvConfig(cfg);
+            if (invariant !== null) {
+                errorMessage.value = invariant;
                 return null;
             }
         }

@@ -73,15 +73,6 @@
     /* Sub-forms render their own row stack inside. */
 }
 
-.stub {
-    font-size: var(--text-sm);
-    font-style: italic;
-    color: var(--text-secondary);
-    padding: var(--space-2);
-    border: 1px dashed var(--border-default);
-    border-radius: var(--radius-sm);
-}
-
 .error {
     color: var(--color-error, #d33);
     font-size: var(--text-sm);
