@@ -62,6 +62,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
     const refreshUnit = useSignal<RefreshUnit>(initialUnit);
 
     const update$ = $((patch: Partial<NumberKvConfig>) => {
+        dirty.value = true;
         const newConfig = { ...props.config, ...patch };
         return props.onChange$(newConfig, validateNumberKvConfig(newConfig));
     });
@@ -103,7 +104,8 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
         return update$({ expectedRefreshSeconds: seconds });
     });
 
-    const errorMessage = useComputed$(() => validateNumberKvConfig(props.config));
+    const dirty = useSignal(false);
+    const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
 
     const fmt = props.config.displayFormat ?? 'decimal';
     const nominalMode: NumberKvNominalMode = props.config.nominalMode ?? 'range';
@@ -137,6 +139,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                     Display & nominal
                 </button>
                 <div class={[styles.sectionBody, !commonOpen.value && styles.sectionBodyCollapsed]}>
+                <div class={styles.sectionBodyInner}>
                     <label class={formStyles.row}>
                         <span class={formStyles.label}>Long form</span>
                         <input
@@ -271,6 +274,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                         </>
                     )}
                 </div>
+                </div>
             </section>
 
             {/* ── Advanced section ─────────────────────────────────────────── */}
@@ -285,6 +289,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                     Alarms & freshness
                 </button>
                 <div class={[styles.sectionBody, !advancedOpen.value && styles.sectionBodyCollapsed]}>
+                <div class={styles.sectionBodyInner}>
                     <div class={styles.thresholdChain} aria-label="Threshold chain LL ≤ L ≤ … ≤ H ≤ HH">
                         <ThresholdInput
                             label="LL"
@@ -333,6 +338,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                             <option value="day">days</option>
                         </select>
                     </div>
+                </div>
                 </div>
             </section>
 
