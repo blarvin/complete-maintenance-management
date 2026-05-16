@@ -31,6 +31,13 @@ export type NumberKvConfigFormProps = {
     onChange$: PropFunction<(cfg: NumberKvConfig, error: string | null) => void>;
 };
 
+const PRECISION_OPTIONS: { value: number; label: string }[] = [
+    { value: 0, label: 'XX' },
+    { value: 1, label: 'XX.0' },
+    { value: 2, label: 'XX.00' },
+    { value: 3, label: 'XX.000' },
+];
+
 type RefreshUnit = 'sec' | 'min' | 'hr' | 'day';
 const UNIT_TO_SECONDS: Record<RefreshUnit, number> = {
     sec: 1,
@@ -171,20 +178,24 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                         </div>
                     </div>
 
-                    <label class={formStyles.row}>
-                        <span class={formStyles.label}>Decimals</span>
-                        <input
-                            type="number"
-                            min={0}
-                            class={formStyles.input}
-                            value={props.config.decimals ?? 2}
-                            onInput$={(e) => {
-                                const raw = (e.target as HTMLInputElement).value;
-                                const n = raw === '' ? undefined : parseInt(raw, 10);
-                                update$({ decimals: Number.isFinite(n) ? n : undefined });
-                            }}
-                        />
-                    </label>
+                    <div class={formStyles.row}>
+                        <span class={formStyles.label}>Precision</span>
+                        <div class={styles.precisionPicker}>
+                            {PRECISION_OPTIONS.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    class={[
+                                        styles.precisionBtn,
+                                        (props.config.decimals ?? 2) === opt.value && styles.precisionBtnActive,
+                                    ]}
+                                    onClick$={() => update$({ decimals: opt.value })}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                     <label class={formStyles.row}>
                         <span class={formStyles.label}>Display format</span>
