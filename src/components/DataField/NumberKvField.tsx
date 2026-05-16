@@ -77,7 +77,7 @@ function withAffix(formatted: string, config: NumberKvConfig): string {
     const symbol = config.unitsSymbol;
     // `percent` is the one displayFormat where Intl already appends a symbol
     // (locale-aware "%"). Skip the unitsSymbol affix to avoid doubling.
-    if (config.displayFormat === 'percent') return formatted;
+    if (config.displayFormat === 'percent' || !symbol) return formatted;
     const pos = config.affixPosition
         ?? (config.displayFormat === 'currency' ? 'prefix' : 'suffix');
     return pos === 'prefix' ? `${symbol}${formatted}` : `${formatted} ${symbol}`;
@@ -100,32 +100,34 @@ function makeValidate(config: NumberKvConfig) {
         // the discrete equivalent. L/H and the nominal band are informational —
         // values there save fine, they just show warn/ok via the state class.
         const { lowLow, highHigh } = config;
+        const u = config.unitsSymbol ? ` ${config.unitsSymbol}` : '';
         if (lowLow !== undefined && value < lowLow) {
-            throw new Error(`Value must be ≥ ${lowLow} ${config.unitsSymbol}`);
+            throw new Error(`Value must be ≥ ${lowLow}${u}`);
         }
         if (highHigh !== undefined && value > highHigh) {
-            throw new Error(`Value must be ≤ ${highHigh} ${config.unitsSymbol}`);
+            throw new Error(`Value must be ≤ ${highHigh}${u}`);
         }
     };
 }
 
 function buildHelperText(config: NumberKvConfig): string {
     const mode = config.nominalMode ?? 'range';
+    const u = config.unitsSymbol ? ` ${config.unitsSymbol}` : '';
     if (mode === 'range') {
-        const { nominalMin, nominalMax, unitsSymbol } = config;
+        const { nominalMin, nominalMax } = config;
         if (nominalMin !== undefined && nominalMax !== undefined) {
-            return `Nominal ${nominalMin}–${nominalMax} ${unitsSymbol}`;
+            return `Nominal ${nominalMin}–${nominalMax}${u}`;
         }
-        if (nominalMin !== undefined) return `Nominal ≥ ${nominalMin} ${unitsSymbol}`;
-        if (nominalMax !== undefined) return `Nominal ≤ ${nominalMax} ${unitsSymbol}`;
+        if (nominalMin !== undefined) return `Nominal ≥ ${nominalMin}${u}`;
+        if (nominalMax !== undefined) return `Nominal ≤ ${nominalMax}${u}`;
         return '';
     }
-    const { nominalValue, tolerance, unitsSymbol } = config;
+    const { nominalValue, tolerance } = config;
     if (nominalValue === undefined) return '';
     if (tolerance !== undefined && tolerance > 0) {
-        return `Nominal ${nominalValue} ±${tolerance} ${unitsSymbol}`;
+        return `Nominal ${nominalValue} ±${tolerance}${u}`;
     }
-    return `Nominal ${nominalValue} ${unitsSymbol}`;
+    return `Nominal ${nominalValue}${u}`;
 }
 
 export const NumberKvField = component$<NumberKvFieldProps>((props) => {
@@ -198,7 +200,7 @@ const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>
     if (isEditing) {
         return (
             <span style="display: contents">
-                {affixPos === 'prefix' && (
+                {affixPos === 'prefix' && config.unitsSymbol && (
                     <span class={numberStyles.affix}>{config.unitsSymbol}</span>
                 )}
                 <input
@@ -215,7 +217,7 @@ const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>
                     aria-describedby={helper ? `${labelId}-helper` : undefined}
                     autoFocus
                 />
-                {affixPos === 'suffix' && (
+                {affixPos === 'suffix' && config.unitsSymbol && (
                     <span class={numberStyles.affix}>{config.unitsSymbol}</span>
                 )}
                 {helper && (

@@ -122,16 +122,17 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
 
     return (
         <div class={formStyles.form}>
-            {/* ── Required ────────────────────────────────────────────────── */}
             <label class={formStyles.row}>
-                <span class={formStyles.label}>Units symbol*</span>
+                <span class={formStyles.label}>Units symbol</span>
                 <input
                     type="text"
                     class={formStyles.input}
-                    value={props.config.unitsSymbol}
+                    value={props.config.unitsSymbol ?? ''}
                     placeholder="e.g. kg, °C, psi, $"
-                    onInput$={(e) => update$({ unitsSymbol: (e.target as HTMLInputElement).value })}
-                    required
+                    onInput$={(e) => {
+                        const v = (e.target as HTMLInputElement).value;
+                        update$({ unitsSymbol: v || undefined });
+                    }}
                 />
             </label>
 
