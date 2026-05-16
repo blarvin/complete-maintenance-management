@@ -1,6 +1,10 @@
 # Claude Code local usage log
 .claude/usage.log
 
+#build artifacts
+dist/
+server/
+
 # Dependencies
 node_modules/
 npm-debug.log*
