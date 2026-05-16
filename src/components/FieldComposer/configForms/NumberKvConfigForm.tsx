@@ -113,6 +113,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
 
     const dirty = useSignal(false);
     const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
+    const selectedPrecision = useSignal(props.config.decimals ?? 2);
 
     const fmt = props.config.displayFormat ?? 'decimal';
     const nominalMode: NumberKvNominalMode = props.config.nominalMode ?? 'range';
@@ -185,11 +186,16 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                                 <button
                                     key={opt.value}
                                     type="button"
+                                    data-precision={String(opt.value)}
                                     class={[
                                         styles.precisionBtn,
-                                        (props.config.decimals ?? 2) === opt.value && styles.precisionBtnActive,
+                                        selectedPrecision.value === opt.value && styles.precisionBtnActive,
                                     ]}
-                                    onClick$={() => update$({ decimals: opt.value })}
+                                    onClick$={(e) => {
+                                        const v = parseInt((e.currentTarget as HTMLButtonElement).dataset.precision ?? '2', 10);
+                                        selectedPrecision.value = v;
+                                        return update$({ decimals: v });
+                                    }}
                                 >
                                     {opt.label}
                                 </button>
