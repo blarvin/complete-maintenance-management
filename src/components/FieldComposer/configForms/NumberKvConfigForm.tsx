@@ -68,6 +68,10 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
     );
     const refreshUnit = useSignal<RefreshUnit>(initialUnit);
 
+    const dirty = useSignal(false);
+    const selectedPrecision = useSignal(props.config.decimals ?? 2);
+    const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
+
     const update$ = $((patch: Partial<NumberKvConfig>) => {
         dirty.value = true;
         const newConfig = { ...props.config, ...patch };
@@ -110,10 +114,6 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
             : undefined;
         return update$({ expectedRefreshSeconds: seconds });
     });
-
-    const dirty = useSignal(false);
-    const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
-    const selectedPrecision = useSignal(props.config.decimals ?? 2);
 
     const fmt = props.config.displayFormat ?? 'decimal';
     const nominalMode: NumberKvNominalMode = props.config.nominalMode ?? 'range';
@@ -182,24 +182,22 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                     <div class={formStyles.row}>
                         <span class={formStyles.label}>Precision</span>
                         <div class={styles.precisionPicker}>
-                            {PRECISION_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    data-precision={String(opt.value)}
-                                    class={[
-                                        styles.precisionBtn,
-                                        selectedPrecision.value === opt.value && styles.precisionBtnActive,
-                                    ]}
-                                    onClick$={(e) => {
-                                        const v = parseInt((e.currentTarget as HTMLButtonElement).dataset.precision ?? '2', 10);
-                                        selectedPrecision.value = v;
-                                        return update$({ decimals: v });
-                                    }}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 0 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 0; return update$({ decimals: 0 }); }}
+                            >XX</button>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 1 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 1; return update$({ decimals: 1 }); }}
+                            >XX.0</button>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 2 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 2; return update$({ decimals: 2 }); }}
+                            >XX.00</button>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 3 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 3; return update$({ decimals: 3 }); }}
+                            >XX.000</button>
                         </div>
                     </div>
 
