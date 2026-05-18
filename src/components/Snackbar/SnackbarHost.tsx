@@ -18,7 +18,6 @@ import styles from './SnackbarHost.module.css';
 export const SnackbarHost = component$(() => {
     const store = useStore<SnackbarStore>({ current: null });
 
-    // eslint-disable-next-line qwik/no-use-visible-task
     useVisibleTask$(() => {
         registerSnackbarStore(store);
     });
