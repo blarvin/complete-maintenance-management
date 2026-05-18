@@ -137,9 +137,9 @@ describe('initStorage - Migration Fallback Paths', () => {
         });
 
         it('recognizes online state via navigator.onLine', () => {
-            // In test environment, navigator.onLine is typically true (mocked)
-            // This test ensures the check works
-            const isOnline = typeof navigator !== 'undefined' && navigator.onLine;
+            // Node 22 added a partial navigator global where onLine may be
+            // undefined; coerce explicitly so the check always yields a boolean.
+            const isOnline = typeof navigator !== 'undefined' && !!navigator.onLine;
             expect(typeof isOnline).toBe('boolean');
         });
     });
