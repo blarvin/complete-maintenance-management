@@ -145,9 +145,9 @@ describe('computeNumberKvState - discrete mode', () => {
 });
 
 describe('validateNumberKvConfig - required + bounds', () => {
-    it('rejects missing unitsSymbol', () => {
-        expect(validateNumberKvConfig({ unitsSymbol: '' })).toMatch(/unitsSymbol/);
-        expect(validateNumberKvConfig({ unitsSymbol: '   ' })).toMatch(/unitsSymbol/);
+    it('accepts config with no unitsSymbol (units are optional)', () => {
+        expect(validateNumberKvConfig({})).toBeNull();
+        expect(validateNumberKvConfig({ unitsSymbol: '' })).toBeNull();
     });
 
     it('accepts minimal valid config (just unitsSymbol)', () => {

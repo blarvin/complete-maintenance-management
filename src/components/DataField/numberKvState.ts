@@ -85,9 +85,6 @@ export function computeNumberKvState(
  * config is assumed valid by the time it reaches the field.
  */
 export function validateNumberKvConfig(config: NumberKvConfig): string | null {
-    if (!config.unitsSymbol || config.unitsSymbol.trim() === '') {
-        return 'unitsSymbol is required';
-    }
     if (config.decimals !== undefined && config.decimals < 0) {
         return 'decimals must be ≥ 0';
     }

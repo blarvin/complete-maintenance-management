@@ -68,7 +68,7 @@ export type NumberKvNominalMode = "range" | "discrete";
  *  - displayFormat === "currency" ⇒ currencyCode non-empty.
  */
 export type NumberKvConfig = {
-  unitsSymbol: string;
+  unitsSymbol?: string;
   unitsLongForm?: string;
   affixPosition?: NumberKvAffixPosition; // default "suffix"
   decimals?: number; // default 2

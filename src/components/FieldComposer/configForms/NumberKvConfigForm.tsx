@@ -31,6 +31,13 @@ export type NumberKvConfigFormProps = {
     onChange$: PropFunction<(cfg: NumberKvConfig, error: string | null) => void>;
 };
 
+const PRECISION_OPTIONS: { value: number; label: string }[] = [
+    { value: 0, label: 'XX' },
+    { value: 1, label: 'XX.0' },
+    { value: 2, label: 'XX.00' },
+    { value: 3, label: 'XX.000' },
+];
+
 type RefreshUnit = 'sec' | 'min' | 'hr' | 'day';
 const UNIT_TO_SECONDS: Record<RefreshUnit, number> = {
     sec: 1,
@@ -60,6 +67,10 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
         initialRefreshSecs !== undefined ? String(initialRefreshSecs / UNIT_TO_SECONDS[initialUnit]) : ''
     );
     const refreshUnit = useSignal<RefreshUnit>(initialUnit);
+
+    const dirty = useSignal(false);
+    const selectedPrecision = useSignal(props.config.decimals ?? 2);
+    const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
 
     const update$ = $((patch: Partial<NumberKvConfig>) => {
         dirty.value = true;
@@ -104,9 +115,6 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
         return update$({ expectedRefreshSeconds: seconds });
     });
 
-    const dirty = useSignal(false);
-    const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
-
     const fmt = props.config.displayFormat ?? 'decimal';
     const nominalMode: NumberKvNominalMode = props.config.nominalMode ?? 'range';
     const affixPos: NumberKvAffixPosition = props.config.affixPosition
@@ -114,16 +122,17 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
 
     return (
         <div class={formStyles.form}>
-            {/* ── Required ────────────────────────────────────────────────── */}
             <label class={formStyles.row}>
-                <span class={formStyles.label}>Units symbol*</span>
+                <span class={formStyles.label}>Units symbol</span>
                 <input
                     type="text"
                     class={formStyles.input}
-                    value={props.config.unitsSymbol}
+                    value={props.config.unitsSymbol ?? ''}
                     placeholder="e.g. kg, °C, psi, $"
-                    onInput$={(e) => update$({ unitsSymbol: (e.target as HTMLInputElement).value })}
-                    required
+                    onInput$={(e) => {
+                        const v = (e.target as HTMLInputElement).value;
+                        update$({ unitsSymbol: v || undefined });
+                    }}
                 />
             </label>
 
@@ -171,20 +180,27 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                         </div>
                     </div>
 
-                    <label class={formStyles.row}>
-                        <span class={formStyles.label}>Decimals</span>
-                        <input
-                            type="number"
-                            min={0}
-                            class={formStyles.input}
-                            value={props.config.decimals ?? 2}
-                            onInput$={(e) => {
-                                const raw = (e.target as HTMLInputElement).value;
-                                const n = raw === '' ? undefined : parseInt(raw, 10);
-                                update$({ decimals: Number.isFinite(n) ? n : undefined });
-                            }}
-                        />
-                    </label>
+                    <div class={formStyles.row}>
+                        <span class={formStyles.label}>Precision</span>
+                        <div class={styles.precisionPicker}>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 0 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 0; return update$({ decimals: 0 }); }}
+                            >XX</button>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 1 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 1; return update$({ decimals: 1 }); }}
+                            >XX.0</button>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 2 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 2; return update$({ decimals: 2 }); }}
+                            >XX.00</button>
+                            <button type="button"
+                                class={[styles.precisionBtn, selectedPrecision.value === 3 && styles.precisionBtnActive]}
+                                onClick$={() => { selectedPrecision.value = 3; return update$({ decimals: 3 }); }}
+                            >XX.000</button>
+                        </div>
+                    </div>
 
                     <label class={formStyles.row}>
                         <span class={formStyles.label}>Display format</span>
