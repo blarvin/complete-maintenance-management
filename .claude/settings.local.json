@@ -35,7 +35,9 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\blarv\\\\Desktop\\\\complete-maintenance-management\" -Recurse -Directory -Name)",
       "Bash(Select-String -Pattern \"\\(components|DataCard|FieldComposer|CreateDataField|DataField\\)\")",
       "Bash(grep -i \"\\\\.ts$\")",
-      "Bash(grep -n \"#### FieldComponent: \\\\`number-kv\\\\`\" \"C:\\\\Users\\\\blarv\\\\Desktop\\\\complete-maintenance-management\\\\SPECIFICATION.md\" -A 150)"
+      "Bash(grep -n \"#### FieldComponent: \\\\`number-kv\\\\`\" \"C:\\\\Users\\\\blarv\\\\Desktop\\\\complete-maintenance-management\\\\SPECIFICATION.md\" -A 150)",
+      "WebFetch(domain:claude.ai)",
+      "PowerShell(\\(Get-Content \"opus_chat_unified_data_model.md\" | Measure-Object -Line\\).Lines)"
     ],
     "deny": [
       "Read(.env*)",

@@ -258,6 +258,18 @@ The `save$` flow: parse → validate (if provided) → `getCommandBus().execute(
 
 ---
 
+### Unified Element Model — Design Rationale
+
+> Design decided on `REFACTOR-single-unified-data-model`; **not yet built**. Captures *why*, so the choices aren't re-litigated. Migration steps live in ISSUES.md; full deliberation in `opus_chat_unified_data_model.md`.
+
+**One primitive, many renderers.** `TreeNode` and `DataField` collapse into one `Element`. The payoff is where complexity lands: with two primitives, every new kind of thing (Job, Logbook, Equipment Plate) risks a schema change; with one, variety lives in **renderers keyed by `kind`** — pure presentation, addable without touching storage. The schema stops being the axis that proliferates.
+
+**Why `siblingOrder` is uniform (and not `updatedAt`).** Order is an explicit, addressable scalar on every element rather than an implicit "position in the parent's array." Two reasons: (1) an explicit scalar can be *shadowed* by a future per-user override (a sparse overlay layered at read time) — an implicit position can't, without duplicating the whole array per user; (2) stable positions beat the old `updatedAt` re-sort, which reshuffled a node's siblings every time it was edited. Cost: inserting between siblings needs a midpoint value (fractional, or renumber-the-run), since plain `max+1` can't.
+
+**Why history keys to the element and spans all properties.** One append-only audit spine for the whole model, not just field values. Keying to `elementId` and widening `property` to `value | name | subtitle | parentId | siblingOrder` means renames, moves (a move *is* a `parentId` change), reorders, and structural deletes are all auditable and revertible through the existing `rev`/`prev`/`new` mechanism — no second system.
+
+---
+
 ### UI Prefs Serialization
 
 **Pattern**: Sets (`expandedCards`, `expandedFieldDetails`) stored as JSON arrays in localStorage. Converted on load/save in `uiPrefs.ts`.

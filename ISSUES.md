@@ -35,6 +35,33 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ---
 
+## Refactor: Unified Element Model (active branch)
+
+Merging `TreeNode` + `DataField` into one `Element` primitive. SPEC §Data Model is the target; design rationale in IMPLEMENTATION.md. Detailed sequencing → the plan.
+
+1.) **Merge stores** — `treeNodes` + `dataFields` → one `elements` store; `dataFieldHistory` → `elementHistory`. Update both adapters (IDB, Firestore), the service registry (`nodeService` + `fieldService` → `elementService`, or thin facades during migration), and the Dexie schema + one-time migration.
+
+2.) **Column renames** (carry the old→new map through code + migration):
+
+   | Old (TreeNode/DataField) | New (Element) |
+   | ------------------------ | ------------- |
+   | `parentNodeId` / `parentId` | `parentId` |
+   | `cardOrder`              | `siblingOrder` |
+   | `componentType`          | `kind` (plus `"node"` for containers) |
+   | `nodeName` / `fieldName` | `name` |
+   | `nodeSubtitle`           | `subtitle` |
+   | `dataFieldId` (history)  | `elementId` |
+
+3.) **Widen history logging** — `ElementHistory.property` covers `value` / `name` / `subtitle` / `parentId` / `siblingOrder` (closes the old `fieldName`-unlogged gap and logs moves/reorders/structural deletes).
+
+4.) **Uniform `siblingOrder`** — assign incrementally at mint for every element (nodes too); drop the child-node `updatedAt` sort; support midpoint insertion (`CreateNodeButton` inserts between siblings).
+
+5.) **Reconcile SPEC prose to surface/renderer vocabulary** — Component Architecture, TreeNode/DataCard/DataField states, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Per Concepts & Vocabulary these are surfaces/renderers, not storage types; reword once the merge lands.
+
+6.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row.
+
+---
+
 ## Features
 
 

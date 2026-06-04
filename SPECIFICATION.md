@@ -1,5 +1,7 @@
 # Asset Tree Management Specification
 
+> **Status (2026-06):** mid-refactor to the unified **Element** data model. The Data Model section describes the target state; built code still lags it. Migration steps live in ISSUES.md and the refactor plan; design rationale lives in IMPLEMENTATION.md and `opus_chat_unified_data_model.md`. Delete this banner when the refactor lands.
+
 ## Overview
 
 Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent things and their parts.
@@ -14,10 +16,43 @@ Unlike common tree view UIs where each node only has a name, this app has four l
 
 This structure enables users to construct, explore, and understand detailed hierarchical models of real world assets.
 
+## Concepts & Vocabulary
+
+This spec speaks in two registers, and keeping them distinct is the whole game. Many user-facing surfaces (Node, Field — and later Job, Logbook, …) sit over one storage primitive, the `Element`, so the boundary between the two registers is **declared once, here** — after which every other section may use either word set unambiguously.
+
+**Surfaces** — what the user sees; what we say in intent and UI copy. Stable pattern language; the set grows as the product does.
+
+| Surface | What it is to the user |
+| ------- | ---------------------- |
+| **Node** | A navigable thing in the tree — an asset or a logical container. Has a Header (Title + Subtitle) and one Data Card. |
+| **Data Card** | The body of a Node: the list of its Fields. |
+| **Field** | One fact on a Card — a `Label : Value` row. |
+| **Field Details** | A Field's metadata (context) and management actions. |
+| **Field History** | A Field's append-only value audit. |
+| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surface patterns, added as the product grows. |
+
+**Storage & runtime** — what the system actually keeps and runs.
+
+| Term | What it is to the system |
+| ---- | ------------------------ |
+| **Element** | The single recursive record. *Every surface above is an Element.* |
+| **kind** | The field on an Element that selects how it is drawn (`node`, `text-kv`, `logbook`…). |
+| **Renderer** | Code that draws an Element for a surface. The `TreeNode` component renders Node surfaces; each `FieldComponent` renders a Field. **New surfaces ship as new renderers, not new tables.** |
+| **FieldDefinition** | A Library entry — a named, configured `kind` users pick to mint a Field. |
+| **FieldComponent** | The dev-authored renderer + value type + config schema behind a field `kind`. |
+
+**The bridge, in one sentence:** *every surface is one Element drawn by the renderer its `kind` selects — the user navigates surfaces; the system stores Elements.*
+
+**Naming discipline:**
+
+- Intent/PRD prose and UI copy use **surface** words (Node, Field, Card).
+- Data-model and runtime prose use **storage** words (Element, kind, renderer).
+- `TreeNode`, `DataCard`, `DataField`, `DataFieldDetails` survive as **component (renderer) identifiers in code — not storage entities.** The only storage entities are `Element`, `ElementHistory`, `FieldDefinition`, and `imageBlobs`.
+
 ## Core Principles
 
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
-- **Self Similarity**: Single TreeNode component handles all levels
+- **Self Similarity**: A single node-renderer (the `TreeNode` component) draws every Node at every depth — and the same self-similarity now spans the Node/Field merge: one `Element` model underlies both, drawn by the renderer its `kind` selects (see Concepts & Vocabulary). New surfaces (Jobs, Logbook, …) are new renderers over that one model, not new data models.
 - **Self-Construction**: Users are fully enabled to create and edit assets, structure, and attributes.
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
@@ -25,6 +60,8 @@ This structure enables users to construct, explore, and understand detailed hier
 - **Offline-First**: Full UI and any data created locally or already loaded is available indefinitely. All operations persist to local storage first, then sync to cloud when online. No difference in UX online or offline. Seamless automatic background sync, update, and reconcile via bidirectional sync with Last-Write-Wins conflict resolution.
 
 ## Component Architecture
+
+***Intent:*** *the whole app is a single scrollable tree the user reads, builds, and edits in place — no separate pages, modes, or forms to get lost in.*
 
 ### Views
 
@@ -99,6 +136,8 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ## DataField Management
 
+***Intent:*** *facts about a thing are captured and corrected right where they sit, and every change is kept — so the record can always be trusted and walked back.*
+
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
 - **Create Data Fields**: Two surfaces sit at the bottom of the DataCard in display mode. A legacy **+ Add Field** (singular) dropdown is the quick-add path — pick one FieldDefinition, the DataField is created immediately. A **+ Add Fields** (plural) button expands the **Field Composer** alongside it for batch-add and FieldDefinition authoring: an inline section showing every available FieldDefinition as a row in a single list, each with a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that FieldDefinition (rendered with its real FieldComponent). Save commits every checked row as a real DataField on the node; Cancel discards them. The Composer also hosts the "+ New Field Definition…" authoring affordance. See "Field Composer" and "DataField Components, Field Definitions, and Library" below.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
@@ -106,6 +145,8 @@ This structure enables users to construct, explore, and understand detailed hier
   - A `DataFieldHistory` entry with `action: "delete"`, `property: "value"`, and `newValue: null` is written only after the undo window elapses.
 
 ## Snackbar & Undo
+
+***Intent:*** *a destructive tap is reversible for a few seconds, so no one has to hesitate before acting.*
 
 A single global Snackbar component provides transient feedback and brief undo for destructive or significant actions.
 
@@ -226,9 +267,11 @@ All interactive elements are keyboard-accessible. This is a core quality bar, no
 
 ### DataField Reordering
 
-Users can reorder DataFields within a DataCard. Reordering updates `cardOrder` for all affected fields and persists immediately. Detailed UX/interaction design TBD.
+Users can reorder DataFields within a DataCard. Reordering updates `siblingOrder` for all affected fields and persists immediately. Detailed UX/interaction design TBD.
 
 ## Field Composer
+
+***Intent:*** *adding facts to a thing is fast, and the vocabulary of facts grows from what users actually need — captured first, tidied later, never gatekept.*
 
 The Field Composer is a unified inline UI for adding one or more DataFields to a TreeNode. It replaces the bare default-fields list in construction mode and adds a batch-add + authoring surface in display mode, alongside the existing quick-add dropdown. The Composer is also the **single Phase-1 entry point for FieldDefinition authoring** (see FieldDefinition Authoring UI below).
 
@@ -253,7 +296,7 @@ The composer is a single inline-expanded section within the DataCard, distinguis
 #### Interactions
 
 - **Existing persisted fields remain visible and editable** above the composer. Edits to existing fields commit immediately as today; edits inside the composer are pending until Save.
-- **Save** persists every checked row as a `DataField` (executing `ADD_FIELD_FROM_DEFINITION` per row — renamed from `ADD_FIELD_FROM_TEMPLATE`), in **alphabetical order** (matching the visual order in the composer), with each new field assigned a `cardOrder` greater than every already-persisted field on the card. New fields appear at the bottom of the FieldList in the same order they previewed in. After Save, the composer collapses.
+- **Save** persists every checked row as a `DataField` (executing `ADD_FIELD_FROM_DEFINITION` per row), in **alphabetical order** (matching the visual order in the composer), with each new field assigned a `siblingOrder` greater than every already-persisted field on the card. New fields appear at the bottom of the FieldList in the same order they previewed in. After Save, the composer collapses.
 - **Cancel** discards every pending row. If any rows had been checked, a Snackbar with Undo follows (`"N fields discarded"` — Undo re-opens the composer with the same rows checked and the same entered values).
 - **Click-away does not dismiss the composer.** Pending work is preserved across in-app navigation; the composer is dismissed only by Save or Cancel. (Pending state across reload is best-effort via existing localStorage scaffolding.)
 - **Construction mode**: Save here is implicit in node creation. The node's "Save" button finalises the node *and* the composer's batch in one transaction. Cancel discards the in-progress node entirely, as today.
@@ -273,6 +316,8 @@ The two pending-state shapes inside the Composer are distinct:
 These are deliberately separate hooks/states because a DataField cannot exist without a FieldDefinition to anchor it.
 
 ## DataField Components and Crowdsourced Library
+
+***Intent:*** *the kinds of fact the app understands are grown by the people using it, not rationed by developers or managers.*
 
 ### Conceptual hierarchy
 
@@ -592,20 +637,34 @@ The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) a
 
 ## Data Model
 
-#### TreeNode Entity
+***Intent:*** *one shape underlies every thing in the app, so a new kind of thing is a new way of drawing it — never new plumbing.*
 
-**Purpose:** Represents physical assets or logical containers in a hierarchical structure
+The data model is a single recursive primitive, the **Element**. A node is an Element with children and a null value; a field is an Element with a value and (usually) no children; a composite (Equipment Plate, Logbook) is an Element with both. See Concepts & Vocabulary for how the user-facing surfaces map onto it.
+
+#### Element Entity
+
+**Purpose:** The single recursive primitive — a named thing that may carry a value and/or contain child Elements.
 
 
-| Field        | Type          | Required | Description                     | Constraints                                    |
-| ------------ | ------------- | -------- | ------------------------------- | ---------------------------------------------- |
-| id           | string (UUID) | Yes      | Unique identifier               | Generated client-side and used as canonical ID |
-| nodeName     | string        | Yes      | Display name of the asset       | Max 100 chars, required                        |
-| nodeSubtitle | string        | No       | Additional description/location | Max 200 chars                                  |
-| parentId     | string \      | null     | Yes                             | Reference to parent node                       |
-| updatedBy    | string        | Yes      | User ID of last editor          | Valid user ID                                  |
-| updatedAt    | timestamp     | Yes      | Last modification time (epoch)  | Client-assigned; server-assigned [Phase 2+]    |
-| deletedAt    | timestamp \   | null     | Yes                             | Soft delete timestamp                          |
+| Field             | Type                   | Required | Description                                                                                          | Constraints                                                                                                       |
+| ----------------- | ---------------------- | -------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| id                | string (UUID)          | Yes      | Unique identifier                                                                                    | Generated client-side; canonical ID                                                                              |
+| kind              | string                 | Yes      | Renderer key / element type; the dispatch discriminator.                                            | `"node"` for structural/container elements; a value-bearing componentType (`"text-kv"`, `"enum-kv"`, `"number-kv"`, `"single-image"`) |
+| name              | string                 | Yes      | Level-I/II label (the element's Title).                                                             | Max 100 chars; required (empty names not allowed)                                                                |
+| subtitle          | string \| null         | No       | Description/location (the element's Subtitle).                                                      | Max 200 chars                                                                                                    |
+| value             | JSON \| null           | No       | Typed value, shape discriminated by `kind`. `null` for pure container (`kind: "node"`) elements.   | —                                                                                                               |
+| parentId          | string \| null         | Yes      | Canonical ("home") parent element. `null` = tree root.                                              | Must reference an existing Element when non-null                                                                 |
+| siblingOrder      | number                 | Yes      | Order among siblings under the canonical parent, assigned incrementally at mint (every element).    | Auto-assigned: next available, or a midpoint when inserted between two siblings                                  |
+| fieldDefinitionId | string (UUID) \| null  | No       | Set for elements minted from a Library `FieldDefinition`. `null` for hand-created container nodes.  | Must exist in `fieldDefinitions` when set                                                                       |
+| updatedBy         | string                 | Yes      | User ID of last editor                                                                              | Valid user ID                                                                                                    |
+| updatedAt         | timestamp              | Yes      | Last modification time (epoch)                                                                      | Client-assigned; server-assigned [Phase 2+]                                                                     |
+| deletedAt         | timestamp \| null      | Yes      | Soft delete timestamp                                                                               |                                                                                                                  |
+
+> The Phase-1 `Element` is exactly the columns above. Graph features (multiple
+> appearances, computed values, smart-element config) add further columns later
+> but are **not part of Phase 1** — see "Future Architecture (Phase 2+)" at the
+> end of this section. They are listed there so the eventual additions are
+> column-adds, not migrations.
 
 
 #### FieldDefinition Entity
@@ -625,101 +684,98 @@ The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) a
 | deletedAt     | timestamp \   | null     | Yes                                     | Soft delete (admin-only in Phase 1)                                                  |
 
 
-#### DataField Entity
+#### ElementHistory Entity
 
-**Purpose:** An instance of a FieldDefinition, attached to a TreeNode, storing one typed value.
-
-
-| Field             | Type          | Required | Description                                    | Constraints                                                   |
-| ----------------- | ------------- | -------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| id                | string (UUID) | Yes      | Unique identifier                              | Generated client-side; canonical ID                           |
-| fieldDefinitionId | string (UUID) | Yes      | Reference to `FieldDefinition.id`              | Must exist in `fieldDefinitions` table                        |
-| componentType     | string        | Yes      | Denormalized from FieldDefinition for dispatch | Must match the referenced FieldDefinition's `componentType`   |
-| fieldName         | string        | Yes      | Display label                                  | Snapshot of FieldDefinition `label` at creation; max 50 chars |
-| parentNodeId      | string        | Yes      | Parent TreeNode reference                      | Must exist in TreeNode table                                  |
-| value             | JSON \        | null     | Yes                                            | Typed value, shape discriminated by `componentType`           |
-| cardOrder         | number        | Yes      | Display ordering within DataCard               | Auto-assigned on creation                                     |
-| updatedBy         | string        | Yes      | User ID of last editor                         | Valid user ID                                                 |
-| updatedAt         | timestamp     | Yes      | Last modification time (epoch)                 | Client-assigned; server-assigned [Phase 2+]                   |
-| deletedAt         | timestamp \   | null     | Yes                                            | Soft delete timestamp                                         |
-
-
-#### DataFieldHistory Entity (typed per componentType; minimal — value changes only; broader property tracking [Phase 2+])
-
-**Purpose:** Immutable append-only audit log of `DataField.value` changes. Typed as a discriminated union over `componentType` so `prevValue` / `newValue` carry the Component's value shape.
+**Purpose:** Immutable append-only audit log of Element changes, spanning every tracked property: value edits, renames, re-subtitling, re-parenting (a *move* is a `parentId` change), reordering, and structural create/delete. Typed as a discriminated union over `kind` so value `prevValue` / `newValue` carry the element's value shape.
 
 **Shared fields**:
 
 
-| Field         | Type          | Required | Description                          | Constraints                                    |
-| ------------- | ------------- | -------- | ------------------------------------ | ---------------------------------------------- |
-| id            | string        | Yes      | Primary key                          | Composite key `${dataFieldId}:${rev}`          |
-| dataFieldId   | string (UUID) | Yes      | Reference to `DataField.id`          | Must exist in `DataField` table                |
-| parentNodeId  | string (UUID) | Yes      | Reference to owning `TreeNode`       | Denormalized for easy queries                  |
-| componentType | string        | Yes      | Discriminator                        | Matches `DataField.componentType`              |
-| action        | enum          | Yes      | `"create" \                          | "update" \                                     |
-| property      | string        | Yes      | Changed property                     | Fixed: `"value"`; other properties [Phase 2+]  |
-| updatedBy     | string        | Yes      | Editor identifier                    | Constant "localUser"; real user IDs [Phase 2+] |
-| updatedAt     | timestamp     | Yes      | When the change occurred (epoch)     | Client-assigned; server-assigned [Phase 2+]    |
-| rev           | number        | Yes      | Monotonic revision per `dataFieldId` | Starts at 0 for create                         |
+| Field     | Type                  | Required | Description                                | Constraints                                       |
+| --------- | --------------------- | -------- | ------------------------------------------ | ------------------------------------------------- |
+| id        | string                | Yes      | Primary key                                | Composite key `${elementId}:${rev}`               |
+| elementId | string (UUID)         | Yes      | Reference to `Element.id`                   | Must exist in `elements` table                    |
+| parentId  | string (UUID) \| null | Yes      | Owning/canonical parent at time of change  | Denormalized for subtree history queries          |
+| kind      | string                | Yes      | Discriminator                              | Matches `Element.kind`                            |
+| action    | enum                  | Yes      | `"create"` \| `"update"` \| `"delete"`     |                                                   |
+| property  | enum                  | Yes      | Which property changed.                                | `"value"` \| `"name"` \| `"subtitle"` \| `"parentId"` \| `"siblingOrder"` |
+| prevValue | JSON \| null          | Cond.    | Prior value of the changed property        | Shape depends on `property` (and on `kind` when `property === "value"`) |
+| newValue  | JSON \| null          | Cond.    | New value of the changed property          | Same                                              |
+| updatedBy | string                | Yes      | Editor identifier                          | Constant `"localUser"`; real user IDs [Phase 2+]  |
+| updatedAt | timestamp             | Yes      | When the change occurred (epoch)           | Client-assigned; server-assigned [Phase 2+]       |
+| rev       | number                | Yes      | Monotonic revision per `elementId`         | Starts at 0 for create                            |
 
 
-**Typed value fields** (`prevValue` and `newValue` shapes, by `componentType`):
+**`prevValue` / `newValue` shapes**:
+
+- `property === "name"` or `"subtitle"` → `string | null`
+- `property === "parentId"` → `string | null` (the element id of the old/new parent)
+- `property === "siblingOrder"` → `number`
+- `property === "value"` → discriminated by `kind`:
 
 
-| componentType    | prevValue / newValue shape                                 |
-| ---------------- | ---------------------------------------------------------- |
-| `text-kv`        | `string \                                                  |
-| `enum-kv`        | `string \                                                  |
-| `number-kv`      | `number \                                                  |
-| `single-image`   | `{ blobId, mimeType, width, height, byteSize, caption? } \ |
+| kind           | value shape                                                  |
+| -------------- | ------------------------------------------------------------ |
+| `text-kv`      | `string \| null`                                             |
+| `enum-kv`      | `string \| null`                                             |
+| `number-kv`    | `number \| null`                                             |
+| `single-image` | `{ blobId, mimeType, width, height, byteSize, caption? } \| null` |
 
 
-Reversion and audit are central to the app, so the history record must preserve the Component-typed value exactly as stored on the DataField at that revision.
+Reversion and audit are central to the app, so the history record must preserve the typed value exactly as stored on the element at that revision.
 
 **Indexes**:
 
-- treeNodes: by parentId, by updatedAt
+- elements: by parentId, by updatedAt, by kind, by fieldDefinitionId — (`*virtualParents` multi-entry index [Phase 2+])
 - fieldDefinitions: by componentType, by updatedAt, by authorId
-- dataFields: by parentNodeId, by updatedAt, by fieldDefinitionId
-- dataFieldHistory: by dataFieldId, by updatedAt
+- elementHistory: by elementId, by updatedAt, by parentId
 - imageBlobs: by blobId (primary)
 
 **Entity Relationships**:
 
-- TreeNode has 0..1 parent TreeNode (self-referential)
-- TreeNode has 0..n child TreeNodes
-- TreeNode has 0..n DataFields
-- DataField belongs to exactly 1 TreeNode
-- DataField references exactly 1 FieldDefinition
-- FieldDefinition has 0..n DataFields (one-to-many)
-- `single-image` DataField references exactly 1 `imageBlobs` row per non-null value
+- Element has 0..1 canonical parent Element (self-referential, via `parentId`)
+- Element has 0..n child Elements
+- A value-bearing Element references 0..1 `FieldDefinition` (via `fieldDefinitionId`); container (`kind: "node"`) elements typically reference none
+- FieldDefinition has 0..n Elements (one-to-many)
+- `single-image` Element references exactly 1 `imageBlobs` row per non-null value
+- [Phase 2+] Element has 0..n virtual appearances (`virtualParents`) and 0..n `reference` edges to other elements
 
 **Sorting policy**:
 
-- Children within a parent are displayed sorted by `updatedAt` ascending.
-- DataFields within a DataCard are displayed sorted by `cardOrder` ascending. New fields are auto-assigned the next available `cardOrder` on creation. Users can reorder fields manually (see DataField Reordering below).
+Every element carries a `siblingOrder`, assigned incrementally when it is minted. Children render in two visual regions (navigable child nodes below; inline value-bearing fields in the Data Card), and **both regions sort by `siblingOrder` ascending**. Positions are stable and manually reorderable.
 
-**TreeNode Rules**:
+- New elements get the next available `siblingOrder`, or a midpoint value when inserted between two existing siblings (e.g. via CreateNodeButton).
+- Manual reorder updates `siblingOrder` and is logged to history (see DataField Reordering below).
 
-- Root nodes must have parentId = null
-- Node names don't need to be unique
+**Element Rules**:
 
-**DataField Rules**:
-
-- All values are stored as strings (parsing/validation in UI)
+- Root elements have `parentId = null`
+- Names don't need to be unique; names are required (non-empty)
+- A value-bearing element with `value: null` is the empty/unfilled case; a container (`kind: "node"`) element holds `value: null` permanently
+- All values are stored per the `kind`'s value shape (parsing/validation in UI)
 - Metadata field `updatedAt` auto-updates on changes (client-assigned; server-assigned [Phase 2+])
 
 **Data Persistence**:
 
 - **Storage Abstraction**: Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
-- **Stores**: `treeNodes`, `dataFields`, `dataFieldHistory`, `fieldDefinitions` (renamed from `templates`; sync wiring per FieldDefinition Library spec)
+- **Stores**: `elements`, `elementHistory`, `fieldDefinitions`, `imageBlobs`
 - **Primary Storage**: Local browser storage for offline-first capability. All operations persist locally first.
 - **Cloud Sync**: Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
 - **Sync Triggers**: Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
-- **Single-user environment**: Uses constant `updatedBy` "localUser". Only `value` changes are logged, not `fieldName`/`componentType`/`fieldDefinitionId` changes. [Phase 2+]: real user identity, broader property change logging.
+- **Single-user environment**: Uses constant `updatedBy` "localUser". Changes to `value` / `name` / `subtitle` / `parentId` / `siblingOrder` are logged to history; `kind` / `fieldDefinitionId` changes are not. [Phase 2+]: real user identity.
+
+### Future Architecture (Phase 2+)
+
+Everything below is **deferred** — out of Phase-1 scope and not to be built now. It is recorded so the eventual schema changes are additive column-adds, not migrations. Full rationale lives in `opus_chat_unified_data_model.md`.
+
+- **Virtual appearances (`virtualParents`)** — the graph overlay. An element keeps its one canonical `parentId` (home) plus zero-or-more virtual appearances under other parents: one identity, many appearances, never a copy; edits write through to the single element. Stored as objects `{ parentId, siblingOrder, navMode, render }` so each appearance carries its own ordering and **portal-vs-citation** behaviour (navigable here, a non-navigable reference there). `virtualParents`, the cross-linked field, and the in-link all reduce to this one edge.
+- **Reference edges (`references`)** — one-way `depends-on` links, needed the first time an element's `value` is *computed* from other elements (sums, match rules, service-due countdowns). Walked backwards to answer "who recomputes when I change." A `relation` discriminator (`appearance` | `reference`) keeps these distinct from parent/appearance edges.
+- **Instance `config`** — authored answers to a `kind`'s contract for "smart" elements (bindings, thresholds, formulas-as-text, queries-as-text). Holds **values, never references** — a pointer to another element is an edge, not config. Phase 1 keeps per-`kind` config on `FieldDefinition`.
+- **Per-viewer overlays** — a user's/team's personal ordering and topology, layered sparsely at read time, never written into the shared element. Implies rollups/badges/search resolve against the *viewer's effective graph*, via a single `effectiveChildren(node, viewer)` chokepoint.
 
 ## Storage Architecture
+
+***Intent:*** *the app behaves identically offline and online; nothing a user does in the field is ever lost to a dropped connection.*
 
 ### Storage Abstraction
 
@@ -737,52 +793,58 @@ Storage operations are abstracted through a backend-agnostic interface, enabling
 
 ### Soft Deletion
 
-Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps:
+Elements support soft deletion via `deletedAt` timestamps:
 
-- Active entities have `deletedAt: null`
-- Deleted entities have `deletedAt: <timestamp>`
-- Queries filter out soft-deleted entities by default
-- Children of soft-deleted nodes are implicitly hidden (not cascade soft-deleted)
-- Restoration: see Snackbar & Undo for the 5s undo window; beyond that, restore is currently cloud-db-only. [Phase 2+]: in-app restore UI (a dedicated TreeNode view for browsing and restoring deleted items).
+- Active elements have `deletedAt: null`
+- Deleted elements have `deletedAt: <timestamp>`
+- Queries filter out soft-deleted elements by default
+- Children of soft-deleted elements are implicitly hidden (not cascade soft-deleted)
+- Restoration: see Snackbar & Undo for the 5s undo window; beyond that, restore is currently cloud-db-only. [Phase 2+]: in-app restore UI (a dedicated view for browsing and restoring deleted elements).
 
-#### TreeNode Example
+#### Element Example (a container — a Node)
 
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
-  "nodeName": "Main HVAC Unit",
-  "nodeSubtitle": "Building A Primary Cooling System",
+  "kind": "node",
+  "name": "Main HVAC Unit",
+  "subtitle": "Building A Primary Cooling System",
+  "value": null,
   "parentId": null,
+  "siblingOrder": 0,
+  "fieldDefinitionId": null,
   "updatedBy": "user456",
   "updatedAt": 1709942400000,
   "deletedAt": null
 }
 ```
 
-#### DataField Examples
+#### Element Examples (value-bearing — Fields, parented to the node above)
 
 ```json
 [
   {
     "id": "660e8400-e29b-41d4-a716-446655440004",
-    "fieldDefinitionId": "fd_serial_number",
-    "componentType": "text-kv",
-    "fieldName": "Serial Number",
-    "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
+    "kind": "text-kv",
+    "name": "Serial Number",
+    "subtitle": null,
     "value": "HVAC-2024-001",
-    "cardOrder": 0,
+    "parentId": "550e8400-e29b-41d4-a716-446655440001",
+    "siblingOrder": 0,
+    "fieldDefinitionId": "fd_serial_number",
     "updatedBy": "user123",
     "updatedAt": 1709856000000,
     "deletedAt": null
   },
   {
     "id": "660e8400-e29b-41d4-a716-446655440005",
-    "fieldDefinitionId": "fd_status",
-    "componentType": "enum-kv",
-    "fieldName": "Status",
-    "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
+    "kind": "enum-kv",
+    "name": "Status",
+    "subtitle": null,
     "value": "In Service",
-    "cardOrder": 1,
+    "parentId": "550e8400-e29b-41d4-a716-446655440001",
+    "siblingOrder": 1,
+    "fieldDefinitionId": "fd_status",
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
     "deletedAt": null
@@ -790,15 +852,15 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
 ]
 ```
 
-#### DataFieldHistory Example (for a single field)
+#### ElementHistory Example (for a single value-bearing element)
 
 ```json
 [
   {
     "id": "660e8400-e29b-41d4-a716-446655440004:0",
-    "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
-    "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
-    "componentType": "text-kv",
+    "elementId": "660e8400-e29b-41d4-a716-446655440004",
+    "parentId": "550e8400-e29b-41d4-a716-446655440001",
+    "kind": "text-kv",
     "action": "create",
     "property": "value",
     "prevValue": null,
@@ -809,9 +871,9 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
   },
   {
     "id": "660e8400-e29b-41d4-a716-446655440004:1",
-    "dataFieldId": "660e8400-e29b-41d4-a716-446655440004",
-    "parentNodeId": "550e8400-e29b-41d4-a716-446655440001",
-    "componentType": "text-kv",
+    "elementId": "660e8400-e29b-41d4-a716-446655440004",
+    "parentId": "550e8400-e29b-41d4-a716-446655440001",
+    "kind": "text-kv",
     "action": "update",
     "property": "value",
     "prevValue": "HVAC-2024-001",
@@ -819,6 +881,19 @@ Both `TreeNode` and `DataField` support soft deletion via `deletedAt` timestamps
     "updatedBy": "localUser",
     "updatedAt": 1709942400000,
     "rev": 1
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440004:2",
+    "elementId": "660e8400-e29b-41d4-a716-446655440004",
+    "parentId": "550e8400-e29b-41d4-a716-446655440001",
+    "kind": "text-kv",
+    "action": "update",
+    "property": "name",
+    "prevValue": "Serial Number",
+    "newValue": "Serial No.",
+    "updatedBy": "localUser",
+    "updatedAt": 1709943000000,
+    "rev": 2
   }
 ]
 ```

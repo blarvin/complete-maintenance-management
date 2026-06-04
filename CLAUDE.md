@@ -92,8 +92,7 @@ Components use discriminated unions + type guards (no prop spreading).
 
 ### Sorting Policy (per SPEC)
 
-- Children within parent: sorted by `updatedAt` ascending
-- DataFields within DataCard: sorted by `cardOrder` ascending
+- All children (child nodes and DataCard fields alike): sorted by `siblingOrder` ascending. `siblingOrder` is assigned incrementally at mint (midpoint when inserted between siblings).
 
 ---
 
