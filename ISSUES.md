@@ -15,18 +15,21 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-- **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
-- **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
+
 
 ### UX
 
-5.) **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
+1.) **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
 
-6.) **Under Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
+2.) **Under Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
 
-7.) **Composer pre-checked + disabled rows have no explanation** — Description / Tags / Type Of are pre-checked and grayed in the construction-view composer with no "(required)" label or tooltip; reads as broken rather than enforced.
+3.) **Composer pre-checked + disabled rows have no explanation** — Description / Tags / Type Of are pre-checked and grayed in the construction-view composer with no "(required)" label or tooltip; reads as broken rather than enforced.
 
-8.) **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
+4.) **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
+
+5.) **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
+
+6.) **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
 
 ### History
 
@@ -34,28 +37,20 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Features
 
-### FieldDefinition Library (specced — see SPECIFICATION.md → "DataField Components, Field Definitions, and Library")
-
-Implementation order is sequential; each step lands before the next.
-
-1. **Rename Template → FieldDefinition** — Mechanical rename per the Migration table in SPEC: `DataFieldTemplate` → `FieldDefinition`, `templates` Dexie table → `fieldDefinitions`, `templateId` → `fieldDefinitionId`, `TEMPLATE_IDS` → `FIELD_DEFINITION_IDS`, `seedTemplates.ts` → `seedFieldDefinitions.ts`, `ADD_FIELD_FROM_TEMPLATE` → `ADD_FIELD_FROM_DEFINITION`, etc. One PR, low risk because instance `fieldName` is already snapshotted.
-2. **Add `authorId` to FieldDefinition** — `"appDeveloper"` on seeds, `getCurrentUserId()` (currently `"localUser"`) on user-authored writes. Not surfaced in UI yet.
-3. **Wire `fieldDefinitions` through the sync layer** — IDBAdapter push/pull, FirestoreAdapter push/pull, SyncQueueManager enqueue on user-authored writes, LWW conflict resolution. Seed path stays local-only and skip-syncs as today.
-4. **FieldDefinition Authoring UI** — "+ New Field Definition…" affordance in the Field Composer expanding into an inline form (FieldComponent picker, label, component-specific config, measurement invariant validation). Save commits the FieldDefinition and immediately materialises a pre-checked Composer row for it. New pending-state hook (working name `useFieldDefinitionDraft`), distinct from `usePendingForms`.
-5. **Revisit edit/delete decisions** — at the tail of the work, check whether multi-user identity has landed; if not, the Phase-1 "no edit, admin-only delete" stance remains.
 
 ### Other
 
-- **Delete with undo** — Confirmation dialog (with descendant/field counts for nodes), Snackbar toast after delete, 5s undo window. Applies to both TreeNode and DataField delete. Requires a global Snackbar component (single-slot, auto-dismiss, optional action button). Blocks full cascade-delete work in LATER.md.
-- **Node metadata in TreeNodeDetails** — Show `createdAt`, last `updatedAt`, last `updatedBy`.
-- **Inline rename of NodeTitle and NodeSubtitle** — Decide UX (double-tap like DataFields? edit button?), then wire up. Currently nodes are rename-less after creation.
-- **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
-- **enum-kv allowOther support** — When `config.allowOther === true`, dropdown should append "Other…" that reveals an inline text input. Currently the dropdown only shows the fixed options list.
-- **Real single-image Component** — Replace the "Image upload coming soon" stub with: Dexie `imageBlobs` table, file picker, preview + full-size modal, MIME/size validation, caption input when `requireCaption`. Firestore blob sync and orphaned-blob GC are separate follow-ups (see LATER.md).
-- **Reconstitute broader adapter + sync test coverage** — `dbSchema`, `DeltaSync`, `firestoreAdapter`, `FullCollectionSync`, `idbAdapter`, `ServerAuthorityResolver`, `serviceLayer`, `syncManager`, `createNodeService` test files were deleted in the Template refactor. Narrow coverage for `seedTemplates`, `ADD_FIELD_FROM_TEMPLATE` handlers, and `measurementState` has been reconstituted; adapter/sync layer coverage is still missing. Worth restoring *before* (3) FieldDefinition sync wiring so the new code lands with coverage in place.
-- **Tab focus order audit** — Walk the app with keyboard only; fix any jumps that land in weird places after Tab across views.
-- **CreateNodeButton child UX** — Spec says n+1 buttons between children; LATER.md flags this as cluttered. Decide: keep interleaved buttons, switch to a single "Add sub-asset" that appends (or inserts relative to a selection), or something else. Then update spec + implementation to match.
-- NodeDetails should show createdAt, createdBy, and last edit date
+1.) **Delete with undo** — Confirmation dialog (with descendant/field counts for nodes), Snackbar toast after delete, 5s undo window. Applies to both TreeNode and DataField delete. Requires a global Snackbar component (single-slot, auto-dismiss, optional action button). Blocks full cascade-delete work in LATER.md.
+
+2.) **Node metadata in TreeNodeDetails** — Show `createdAt`, last `updatedAt`, last `updatedBy`.
+
+3.) **Inline rename of NodeTitle and NodeSubtitle** — Decide UX (double-tap like DataFields? edit button?), then wire up. Currently nodes are rename-less after creation.
+
+4.) **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
+
+5.) **enum-kv allowOther support** — When `config.allowOther === true`, dropdown should append "Other…" that reveals an inline text input. Currently the dropdown only shows the fixed options list.
+
+6.) **Real single-image Component** — Replace the "Image upload coming soon" stub with: Dexie `imageBlobs` table, file picker, preview + full-size modal, MIME/size validation, caption input when `requireCaption`. Firestore blob sync and orphaned-blob GC are separate follow-ups (see LATER.md).
 
 ---
 
