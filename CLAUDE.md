@@ -92,7 +92,7 @@ Components use discriminated unions + type guards (no prop spreading).
 
 ### Sorting Policy (per SPEC)
 
-- All children (child nodes and DataCard fields alike): sorted by `siblingOrder` ascending. `siblingOrder` is assigned incrementally at mint (midpoint when inserted between siblings).
+- All children (child nodes and DataCard fields alike): sorted by `siblingOrder` ascending. `siblingOrder` is assigned incrementally at mint; inserting between siblings renumbers the affected run (not fractional midpoints).
 
 ---
 
