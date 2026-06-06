@@ -24,8 +24,18 @@ const firebaseConfig = {
     appId: "1:1041054928276:web:f4804c9c7b35c66cd4d381",
 };
 
-// All collections in this Firestore database
-const COLLECTIONS = ['treeNodes', 'dataFields', 'dataFieldHistory'];
+// All collections in this Firestore database.
+// Current unified-Element model collections (see COLLECTIONS in src/constants.ts),
+// plus legacy collections kept here so leftover pre-refactor data also gets wiped.
+const COLLECTIONS = [
+    'elements',
+    'elementHistory',
+    'fieldDefinitions',
+    // Legacy (pre-Element-model) collections:
+    'treeNodes',
+    'dataFields',
+    'dataFieldHistory',
+];
 
 async function deleteCollection(db: ReturnType<typeof getFirestore>, collectionName: string): Promise<number> {
     const colRef = collection(db, collectionName);

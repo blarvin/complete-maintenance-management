@@ -27,7 +27,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 4.) **Save button has no visible disabled state** — Renders as plain gray text inside the button border; bump contrast or add a clear disabled style.
 
-5.) **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases.
+5.) **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases. In fact, it should be disabled if the seected value is the same as the current value, which is a common edge case.
 
 6.) **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
 
