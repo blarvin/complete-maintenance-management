@@ -225,3 +225,60 @@ export type DataFieldHistory =
   | EnumKvHistory
   | NumberKvHistory
   | SingleImageHistory;
+
+// ============================================================================
+// Unified Element Model (in-progress refactor — see plan: unified-element-data-model)
+// ============================================================================
+
+/**
+ * Element kind. `"node"` denotes a container (no value); the rest are
+ * value-bearing kinds matching FieldDefinition componentTypes.
+ */
+export type Kind = "node" | ComponentType;
+
+/**
+ * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.
+ * - `name` is required (max 100 chars), stays denormalized for header hot path.
+ * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
+ * - `value` is null for `kind === "node"`; typed by `kind` otherwise.
+ * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
+ * - `fieldDefinitionId` is null for nodes.
+ */
+export type Element = {
+  id: ID;
+  kind: Kind;
+  name: string;
+  subtitle: string | null;
+  value: DataFieldValue | null;
+  parentId: ID | null;
+  siblingOrder: number;
+  fieldDefinitionId: ID | null;
+  updatedBy: UserId;
+  updatedAt: number;
+  deletedAt: number | null;
+};
+
+/**
+ * Unified history log replacing dataFieldHistory. Captures structural changes
+ * (name, subtitle, parentId, siblingOrder) in addition to value edits.
+ *
+ * Primary key: `${elementId}:${rev}`.
+ */
+export type ElementHistoryProperty =
+  | "value"
+  | "name"
+  | "subtitle"
+  | "parentId"
+  | "siblingOrder";
+
+export type ElementHistory = {
+  id: string; // `${elementId}:${rev}`
+  elementId: ID;
+  rev: number; // monotonic per elementId, start 0 on create
+  action: "create" | "update" | "delete";
+  property: ElementHistoryProperty;
+  prevValue: unknown;
+  newValue: unknown;
+  updatedBy: UserId;
+  updatedAt: number;
+};

@@ -29,6 +29,8 @@ export const COLLECTIONS = {
     FIELD_DEFINITIONS: "fieldDefinitions",
     FIELDS: "dataFields",
     HISTORY: "dataFieldHistory",
+    ELEMENTS: "elements",
+    ELEMENT_HISTORY: "elementHistory",
 } as const;
 
 /*

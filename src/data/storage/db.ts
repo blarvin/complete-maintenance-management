@@ -3,7 +3,7 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { TreeNode, DataField, DataFieldHistory, FieldDefinition } from '../models';
+import type { TreeNode, DataField, DataFieldHistory, FieldDefinition, Element, ElementHistory } from '../models';
 
 export type SyncOperation =
   | 'create-node'
@@ -40,6 +40,8 @@ export class AppDatabase extends Dexie {
   fieldDefinitions!: Table<FieldDefinition, string>;
   fields!: Table<DataField, string>;
   history!: Table<DataFieldHistory, string>;
+  elements!: Table<Element, string>;
+  elementHistory!: Table<ElementHistory, string>;
   syncQueue!: Table<SyncQueueItem, string>;
   syncMetadata!: Table<SyncMetadata, string>;
 
@@ -147,6 +149,32 @@ export class AppDatabase extends Dexie {
         tx.table('fields').clear(),
         tx.table('history').clear(),
         tx.table('fieldDefinitions').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
+
+    // Version 7: Unified Element model. Adds `elements` and `elementHistory`
+    // stores alongside the legacy `nodes`/`fields`/`history` stores. Legacy
+    // stores remain until adapters are rewritten (next commit), at which
+    // point a v8 drops them. Clear-on-upgrade — no migration path.
+    this.version(7).stores({
+      nodes: 'id, parentId, updatedAt, deletedAt',
+      fieldDefinitions: 'id, componentType, authorId, updatedAt, deletedAt',
+      fields: 'id, parentNodeId, fieldDefinitionId, componentType, cardOrder, updatedAt, deletedAt',
+      history: 'id, dataFieldId, parentNodeId, updatedAt, rev',
+      elements: 'id, parentId, kind, fieldDefinitionId, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('nodes').clear(),
+        tx.table('fields').clear(),
+        tx.table('history').clear(),
+        tx.table('fieldDefinitions').clear(),
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
         tx.table('syncQueue').clear(),
         tx.table('syncMetadata').clear(),
       ]);
