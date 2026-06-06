@@ -1,7 +1,7 @@
 import type { StorageAdapter, StorageResult } from '../storage/storageAdapter';
-import type { INodeQueries, IFieldQueries, IFieldDefinitionQueries } from './types';
+import type { INodeQueries, IFieldQueries, IFieldDefinitionQueries, IElementQueries } from './types';
 
-export type { INodeQueries, IFieldQueries, IFieldDefinitionQueries } from './types';
+export type { INodeQueries, IFieldQueries, IFieldDefinitionQueries, IElementQueries } from './types';
 
 function unwrap<T>(result: StorageResult<T>): T {
   return result.data;
@@ -30,6 +30,17 @@ export function fieldQueriesFromAdapter(adapter: StorageAdapter): IFieldQueries 
   };
 }
 
+export function elementQueriesFromAdapter(adapter: StorageAdapter): IElementQueries {
+  return {
+    getRootElements: async () => unwrap(await adapter.listRootElements()),
+    getElementById: async (id) => unwrap(await adapter.getElement(id)),
+    getChildren: async (parentId) => unwrap(await adapter.listChildElements(parentId)),
+    getChildrenByKind: async (parentId, kind) => unwrap(await adapter.listChildElementsByKind(parentId, kind)),
+    getElementHistory: async (elementId) => unwrap(await adapter.getElementHistory(elementId)),
+    nextSiblingOrder: async (parentId) => unwrap(await adapter.nextSiblingOrder(parentId)),
+  };
+}
+
 export function fieldDefinitionQueriesFromAdapter(adapter: StorageAdapter): IFieldDefinitionQueries {
   return {
     listFieldDefinitions: async () => unwrap(await adapter.listFieldDefinitions()),
@@ -44,6 +55,7 @@ export function fieldDefinitionQueriesFromAdapter(adapter: StorageAdapter): IFie
 let activeNodeQueries: INodeQueries | null = null;
 let activeFieldQueries: IFieldQueries | null = null;
 let activeFieldDefinitionQueries: IFieldDefinitionQueries | null = null;
+let activeElementQueries: IElementQueries | null = null;
 
 export function getNodeQueries(): INodeQueries {
   if (!activeNodeQueries) throw new Error('Node queries not initialized. Call initializeQueries() first.');
@@ -60,10 +72,16 @@ export function getFieldDefinitionQueries(): IFieldDefinitionQueries {
   return activeFieldDefinitionQueries;
 }
 
+export function getElementQueries(): IElementQueries {
+  if (!activeElementQueries) throw new Error('Element queries not initialized. Call initializeQueries() first.');
+  return activeElementQueries;
+}
+
 export function initializeQueries(adapter: StorageAdapter): void {
   activeNodeQueries = nodeQueriesFromAdapter(adapter);
   activeFieldQueries = fieldQueriesFromAdapter(adapter);
   activeFieldDefinitionQueries = fieldDefinitionQueriesFromAdapter(adapter);
+  activeElementQueries = elementQueriesFromAdapter(adapter);
 }
 
 export function setNodeQueries(q: INodeQueries): void {
@@ -78,8 +96,13 @@ export function setFieldDefinitionQueries(q: IFieldDefinitionQueries): void {
   activeFieldDefinitionQueries = q;
 }
 
+export function setElementQueries(q: IElementQueries): void {
+  activeElementQueries = q;
+}
+
 export function resetQueries(): void {
   activeNodeQueries = null;
   activeFieldQueries = null;
   activeFieldDefinitionQueries = null;
+  activeElementQueries = null;
 }
