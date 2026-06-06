@@ -86,8 +86,8 @@ export const BranchView = component$((props: BranchViewProps) => {
                         <TreeNode
                             key={ucNode.id}
                             id={ucNode.id}
-                            nodeName={ucNode.nodeName}
-                            nodeSubtitle={ucNode.nodeSubtitle}
+                            nodeName={ucNode.name}
+                            nodeSubtitle={ucNode.subtitle}
                             nodeState="UNDER_CONSTRUCTION"
                             isChildConstruction={true}
                             onCancel$={cancel$}

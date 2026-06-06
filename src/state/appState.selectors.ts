@@ -34,7 +34,7 @@ export const selectors = {
         }
         
         // In BRANCH view
-        if (appState.view.nodeId === nodeId) {
+        if (appState.view.elementId === nodeId) {
             return 'PARENT';
         }
         
@@ -55,7 +55,7 @@ export const selectors = {
         }
         
         // In BRANCH view
-        if (appState.view.nodeId === nodeId) {
+        if (appState.view.elementId === nodeId) {
             return 'PARENT';
         }
         
@@ -76,7 +76,7 @@ export const selectors = {
      * Get the DataField state for a given field
      */
     getDataFieldState: (appState: AppState, fieldId: string): DataFieldState => {
-        return appState.editingFieldId === fieldId ? 'EDITING' : 'DISPLAY';
+        return appState.editingElementId === fieldId ? 'EDITING' : 'DISPLAY';
     },
 
     /**
@@ -104,7 +104,7 @@ export const selectors = {
      * Get current node ID (null if ROOT view)
      */
     getCurrentNodeId: (appState: AppState): string | null => {
-        return appState.view.state === 'BRANCH' ? appState.view.nodeId : null;
+        return appState.view.state === 'BRANCH' ? appState.view.elementId : null;
     },
 
     /**

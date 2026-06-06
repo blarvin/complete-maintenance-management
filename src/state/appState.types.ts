@@ -5,6 +5,7 @@
  */
 
 import { loadUIPrefs } from './uiPrefs';
+import type { Kind } from '../data/models';
 
 // Re-export TreeNode state types from the canonical source
 export type { TreeNodeState, DisplayNodeState } from '../components/TreeNode/types';
@@ -12,9 +13,9 @@ export type { TreeNodeState, DisplayNodeState } from '../components/TreeNode/typ
 /**
  * View States - Which view is currently active
  */
-export type ViewState = 
+export type ViewState =
     | { state: 'ROOT' }
-    | { state: 'BRANCH'; nodeId: string };
+    | { state: 'BRANCH'; elementId: string };
 
 /**
  * DataCard States
@@ -39,22 +40,25 @@ export type DataFieldDetailsState =
     | 'EXPANDED';
 
 /**
- * Under-construction node data
+ * Under-construction element data. Phase 1: only `kind: "node"` reaches this
+ * state; value-bearing kinds are minted via CREATE_ELEMENT_FROM_DEFINITION
+ * with no construction step.
  */
 export type UnderConstructionData = {
     id: string;
     parentId: string | null;
-    nodeName: string;
-    nodeSubtitle: string;
+    kind: Kind;
+    name: string;
+    subtitle: string;
 } | null;
 
 /**
- * UI State - Persisted preferences
+ * UI State - Persisted preferences. All sets are keyed by elementId.
  */
 export type UIState = {
-    expandedCards: Set<string>;        // nodeId -> card is expanded
-    expandedFieldDetails: Set<string>; // fieldId -> details are expanded
-    expandedNodeDetails: Set<string>;  // nodeId -> node details panel is expanded
+    expandedCards: Set<string>;        // container elementId -> card is expanded
+    expandedFieldDetails: Set<string>; // field elementId -> details are expanded
+    expandedNodeDetails: Set<string>;  // container elementId -> node details panel is expanded
 };
 
 /**
@@ -73,8 +77,8 @@ export type AppState = {
     // UI preferences (persisted)
     ui: UIState;
     
-    // Currently editing field (only one at a time per SPEC)
-    editingFieldId: string | null;
+    // Currently editing element (only one at a time per SPEC)
+    editingElementId: string | null;
 };
 
 /**
@@ -91,6 +95,6 @@ export function createInitialState(): AppState {
             expandedFieldDetails: prefs.expandedFieldDetails,
             expandedNodeDetails: prefs.expandedNodeDetails,
         },
-        editingFieldId: null,
+        editingElementId: null,
     };
 }

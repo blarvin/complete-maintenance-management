@@ -66,8 +66,9 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         await startConstruction$({
             id,
             parentId: options.parentId,
-            nodeName: '',
-            nodeSubtitle: '',
+            kind: 'node',
+            name: '',
+            subtitle: '',
         });
     });
 

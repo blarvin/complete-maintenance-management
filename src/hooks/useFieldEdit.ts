@@ -93,7 +93,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
 
     const { suppressBlurUntil } = useFocusManager(
         editInputRef,
-        () => appState.editingFieldId === options.fieldId
+        () => appState.editingElementId === options.fieldId
     );
 
     // Auto-enter edit mode on mount when used in the FieldComposer (pendingMode)
@@ -104,7 +104,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     useVisibleTask$(({ cleanup }) => {
         if (!options.pendingMode?.autoFocus) return;
         if (options.initialValue !== null) return;
-        if (appState.editingFieldId === options.fieldId) return;
+        if (appState.editingElementId === options.fieldId) return;
         startFieldEdit$(options.fieldId);
         editValue.value = options.format(null);
         const t = setTimeout(() => {
@@ -117,13 +117,13 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // === Edit Flow Handlers ===
 
     const beginEdit$ = $(() => {
-        if (appState.editingFieldId === options.fieldId) return;
+        if (appState.editingElementId === options.fieldId) return;
         startFieldEdit$(options.fieldId);
         editValue.value = options.format(currentValue.value);
     });
 
     const save$ = $(async () => {
-        if (appState.editingFieldId !== options.fieldId) return;
+        if (appState.editingElementId !== options.fieldId) return;
         const fieldId = options.fieldId;
         const prevVal = currentValue.value;
         let newVal: T | null;
@@ -176,7 +176,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     });
 
     const cancel$ = $(() => {
-        if (appState.editingFieldId !== options.fieldId) return;
+        if (appState.editingElementId !== options.fieldId) return;
         stopFieldEdit$();
         editValue.value = options.format(currentValue.value);
     });
@@ -185,7 +185,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // pending row so typed values aren't lost when the user clicks Save in the
     // composer footer (or moves to another row).
     useOnDocument('pointerdown', $(async (ev: Event) => {
-        if (appState.editingFieldId !== options.fieldId) return;
+        if (appState.editingElementId !== options.fieldId) return;
         const container = rootRef.value;
         const target = ev.target as Node | null;
         if (container && target && !container.contains(target)) {
@@ -206,7 +206,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
 
     const inputBlur$ = $(async () => {
         if (Date.now() < suppressBlurUntil.value) return;
-        if (appState.editingFieldId === options.fieldId) {
+        if (appState.editingElementId === options.fieldId) {
             if (options.pendingMode) {
                 await save$();
             } else {
@@ -227,7 +227,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     });
 
     const inputPointerDown$ = $(async (ev: PointerEvent | MouseEvent) => {
-        if (appState.editingFieldId !== options.fieldId) return;
+        if (appState.editingElementId !== options.fieldId) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
         suppressBlurUntil.value = Date.now() + BLUR_SUPPRESS_WINDOW_MS;
@@ -240,7 +240,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // === Display Value Event Handlers ===
 
     const valuePointerDown$ = $(async (ev: PointerEvent | MouseEvent) => {
-        if (appState.editingFieldId === options.fieldId) return;
+        if (appState.editingElementId === options.fieldId) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
         const isDouble = await checkDoubleTap$(x, y);
@@ -250,7 +250,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     });
 
     const valueKeyDown$ = $((e: KeyboardEvent) => {
-        if (appState.editingFieldId === options.fieldId) return;
+        if (appState.editingElementId === options.fieldId) return;
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             beginEdit$();

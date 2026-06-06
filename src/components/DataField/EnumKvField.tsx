@@ -77,13 +77,13 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     });
 
     const open$ = $(() => {
-        if (appState.editingFieldId === props.id) return;
+        if (appState.editingElementId === props.id) return;
         startFieldEdit$(props.id);
         isOpen.value = true;
     });
 
     const close$ = $(() => {
-        if (appState.editingFieldId === props.id) stopFieldEdit$();
+        if (appState.editingElementId === props.id) stopFieldEdit$();
         isOpen.value = false;
     });
 

@@ -25,7 +25,7 @@ function createTestState(overrides?: Partial<AppState>): AppState {
             expandedFieldDetails: new Set<string>(),
             expandedNodeDetails: new Set<string>(),
         },
-        editingFieldId: null,
+        editingElementId: null,
         ...overrides,
     };
 }
@@ -36,21 +36,21 @@ describe('State Transitions', () => {
             const state = createTestState();
             transitions.navigateToNode(state, 'node-1');
             
-            expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'node-1' });
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
         });
 
         it('transitions from BRANCH to deeper BRANCH', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'parent-1' },
+                view: { state: 'BRANCH', elementId: 'parent-1' },
             });
             transitions.navigateToNode(state, 'child-1');
             
-            expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'child-1' });
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'child-1' });
         });
 
         it('pushes current nodeId to history when navigating deeper', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'parent-1' },
+                view: { state: 'BRANCH', elementId: 'parent-1' },
                 history: [],
             });
             transitions.navigateToNode(state, 'child-1');
@@ -66,14 +66,14 @@ describe('State Transitions', () => {
             transitions.navigateToNode(state, 'level-3');
             
             expect(state.history).toEqual(['level-1', 'level-2']);
-            expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'level-3' });
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'level-3' });
         });
 
-        it('clears editingFieldId on navigation', () => {
-            const state = createTestState({ editingFieldId: 'field-1' });
+        it('clears editingElementId on navigation', () => {
+            const state = createTestState({ editingElementId: 'field-1' });
             transitions.navigateToNode(state, 'node-1');
             
-            expect(state.editingFieldId).toBeNull();
+            expect(state.editingElementId).toBeNull();
         });
 
         it('GUARD: blocks navigation while under construction', () => {
@@ -81,8 +81,9 @@ describe('State Transitions', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             
@@ -96,7 +97,7 @@ describe('State Transitions', () => {
     describe('navigateUp', () => {
         it('transitions from BRANCH to ROOT when parentId is null', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
+                view: { state: 'BRANCH', elementId: 'node-1' },
             });
             transitions.navigateUp(state, null);
             
@@ -105,17 +106,17 @@ describe('State Transitions', () => {
 
         it('transitions from BRANCH to parent BRANCH', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'child-1' },
+                view: { state: 'BRANCH', elementId: 'child-1' },
                 history: ['parent-1'],
             });
             transitions.navigateUp(state, 'parent-1');
             
-            expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'parent-1' });
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'parent-1' });
         });
 
         it('pops history when navigating up', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'level-3' },
+                view: { state: 'BRANCH', elementId: 'level-3' },
                 history: ['level-1', 'level-2'],
             });
             transitions.navigateUp(state, 'level-2');
@@ -125,7 +126,7 @@ describe('State Transitions', () => {
 
         it('clears history when navigating to ROOT', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
+                view: { state: 'BRANCH', elementId: 'node-1' },
                 history: ['a', 'b', 'c'],
             });
             transitions.navigateUp(state, null);
@@ -133,14 +134,14 @@ describe('State Transitions', () => {
             expect(state.history).toEqual([]);
         });
 
-        it('clears editingFieldId on navigation', () => {
+        it('clears editingElementId on navigation', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
-                editingFieldId: 'field-1',
+                view: { state: 'BRANCH', elementId: 'node-1' },
+                editingElementId: 'field-1',
             });
             transitions.navigateUp(state, null);
             
-            expect(state.editingFieldId).toBeNull();
+            expect(state.editingElementId).toBeNull();
         });
 
         it('GUARD: does nothing when already at ROOT', () => {
@@ -154,26 +155,27 @@ describe('State Transitions', () => {
 
         it('GUARD: blocks navigation while under construction', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
+                view: { state: 'BRANCH', elementId: 'node-1' },
                 underConstruction: {
                     id: 'new-node',
                     parentId: 'node-1',
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             
             transitions.navigateUp(state, null);
             
             // Should not have changed
-            expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'node-1' });
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
         });
     });
 
     describe('navigateToRoot', () => {
         it('transitions from BRANCH to ROOT', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'deep-node' },
+                view: { state: 'BRANCH', elementId: 'deep-node' },
                 history: ['a', 'b', 'c'],
             });
             transitions.navigateToRoot(state);
@@ -189,30 +191,31 @@ describe('State Transitions', () => {
             expect(state.view).toEqual({ state: 'ROOT' });
         });
 
-        it('clears editingFieldId', () => {
+        it('clears editingElementId', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
-                editingFieldId: 'field-1',
+                view: { state: 'BRANCH', elementId: 'node-1' },
+                editingElementId: 'field-1',
             });
             transitions.navigateToRoot(state);
             
-            expect(state.editingFieldId).toBeNull();
+            expect(state.editingElementId).toBeNull();
         });
 
         it('GUARD: blocks while under construction', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
+                view: { state: 'BRANCH', elementId: 'node-1' },
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             
             transitions.navigateToRoot(state);
             
-            expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'node-1' });
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
         });
     });
 
@@ -222,8 +225,9 @@ describe('State Transitions', () => {
             const ucData = {
                 id: 'new-node',
                 parentId: null,
-                nodeName: '',
-                nodeSubtitle: '',
+                kind: 'node' as const,
+                name: '',
+                subtitle: '',
             };
             
             transitions.startConstruction(state, ucData);
@@ -235,16 +239,18 @@ describe('State Transitions', () => {
             const existingUC = {
                 id: 'existing',
                 parentId: null,
-                nodeName: 'Existing',
-                nodeSubtitle: '',
+                kind: 'node' as const,
+                name: 'Existing',
+                subtitle: '',
             };
             const state = createTestState({ underConstruction: existingUC });
             
             transitions.startConstruction(state, {
                 id: 'new',
                 parentId: null,
-                nodeName: '',
-                nodeSubtitle: '',
+                kind: 'node',
+                name: '',
+                subtitle: '',
             });
             
             // Should still be the existing one
@@ -258,8 +264,9 @@ describe('State Transitions', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             
@@ -281,8 +288,9 @@ describe('State Transitions', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: 'New Node',
-                    nodeSubtitle: 'Subtitle',
+                    kind: 'node',
+                    name: 'New Node',
+                    subtitle: 'Subtitle',
                 },
             });
             
@@ -351,27 +359,27 @@ describe('State Transitions', () => {
     });
 
     describe('startFieldEdit', () => {
-        it('sets editingFieldId', () => {
+        it('sets editingElementId', () => {
             const state = createTestState();
             transitions.startFieldEdit(state, 'field-1');
             
-            expect(state.editingFieldId).toBe('field-1');
+            expect(state.editingElementId).toBe('field-1');
         });
 
-        it('replaces existing editingFieldId (single-field edit guarantee)', () => {
-            const state = createTestState({ editingFieldId: 'field-1' });
+        it('replaces existing editingElementId (single-field edit guarantee)', () => {
+            const state = createTestState({ editingElementId: 'field-1' });
             transitions.startFieldEdit(state, 'field-2');
             
-            expect(state.editingFieldId).toBe('field-2');
+            expect(state.editingElementId).toBe('field-2');
         });
     });
 
     describe('stopFieldEdit', () => {
-        it('clears editingFieldId', () => {
-            const state = createTestState({ editingFieldId: 'field-1' });
+        it('clears editingElementId', () => {
+            const state = createTestState({ editingElementId: 'field-1' });
             transitions.stopFieldEdit(state);
             
-            expect(state.editingFieldId).toBeNull();
+            expect(state.editingElementId).toBeNull();
         });
     });
 });
@@ -383,8 +391,9 @@ describe('State Selectors', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             
@@ -401,7 +410,7 @@ describe('State Selectors', () => {
 
         it('returns PARENT for current node in BRANCH view', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'parent-node' },
+                view: { state: 'BRANCH', elementId: 'parent-node' },
             });
             
             const result = selectors.getTreeNodeState(state, 'parent-node', null);
@@ -410,7 +419,7 @@ describe('State Selectors', () => {
 
         it('returns CHILD for other nodes in BRANCH view', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'parent-node' },
+                view: { state: 'BRANCH', elementId: 'parent-node' },
             });
             
             const result = selectors.getTreeNodeState(state, 'child-node', 'parent-node');
@@ -424,8 +433,9 @@ describe('State Selectors', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             
@@ -456,14 +466,14 @@ describe('State Selectors', () => {
 
     describe('getDataFieldState', () => {
         it('returns EDITING when field is being edited', () => {
-            const state = createTestState({ editingFieldId: 'field-1' });
+            const state = createTestState({ editingElementId: 'field-1' });
             
             const result = selectors.getDataFieldState(state, 'field-1');
             expect(result).toBe('EDITING');
         });
 
         it('returns DISPLAY when field is not being edited', () => {
-            const state = createTestState({ editingFieldId: 'field-1' });
+            const state = createTestState({ editingElementId: 'field-1' });
             
             const result = selectors.getDataFieldState(state, 'field-2');
             expect(result).toBe('DISPLAY');
@@ -507,7 +517,7 @@ describe('State Selectors', () => {
 
         it('returns false for BRANCH view', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
+                view: { state: 'BRANCH', elementId: 'node-1' },
             });
             expect(selectors.isRootView(state)).toBe(false);
         });
@@ -521,7 +531,7 @@ describe('State Selectors', () => {
 
         it('returns nodeId for BRANCH view', () => {
             const state = createTestState({
-                view: { state: 'BRANCH', nodeId: 'node-1' },
+                view: { state: 'BRANCH', elementId: 'node-1' },
             });
             expect(selectors.getCurrentNodeId(state)).toBe('node-1');
         });
@@ -533,8 +543,9 @@ describe('State Selectors', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             expect(selectors.isUnderConstruction(state, 'new-node')).toBe(true);
@@ -545,8 +556,9 @@ describe('State Selectors', () => {
                 underConstruction: {
                     id: 'new-node',
                     parentId: null,
-                    nodeName: '',
-                    nodeSubtitle: '',
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
                 },
             });
             expect(selectors.isUnderConstruction(state, 'other-node')).toBe(false);
@@ -564,10 +576,10 @@ describe('State Invariants', () => {
         const state = createTestState();
         
         transitions.startFieldEdit(state, 'field-1');
-        expect(state.editingFieldId).toBe('field-1');
+        expect(state.editingElementId).toBe('field-1');
         
         transitions.startFieldEdit(state, 'field-2');
-        expect(state.editingFieldId).toBe('field-2');
+        expect(state.editingElementId).toBe('field-2');
         
         // field-1 is no longer editing
         expect(selectors.getDataFieldState(state, 'field-1')).toBe('DISPLAY');
@@ -575,10 +587,10 @@ describe('State Invariants', () => {
     });
 
     it('navigation clears editing state', () => {
-        const state = createTestState({ editingFieldId: 'field-1' });
+        const state = createTestState({ editingElementId: 'field-1' });
         
         transitions.navigateToNode(state, 'node-1');
-        expect(state.editingFieldId).toBeNull();
+        expect(state.editingElementId).toBeNull();
     });
 
     it('cannot start multiple constructions', () => {
@@ -587,15 +599,17 @@ describe('State Invariants', () => {
         transitions.startConstruction(state, {
             id: 'first',
             parentId: null,
-            nodeName: '',
-            nodeSubtitle: '',
+            kind: 'node',
+            name: '',
+            subtitle: '',
         });
         
         transitions.startConstruction(state, {
             id: 'second',
             parentId: null,
-            nodeName: '',
-            nodeSubtitle: '',
+            kind: 'node',
+            name: '',
+            subtitle: '',
         });
         
         expect(state.underConstruction?.id).toBe('first');
@@ -603,24 +617,25 @@ describe('State Invariants', () => {
 
     it('construction blocks all navigation', () => {
         const state = createTestState({
-            view: { state: 'BRANCH', nodeId: 'node-1' },
+            view: { state: 'BRANCH', elementId: 'node-1' },
             underConstruction: {
                 id: 'new-node',
                 parentId: 'node-1',
-                nodeName: '',
-                nodeSubtitle: '',
+                kind: 'node',
+                name: '',
+                subtitle: '',
             },
         });
         
         // Try all navigation methods
         transitions.navigateToNode(state, 'other-node');
-        expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'node-1' });
+        expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
         
         transitions.navigateUp(state, null);
-        expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'node-1' });
+        expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
         
         transitions.navigateToRoot(state);
-        expect(state.view).toEqual({ state: 'BRANCH', nodeId: 'node-1' });
+        expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
     });
 });
 
