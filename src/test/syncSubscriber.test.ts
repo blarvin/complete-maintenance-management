@@ -27,36 +27,36 @@ describe('syncSubscriber', () => {
     bus.clear();
   });
 
-  it('calls triggerSync on NODE_WRITTEN', () => {
+  it('calls triggerSync on ELEMENT_WRITTEN (node)', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'NODE_WRITTEN', node: { id: 'n1', parentId: null, nodeName: 'X', deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
-  it('calls triggerSync on NODE_HARD_DELETED', () => {
+  it('calls triggerSync on ELEMENT_HARD_DELETED', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'NODE_HARD_DELETED', nodeId: 'n1' });
+    bus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
-  it('calls triggerSync on FIELD_WRITTEN', () => {
+  it('calls triggerSync on ELEMENT_WRITTEN (field)', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
-  it('calls triggerSync on FIELD_DELETED', () => {
+  it('calls triggerSync on ELEMENT_HARD_DELETED (field)', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'FIELD_DELETED', fieldId: 'f1' });
+    bus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: 'f1' });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
   it('calls triggerSync once per event for rapid emits', () => {
     subscribeSyncTrigger();
     const events: StorageEvent[] = [
-      { type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', value: null, deletedAt: null } },
-      { type: 'FIELD_WRITTEN', field: { id: 'f2', parentNodeId: 'n1', value: null, deletedAt: null } },
-      { type: 'NODE_WRITTEN', node: { id: 'n1', parentId: null, nodeName: 'X', deletedAt: null } },
+      { type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, deletedAt: null } },
+      { type: 'ELEMENT_WRITTEN', element: { id: 'f2', kind: 'text-kv', parentId: 'n1', name: 'F2', value: null, deletedAt: null } },
+      { type: 'ELEMENT_WRITTEN', element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, deletedAt: null } },
     ];
     for (const e of events) bus.emit(e);
     // triggerSync is called per event; debounce is inside triggerSync itself
@@ -65,11 +65,11 @@ describe('syncSubscriber', () => {
 
   it('unsubscribe stops triggering sync', () => {
     const unsub = subscribeSyncTrigger();
-    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f1', parentNodeId: 'n1', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
 
     unsub();
-    bus.emit({ type: 'FIELD_WRITTEN', field: { id: 'f2', parentNodeId: 'n1', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f2', kind: 'text-kv', parentId: 'n1', name: 'F2', value: null, deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce(); // still 1, not 2
   });
 });

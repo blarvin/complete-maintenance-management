@@ -41,9 +41,9 @@ describe('SyncPusher', () => {
 
   it('processes all items in queue', async () => {
     const queueItems: SyncQueueItem[] = [
-      { id: 'q1', entityType: 'node', entityId: 'node-1', operation: 'create-node', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
-      { id: 'q2', entityType: 'node', entityId: 'node-2', operation: 'update-node', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
-      { id: 'q3', entityType: 'field', entityId: 'field-1', operation: 'create-field', payload: {}, timestamp: 3000, status: 'pending', retryCount: 0 },
+      { id: 'q1', entityType: 'element', entityId: 'el-1', operation: 'create-element', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
+      { id: 'q2', entityType: 'element', entityId: 'el-2', operation: 'update-element', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
+      { id: 'q3', entityType: 'element', entityId: 'el-3', operation: 'create-element-history', payload: {}, timestamp: 3000, status: 'pending', retryCount: 0 },
     ];
 
     vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue(queueItems);
@@ -59,8 +59,8 @@ describe('SyncPusher', () => {
 
   it('marks items as failed when remote throws', async () => {
     const queueItems: SyncQueueItem[] = [
-      { id: 'q1', entityType: 'node', entityId: 'node-1', operation: 'create-node', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
-      { id: 'q2', entityType: 'node', entityId: 'node-2', operation: 'create-node', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
+      { id: 'q1', entityType: 'element', entityId: 'el-1', operation: 'create-element', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
+      { id: 'q2', entityType: 'element', entityId: 'el-2', operation: 'create-element', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
     ];
 
     const error = new Error('Network error');
@@ -78,9 +78,9 @@ describe('SyncPusher', () => {
 
   it('continues processing after a failure', async () => {
     const queueItems: SyncQueueItem[] = [
-      { id: 'q1', entityType: 'node', entityId: 'node-1', operation: 'create-node', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
-      { id: 'q2', entityType: 'node', entityId: 'node-2', operation: 'create-node', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
-      { id: 'q3', entityType: 'node', entityId: 'node-3', operation: 'create-node', payload: {}, timestamp: 3000, status: 'pending', retryCount: 0 },
+      { id: 'q1', entityType: 'element', entityId: 'el-1', operation: 'create-element', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
+      { id: 'q2', entityType: 'element', entityId: 'el-2', operation: 'create-element', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
+      { id: 'q3', entityType: 'element', entityId: 'el-3', operation: 'create-element', payload: {}, timestamp: 3000, status: 'pending', retryCount: 0 },
     ];
 
     vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue(queueItems);
@@ -100,8 +100,8 @@ describe('SyncPusher', () => {
   it('applies items in queue order', async () => {
     const callOrder: string[] = [];
     const queueItems: SyncQueueItem[] = [
-      { id: 'q1', entityType: 'node', entityId: 'node-1', operation: 'create-node', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
-      { id: 'q2', entityType: 'node', entityId: 'node-2', operation: 'create-node', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
+      { id: 'q1', entityType: 'element', entityId: 'el-1', operation: 'create-element', payload: {}, timestamp: 1000, status: 'pending', retryCount: 0 },
+      { id: 'q2', entityType: 'element', entityId: 'el-2', operation: 'create-element', payload: {}, timestamp: 2000, status: 'pending', retryCount: 0 },
     ];
 
     vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue(queueItems);

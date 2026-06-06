@@ -3,16 +3,9 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { TreeNode, DataField, DataFieldHistory, FieldDefinition, Element, ElementHistory } from '../models';
+import type { FieldDefinition, Element, ElementHistory } from '../models';
 
 export type SyncOperation =
-  | 'create-node'
-  | 'update-node'
-  | 'delete-node'
-  | 'create-field'
-  | 'update-field'
-  | 'delete-field'
-  | 'create-history'
   | 'create-fieldDefinition'
   | 'update-fieldDefinition'
   | 'create-element'
@@ -23,7 +16,7 @@ export type SyncOperation =
 export type SyncQueueItem = {
   id: string;
   operation: SyncOperation;
-  entityType: 'node' | 'field' | 'field-history' | 'fieldDefinition' | 'element' | 'element-history';
+  entityType: 'fieldDefinition' | 'element' | 'element-history';
   entityId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any; // Dynamic payload for different entity types
@@ -40,10 +33,7 @@ export type SyncMetadata = {
 };
 
 export class AppDatabase extends Dexie {
-  nodes!: Table<TreeNode, string>;
   fieldDefinitions!: Table<FieldDefinition, string>;
-  fields!: Table<DataField, string>;
-  history!: Table<DataFieldHistory, string>;
   elements!: Table<Element, string>;
   elementHistory!: Table<ElementHistory, string>;
   syncQueue!: Table<SyncQueueItem, string>;
@@ -176,6 +166,28 @@ export class AppDatabase extends Dexie {
         tx.table('nodes').clear(),
         tx.table('fields').clear(),
         tx.table('history').clear(),
+        tx.table('fieldDefinitions').clear(),
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
+
+    // Version 8: Drop the legacy `nodes` / `fields` / `history` stores now that
+    // the entire data + sync path runs on `elements` / `elementHistory`.
+    // Setting a store to `null` deletes it. Clear-on-upgrade — no migration.
+    this.version(8).stores({
+      nodes: null,
+      fields: null,
+      history: null,
+      fieldDefinitions: 'id, componentType, authorId, updatedAt, deletedAt',
+      elements: 'id, parentId, kind, fieldDefinitionId, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
         tx.table('fieldDefinitions').clear(),
         tx.table('elements').clear(),
         tx.table('elementHistory').clear(),

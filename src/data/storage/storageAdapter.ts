@@ -1,4 +1,4 @@
-import type { DataField, DataFieldHistory, FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, TreeNode, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
+import type { FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -16,18 +16,6 @@ export type StorageResult<T> = {
   meta?: StorageMeta;
 };
 
-export type StorageNodeCreate = {
-  id: string;
-  parentId: string | null;
-  nodeName: string;
-  nodeSubtitle: string;
-};
-
-export type StorageNodeUpdate = {
-  nodeName?: string;
-  nodeSubtitle?: string;
-};
-
 export type StorageFieldDefinitionCreate = {
   id: string;
   componentType: ComponentType;
@@ -40,23 +28,8 @@ export type StorageFieldDefinitionUpdate = {
   config?: FieldDefinitionConfig;
 };
 
-export type StorageFieldCreate = {
-  id: string;
-  parentNodeId: string;
-  fieldDefinitionId: string;
-  cardOrder?: number;
-  /** Optional initial value. When provided, the create-event history row
-   *  carries this value instead of null, avoiding a redundant "Empty" entry
-   *  followed by an immediate update. */
-  initialValue?: DataFieldValue | null;
-};
-
-export type StorageFieldUpdate = {
-  value: DataFieldValue | null;
-};
-
 // ============================================================================
-// Unified Element inputs (additive — coexist with legacy node/field inputs)
+// Unified Element inputs
 // ============================================================================
 
 export type StorageElementCreate = {
@@ -86,41 +59,11 @@ export type StorageElementUpdate = Partial<{
  * Does not mirror Firestore; focuses on current domain operations.
  */
 export interface StorageAdapter {
-  // Tree node operations
-  listRootNodes(): Promise<StorageResult<TreeNode[]>>;
-  getNode(id: string): Promise<StorageResult<TreeNode | null>>;
-  listChildren(parentId: string): Promise<StorageResult<TreeNode[]>>;
-  createNode(input: StorageNodeCreate): Promise<StorageResult<TreeNode>>;
-  updateNode(id: string, updates: StorageNodeUpdate): Promise<StorageResult<void>>;
-  deleteNode(
-    id: string,
-    opts?: { cascade?: boolean } // Phase 1: expect cascade=false; leaf-only enforced upstream or inside adapter
-  ): Promise<StorageResult<void>>;
-
-  // FieldDefinition operations
+  // FieldDefinition operations (the Library)
   listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>>;
   getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>>;
   createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>>;
   updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>>;
-
-  // Data field operations
-  listFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
-  nextCardOrder(parentNodeId: string): Promise<StorageResult<number>>;
-  createField(input: StorageFieldCreate): Promise<StorageResult<DataField>>;
-  updateFieldValue(id: string, input: StorageFieldUpdate): Promise<StorageResult<void>>;
-  deleteField(id: string): Promise<StorageResult<void>>;
-
-  // History
-  getFieldHistory(dataFieldId: string): Promise<StorageResult<DataFieldHistory[]>>;
-
-  // Soft delete support - Nodes
-  listDeletedNodes(): Promise<StorageResult<TreeNode[]>>;
-  listDeletedChildren(parentId: string): Promise<StorageResult<TreeNode[]>>;
-  restoreNode(id: string): Promise<StorageResult<void>>;
-
-  // Soft delete support - Fields
-  listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
-  restoreField(id: string): Promise<StorageResult<void>>;
 
   // ============================================================================
   // Element operations (unified primitive — see plan: unified-element-data-model)

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 
-describe('AppDatabase schema (v7 — unified Element model)', () => {
+describe('AppDatabase schema (v8 — unified Element model, legacy stores dropped)', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
@@ -11,8 +11,18 @@ describe('AppDatabase schema (v7 — unified Element model)', () => {
     await db.delete();
   });
 
-  it('opens at version 7', () => {
-    expect(db.verno).toBe(7);
+  it('opens at version 8', () => {
+    expect(db.verno).toBe(8);
+  });
+
+  it('no longer exposes the legacy nodes/fields/history stores', () => {
+    const tableNames = db.tables.map((t) => t.name);
+    expect(tableNames).not.toContain('nodes');
+    expect(tableNames).not.toContain('fields');
+    expect(tableNames).not.toContain('history');
+    expect(tableNames).toEqual(
+      expect.arrayContaining(['elements', 'elementHistory', 'fieldDefinitions', 'syncQueue', 'syncMetadata']),
+    );
   });
 
   it('has elements store with expected indexes', () => {

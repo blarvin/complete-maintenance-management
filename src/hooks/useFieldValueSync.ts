@@ -1,9 +1,9 @@
 /**
  * useFieldValueSync - Subscribe a renderer's currentValue signal to
- * FIELD_WRITTEN events for a specific field id.
+ * ELEMENT_WRITTEN events for a specific element (field) id.
  *
  * Updates the signal directly from the event payload whenever a write
- * touches this field — including writes dispatched from sibling components
+ * touches this element — including writes dispatched from sibling components
  * (e.g. revert from DataFieldHistory). This bypasses the FieldList → props
  * → renderer reactivity chain, which doesn't reliably propagate in time
  * for cross-component writes.
@@ -22,9 +22,9 @@ export function useFieldValueSync<T>(
 ) {
     useVisibleTask$(({ cleanup }) => {
         const unsub = storageEventBus.subscribe((event) => {
-            if (event.type !== 'FIELD_WRITTEN') return;
-            if (event.field.id !== fieldId) return;
-            currentValue.value = (event.field.value as T | null) ?? null;
+            if (event.type !== 'ELEMENT_WRITTEN') return;
+            if (event.element.id !== fieldId) return;
+            currentValue.value = (event.element.value as T | null) ?? null;
         });
         cleanup(() => unsub());
     });

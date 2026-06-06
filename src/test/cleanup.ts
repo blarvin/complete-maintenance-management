@@ -8,7 +8,7 @@ import { cleanupAllTestFixtures } from './testUtils';
 async function main() {
     console.log('Cleaning up all test fixtures...');
     const cleaned = await cleanupAllTestFixtures();
-    console.log(`Cleaned: ${cleaned.nodes} nodes, ${cleaned.fields} fields, ${cleaned.history} history entries`);
+    console.log(`Cleaned: ${cleaned.elements} elements, ${cleaned.elementHistory} history, ${cleaned.fieldDefinitions} field definitions`);
     process.exit(0);
 }
 

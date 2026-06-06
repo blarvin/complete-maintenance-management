@@ -25,10 +25,7 @@ export const LEGACY_ADD_FIELD_ENABLED = true;
  * Firestore collection names.
  */
 export const COLLECTIONS = {
-    NODES: "treeNodes",
     FIELD_DEFINITIONS: "fieldDefinitions",
-    FIELDS: "dataFields",
-    HISTORY: "dataFieldHistory",
     ELEMENTS: "elements",
     ELEMENT_HISTORY: "elementHistory",
 } as const;

@@ -14,8 +14,8 @@ describe('StorageEventBus', () => {
         bus.subscribe(e => received.push(e));
 
         const event: StorageEvent = {
-            type: 'NODE_WRITTEN',
-            node: { id: 'n1', parentId: null, nodeName: 'Root', deletedAt: null },
+            type: 'ELEMENT_WRITTEN',
+            element: { id: 'n1', kind: 'node', parentId: null, name: 'Root', value: null, deletedAt: null },
         };
         bus.emit(event);
 
@@ -29,8 +29,8 @@ describe('StorageEventBus', () => {
         bus.subscribe(e => b.push(e));
 
         const event: StorageEvent = {
-            type: 'NODE_HARD_DELETED',
-            nodeId: 'n1',
+            type: 'ELEMENT_HARD_DELETED',
+            elementId: 'n1',
         };
         bus.emit(event);
 
@@ -47,8 +47,8 @@ describe('StorageEventBus', () => {
         unsub();
 
         const event: StorageEvent = {
-            type: 'NODE_WRITTEN',
-            node: { id: 'n1', parentId: null, nodeName: 'X', deletedAt: null },
+            type: 'ELEMENT_WRITTEN',
+            element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, deletedAt: null },
         };
         bus.emit(event);
 
@@ -62,14 +62,14 @@ describe('StorageEventBus', () => {
         bus.subscribe(e => received.push(e));
 
         bus.clear();
-        bus.emit({ type: 'NODE_HARD_DELETED', nodeId: 'n1' });
+        bus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
 
         expect(received).toEqual([]);
     });
 
     it('emitting with no subscribers does not throw', () => {
         expect(() => {
-            bus.emit({ type: 'NODE_HARD_DELETED', nodeId: 'n1' });
+            bus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
         }).not.toThrow();
     });
 });
