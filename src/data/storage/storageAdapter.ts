@@ -153,26 +153,17 @@ export type { ElementHistoryProperty };
 export interface SyncableStorageAdapter extends StorageAdapter {
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
-  applyRemoteUpdate(entityType: 'node' | 'field' | 'fieldDefinition', entity: TreeNode | DataField | FieldDefinition): Promise<void>;
 
-  // Full collection retrieval methods
-  getAllNodes(): Promise<TreeNode[]>;
-  getAllFields(): Promise<DataField[]>;
-  getAllHistory(): Promise<DataFieldHistory[]>;
+  // FieldDefinition remote apply (server-authority upsert from a pull).
+  applyRemoteFieldDefinition(entity: FieldDefinition): Promise<void>;
   getAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
-  // History sync methods
-  applyRemoteHistory(history: DataFieldHistory): Promise<void>;
-
-  // Silent delete methods (no sync queue entry)
-  deleteNodeLocal(id: string): Promise<void>;
-  deleteFieldLocal(id: string): Promise<void>;
-
-  // ---- Element sync (additive) ----
+  // ---- Element sync ----
   getAllElements(): Promise<Element[]>;
   getAllElementHistory(): Promise<ElementHistory[]>;
   applyRemoteElement(element: Element): Promise<void>;
   applyRemoteElementHistory(history: ElementHistory): Promise<void>;
+  /** Silent hard delete (no sync queue entry) — used by full-collection reconcile. */
   deleteElementLocal(id: string): Promise<void>;
 }
 
@@ -182,15 +173,14 @@ export interface SyncableStorageAdapter extends StorageAdapter {
  */
 export interface RemoteSyncAdapter {
   applySyncItem(item: SyncQueueItem): Promise<void>;
-  pullEntitiesSince(type: 'node' | 'field' | 'fieldDefinition', since: number): Promise<Array<TreeNode | DataField | FieldDefinition>>;
 
   // Full collection pull methods
-  pullAllNodes(): Promise<TreeNode[]>;
-  pullAllFields(): Promise<DataField[]>;
-  pullAllHistory(): Promise<DataFieldHistory[]>;
+  pullAllElements(): Promise<Element[]>;
+  pullAllElementHistory(): Promise<ElementHistory[]>;
   pullAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
-  // Delta sync methods
-  pullHistorySince(since: number): Promise<DataFieldHistory[]>;
+  // Delta sync methods (only rows updated since the given timestamp)
+  pullElementsSince(since: number): Promise<Element[]>;
+  pullElementHistorySince(since: number): Promise<ElementHistory[]>;
   pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]>;
 }

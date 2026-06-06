@@ -523,53 +523,17 @@ export class IDBAdapter implements SyncableStorageAdapter {
     await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: timestamp });
   }
 
-  async applyRemoteUpdate(entityType: 'node' | 'field' | 'fieldDefinition', entity: TreeNode | DataField | FieldDefinition): Promise<void> {
-    if (entityType === 'node') {
-      const node = entity as TreeNode;
-      await db.nodes.put(node);
-      storageEventBus.emit({ type: 'NODE_WRITTEN', node });
-    } else if (entityType === 'fieldDefinition') {
-      const def = entity as FieldDefinition;
-      await db.fieldDefinitions.put(def);
-      storageEventBus.emit({ type: 'FIELD_DEFINITION_WRITTEN', definition: { id: def.id, deletedAt: def.deletedAt } });
-    } else {
-      const incoming = entity as DataField;
-      await db.fields.put(incoming);
-      storageEventBus.emit({ type: 'FIELD_WRITTEN', field: { id: incoming.id, parentNodeId: incoming.parentNodeId, value: incoming.value, deletedAt: incoming.deletedAt } });
-    }
+  async applyRemoteFieldDefinition(def: FieldDefinition): Promise<void> {
+    await db.fieldDefinitions.put(def);
+    storageEventBus.emit({ type: 'FIELD_DEFINITION_WRITTEN', definition: { id: def.id, deletedAt: def.deletedAt } });
   }
 
   // ============================================================================
   // Full Collection Sync Operations
   // ============================================================================
 
-  async getAllNodes(): Promise<TreeNode[]> {
-    return await db.nodes.toArray();
-  }
-
-  async getAllFields(): Promise<DataField[]> {
-    return await db.fields.toArray();
-  }
-
-  async getAllHistory(): Promise<DataFieldHistory[]> {
-    return await db.history.toArray();
-  }
-
   async getAllFieldDefinitions(): Promise<FieldDefinition[]> {
     return await db.fieldDefinitions.toArray();
-  }
-
-  async applyRemoteHistory(history: DataFieldHistory): Promise<void> {
-    await db.history.put(history);
-  }
-
-  async deleteNodeLocal(id: string): Promise<void> {
-    await db.nodes.delete(id);
-    storageEventBus.emit({ type: 'NODE_HARD_DELETED', nodeId: id });
-  }
-
-  async deleteFieldLocal(id: string): Promise<void> {
-    await db.fields.delete(id);
   }
 
   // ============================================================================

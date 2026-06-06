@@ -710,51 +710,20 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   }
 
   /**
-   * Pull entities updated since the given timestamp from Firestore.
-   */
-  async pullEntitiesSince(type: 'node' | 'field' | 'fieldDefinition', since: number): Promise<Array<TreeNode | DataField | FieldDefinition>> {
-    const collectionName =
-      type === 'node' ? COLLECTIONS.NODES
-      : type === 'fieldDefinition' ? COLLECTIONS.FIELD_DEFINITIONS
-      : COLLECTIONS.FIELDS;
-    const q = query(
-      collection(db, collectionName),
-      where('updatedAt', '>', since)
-    );
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      return [];
-    }
-
-    return snap.docs.map((docSnap) => coerceTimestamps<TreeNode | DataField | FieldDefinition>(docSnap.data()));
-  }
-
-  /**
-   * Pull all nodes from Firestore (full collection).
+   * Pull all elements from Firestore (full collection).
    * Used for full collection sync to detect deletions.
    */
-  async pullAllNodes(): Promise<TreeNode[]> {
-    const snap = await getDocs(collection(db, COLLECTIONS.NODES));
-    return snap.docs.map(d => coerceTimestamps<TreeNode>(d.data()));
+  async pullAllElements(): Promise<Element[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.ELEMENTS));
+    return snap.docs.map(d => coerceTimestamps<Element>(d.data()));
   }
 
   /**
-   * Pull all fields from Firestore (full collection).
-   * Used for full collection sync to detect deletions.
+   * Pull all element history from Firestore (full collection).
    */
-  async pullAllFields(): Promise<DataField[]> {
-    const snap = await getDocs(collection(db, COLLECTIONS.FIELDS));
-    return snap.docs.map(d => coerceTimestamps<DataField>(d.data()));
-  }
-
-  /**
-   * Pull all history from Firestore (full collection).
-   * Used for history sync across devices.
-   */
-  async pullAllHistory(): Promise<DataFieldHistory[]> {
-    const snap = await getDocs(collection(db, COLLECTIONS.HISTORY));
-    return snap.docs.map(d => coerceTimestamps<DataFieldHistory>(d.data()));
+  async pullAllElementHistory(): Promise<ElementHistory[]> {
+    const snap = await getDocs(collection(db, COLLECTIONS.ELEMENT_HISTORY));
+    return snap.docs.map(d => coerceTimestamps<ElementHistory>(d.data()));
   }
 
   /**
@@ -766,16 +735,28 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
   }
 
   /**
-   * Pull history updated since the given timestamp from Firestore.
-   * Used for delta sync to fetch only new/changed history entries.
+   * Pull elements updated since the given timestamp (delta sync).
+   * Soft deletes surface as rows with deletedAt set and a bumped updatedAt.
    */
-  async pullHistorySince(since: number): Promise<DataFieldHistory[]> {
+  async pullElementsSince(since: number): Promise<Element[]> {
     const q = query(
-      collection(db, COLLECTIONS.HISTORY),
+      collection(db, COLLECTIONS.ELEMENTS),
       where('updatedAt', '>', since)
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => coerceTimestamps<DataFieldHistory>(d.data()));
+    return snap.docs.map(d => coerceTimestamps<Element>(d.data()));
+  }
+
+  /**
+   * Pull element history updated since the given timestamp (delta sync).
+   */
+  async pullElementHistorySince(since: number): Promise<ElementHistory[]> {
+    const q = query(
+      collection(db, COLLECTIONS.ELEMENT_HISTORY),
+      where('updatedAt', '>', since)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => coerceTimestamps<ElementHistory>(d.data()));
   }
 
   /**

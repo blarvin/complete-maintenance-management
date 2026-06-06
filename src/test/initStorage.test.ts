@@ -215,34 +215,21 @@ describe('initStorage - Node Index Seeding', () => {
     });
 
     it('hydrates in-memory node index with active nodes only', async () => {
-        await db.nodes.bulkAdd([
-            {
-                id: 'root',
-                parentId: null,
-                nodeName: 'Root',
-                nodeSubtitle: '',
-                updatedBy: 'test',
-                updatedAt: Date.now(),
-                deletedAt: null,
-            },
-            {
-                id: 'child',
-                parentId: 'root',
-                nodeName: 'Child',
-                nodeSubtitle: '',
-                updatedBy: 'test',
-                updatedAt: Date.now(),
-                deletedAt: null,
-            },
-            {
-                id: 'deleted-node',
-                parentId: null,
-                nodeName: 'Should Not Load',
-                nodeSubtitle: '',
-                updatedBy: 'test',
-                updatedAt: Date.now(),
-                deletedAt: Date.now(),
-            },
+        const baseEl = {
+            kind: 'node' as const,
+            subtitle: null,
+            value: null,
+            siblingOrder: 0,
+            fieldDefinitionId: null,
+            updatedBy: 'test',
+            updatedAt: Date.now(),
+        };
+        await db.elements.bulkAdd([
+            { ...baseEl, id: 'root', parentId: null, name: 'Root', deletedAt: null },
+            { ...baseEl, id: 'child', parentId: 'root', name: 'Child', deletedAt: null },
+            { ...baseEl, id: 'deleted-node', parentId: null, name: 'Should Not Load', deletedAt: Date.now() },
+            // A non-node element must never enter the node index.
+            { ...baseEl, id: 'field', kind: 'text-kv', parentId: 'root', name: 'VIN', fieldDefinitionId: 'fd', value: 'X', deletedAt: null },
         ]);
 
         const { initializeStorage } = await import('../data/storage/initStorage');
@@ -254,6 +241,7 @@ describe('initStorage - Node Index Seeding', () => {
             { id: 'child', name: 'Child' },
         ]);
         expect(getAncestorPath('deleted-node')).toEqual([]);
+        expect(getAncestorPath('field')).toEqual([]);
     });
 });
 

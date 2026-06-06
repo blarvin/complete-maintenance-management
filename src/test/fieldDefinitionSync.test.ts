@@ -22,12 +22,11 @@ import type { FieldDefinition } from '../data/models';
 function mockRemote(overrides: Partial<RemoteSyncAdapter> = {}): RemoteSyncAdapter {
     return {
         applySyncItem: vi.fn(),
-        pullEntitiesSince: vi.fn().mockResolvedValue([]),
-        pullAllNodes: vi.fn().mockResolvedValue([]),
-        pullAllFields: vi.fn().mockResolvedValue([]),
-        pullAllHistory: vi.fn().mockResolvedValue([]),
+        pullAllElements: vi.fn().mockResolvedValue([]),
+        pullAllElementHistory: vi.fn().mockResolvedValue([]),
         pullAllFieldDefinitions: vi.fn().mockResolvedValue([]),
-        pullHistorySince: vi.fn().mockResolvedValue([]),
+        pullElementsSince: vi.fn().mockResolvedValue([]),
+        pullElementHistorySince: vi.fn().mockResolvedValue([]),
         pullFieldDefinitionsSince: vi.fn().mockResolvedValue([]),
         ...overrides,
     };
@@ -150,9 +149,8 @@ describe('FullCollectionSync - FieldDefinitions', () => {
         await Promise.all([
             db.fieldDefinitions.clear(),
             db.syncQueue.clear(),
-            db.nodes.clear(),
-            db.fields.clear(),
-            db.history.clear(),
+            db.elements.clear(),
+            db.elementHistory.clear(),
         ]);
     });
 
@@ -205,9 +203,8 @@ describe('DeltaSync - FieldDefinitions', () => {
         await Promise.all([
             db.fieldDefinitions.clear(),
             db.syncQueue.clear(),
-            db.nodes.clear(),
-            db.fields.clear(),
-            db.history.clear(),
+            db.elements.clear(),
+            db.elementHistory.clear(),
             db.syncMetadata.clear(),
         ]);
     });
