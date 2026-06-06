@@ -81,8 +81,8 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
         }
         try {
             await getCommandBus().execute({
-                type: 'UPDATE_FIELD_VALUE',
-                payload: { fieldId, newValue: targetValue },
+                type: 'UPDATE_ELEMENT_VALUE',
+                payload: { id: fieldId, value: targetValue },
             });
             selectedId.value = null;
             getSnackbarService().show({
@@ -91,8 +91,8 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                     label: 'Undo',
                     handler: $(async () => {
                         await getCommandBus().execute({
-                            type: 'UPDATE_FIELD_VALUE',
-                            payload: { fieldId, newValue: prevValue },
+                            type: 'UPDATE_ELEMENT_VALUE',
+                            payload: { id: fieldId, value: prevValue },
                         });
                     }),
                 },

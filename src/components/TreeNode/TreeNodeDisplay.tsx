@@ -54,13 +54,13 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
         const nodeId = props.id;
         const parentId = props.parentId;
         try {
-            await getCommandBus().execute({ type: 'DELETE_NODE', payload: { id: nodeId } });
+            await getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: nodeId } });
             getSnackbarService().show({
                 message: 'Node deleted',
                 action: {
                     label: 'Undo',
                     handler: $(async () => {
-                        await getCommandBus().execute({ type: 'RESTORE_NODE', payload: { id: nodeId } });
+                        await getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: nodeId } });
                     }),
                 },
             });

@@ -49,13 +49,13 @@ export const DataField = component$<DataFieldProps>((props) => {
     const handleDelete$ = $(async () => {
         const fieldId = props.id;
         try {
-            await getCommandBus().execute({ type: 'DELETE_FIELD', payload: { fieldId } });
+            await getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } });
             getSnackbarService().show({
                 message: 'Field deleted',
                 action: {
                     label: 'Undo',
                     handler: $(async () => {
-                        await getCommandBus().execute({ type: 'RESTORE_FIELD', payload: { fieldId } });
+                        await getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } });
                     }),
                 },
             });

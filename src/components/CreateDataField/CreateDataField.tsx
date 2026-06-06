@@ -47,11 +47,11 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     const pick$ = $(async (def: FieldDefinition) => {
         props.activeSurface.value = 'none';
         await getCommandBus().execute({
-            type: 'ADD_FIELD_FROM_DEFINITION',
+            type: 'CREATE_ELEMENT_FROM_DEFINITION',
             payload: {
-                nodeId: props.nodeId,
+                parentId: props.nodeId,
                 fieldDefinitionId: def.id,
-                cardOrder: props.currentMaxCardOrder + 1,
+                siblingOrder: props.currentMaxCardOrder + 1,
             },
         });
         await props.onCreated$();

@@ -282,3 +282,55 @@ export type ElementHistory = {
   updatedBy: UserId;
   updatedAt: number;
 };
+
+// ============================================================================
+// View-model adapters (transition: UI still consumes TreeNode/DataField shapes)
+// ============================================================================
+
+/**
+ * Project an Element with `kind === "node"` onto the legacy TreeNode shape so
+ * existing components keep compiling while the data path migrates. Throws if
+ * the element is a value-bearing kind.
+ */
+export function elementToTreeNode(e: Element): TreeNode {
+  if (e.kind !== "node") {
+    throw new Error(`elementToTreeNode: expected kind=node, got ${e.kind}`);
+  }
+  return {
+    id: e.id,
+    nodeName: e.name,
+    nodeSubtitle: e.subtitle ?? "",
+    parentId: e.parentId,
+    updatedBy: e.updatedBy,
+    updatedAt: e.updatedAt,
+    deletedAt: e.deletedAt,
+  };
+}
+
+/**
+ * Project a value-bearing Element onto the legacy DataField shape. Throws if
+ * the element is a container node.
+ */
+export function elementToDataField(e: Element): DataField {
+  if (e.kind === "node") {
+    throw new Error(`elementToDataField: cannot project kind=node`);
+  }
+  if (!e.fieldDefinitionId) {
+    throw new Error(`elementToDataField: element ${e.id} missing fieldDefinitionId`);
+  }
+  if (!e.parentId) {
+    throw new Error(`elementToDataField: element ${e.id} has no parentId`);
+  }
+  return {
+    id: e.id,
+    parentNodeId: e.parentId,
+    fieldDefinitionId: e.fieldDefinitionId,
+    componentType: e.kind,
+    fieldName: e.name,
+    value: e.value,
+    cardOrder: e.siblingOrder,
+    updatedBy: e.updatedBy,
+    updatedAt: e.updatedAt,
+    deletedAt: e.deletedAt,
+  };
+}

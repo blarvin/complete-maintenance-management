@@ -99,8 +99,8 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
         }
         try {
             await getCommandBus().execute({
-                type: 'UPDATE_FIELD_VALUE',
-                payload: { fieldId, newValue: option },
+                type: 'UPDATE_ELEMENT_VALUE',
+                payload: { id: fieldId, value: option },
             });
             currentValue.value = option;
             close$();
@@ -110,8 +110,8 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
                     label: 'Undo',
                     handler: $(async () => {
                         await getCommandBus().execute({
-                            type: 'UPDATE_FIELD_VALUE',
-                            payload: { fieldId, newValue: prev },
+                            type: 'UPDATE_ELEMENT_VALUE',
+                            payload: { id: fieldId, value: prev },
                         });
                     }),
                 },

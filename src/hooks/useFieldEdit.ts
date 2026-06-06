@@ -152,7 +152,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
             return;
         }
         try {
-            await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId, newValue: newVal } });
+            await getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: newVal } });
             currentValue.value = newVal;
             stopFieldEdit$();
             getSnackbarService().show({
@@ -160,7 +160,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
                 action: {
                     label: 'Undo',
                     handler: $(async () => {
-                        await getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', payload: { fieldId, newValue: prevVal } });
+                        await getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevVal } });
                     }),
                 },
             });
