@@ -37,17 +37,15 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Refactor: Unified Element Model — remaining work
 
-The data path, command/query surface, and FSM are unified (commits 1–5 on `REFACTOR-single-unified-data-model`). UI consumes Element via the `elementToTreeNode` / `elementToDataField` mappers and writes through `CREATE_ELEMENT` / `UPDATE_ELEMENT_VALUE` / `DELETE_ELEMENT` etc. Open items:
+The data path, command/query surface, FSM, push **and pull** sync, and the in-memory node index are unified (`REFACTOR-single-unified-data-model`). UI consumes Element via the `elementToTreeNode` / `elementToDataField` mappers and writes through `CREATE_ELEMENT` / `UPDATE_ELEMENT_VALUE` / `DELETE_ELEMENT` etc. Open items:
 
-1.) **Sync layer retarget** — `FullCollectionSync`, `ServerAuthorityResolver`, `SyncPusher`, Firestore push paths still operate on `nodes` / `fields` / `dataFieldHistory` collections. Currently runs on empty legacy tables, so it's a no-op. Retarget to `elements` / `elementHistory` and remove legacy Firestore collection names from `COLLECTIONS`.
+1.) **Drop legacy Dexie stores + adapter methods** — `db.nodes` / `db.fields` / `db.history` and the legacy StorageAdapter node/field CRUD (createNode, listFields, …) plus legacy `COLLECTIONS.NODES/FIELDS/HISTORY` are now unused (sync no longer touches them). Bump to a v8 schema that drops the stores and remove the dead methods + collection constants. The `db.nodes`-seeding tests in `initStorage.test.ts` go away with this.
 
-2.) **Drop legacy Dexie stores + adapter methods** — `db.nodes` / `db.fields` / `db.history` and their IDBAdapter / FirestoreAdapter / StorageAdapter methods are unused by UI but still present. Bump to v8 to drop them once sync is retargeted.
+2.) **Component prop reshape** — `TreeNodeDisplayProps`, `DataFieldProps`, `TreeNodeConstructionProps` still take legacy-shaped fields (`nodeName`, `fieldName`, `componentType`, …). Reshape to `{ element: Element }` once renderer-registry direction is decided.
 
-3.) **Component prop reshape** — `TreeNodeDisplayProps`, `DataFieldProps`, `TreeNodeConstructionProps` still take legacy-shaped fields (`nodeName`, `fieldName`, `componentType`, …). Reshape to `{ element: Element }` once renderer-registry direction is decided.
+3.) **SPEC prose reconciliation (still needed)** — Component Architecture, TreeNode/DataCard/DataField surface descriptions, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Reword for surface/renderer vocabulary.
 
-4.) **SPEC prose reconciliation (still needed)** — Component Architecture, TreeNode/DataCard/DataField surface descriptions, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Reword for surface/renderer vocabulary.
-
-5.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row in SPEC.
+4.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row in SPEC.
 
 ---
 

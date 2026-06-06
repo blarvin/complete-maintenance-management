@@ -25,10 +25,9 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 ### Unified Element refactor — remaining items
 
-The data path is unified (commits 1–5 on `REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
+The data path **and the full push/pull sync layer** are unified (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
 
-- **Sync layer retarget** — `FullCollectionSync`, `ServerAuthorityResolver`, `SyncPusher`, Firestore push helpers still operate on legacy collections (`treeNodes`, `dataFields`, `dataFieldHistory`). They run on empty tables, so they no-op safely; retarget when sync is exercised again.
-- **Drop legacy Dexie stores + adapter methods** — Once sync is retargeted, `db.nodes` / `db.fields` / `db.history` and their IDBAdapter / FirestoreAdapter methods can be removed via a v8 bump.
+- **Drop legacy Dexie stores + adapter methods** — sync no longer reads `db.nodes` / `db.fields` / `db.history`, so they (and the legacy StorageAdapter node/field CRUD + `COLLECTIONS.NODES/FIELDS/HISTORY`) are dead weight. Remove via a v8 schema bump.
 - **Component prop reshape** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Currently bridged via `elementToTreeNode` / `elementToDataField` mappers (which are a defensible permanent boundary if the renderer-registry direction calls for it).
 - **Renderer registry / re-rooting threshold** — Per-renderer setting that decides nest-vs-navigate (e.g. Equipment Plate inlines, Job re-roots). Decide thresholds when Logbook / Equipment Plate land.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
