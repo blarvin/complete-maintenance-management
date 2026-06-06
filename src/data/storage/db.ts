@@ -14,12 +14,16 @@ export type SyncOperation =
   | 'delete-field'
   | 'create-history'
   | 'create-fieldDefinition'
-  | 'update-fieldDefinition';
+  | 'update-fieldDefinition'
+  | 'create-element'
+  | 'update-element'
+  | 'delete-element'
+  | 'create-element-history';
 
 export type SyncQueueItem = {
   id: string;
   operation: SyncOperation;
-  entityType: 'node' | 'field' | 'field-history' | 'fieldDefinition';
+  entityType: 'node' | 'field' | 'field-history' | 'fieldDefinition' | 'element' | 'element-history';
   entityId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any; // Dynamic payload for different entity types

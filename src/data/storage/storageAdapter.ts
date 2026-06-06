@@ -1,4 +1,4 @@
-import type { DataField, DataFieldHistory, FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, TreeNode } from "../models";
+import type { DataField, DataFieldHistory, FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, TreeNode, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -55,6 +55,32 @@ export type StorageFieldUpdate = {
   value: DataFieldValue | null;
 };
 
+// ============================================================================
+// Unified Element inputs (additive — coexist with legacy node/field inputs)
+// ============================================================================
+
+export type StorageElementCreate = {
+  id: string;
+  kind: Kind;
+  parentId: string | null;
+  name: string;
+  subtitle?: string | null;
+  /** Required when kind !== "node". */
+  fieldDefinitionId?: string | null;
+  /** Optional initial value (for value-bearing kinds). */
+  value?: DataFieldValue | null;
+  /** Optional explicit sibling order; auto-minted via nextSiblingOrder when omitted. */
+  siblingOrder?: number;
+};
+
+export type StorageElementUpdate = Partial<{
+  name: string;
+  subtitle: string | null;
+  value: DataFieldValue | null;
+  parentId: string | null;
+  siblingOrder: number;
+}>;
+
 /**
  * Domain-shaped storage adapter contract (backend-agnostic).
  * Does not mirror Firestore; focuses on current domain operations.
@@ -95,7 +121,27 @@ export interface StorageAdapter {
   // Soft delete support - Fields
   listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
   restoreField(id: string): Promise<StorageResult<void>>;
+
+  // ============================================================================
+  // Element operations (unified primitive — see plan: unified-element-data-model)
+  // ============================================================================
+  listRootElements(): Promise<StorageResult<Element[]>>;
+  getElement(id: string): Promise<StorageResult<Element | null>>;
+  listChildElements(parentId: string): Promise<StorageResult<Element[]>>;
+  listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>>;
+  nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>>;
+  createElement(input: StorageElementCreate): Promise<StorageResult<Element>>;
+  updateElement(id: string, updates: StorageElementUpdate): Promise<StorageResult<void>>;
+  softDeleteElement(id: string): Promise<StorageResult<void>>;
+  restoreElement(id: string): Promise<StorageResult<void>>;
+  getElementHistory(elementId: string): Promise<StorageResult<ElementHistory[]>>;
 }
+
+/**
+ * Property metadata for element history bookkeeping.
+ */
+export type ElementHistoryAction = 'create' | 'update' | 'delete';
+export type { ElementHistoryProperty };
 
 /**
  * Storage adapter with sync capabilities.
@@ -121,6 +167,13 @@ export interface SyncableStorageAdapter extends StorageAdapter {
   // Silent delete methods (no sync queue entry)
   deleteNodeLocal(id: string): Promise<void>;
   deleteFieldLocal(id: string): Promise<void>;
+
+  // ---- Element sync (additive) ----
+  getAllElements(): Promise<Element[]>;
+  getAllElementHistory(): Promise<ElementHistory[]>;
+  applyRemoteElement(element: Element): Promise<void>;
+  applyRemoteElementHistory(history: ElementHistory): Promise<void>;
+  deleteElementLocal(id: string): Promise<void>;
 }
 
 /**

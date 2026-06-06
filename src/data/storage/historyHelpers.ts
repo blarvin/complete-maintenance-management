@@ -1,4 +1,4 @@
-import type { DataFieldHistory, ComponentType, DataFieldValue } from '../models';
+import type { DataFieldHistory, ComponentType, DataFieldValue, ElementHistory, ElementHistoryProperty } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
@@ -49,4 +49,30 @@ export function createHistoryEntry(params: {
         newValue: newValue as any,
       };
   }
+}
+
+/**
+ * Create an ElementHistory entry. Generic over property — supports
+ * `value | name | subtitle | parentId | siblingOrder` per the unified model.
+ */
+export function createElementHistoryEntry(params: {
+  elementId: string;
+  rev: number;
+  action: 'create' | 'update' | 'delete';
+  property: ElementHistoryProperty;
+  prevValue: unknown;
+  newValue: unknown;
+}): ElementHistory {
+  const { elementId, rev, action, property, prevValue, newValue } = params;
+  return {
+    id: `${elementId}:${rev}`,
+    elementId,
+    rev,
+    action,
+    property,
+    prevValue,
+    newValue,
+    updatedBy: getCurrentUserId(),
+    updatedAt: now(),
+  };
 }
