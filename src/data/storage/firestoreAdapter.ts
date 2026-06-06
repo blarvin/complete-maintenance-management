@@ -670,6 +670,40 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
         }, { merge: true });
         break;
       }
+      case 'create-element': {
+        const element = item.payload as Element;
+        await setDoc(doc(db, COLLECTIONS.ELEMENTS, element.id), {
+          ...element,
+          updatedAt: serverTimestamp(),
+        });
+        break;
+      }
+      case 'update-element': {
+        // Soft delete reuses this op (payload carries deletedAt); merge so a
+        // partial update never clobbers untouched columns.
+        const element = item.payload as Element;
+        await setDoc(doc(db, COLLECTIONS.ELEMENTS, element.id), {
+          ...element,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        break;
+      }
+      case 'delete-element': {
+        const ref = doc(db, COLLECTIONS.ELEMENTS, item.entityId);
+        await updateDoc(ref, {
+          deletedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        break;
+      }
+      case 'create-element-history': {
+        const history = item.payload as ElementHistory;
+        await setDoc(doc(db, COLLECTIONS.ELEMENT_HISTORY, history.id), {
+          ...history,
+          updatedAt: serverTimestamp(),
+        });
+        break;
+      }
       default:
         console.warn('[FirestoreAdapter] Unknown sync operation:', item.operation);
     }
