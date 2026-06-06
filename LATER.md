@@ -23,6 +23,17 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 ## Data Model & Schema
 
+### Unified Element refactor — remaining items
+
+The data path is unified (commits 1–5 on `REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
+
+- **Sync layer retarget** — `FullCollectionSync`, `ServerAuthorityResolver`, `SyncPusher`, Firestore push helpers still operate on legacy collections (`treeNodes`, `dataFields`, `dataFieldHistory`). They run on empty tables, so they no-op safely; retarget when sync is exercised again.
+- **Drop legacy Dexie stores + adapter methods** — Once sync is retargeted, `db.nodes` / `db.fields` / `db.history` and their IDBAdapter / FirestoreAdapter methods can be removed via a v8 bump.
+- **Component prop reshape** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Currently bridged via `elementToTreeNode` / `elementToDataField` mappers (which are a defensible permanent boundary if the renderer-registry direction calls for it).
+- **Renderer registry / re-rooting threshold** — Per-renderer setting that decides nest-vs-navigate (e.g. Equipment Plate inlines, Job re-roots). Decide thresholds when Logbook / Equipment Plate land.
+- **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
+- **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
+
 ### `subtitle` → optional `nodeSubtitle` child element
 
 Today `Element.name` and `Element.subtitle` are columns. `name` is staying a column permanently — it's required identity, uniform across every kind (node Title / field Label), on the header hot path, and keeps the `elements` table human-readable for hand inspection ("not displayed by a renderer" ≠ "not stored"). `subtitle` is the one demotion candidate: it's node-only, semantically soft, and is the last node-only column. The pure-recursive move is to make it an optional child Element (`kind: "nodeSubtitle"`), so a node's subtitle joins the model its *fields* already live in (fields are already child Elements distinguished by `kind`) — which natively serves variable/editable/deletable headers and removes the temptation to overload `subtitle` for captions/usage-notes.

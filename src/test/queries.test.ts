@@ -1,91 +1,85 @@
 import { describe, it, expect, vi } from 'vitest';
-import { nodeQueriesFromAdapter, fieldQueriesFromAdapter } from '../data/queries';
+import { elementQueriesFromAdapter, fieldDefinitionQueriesFromAdapter } from '../data/queries';
 import type { StorageAdapter } from '../data/storage/storageAdapter';
 
 function mockAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
   return {
-    listRootNodes: vi.fn().mockResolvedValue({ data: [{ id: 'r1' }] }),
-    getNode: vi.fn().mockResolvedValue({ data: { id: 'n1' } }),
-    listChildren: vi.fn().mockResolvedValue({ data: [{ id: 'c1' }] }),
-    listFields: vi.fn().mockResolvedValue({ data: [{ id: 'f1' }] }),
-    getFieldHistory: vi.fn().mockResolvedValue({ data: [{ id: 'h1' }] }),
-    nextCardOrder: vi.fn().mockResolvedValue({ data: 3 }),
-    // Unused in queries but required by interface
-    createNode: vi.fn(),
-    updateNode: vi.fn(),
-    deleteNode: vi.fn(),
-    createField: vi.fn(),
-    updateFieldValue: vi.fn(),
-    deleteField: vi.fn(),
-    listDeletedNodes: vi.fn(),
-    listDeletedChildren: vi.fn(),
-    restoreNode: vi.fn(),
-    listDeletedFields: vi.fn(),
-    restoreField: vi.fn(),
+    listRootElements: vi.fn().mockResolvedValue({ data: [{ id: 'r1' }] }),
+    getElement: vi.fn().mockResolvedValue({ data: { id: 'e1' } }),
+    listChildElements: vi.fn().mockResolvedValue({ data: [{ id: 'c1' }] }),
+    listChildElementsByKind: vi.fn().mockResolvedValue({ data: [{ id: 'k1' }] }),
+    getElementHistory: vi.fn().mockResolvedValue({ data: [{ id: 'h1' }] }),
+    nextSiblingOrder: vi.fn().mockResolvedValue({ data: 3 }),
+    listFieldDefinitions: vi.fn().mockResolvedValue({ data: [{ id: 'fd1', label: 'A' }] }),
+    getFieldDefinition: vi.fn().mockResolvedValue({ data: { id: 'fd1' } }),
     ...overrides,
-  } as StorageAdapter;
+  } as unknown as StorageAdapter;
 }
 
 describe('Query factories', () => {
-  describe('nodeQueriesFromAdapter', () => {
-    it('getRootNodes unwraps StorageResult', async () => {
+  describe('elementQueriesFromAdapter', () => {
+    it('getRootElements unwraps StorageResult', async () => {
       const adapter = mockAdapter();
-      const q = nodeQueriesFromAdapter(adapter);
-      const result = await q.getRootNodes();
+      const q = elementQueriesFromAdapter(adapter);
+      const result = await q.getRootElements();
       expect(result).toEqual([{ id: 'r1' }]);
-      expect(adapter.listRootNodes).toHaveBeenCalled();
+      expect(adapter.listRootElements).toHaveBeenCalled();
     });
 
-    it('getNodeById delegates to adapter.getNode', async () => {
+    it('getElementById delegates to adapter.getElement', async () => {
       const adapter = mockAdapter();
-      const q = nodeQueriesFromAdapter(adapter);
-      const result = await q.getNodeById('n1');
-      expect(result).toEqual({ id: 'n1' });
-      expect(adapter.getNode).toHaveBeenCalledWith('n1');
+      const q = elementQueriesFromAdapter(adapter);
+      const result = await q.getElementById('e1');
+      expect(result).toEqual({ id: 'e1' });
+      expect(adapter.getElement).toHaveBeenCalledWith('e1');
     });
 
-    it('getNodeWithChildren fetches node and children in parallel', async () => {
+    it('getChildren delegates to adapter.listChildElements', async () => {
       const adapter = mockAdapter();
-      const q = nodeQueriesFromAdapter(adapter);
-      const result = await q.getNodeWithChildren('n1');
-      expect(result.node).toEqual({ id: 'n1' });
-      expect(result.children).toEqual([{ id: 'c1' }]);
-      expect(adapter.getNode).toHaveBeenCalledWith('n1');
-      expect(adapter.listChildren).toHaveBeenCalledWith('n1');
-    });
-
-    it('getChildren delegates to adapter.listChildren', async () => {
-      const adapter = mockAdapter();
-      const q = nodeQueriesFromAdapter(adapter);
+      const q = elementQueriesFromAdapter(adapter);
       const result = await q.getChildren('p1');
       expect(result).toEqual([{ id: 'c1' }]);
-      expect(adapter.listChildren).toHaveBeenCalledWith('p1');
+      expect(adapter.listChildElements).toHaveBeenCalledWith('p1');
+    });
+
+    it('getChildrenByKind delegates to adapter.listChildElementsByKind', async () => {
+      const adapter = mockAdapter();
+      const q = elementQueriesFromAdapter(adapter);
+      const result = await q.getChildrenByKind('p1', 'text-kv');
+      expect(result).toEqual([{ id: 'k1' }]);
+      expect(adapter.listChildElementsByKind).toHaveBeenCalledWith('p1', 'text-kv');
+    });
+
+    it('getElementHistory delegates to adapter.getElementHistory', async () => {
+      const adapter = mockAdapter();
+      const q = elementQueriesFromAdapter(adapter);
+      const result = await q.getElementHistory('e1');
+      expect(result).toEqual([{ id: 'h1' }]);
+      expect(adapter.getElementHistory).toHaveBeenCalledWith('e1');
+    });
+
+    it('nextSiblingOrder unwraps StorageResult', async () => {
+      const adapter = mockAdapter();
+      const q = elementQueriesFromAdapter(adapter);
+      const result = await q.nextSiblingOrder('p1');
+      expect(result).toBe(3);
+      expect(adapter.nextSiblingOrder).toHaveBeenCalledWith('p1');
     });
   });
 
-  describe('fieldQueriesFromAdapter', () => {
-    it('getFieldsForNode unwraps StorageResult', async () => {
+  describe('fieldDefinitionQueriesFromAdapter', () => {
+    it('listFieldDefinitions unwraps StorageResult', async () => {
       const adapter = mockAdapter();
-      const q = fieldQueriesFromAdapter(adapter);
-      const result = await q.getFieldsForNode('n1');
-      expect(result).toEqual([{ id: 'f1' }]);
-      expect(adapter.listFields).toHaveBeenCalledWith('n1');
+      const q = fieldDefinitionQueriesFromAdapter(adapter);
+      const result = await q.listFieldDefinitions();
+      expect(result).toEqual([{ id: 'fd1', label: 'A' }]);
     });
 
-    it('getFieldHistory delegates to adapter.getFieldHistory', async () => {
+    it('getFieldDefinitionByLabel finds the matching definition', async () => {
       const adapter = mockAdapter();
-      const q = fieldQueriesFromAdapter(adapter);
-      const result = await q.getFieldHistory('f1');
-      expect(result).toEqual([{ id: 'h1' }]);
-      expect(adapter.getFieldHistory).toHaveBeenCalledWith('f1');
-    });
-
-    it('nextCardOrder unwraps StorageResult', async () => {
-      const adapter = mockAdapter();
-      const q = fieldQueriesFromAdapter(adapter);
-      const result = await q.nextCardOrder('n1');
-      expect(result).toBe(3);
-      expect(adapter.nextCardOrder).toHaveBeenCalledWith('n1');
+      const q = fieldDefinitionQueriesFromAdapter(adapter);
+      const result = await q.getFieldDefinitionByLabel('A');
+      expect(result).toEqual({ id: 'fd1', label: 'A' });
     });
   });
 });

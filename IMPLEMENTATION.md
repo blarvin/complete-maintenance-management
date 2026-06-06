@@ -4,6 +4,22 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 ---
 
+## Unified Element Model (in progress on `REFACTOR-single-unified-data-model`)
+
+`TreeNode` and `DataField` are unified into a single `Element` primitive discriminated by `kind` (`"node"` for containers; the four `componentType` literals for value-bearing kinds). One `elements` Dexie store and one `elementHistory` log replace the previous `nodes` / `fields` / `history` triple.
+
+**Wipe-on-upgrade.** v7 introduces `elements` / `elementHistory` alongside the legacy stores; the legacy stores will be dropped in a v8 bump once the sync layer is retargeted. No migration path — matches the wipe pattern established by v3/v4/v5/v6.
+
+**Composite history key.** Each `ElementHistory` row uses `${elementId}:${rev}` as its primary key with a `[elementId+rev]` compound index. `property` widens from the value-only enum to `value | name | subtitle | parentId | siblingOrder`, so renames, moves, and reorders are now logged — closing a long-standing audit gap.
+
+**View-model mappers, not prop reshape.** UI components keep their TreeNode/DataField-shaped props; hooks call `getElementQueries()` and project rows through `elementToTreeNode` / `elementToDataField` (in `models.ts`) before handing them to renderers. This is a defensible permanent boundary — TreeNode/DataField become view-model DTOs rather than storage types — and let the refactor land without touching every renderer. Component prop reshape can happen organically when the renderer-registry direction is decided.
+
+**Uniform `siblingOrder`.** Every child (nodes and value-bearing kinds alike) is sorted by `siblingOrder` ascending. Mint assigns the next integer; midpoint insertion will renumber-the-run rather than use fractional keys (fractional deferred to LATER.md).
+
+**FSM rename.** `ViewState.nodeId` → `elementId`, `editingFieldId` → `editingElementId`, `UnderConstructionData` gains `kind: Kind`. UIPrefs key bumped to `treeview:ui:prefs:v2` so any stale persisted expansion sets discard cleanly.
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry

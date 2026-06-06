@@ -3,61 +3,11 @@ import type { StorageAdapter } from '../storage/storageAdapter';
 import { generateId } from '../../utils/id';
 
 export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): void {
-  bus.register('CREATE_EMPTY_NODE', async (cmd) => {
-    const result = await adapter.createNode({
-      id: cmd.payload.id,
-      parentId: cmd.payload.parentId,
-      nodeName: '',
-      nodeSubtitle: '',
-    });
-    return result.data;
-  });
-
-  bus.register('UPDATE_NODE', async (cmd) => {
-    await adapter.updateNode(cmd.payload.id, cmd.payload.updates);
-  });
-
-  bus.register('DELETE_NODE', async (cmd) => {
-    await adapter.deleteNode(cmd.payload.id);
-  });
-
   bus.register('CREATE_FIELD_DEFINITION', async (cmd) => {
     const { id, componentType, label, config } = cmd.payload;
     const result = await adapter.createFieldDefinition({ id, componentType, label, config });
     return result.data;
   });
-
-  bus.register('ADD_FIELD_FROM_DEFINITION', async (cmd) => {
-    const { nodeId, fieldDefinitionId, cardOrder, initialValue } = cmd.payload;
-    const result = await adapter.createField({
-      id: generateId(),
-      parentNodeId: nodeId,
-      fieldDefinitionId,
-      cardOrder,
-      initialValue,
-    });
-    return result.data;
-  });
-
-  bus.register('UPDATE_FIELD_VALUE', async (cmd) => {
-    await adapter.updateFieldValue(cmd.payload.fieldId, { value: cmd.payload.newValue });
-  });
-
-  bus.register('DELETE_FIELD', async (cmd) => {
-    await adapter.deleteField(cmd.payload.fieldId);
-  });
-
-  bus.register('RESTORE_FIELD', async (cmd) => {
-    await adapter.restoreField(cmd.payload.fieldId);
-  });
-
-  bus.register('RESTORE_NODE', async (cmd) => {
-    await adapter.restoreNode(cmd.payload.id);
-  });
-
-  // ============================================================================
-  // Element commands (unified)
-  // ============================================================================
 
   bus.register('CREATE_ELEMENT', async (cmd) => {
     const { id, kind, parentId, name, subtitle, fieldDefinitionId, value, siblingOrder } = cmd.payload;
