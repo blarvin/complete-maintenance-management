@@ -37,15 +37,13 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Refactor: Unified Element Model — remaining work
 
-The data path, command/query surface, FSM, push **and pull** sync, and the in-memory node index are unified (`REFACTOR-single-unified-data-model`). UI consumes Element via the `elementToTreeNode` / `elementToDataField` mappers and writes through `CREATE_ELEMENT` / `UPDATE_ELEMENT_VALUE` / `DELETE_ELEMENT` etc. Open items:
+The storage stack is fully unified end-to-end (`REFACTOR-single-unified-data-model`): one `elements` + `elementHistory` store (Dexie v8 dropped the legacy `nodes`/`fields`/`history` stores), element-only adapters/commands/queries, push+pull sync, node index, and event bus. UI consumes Element via the `elementToTreeNode` / `elementToDataField` mappers and writes through `CREATE_ELEMENT` / `UPDATE_ELEMENT_VALUE` / `DELETE_ELEMENT` etc. Remaining open items:
 
-1.) **Drop legacy Dexie stores + adapter methods** — `db.nodes` / `db.fields` / `db.history` and the legacy StorageAdapter node/field CRUD (createNode, listFields, …) plus legacy `COLLECTIONS.NODES/FIELDS/HISTORY` are now unused (sync no longer touches them). Bump to a v8 schema that drops the stores and remove the dead methods + collection constants. The `db.nodes`-seeding tests in `initStorage.test.ts` go away with this.
+1.) **Component prop reshape** — `TreeNodeDisplayProps`, `DataFieldProps`, `TreeNodeConstructionProps` still take legacy-shaped fields (`nodeName`, `fieldName`, `componentType`, …). Reshape to `{ element: Element }` once renderer-registry direction is decided. (The `TreeNode` / `DataField` / `DataFieldHistory` types survive as view-model DTOs feeding these props.)
 
-2.) **Component prop reshape** — `TreeNodeDisplayProps`, `DataFieldProps`, `TreeNodeConstructionProps` still take legacy-shaped fields (`nodeName`, `fieldName`, `componentType`, …). Reshape to `{ element: Element }` once renderer-registry direction is decided.
+2.) **SPEC prose reconciliation (still needed)** — Component Architecture, TreeNode/DataCard/DataField surface descriptions, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Reword for surface/renderer vocabulary.
 
-3.) **SPEC prose reconciliation (still needed)** — Component Architecture, TreeNode/DataCard/DataField surface descriptions, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Reword for surface/renderer vocabulary.
-
-4.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row in SPEC.
+3.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row in SPEC.
 
 ---
 

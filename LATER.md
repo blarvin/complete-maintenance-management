@@ -25,9 +25,8 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 ### Unified Element refactor — remaining items
 
-The data path **and the full push/pull sync layer** are unified (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
+The storage stack is fully unified end-to-end, including the Dexie v8 store-drop (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
 
-- **Drop legacy Dexie stores + adapter methods** — sync no longer reads `db.nodes` / `db.fields` / `db.history`, so they (and the legacy StorageAdapter node/field CRUD + `COLLECTIONS.NODES/FIELDS/HISTORY`) are dead weight. Remove via a v8 schema bump.
 - **Component prop reshape** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Currently bridged via `elementToTreeNode` / `elementToDataField` mappers (which are a defensible permanent boundary if the renderer-registry direction calls for it).
 - **Renderer registry / re-rooting threshold** — Per-renderer setting that decides nest-vs-navigate (e.g. Equipment Plate inlines, Job re-roots). Decide thresholds when Logbook / Equipment Plate land.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
