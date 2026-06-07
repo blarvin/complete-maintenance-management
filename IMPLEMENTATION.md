@@ -26,22 +26,22 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 **Problem**: Qwik's resumability requires serializing closures captured in `$()` functions. Context-provided services can't serialize because they contain functions.
 
-**Solution**: Module-level service registry instead of React-style context:
+**Solution**: Module-level registry (command bus + query objects) instead of React-style context:
 
 ```typescript
-// ❌ Won't work: nodes captured in closure, can't serialize functions
-const { nodes } = useContext(DataContext);
+// ❌ Won't work: queries captured in closure, can't serialize functions
+const { elements } = useContext(DataContext);
 const load$ = $(async () => {
-  await nodes.getRootNodes();
+  await elements.getRootElements();
 });
 
-// ✅ Works: nothing captured, service looked up at runtime
+// ✅ Works: nothing captured, registry looked up at runtime
 const load$ = $(async () => {
-  await getNodeService().getRootNodes();
+  await getElementQueries().getRootElements();
 });
 ```
 
-Services live at module scope (`src/data/services/index.ts`), swapped via `setNodeService()` for tests. This maintains Dependency Inversion Principle (components depend on `INodeService` interface) without serialization issues.
+The registry lives at module scope (`getCommandBus()` for writes in `src/data/commands/`, `getElementQueries()` / `getFieldDefinitionQueries()` for reads in `src/data/queries/`), swapped via `setElementQueries()` for tests. This maintains Dependency Inversion (components depend on the query/command interfaces) without serialization issues.
 
 **Why This Matters**: Without this pattern, Qwik's resumability breaks—the app can't serialize state for server-side rendering.
 
@@ -53,10 +53,10 @@ Services live at module scope (`src/data/services/index.ts`), swapped via `setNo
 
 **How It Works**:
 
-- Services (`INodeService`, `IFieldService`) are created from adapters via `nodeServiceFromAdapter()` and `fieldServiceFromAdapter()` factories
-- Default services use `FirestoreAdapter`
-- `useStorageAdapter(adapter)` swaps both node and field services to delegate through any adapter
-- Component-facing service contracts remain unchanged
+- Query objects are created from adapters via `elementQueriesFromAdapter()` / `fieldDefinitionQueriesFromAdapter()` factories (`src/data/queries/index.ts`); the command bus routes through the same adapter
+- `initializeQueries(adapter)` / `initializeCommandBus(adapter)` wire the active adapter (see `initStorage.ts`)
+- Swapping the adapter (or calling `setElementQueries()` in tests) redirects all reads/writes without touching components
+- Component-facing query/command contracts remain unchanged
 
 **Why This Matters**: Enables swapping storage backends (IndexedDB/memory for tests) without touching components. Critical for testing and future backend changes.
 
@@ -119,7 +119,7 @@ Orchestrator picks sub-component based on state.
 
 **Initialization**: `initStorage.ts` calls `initializeCommandBus(idbAdapter)` and `initializeQueries(idbAdapter)` after creating the adapter, ensuring the command bus and queries share the same adapter instance that SyncManager uses.
 
-**Deprecated but kept**: `INodeService` / `IFieldService` interfaces and `getNodeService()` / `getFieldService()` are marked `@deprecated` but remain for existing tests. `CreateNodeInput` is re-exported from `commands/types.ts` for backward compatibility.
+**Legacy service layer removed**: the old `INodeService` / `IFieldService` interfaces and `getNodeService()` / `getFieldService()` registry are gone — all reads/writes now flow through the command bus and query objects above. `CreateNodeInput` lives in `commands/types.ts`.
 
 ---
 
@@ -298,7 +298,7 @@ The `save$` flow: parse → validate (if provided) → `getCommandBus().execute(
 
 ## Hook Patterns
 
-**useNodeCreation**: Extracts duplicate creation flow from RootView/BranchView. Returns `{ ucNode, start$, cancel$, complete$ }`. Internally calls `startConstruction$` (FSM transition), then on complete calls `getNodeService().createWithFields()` (data layer).
+**useNodeCreation**: Extracts duplicate creation flow from RootView/BranchView. Returns `{ ucNode, start$, cancel$, complete$ }`. Internally calls `startConstruction$` (FSM transition), then on complete dispatches the node-creation command via `getCommandBus()` (data layer).
 
 **useDoubleTap**: Returns `{ checkDoubleTap$ }` which takes `(x, y)` and returns boolean. Caller handles what to do on double-tap. Internal state persists across taps via Qwik signals.
 
@@ -334,7 +334,7 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Testing Patterns
 
-**Service Testing**: Tests use the same registry abstraction as components (`getNodeService()`/`getFieldService()`). Tests can use `setNodeService()`/`setFieldService()` to swap implementations, or `useStorageAdapter()` to swap adapters. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
+**Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
 
 **Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
 

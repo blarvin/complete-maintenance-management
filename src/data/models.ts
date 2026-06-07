@@ -182,49 +182,24 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // History
 // ============================================================================
 
-type DataFieldHistoryShared = {
-  id: string; // `${dataFieldId}:${rev}`
+/**
+ * View-model for the value-history viewer. ElementHistory rows are projected
+ * into this shape by `projectValueHistory` (DataFieldDetails). Only value-edit
+ * rows survive the projection, so `property` is always `"value"`; the typed
+ * value is carried via `componentType` + `prevValue`/`newValue`.
+ */
+export type DataFieldHistory = {
+  id: string; // `${elementId}:${rev}`
   dataFieldId: ID;
-  parentNodeId: ID;
   action: "create" | "update" | "delete";
   property: "value";
+  componentType: ComponentType;
+  prevValue: DataFieldValue | null;
+  newValue: DataFieldValue | null;
   updatedBy: UserId;
   updatedAt: number;
-  rev: number; // monotonic per dataFieldId, start 0 on create
+  rev: number; // monotonic per element, start 0 on create
 };
-
-export type TextKvHistory = DataFieldHistoryShared & {
-  componentType: "text-kv";
-  prevValue: TextKvValue | null;
-  newValue: TextKvValue | null;
-};
-
-export type EnumKvHistory = DataFieldHistoryShared & {
-  componentType: "enum-kv";
-  prevValue: EnumKvValue | null;
-  newValue: EnumKvValue | null;
-};
-
-export type NumberKvHistory = DataFieldHistoryShared & {
-  componentType: "number-kv";
-  prevValue: NumberKvValue | null;
-  newValue: NumberKvValue | null;
-};
-
-export type SingleImageHistory = DataFieldHistoryShared & {
-  componentType: "single-image";
-  prevValue: SingleImageValue | null;
-  newValue: SingleImageValue | null;
-};
-
-/**
- * Discriminated union on `componentType`. Per SPEC §Typed value fields.
- */
-export type DataFieldHistory =
-  | TextKvHistory
-  | EnumKvHistory
-  | NumberKvHistory
-  | SingleImageHistory;
 
 // ============================================================================
 // Unified Element Model (in-progress refactor — see plan: unified-element-data-model)

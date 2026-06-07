@@ -319,7 +319,6 @@ createSyncManager({
 
 - Command logging / audit middleware on CommandBus (pre/post hooks)
 - Query caching / materialized views (beyond existing `nodeIndex`)
-- Remove `INodeService` / `IFieldService` interface types from `services/index.ts` once no external code references them
 
 ### Structured Logger (Refactoring Audit 7.5)
 

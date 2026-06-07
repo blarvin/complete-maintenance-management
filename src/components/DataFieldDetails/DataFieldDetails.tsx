@@ -147,7 +147,6 @@ function projectValueHistory(
         .map(r => ({
             id: r.id,
             dataFieldId: elementId,
-            parentNodeId: '',
             action: r.action,
             property: 'value',
             componentType,

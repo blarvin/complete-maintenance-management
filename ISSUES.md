@@ -68,11 +68,11 @@ The storage stack is fully unified end-to-end (`REFACTOR-single-unified-data-mod
 
 ## Tech Debt
 
+- **Restore emulator round-trip sync coverage** — The Element refactor traded the live-emulator adapter/sync suite for mock-based unit tests (`fieldDefinitionSync.test.ts` mocks `RemoteSyncAdapter`; its header points here). Result: the whole unit suite now passes without the Firebase emulator, but nothing automatically verifies real Firestore push/pull against the Element model. Reinstate a round-trip suite (Vitest against the emulator, or Cypress E2E) covering `elements` + `elementHistory` + `fieldDefinitions`.
 - **Timestamp-formatting helper** — Whatever fixes the Invalid Date / NaN bugs should land as a single shared formatter, not two copies. (Pairs with the bug above.)
 - **Shared history creation logic** — Duplicated between `IDBAdapter` and `FirestoreAdapter`. Extract alongside the existing `historyHelpers.ts` (where `nextRev` already lives).
 - **IDBAdapter error handling is minimal** — `FirestoreAdapter` normalizes to `StorageError` comprehensively; `IDBAdapter` is terse. Bring IDB up to parity before Snackbar work so user-facing error messages have a consistent shape.
 - **Nomenclature: DataField vs DataFieldValue** — Inconsistent across code and docs. Pick one, rename, done.
-- **Remove unused `nodeId` prop from DataCard** — Trivial cleanup.
 - **Double underline while editing** — DataField value has a visible affordance underline plus the browser's input underline while editing. Pick one.
 - **`pendingMode` boilerplate across DataField Components** — TextKv/EnumKv/MeasurementKv/SingleImage each repeat near-identical `pendingMode` wiring into `useFieldEdit` (and Enum has its own click-away path). Don't abstract until a 5th component lands and the pattern is clear — premature now would obscure more than it shares.
 - **`useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
