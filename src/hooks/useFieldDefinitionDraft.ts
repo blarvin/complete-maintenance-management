@@ -14,14 +14,11 @@
 import { useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
+import { getKindManifest } from '../kinds/registry';
 import type {
     ComponentType,
     FieldDefinition,
     FieldDefinitionConfig,
-    TextKvConfig,
-    EnumKvConfig,
-    NumberKvConfig,
-    SingleImageConfig,
 } from '../data/models';
 
 export type FieldDefinitionDraftPhase = 'idle' | 'authoring';
@@ -29,16 +26,7 @@ export type FieldDefinitionDraftPhase = 'idle' | 'authoring';
 export const DEFAULT_COMPONENT_TYPE: ComponentType = 'text-kv';
 
 export function defaultConfigFor(type: ComponentType): FieldDefinitionConfig {
-    switch (type) {
-        case 'text-kv':
-            return {} as TextKvConfig;
-        case 'enum-kv':
-            return { options: [] } as EnumKvConfig;
-        case 'number-kv':
-            return { unitsSymbol: '' } as NumberKvConfig;
-        case 'single-image':
-            return { maxSizeMB: 5 } as SingleImageConfig;
-    }
+    return getKindManifest(type).defaultConfig();
 }
 
 const LABEL_MAX = 50;

@@ -27,8 +27,8 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 The storage stack is fully unified end-to-end, including the Dexie v8 store-drop (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
 
-- **Component prop reshape** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Currently bridged via `elementToTreeNode` / `elementToDataField` mappers (which are a defensible permanent boundary if the renderer-registry direction calls for it).
-- **Renderer registry / re-rooting threshold** — Per-renderer setting that decides nest-vs-navigate (e.g. Equipment Plate inlines, Job re-roots). Decide thresholds when Logbook / Equipment Plate land.
+- **Component prop reshape (optional)** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Bridged via `elementToTreeNode` / `elementToDataField` mappers. Now that the renderer registry has landed (the Phase-1 consolidation in `src/kinds/`), this is downgraded to optional — the mappers are a defensible permanent DTO boundary. Revisit only if it causes real friction.
+- **Renderer registry — Phase 2** — The Phase-1 consolidation shipped (`src/kinds/`: one manifest per value-bearing kind, exhaustiveness-checked). Deferred until a second non-field surface (Logbook / Equipment Plate) forces them: (a) the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split; (b) generalizing the key to full `Kind` (including `node`); (c) a `placement` field for the nest-vs-navigate re-rooting threshold (Equipment Plate inlines, Job re-roots); (d) a `nature: data | reference` field so the sync layer doesn't LWW live/portal content; (e) lazy renderer loading for heavy kinds (canvas/video/iframe); (f) deriving the `Kind` / `DataFieldValue` unions from the registry.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
 - **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
 

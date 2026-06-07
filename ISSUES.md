@@ -37,13 +37,11 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Refactor: Unified Element Model — remaining work
 
-The storage stack is fully unified end-to-end (`REFACTOR-single-unified-data-model`): one `elements` + `elementHistory` store (Dexie v8 dropped the legacy `nodes`/`fields`/`history` stores), element-only adapters/commands/queries, push+pull sync, node index, and event bus. UI consumes Element via the `elementToTreeNode` / `elementToDataField` mappers and writes through `CREATE_ELEMENT` / `UPDATE_ELEMENT_VALUE` / `DELETE_ELEMENT` etc. Remaining open items:
+The storage stack is fully unified end-to-end (`REFACTOR-single-unified-data-model`): one `elements` + `elementHistory` store (Dexie v8 dropped the legacy `nodes`/`fields`/`history` stores), element-only adapters/commands/queries, push+pull sync, node index, and event bus. UI consumes Element via the `elementToTreeNode` / `elementToDataField` mappers and writes through `CREATE_ELEMENT` / `UPDATE_ELEMENT_VALUE` / `DELETE_ELEMENT` etc. The renderer registry (`src/kinds/`) consolidated the per-kind dispatch; the `{ element: Element }` prop reshape is now optional (deferred to LATER.md). Remaining open items:
 
-1.) **Component prop reshape** — `TreeNodeDisplayProps`, `DataFieldProps`, `TreeNodeConstructionProps` still take legacy-shaped fields (`nodeName`, `fieldName`, `componentType`, …). Reshape to `{ element: Element }` once renderer-registry direction is decided. (The `TreeNode` / `DataField` / `DataFieldHistory` types survive as view-model DTOs feeding these props.)
+1.) **SPEC prose reconciliation (still needed)** — Component Architecture, TreeNode/DataCard/DataField surface descriptions, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Reword for surface/renderer vocabulary.
 
-2.) **SPEC prose reconciliation (still needed)** — Component Architecture, TreeNode/DataCard/DataField surface descriptions, Field Composer, and the FieldComponent → FieldDefinition → DataField hierarchy still read in two-primitive terms. Reword for surface/renderer vocabulary.
-
-3.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row in SPEC.
+2.) **Add Migration & Naming row** — TreeNode/DataField → Element, parallel to the existing Template → FieldDefinition row in SPEC.
 
 ---
 

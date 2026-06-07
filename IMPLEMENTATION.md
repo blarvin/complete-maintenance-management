@@ -12,11 +12,25 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 **Composite history key.** Each `ElementHistory` row uses `${elementId}:${rev}` as its primary key with a `[elementId+rev]` compound index. `property` widens from the value-only enum to `value | name | subtitle | parentId | siblingOrder`, so renames, moves, and reorders are now logged — closing a long-standing audit gap.
 
-**View-model mappers, not prop reshape.** UI components keep their TreeNode/DataField-shaped props; hooks call `getElementQueries()` and project rows through `elementToTreeNode` / `elementToDataField` (in `models.ts`) before handing them to renderers. This is a defensible permanent boundary — TreeNode/DataField become view-model DTOs rather than storage types — and let the refactor land without touching every renderer. Component prop reshape can happen organically when the renderer-registry direction is decided.
+**View-model mappers, not prop reshape.** UI components keep their TreeNode/DataField-shaped props; hooks call `getElementQueries()` and project rows through `elementToTreeNode` / `elementToDataField` (in `models.ts`) before handing them to renderers. This is a defensible permanent boundary — TreeNode/DataField become view-model DTOs rather than storage types — and let the refactor land without touching every renderer. With the renderer registry now in place (below), the prop reshape to `{ element: Element }` is downgraded from "pending" to optional — the mappers can stay as the DTO seam.
 
 **Uniform `siblingOrder`.** Every child (nodes and value-bearing kinds alike) is sorted by `siblingOrder` ascending. Mint assigns the next integer; midpoint insertion will renumber-the-run rather than use fractional keys (fractional deferred to LATER.md).
 
 **FSM rename.** `ViewState.nodeId` → `elementId`, `editingFieldId` → `editingElementId`, `UnderConstructionData` gains `kind: Kind`. UIPrefs key bumped to `treeview:ui:prefs:v2` so any stale persisted expansion sets discard cleanly.
+
+---
+
+## Renderer Registry (`src/kinds/`)
+
+The per-kind dispatch that used to be smeared across six `switch (componentType)` sites is consolidated into one manifest per value-bearing kind. `KIND_REGISTRY` (in `src/kinds/registry.ts`) maps each `ComponentType` to a `KindManifest` of `{ Renderer, ConfigForm, defaultConfig, displayPreview, pickerLabel }`, and is typed `satisfies Record<ComponentType, KindManifest>` so registering a kind and declaring it in the `ComponentType` union are checked as one act — forget a kind and it's a compile error. Consumers call `getKindManifest(type)` and render `<manifest.Renderer …>` / `<manifest.ConfigForm …>` dynamically.
+
+**`node` is privileged, not registered.** The recursion and navigation logic is inseparable from the node kind, so `TreeNode` stays in the component layer rather than becoming just-another-renderer. The registry is keyed by the four value-bearing kinds only — node is deliberately absent.
+
+**Uniform-props-via-cast seam.** Renderer props are near-uniform but not identical (`single-image` ignores `fieldDefinitionId`; only `number-kv` reads `updatedAt`) and config-form `onChange$` is 1-arg for text/single-image vs 2-arg `(cfg, error)` for enum/number. Rather than rewrite all eight components, each manifest bridges its component into the uniform `FieldRendererProps` / `ConfigFormProps` with one localized `as unknown as Component<…>` cast. Runtime is sound because the registry is keyed by the same discriminant that determines the value/config type; the small type-unsafety is confined to the manifest boundary.
+
+**Files in place, no vertical-slice move (yet).** Manifests import the existing components where they already live (`components/DataField/*`, `components/FieldComposer/configForms/*`) — the cheap "name the seam" step. The full `src/kinds/<kind>/` vertical-slice reorg and the Phase-2 manifest fields (`placement` nest-vs-navigate, `nature` data-vs-reference, lazy renderers) are deferred until a second non-field surface (Logbook / Equipment Plate) forces them — see LATER.md.
+
+**Residual switch.** `DataFieldHistory.formatHistoryValue` still switches on `componentType` — it's a units-aware *history* formatter with different single-image semantics (`'[image]'` always vs. the manifest's `caption ?? '[image]'`), so folding it into `displayPreview` would change behavior. Left intentionally.
 
 ---
 

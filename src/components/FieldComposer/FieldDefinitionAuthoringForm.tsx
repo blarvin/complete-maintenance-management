@@ -13,20 +13,15 @@
  */
 
 import { component$, $, type PropFunction } from '@builder.io/qwik';
-import type { ComponentType, EnumKvConfig, FieldDefinition, FieldDefinitionConfig, NumberKvConfig, SingleImageConfig, TextKvConfig } from '../../data/models';
+import type { FieldDefinition, FieldDefinitionConfig } from '../../data/models';
 import { useFieldDefinitionDraft } from '../../hooks/useFieldDefinitionDraft';
-import { TextKvConfigForm } from './configForms/TextKvConfigForm';
-import { EnumKvConfigForm } from './configForms/EnumKvConfigForm';
-import { NumberKvConfigForm } from './configForms/NumberKvConfigForm';
-import { SingleImageConfigForm } from './configForms/SingleImageConfigForm';
+import { getKindManifest, FIELD_KINDS } from '../../kinds/registry';
 import styles from './FieldDefinitionAuthoringForm.module.css';
 
-const COMPONENT_CHOICES: { type: ComponentType; label: string }[] = [
-    { type: 'text-kv', label: 'Text' },
-    { type: 'enum-kv', label: 'Enum' },
-    { type: 'number-kv', label: 'Number' },
-    { type: 'single-image', label: 'Image' },
-];
+const COMPONENT_CHOICES = FIELD_KINDS.map((type) => ({
+    type,
+    label: getKindManifest(type).pickerLabel,
+}));
 
 export type FieldDefinitionAuthoringFormProps = {
     /** Called with the freshly-created FieldDefinition so the parent Composer
@@ -59,6 +54,8 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
         const def = await save$();
         if (def) await props.onCreated$(def);
     });
+
+    const ConfigForm = getKindManifest(componentType.value).ConfigForm;
 
     return (
         <div class={styles.form}>
@@ -99,30 +96,13 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
             <div class={styles.section}>
                 <span class={styles.sectionLabel}>Config</span>
                 <div class={styles.configHost}>
-                    {componentType.value === 'text-kv' && (
-                        <TextKvConfigForm
-                            config={config.value as TextKvConfig}
-                            onChange$={$((cfg: FieldDefinitionConfig) => setConfig$(cfg))}
-                        />
-                    )}
-                    {componentType.value === 'enum-kv' && (
-                        <EnumKvConfigForm
-                            config={config.value as EnumKvConfig}
-                            onChange$={$((cfg: EnumKvConfig, error: string | null) => { setConfig$(cfg); setConfigError$(error); })}
-                        />
-                    )}
-                    {componentType.value === 'number-kv' && (
-                        <NumberKvConfigForm
-                            config={config.value as NumberKvConfig}
-                            onChange$={$((cfg: NumberKvConfig, error: string | null) => { setConfig$(cfg); setConfigError$(error); })}
-                        />
-                    )}
-                    {componentType.value === 'single-image' && (
-                        <SingleImageConfigForm
-                            config={config.value as SingleImageConfig}
-                            onChange$={$((cfg: FieldDefinitionConfig) => setConfig$(cfg))}
-                        />
-                    )}
+                    <ConfigForm
+                        config={config.value}
+                        onChange$={$((cfg: FieldDefinitionConfig, error?: string | null) => {
+                            setConfig$(cfg);
+                            setConfigError$(error ?? null);
+                        })}
+                    />
                 </div>
             </div>
 

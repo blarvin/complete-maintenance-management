@@ -14,11 +14,8 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, type QRL, type Signal } from '@builder.io/qwik';
-import { TextKvField } from '../DataField/TextKvField';
-import { EnumKvField } from '../DataField/EnumKvField';
-import { NumberKvField } from '../DataField/NumberKvField';
-import { SingleImageField } from '../DataField/SingleImageField';
-import type { FieldDefinition, DataFieldValue, SingleImageValue } from '../../data/models';
+import { getKindManifest } from '../../kinds/registry';
+import type { FieldDefinition, DataFieldValue } from '../../data/models';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import styles from './ComposerRow.module.css';
 
@@ -95,51 +92,16 @@ const RowBody = component$<RowBodyProps>((props) => {
     const onChange$ = $((value: DataFieldValue | null) => {
         return props.onValueChange$(formId, value);
     });
-    const autoFocus = props.autoFocus;
 
-    switch (props.definition.componentType) {
-        case 'text-kv':
-            return (
-                <TextKvField
-                    id={props.pendingForm.id}
-                    fieldName={props.definition.label}
-                    fieldDefinitionId={props.definition.id}
-                    value={(props.pendingForm.value as string | null) ?? null}
-                    rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void>, autoFocus }}
-                />
-            );
-        case 'enum-kv':
-            return (
-                <EnumKvField
-                    id={props.pendingForm.id}
-                    fieldName={props.definition.label}
-                    fieldDefinitionId={props.definition.id}
-                    value={(props.pendingForm.value as string | null) ?? null}
-                    rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: string | null) => void>, autoFocus }}
-                />
-            );
-        case 'number-kv':
-            return (
-                <NumberKvField
-                    id={props.pendingForm.id}
-                    fieldName={props.definition.label}
-                    fieldDefinitionId={props.definition.id}
-                    value={(props.pendingForm.value as number | null) ?? null}
-                    rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: number | null) => void>, autoFocus }}
-                />
-            );
-        case 'single-image':
-            return (
-                <SingleImageField
-                    id={props.pendingForm.id}
-                    fieldName={props.definition.label}
-                    value={(props.pendingForm.value as SingleImageValue | null) ?? null}
-                    rootRef={props.rootRef}
-                    pendingMode={{ onChange$: onChange$ as QRL<(value: SingleImageValue | null) => void>, autoFocus }}
-                />
-            );
-    }
+    const Renderer = getKindManifest(props.definition.componentType).Renderer;
+    return (
+        <Renderer
+            id={props.pendingForm.id}
+            fieldName={props.definition.label}
+            fieldDefinitionId={props.definition.id}
+            value={props.pendingForm.value ?? null}
+            rootRef={props.rootRef}
+            pendingMode={{ onChange$, autoFocus: props.autoFocus }}
+        />
+    );
 });

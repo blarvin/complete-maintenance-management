@@ -13,11 +13,8 @@ import { getSnackbarService } from '../../services/snackbar';
 import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
-import { TextKvField } from './TextKvField';
-import { EnumKvField } from './EnumKvField';
-import { NumberKvField } from './NumberKvField';
-import { SingleImageField } from './SingleImageField';
-import type { ComponentType, DataFieldValue, SingleImageValue } from '../../data/models';
+import { getKindManifest } from '../../kinds/registry';
+import type { ComponentType, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
@@ -73,7 +70,7 @@ export const DataField = component$<DataFieldProps>((props) => {
     const labelId = `field-label-${props.id}`;
 
     // Used by DataFieldDetails for metadata and (future) history-value preview.
-    const currentDisplayValue = displayPreview(props.componentType, props.value);
+    const currentDisplayValue = getKindManifest(props.componentType).displayPreview(props.value);
 
     const isImageVariant = props.componentType === 'single-image';
 
@@ -119,72 +116,20 @@ export const DataField = component$<DataFieldProps>((props) => {
     );
 });
 
-/**
- * Best-effort string preview of a DataField value, dispatched on componentType.
- * Used by metadata/history surfaces that need a uniform string view of the
- * current value across all Component types.
- */
-function displayPreview(componentType: ComponentType, value: DataFieldValue | null): string | null {
-    if (value === null || value === undefined) return null;
-    switch (componentType) {
-        case 'text-kv':
-        case 'enum-kv':
-            return value as string;
-        case 'number-kv':
-            return String(value as number);
-        case 'single-image':
-            return (value as SingleImageValue).caption ?? '[image]';
-    }
-}
-
 function renderBody(
     props: DataFieldProps,
     rootRef: Signal<HTMLElement | undefined>,
 ) {
-    switch (props.componentType) {
-        case 'text-kv':
-            return (
-                <TextKvField
-                    id={props.id}
-                    fieldName={props.fieldName}
-                    fieldDefinitionId={props.fieldDefinitionId}
-                    value={(props.value as string | null) ?? null}
-                    rootRef={rootRef}
-                    onUpdated$={props.onUpdated$}
-                />
-            );
-        case 'enum-kv':
-            return (
-                <EnumKvField
-                    id={props.id}
-                    fieldName={props.fieldName}
-                    fieldDefinitionId={props.fieldDefinitionId}
-                    value={(props.value as string | null) ?? null}
-                    rootRef={rootRef}
-                    onUpdated$={props.onUpdated$}
-                />
-            );
-        case 'number-kv':
-            return (
-                <NumberKvField
-                    id={props.id}
-                    fieldName={props.fieldName}
-                    fieldDefinitionId={props.fieldDefinitionId}
-                    value={(props.value as number | null) ?? null}
-                    updatedAt={props.updatedAt}
-                    rootRef={rootRef}
-                    onUpdated$={props.onUpdated$}
-                />
-            );
-        case 'single-image':
-            return (
-                <SingleImageField
-                    id={props.id}
-                    fieldName={props.fieldName}
-                    value={(props.value as SingleImageValue | null) ?? null}
-                    rootRef={rootRef}
-                    onUpdated$={props.onUpdated$}
-                />
-            );
-    }
+    const Renderer = getKindManifest(props.componentType).Renderer;
+    return (
+        <Renderer
+            id={props.id}
+            fieldName={props.fieldName}
+            fieldDefinitionId={props.fieldDefinitionId}
+            value={props.value}
+            updatedAt={props.updatedAt}
+            rootRef={rootRef}
+            onUpdated$={props.onUpdated$}
+        />
+    );
 }
