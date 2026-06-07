@@ -15,8 +15,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-
-
 ### UX
 
 1.) **Construction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Pick one location.
@@ -31,10 +29,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 6.) **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
 
-
-
 ## Features
-
 
 ### Other
 
@@ -48,8 +43,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 5.) **enum-kv allowOther support** — When `config.allowOther === true`, dropdown should append "Other…" that reveals an inline text input. Currently the dropdown only shows the fixed options list.
 
-6.) **Real single-image Component** — Replace the "Image upload coming soon" stub with: Dexie `imageBlobs` table, file picker, preview + full-size modal, MIME/size validation, caption input when `requireCaption`. Firestore blob sync and orphaned-blob GC are separate follow-ups (see LATER.md).
-
 ---
 
 ## Tech Debt
@@ -58,7 +51,6 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Timestamp-formatting helper** — Whatever fixes the Invalid Date / NaN bugs should land as a single shared formatter, not two copies. (Pairs with the bug above.)
 - **Shared history creation logic** — Duplicated between `IDBAdapter` and `FirestoreAdapter`. Extract alongside the existing `historyHelpers.ts` (where `nextRev` already lives).
 - **IDBAdapter error handling is minimal** — `FirestoreAdapter` normalizes to `StorageError` comprehensively; `IDBAdapter` is terse. Bring IDB up to parity before Snackbar work so user-facing error messages have a consistent shape.
-- **Nomenclature: DataField vs DataFieldValue** — Inconsistent across code and docs. Pick one, rename, done.
-- **Double underline while editing** — DataField value has a visible affordance underline plus the browser's input underline while editing. Pick one.
-- **`pendingMode` boilerplate across DataField Components** — TextKv/EnumKv/MeasurementKv/SingleImage each repeat near-identical `pendingMode` wiring into `useFieldEdit` (and Enum has its own click-away path). Don't abstract until a 5th component lands and the pattern is clear — premature now would obscure more than it shares.
-- **`useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
+- `**pendingMode` boilerplate across DataField Components** — TextKv/EnumKv/NumberKv/SingleImage each repeat near-identical `pendingMode` wiring into `useFieldEdit` (and Enum has its own click-away path). Don't abstract until a 5th component lands and the pattern is clear — premature now would obscure more than it shares.
+- `**useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
+
