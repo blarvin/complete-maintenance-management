@@ -32,10 +32,10 @@
 
 ### Four-Level Knowledge Structure (per SPEC)
 
-1. **Nodes** (TreeNode) - Things and their constituent parts (Title + Subtitle)
-2. **Data Card** - Container with DataFields (facts about the thing)
-3. **Field Details** - Metadata, history, management actions per field
-4. **Field History** - Append-only audit log of value changes
+1. **Nodes** (rendered TreeNode, stored as `Element` with `kind: "node"`) — Things and their constituent parts (Title + Subtitle)
+2. **Data Card** — Container that lists an element's non-`"node"` children (DataFields)
+3. **Field Details** — Metadata, history, management actions per field
+4. **Element History** — Append-only audit log keyed `${elementId}:${rev}`, logs value / name / subtitle / parentId / siblingOrder changes
 
 ---
 
@@ -44,13 +44,13 @@
 ### 2. Adapter Pattern (Backend Abstraction)
 
 **Location**: `src/data/storage/`
-**Interface**: `StorageAdapter` - Backend-agnostic domain operations
+**Interface**: `StorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus FieldDefinition CRUD
 **Implementations**: `IDBAdapter` (primary, offline-first via Dexie), `FirestoreAdapter` (cloud sync)
-**Service Registry**: `src/data/services/index.ts`
+**Command/query registry**: `src/data/commands/` and `src/data/queries/`
 
-- Module-level getters: `getNodeService()`, `getFieldService()`
+- Module-level getters: `getCommandBus()`, `getElementQueries()`, `getFieldDefinitionQueries()`
 - IMPORTANT: Call these at runtime inside `$()` handlers — never capture in closures or serialize
-- `setNodeService(mock)` / `setFieldService(mock)` for test swapping
+- `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping
 - Qwik `useContextProvider` CANNOT hold services (methods aren't serializable, `Code(3)` error)
 - `noSerialize` workaround not viable — values become `undefined` after SSR
 
@@ -92,8 +92,7 @@ Components use discriminated unions + type guards (no prop spreading).
 
 ### Sorting Policy (per SPEC)
 
-- Children within parent: sorted by `updatedAt` ascending
-- DataFields within DataCard: sorted by `cardOrder` ascending
+- All children (child nodes and DataCard fields alike): sorted by `siblingOrder` ascending. `siblingOrder` is assigned incrementally at mint; inserting between siblings renumbers the affected run (not fractional midpoints).
 
 ---
 
@@ -150,8 +149,8 @@ npm run emulator     # Run Firebase emulator
 
 ```typescript
 // Get services (module-level registry)
-const nodeService = getNodeService();
-const fieldService = getFieldService();
+const bus = getCommandBus();
+const q = getElementQueries();
 
 // Swap adapter for testing
 useStorageAdapter(new IDBAdapter());
@@ -171,5 +170,7 @@ useStorageAdapter(new IDBAdapter());
 
 - `src/components/TreeNode/TreeNode.tsx` - Main component orchestrator
 - `src/components/DataField/DataField.tsx` - Field editing logic
-- `src/data/services/index.ts` - Service registry
+- `src/data/commands/handlers.ts` - Element command handlers
+- `src/data/queries/index.ts` - `getElementQueries()` / `getFieldDefinitionQueries()`
+- `src/data/models.ts` - `Element`, `ElementHistory`, `elementToTreeNode` / `elementToDataField` mappers
 - `src/constants.ts` - Hardcoded values (USER_ID, library)

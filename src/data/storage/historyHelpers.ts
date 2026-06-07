@@ -1,4 +1,4 @@
-import type { DataFieldHistory, ComponentType, DataFieldValue } from '../models';
+import type { ElementHistory, ElementHistoryProperty } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
@@ -11,42 +11,28 @@ export function computeNextRev(histories: { rev: number }[]): number {
   return Math.max(...histories.map(h => h.rev)) + 1;
 }
 
-export function createHistoryEntry(params: {
-  dataFieldId: string;
-  parentNodeId: string;
-  componentType: ComponentType;
-  action: 'create' | 'update' | 'delete';
-  prevValue: DataFieldValue | null;
-  newValue: DataFieldValue | null;
+/**
+ * Create an ElementHistory entry. Generic over property — supports
+ * `value | name | subtitle | parentId | siblingOrder` per the unified model.
+ */
+export function createElementHistoryEntry(params: {
+  elementId: string;
   rev: number;
-}): DataFieldHistory {
-  const { dataFieldId, parentNodeId, componentType, action, prevValue, newValue, rev } = params;
-  const base = {
-    id: `${dataFieldId}:${rev}`,
-    dataFieldId,
-    parentNodeId,
+  action: 'create' | 'update' | 'delete';
+  property: ElementHistoryProperty;
+  prevValue: unknown;
+  newValue: unknown;
+}): ElementHistory {
+  const { elementId, rev, action, property, prevValue, newValue } = params;
+  return {
+    id: `${elementId}:${rev}`,
+    elementId,
+    rev,
     action,
-    property: 'value' as const,
+    property,
+    prevValue,
+    newValue,
     updatedBy: getCurrentUserId(),
     updatedAt: now(),
-    rev,
   };
-  // TS discriminated-union narrowing: per-branch literal componentType.
-  switch (componentType) {
-    case 'text-kv':
-      return { ...base, componentType: 'text-kv', prevValue: prevValue as string | null, newValue: newValue as string | null };
-    case 'enum-kv':
-      return { ...base, componentType: 'enum-kv', prevValue: prevValue as string | null, newValue: newValue as string | null };
-    case 'number-kv':
-      return { ...base, componentType: 'number-kv', prevValue: prevValue as number | null, newValue: newValue as number | null };
-    case 'single-image':
-      return {
-        ...base,
-        componentType: 'single-image',
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        prevValue: prevValue as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        newValue: newValue as any,
-      };
-  }
 }

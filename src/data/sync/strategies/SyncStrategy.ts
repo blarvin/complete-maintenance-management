@@ -8,9 +8,8 @@
  */
 
 export type SyncResult = {
-  nodesApplied: number;
-  fieldsApplied: number;
-  historyApplied: number;
+  elementsApplied: number;
+  elementHistoryApplied: number;
   fieldDefinitionsApplied: number;
 };
 

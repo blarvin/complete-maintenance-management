@@ -66,8 +66,9 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         await startConstruction$({
             id,
             parentId: options.parentId,
-            nodeName: '',
-            nodeSubtitle: '',
+            kind: 'node',
+            name: '',
+            subtitle: '',
         });
     });
 
@@ -94,17 +95,13 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
 
         const bus = getCommandBus();
         await bus.execute({
-            type: 'CREATE_EMPTY_NODE',
-            payload: { id: ucData.id, parentId: ucData.parentId },
-        });
-        await bus.execute({
-            type: 'UPDATE_NODE',
+            type: 'CREATE_ELEMENT',
             payload: {
                 id: ucData.id,
-                updates: {
-                    nodeName: payload.nodeName || 'Untitled',
-                    nodeSubtitle: payload.nodeSubtitle || '',
-                },
+                kind: 'node',
+                parentId: ucData.parentId,
+                name: payload.nodeName || 'Untitled',
+                subtitle: payload.nodeSubtitle || null,
             },
         });
 

@@ -48,26 +48,30 @@ describe('initStorage - Initialization State', () => {
             const { clearStorage, isStorageInitialized } = await import('../data/storage/initStorage');
             
             // Add some data
-            await db.nodes.add({
+            await db.elements.add({
                 id: 'test-node',
+                kind: 'node',
                 parentId: null,
-                nodeName: 'Test',
-                nodeSubtitle: '',
+                name: 'Test',
+                subtitle: null,
+                value: null,
+                siblingOrder: 0,
+                fieldDefinitionId: null,
                 updatedBy: 'test',
                 updatedAt: Date.now(),
                 deletedAt: null,
             });
-            
-            const countBefore = await db.nodes.count();
+
+            const countBefore = await db.elements.count();
             expect(countBefore).toBe(1);
-            
+
             // Clear storage
             await clearStorage();
-            
+
             // Re-open db after delete
             await db.open();
-            
-            const countAfter = await db.nodes.count();
+
+            const countAfter = await db.elements.count();
             expect(countAfter).toBe(0);
             expect(isStorageInitialized()).toBe(false);
         });
@@ -87,29 +91,29 @@ describe('initStorage - Migration Fallback Paths', () => {
     });
 
     describe('Migration skipped when IDB has data', () => {
-        it('does not migrate if nodes exist in IDB', async () => {
-            // Pre-populate IDB with a node
-            await db.nodes.add({
+        it('does not migrate if elements exist in IDB', async () => {
+            // Pre-populate IDB with an element
+            await db.elements.add({
                 id: 'existing-node',
+                kind: 'node',
                 parentId: null,
-                nodeName: 'Existing',
-                nodeSubtitle: '',
+                name: 'Existing',
+                subtitle: null,
+                value: null,
+                siblingOrder: 0,
+                fieldDefinitionId: null,
                 updatedBy: 'test',
                 updatedAt: Date.now(),
                 deletedAt: null,
             });
 
-            const nodeCount = await db.nodes.count();
-            expect(nodeCount).toBe(1);
+            const elementCount = await db.elements.count();
+            expect(elementCount).toBe(1);
 
-            // The initStorage logic checks nodeCount > 0 and skips migration
-            // We can verify this by checking that our existing node is preserved
-            // and no additional nodes were added (simulating what would happen
-            // if migration ran - though we can't easily mock Firestore here)
-            
+            // The initStorage logic checks elementCount > 0 and skips migration.
             // This test documents the expected behavior: if IDB has data,
-            // the migration path is not taken
-            expect(nodeCount).toBeGreaterThan(0);
+            // the migration path is not taken.
+            expect(elementCount).toBeGreaterThan(0);
         });
     });
 
@@ -215,34 +219,21 @@ describe('initStorage - Node Index Seeding', () => {
     });
 
     it('hydrates in-memory node index with active nodes only', async () => {
-        await db.nodes.bulkAdd([
-            {
-                id: 'root',
-                parentId: null,
-                nodeName: 'Root',
-                nodeSubtitle: '',
-                updatedBy: 'test',
-                updatedAt: Date.now(),
-                deletedAt: null,
-            },
-            {
-                id: 'child',
-                parentId: 'root',
-                nodeName: 'Child',
-                nodeSubtitle: '',
-                updatedBy: 'test',
-                updatedAt: Date.now(),
-                deletedAt: null,
-            },
-            {
-                id: 'deleted-node',
-                parentId: null,
-                nodeName: 'Should Not Load',
-                nodeSubtitle: '',
-                updatedBy: 'test',
-                updatedAt: Date.now(),
-                deletedAt: Date.now(),
-            },
+        const baseEl = {
+            kind: 'node' as const,
+            subtitle: null,
+            value: null,
+            siblingOrder: 0,
+            fieldDefinitionId: null,
+            updatedBy: 'test',
+            updatedAt: Date.now(),
+        };
+        await db.elements.bulkAdd([
+            { ...baseEl, id: 'root', parentId: null, name: 'Root', deletedAt: null },
+            { ...baseEl, id: 'child', parentId: 'root', name: 'Child', deletedAt: null },
+            { ...baseEl, id: 'deleted-node', parentId: null, name: 'Should Not Load', deletedAt: Date.now() },
+            // A non-node element must never enter the node index.
+            { ...baseEl, id: 'field', kind: 'text-kv', parentId: 'root', name: 'VIN', fieldDefinitionId: 'fd', value: 'X', deletedAt: null },
         ]);
 
         const { initializeStorage } = await import('../data/storage/initStorage');
@@ -254,6 +245,7 @@ describe('initStorage - Node Index Seeding', () => {
             { id: 'child', name: 'Child' },
         ]);
         expect(getAncestorPath('deleted-node')).toEqual([]);
+        expect(getAncestorPath('field')).toEqual([]);
     });
 });
 
@@ -324,18 +316,18 @@ describe('Adapter Instance Creation', () => {
         const adapter = new IDBAdapter();
         
         expect(adapter).toBeDefined();
-        expect(typeof adapter.listRootNodes).toBe('function');
-        expect(typeof adapter.createNode).toBe('function');
+        expect(typeof adapter.listRootElements).toBe('function');
+        expect(typeof adapter.createElement).toBe('function');
         expect(typeof adapter.syncQueue.getSyncQueue).toBe('function');
     });
 
     it('FirestoreAdapter can be instantiated', async () => {
         const { FirestoreAdapter } = await import('../data/storage/firestoreAdapter');
         const adapter = new FirestoreAdapter();
-        
+
         expect(adapter).toBeDefined();
-        expect(typeof adapter.listRootNodes).toBe('function');
-        expect(typeof adapter.createNode).toBe('function');
+        expect(typeof adapter.listRootElements).toBe('function');
+        expect(typeof adapter.createElement).toBe('function');
         expect(typeof adapter.applySyncItem).toBe('function');
     });
 

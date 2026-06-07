@@ -9,7 +9,7 @@ export async function setup() {
     
     console.log('\n[Test Setup] Cleaning up leftover test fixtures...');
     const cleaned = await cleanupAllTestFixtures();
-    console.log(`[Test Setup] Cleaned: ${cleaned.nodes} nodes, ${cleaned.fields} fields, ${cleaned.history} history`);
+    console.log(`[Test Setup] Cleaned: ${cleaned.elements} elements, ${cleaned.elementHistory} history, ${cleaned.fieldDefinitions} field definitions`);
 }
 
 export async function teardown() {
@@ -17,5 +17,5 @@ export async function teardown() {
     
     console.log('\n[Test Teardown] Final cleanup of test fixtures...');
     const cleaned = await cleanupAllTestFixtures();
-    console.log(`[Test Teardown] Cleaned: ${cleaned.nodes} nodes, ${cleaned.fields} fields, ${cleaned.history} history`);
+    console.log(`[Test Teardown] Cleaned: ${cleaned.elements} elements, ${cleaned.elementHistory} history, ${cleaned.fieldDefinitions} field definitions`);
 }

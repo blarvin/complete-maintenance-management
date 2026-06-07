@@ -45,8 +45,8 @@ export const RootView = component$(() => {
                 <TreeNode
                     key={ucNode.id}
                     id={ucNode.id}
-                    nodeName={ucNode.nodeName}
-                    nodeSubtitle={ucNode.nodeSubtitle}
+                    nodeName={ucNode.name}
+                    nodeSubtitle={ucNode.subtitle}
                     nodeState="UNDER_CONSTRUCTION"
                     onCancel$={cancel$}
                     onCreate$={complete$}

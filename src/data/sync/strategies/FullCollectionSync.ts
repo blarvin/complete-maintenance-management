@@ -23,93 +23,62 @@ export class FullCollectionSync implements SyncStrategy {
 
   async sync(): Promise<SyncResult> {
     const fieldDefinitionsApplied = await this.syncFieldDefinitions();
-    const nodesApplied = await this.syncNodes();
-    const fieldsApplied = await this.syncFields();
-    const historyApplied = await this.syncHistory();
+    const elementsApplied = await this.syncElements();
+    const elementHistoryApplied = await this.syncElementHistory();
 
-    return { nodesApplied, fieldsApplied, historyApplied, fieldDefinitionsApplied };
+    return { elementsApplied, elementHistoryApplied, fieldDefinitionsApplied };
   }
 
-  private async syncNodes(): Promise<number> {
-    const remoteNodes = await this.remote.pullAllNodes();
-    const remoteIds = new Set(remoteNodes.map(n => n.id));
+  private async syncElements(): Promise<number> {
+    const remoteElements = await this.remote.pullAllElements();
+    const remoteIds = new Set(remoteElements.map(e => e.id));
 
-    const localNodes = await this.local.getAllNodes();
+    const localElements = await this.local.getAllElements();
     const pendingQueue = await this.syncQueue.getSyncQueue();
     const pendingIds = new Set(
       pendingQueue
-        .filter(item => item.entityType === 'node')
+        .filter(item => item.entityType === 'element')
         .map(item => item.entityId)
     );
 
-    // Delete local nodes not in remote (unless pending push)
-    for (const localNode of localNodes) {
-      if (!remoteIds.has(localNode.id) && !pendingIds.has(localNode.id)) {
-        await this.local.deleteNodeLocal(localNode.id);
-        console.log('[FullCollectionSync] Deleted local node (removed remotely):', localNode.id);
+    // Delete local elements not in remote (unless pending push)
+    for (const localElement of localElements) {
+      if (!remoteIds.has(localElement.id) && !pendingIds.has(localElement.id)) {
+        await this.local.deleteElementLocal(localElement.id);
+        console.log('[FullCollectionSync] Deleted local element (removed remotely):', localElement.id);
       }
     }
 
-    // Apply remote nodes (server authority)
+    // Apply remote elements (server authority)
     let applied = 0;
-    for (const remoteNode of remoteNodes) {
-      const result = await this.resolver.resolveNode(remoteNode);
+    for (const remoteElement of remoteElements) {
+      const result = await this.resolver.resolveElement(remoteElement);
       if (result === 'applied') applied++;
     }
 
     return applied;
   }
 
-  private async syncFields(): Promise<number> {
-    const remoteFields = await this.remote.pullAllFields();
-    const remoteIds = new Set(remoteFields.map(f => f.id));
-
-    const localFields = await this.local.getAllFields();
-    const pendingQueue = await this.syncQueue.getSyncQueue();
-    const pendingIds = new Set(
-      pendingQueue
-        .filter(item => item.entityType === 'field')
-        .map(item => item.entityId)
-    );
-
-    // Delete local fields not in remote (unless pending push)
-    for (const localField of localFields) {
-      if (!remoteIds.has(localField.id) && !pendingIds.has(localField.id)) {
-        await this.local.deleteFieldLocal(localField.id);
-        console.log('[FullCollectionSync] Deleted local field (removed remotely):', localField.id);
-      }
-    }
-
-    // Apply remote fields (server authority)
-    let applied = 0;
-    for (const remoteField of remoteFields) {
-      const result = await this.resolver.resolveField(remoteField);
-      if (result === 'applied') applied++;
-    }
-
-    return applied;
-  }
-
-  private async syncHistory(): Promise<number> {
-    const remoteHistory = await this.remote.pullAllHistory();
+  private async syncElementHistory(): Promise<number> {
+    const remoteHistory = await this.remote.pullAllElementHistory();
 
     // Upsert all remote history entries (no deletion detection)
     // Orphaned history entries are intentional - they will be handled by soft delete
     for (const hist of remoteHistory) {
-      await this.local.applyRemoteHistory(hist);
+      await this.local.applyRemoteElementHistory(hist);
     }
 
-    console.log('[FullCollectionSync] Synced', remoteHistory.length, 'history entries');
+    console.log('[FullCollectionSync] Synced', remoteHistory.length, 'element history entries');
     return remoteHistory.length;
   }
 
   /**
-   * Sync FieldDefinitions full collection. Runs first so DataFields applied
+   * Sync FieldDefinitions full collection. Runs first so elements applied
    * later in the same cycle can reference newly-arrived definitions.
    *
    * No hard-delete detection: FieldDefinitions are admin-only soft-delete
    * (`deletedAt`); a row pulled with deletedAt set is the tombstone, and
-   * resolver.applyRemoteUpdate persists it. Pending local writes still win.
+   * resolver.applyRemoteFieldDefinition persists it. Pending local writes still win.
    */
   private async syncFieldDefinitions(): Promise<number> {
     const remoteDefinitions = await this.remote.pullAllFieldDefinitions();

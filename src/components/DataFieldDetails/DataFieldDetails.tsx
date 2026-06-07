@@ -8,10 +8,10 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@builder.io/qwik';
-import { getFieldQueries, getFieldDefinitionQueries } from '../../data/queries';
+import { getElementQueries, getFieldDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
-import type { ComponentType, DataFieldHistory as HistoryEntry, FieldDefinition, NumberKvConfig } from '../../data/models';
+import type { ComponentType, DataFieldHistory as HistoryEntry, FieldDefinition, NumberKvConfig, ElementHistory, DataFieldValue } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
 
@@ -30,10 +30,15 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     const isLoaded = useSignal(false);
     const isHistoryOpen = useSignal(false);
 
+    const fetchHistory$ = $(async (): Promise<HistoryEntry[]> => {
+        const rows = await getElementQueries().getElementHistory(props.fieldId);
+        return projectValueHistory(rows, props.componentType, props.fieldId);
+    });
+
     useVisibleTask$(async () => {
         try {
             const [h, def] = await Promise.all([
-                getFieldQueries().getFieldHistory(props.fieldId),
+                fetchHistory$(),
                 getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId),
             ]);
             history.value = h;
@@ -45,14 +50,12 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         }
     });
 
-    // Re-fetch history whenever this field is written to, so newly-saved values
-    // appear immediately while Details is open (history panel may be open too).
     useVisibleTask$(({ cleanup }) => {
         const unsubscribe = storageEventBus.subscribe(async (event) => {
-            if (event.type !== 'FIELD_WRITTEN') return;
-            if (event.field.id !== props.fieldId) return;
+            if (event.type !== 'ELEMENT_WRITTEN') return;
+            if (event.element.id !== props.fieldId) return;
             try {
-                history.value = await getFieldQueries().getFieldHistory(props.fieldId);
+                history.value = await fetchHistory$();
             } catch (e) {
                 console.error('Failed to refresh field history:', e);
             }
@@ -127,3 +130,30 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         </div>
     );
 });
+
+/**
+ * Project ElementHistory rows into the legacy DataFieldHistory shape the
+ * history viewer expects. Only value-property rows survive — name/subtitle/
+ * parentId/siblingOrder edits are not field-value history.
+ */
+function projectValueHistory(
+    rows: ElementHistory[],
+    componentType: ComponentType,
+    elementId: string,
+): HistoryEntry[] {
+    return rows
+        .filter(r => r.property === 'value')
+        .sort((a, b) => a.rev - b.rev)
+        .map(r => ({
+            id: r.id,
+            dataFieldId: elementId,
+            action: r.action,
+            property: 'value',
+            componentType,
+            prevValue: r.prevValue as DataFieldValue | null,
+            newValue: r.newValue as DataFieldValue | null,
+            updatedBy: r.updatedBy,
+            updatedAt: r.updatedAt,
+            rev: r.rev,
+        }) as HistoryEntry);
+}

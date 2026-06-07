@@ -1,4 +1,4 @@
-import type { DataField, DataFieldHistory, FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, TreeNode } from "../models";
+import type { FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -16,18 +16,6 @@ export type StorageResult<T> = {
   meta?: StorageMeta;
 };
 
-export type StorageNodeCreate = {
-  id: string;
-  parentId: string | null;
-  nodeName: string;
-  nodeSubtitle: string;
-};
-
-export type StorageNodeUpdate = {
-  nodeName?: string;
-  nodeSubtitle?: string;
-};
-
 export type StorageFieldDefinitionCreate = {
   id: string;
   componentType: ComponentType;
@@ -40,62 +28,63 @@ export type StorageFieldDefinitionUpdate = {
   config?: FieldDefinitionConfig;
 };
 
-export type StorageFieldCreate = {
+// ============================================================================
+// Unified Element inputs
+// ============================================================================
+
+export type StorageElementCreate = {
   id: string;
-  parentNodeId: string;
-  fieldDefinitionId: string;
-  cardOrder?: number;
-  /** Optional initial value. When provided, the create-event history row
-   *  carries this value instead of null, avoiding a redundant "Empty" entry
-   *  followed by an immediate update. */
-  initialValue?: DataFieldValue | null;
+  kind: Kind;
+  parentId: string | null;
+  name: string;
+  subtitle?: string | null;
+  /** Required when kind !== "node". */
+  fieldDefinitionId?: string | null;
+  /** Optional initial value (for value-bearing kinds). */
+  value?: DataFieldValue | null;
+  /** Optional explicit sibling order; auto-minted via nextSiblingOrder when omitted. */
+  siblingOrder?: number;
 };
 
-export type StorageFieldUpdate = {
+export type StorageElementUpdate = Partial<{
+  name: string;
+  subtitle: string | null;
   value: DataFieldValue | null;
-};
+  parentId: string | null;
+  siblingOrder: number;
+}>;
 
 /**
  * Domain-shaped storage adapter contract (backend-agnostic).
  * Does not mirror Firestore; focuses on current domain operations.
  */
 export interface StorageAdapter {
-  // Tree node operations
-  listRootNodes(): Promise<StorageResult<TreeNode[]>>;
-  getNode(id: string): Promise<StorageResult<TreeNode | null>>;
-  listChildren(parentId: string): Promise<StorageResult<TreeNode[]>>;
-  createNode(input: StorageNodeCreate): Promise<StorageResult<TreeNode>>;
-  updateNode(id: string, updates: StorageNodeUpdate): Promise<StorageResult<void>>;
-  deleteNode(
-    id: string,
-    opts?: { cascade?: boolean } // Phase 1: expect cascade=false; leaf-only enforced upstream or inside adapter
-  ): Promise<StorageResult<void>>;
-
-  // FieldDefinition operations
+  // FieldDefinition operations (the Library)
   listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>>;
   getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>>;
   createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>>;
   updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>>;
 
-  // Data field operations
-  listFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
-  nextCardOrder(parentNodeId: string): Promise<StorageResult<number>>;
-  createField(input: StorageFieldCreate): Promise<StorageResult<DataField>>;
-  updateFieldValue(id: string, input: StorageFieldUpdate): Promise<StorageResult<void>>;
-  deleteField(id: string): Promise<StorageResult<void>>;
-
-  // History
-  getFieldHistory(dataFieldId: string): Promise<StorageResult<DataFieldHistory[]>>;
-
-  // Soft delete support - Nodes
-  listDeletedNodes(): Promise<StorageResult<TreeNode[]>>;
-  listDeletedChildren(parentId: string): Promise<StorageResult<TreeNode[]>>;
-  restoreNode(id: string): Promise<StorageResult<void>>;
-
-  // Soft delete support - Fields
-  listDeletedFields(parentNodeId: string): Promise<StorageResult<DataField[]>>;
-  restoreField(id: string): Promise<StorageResult<void>>;
+  // ============================================================================
+  // Element operations (unified primitive — see plan: unified-element-data-model)
+  // ============================================================================
+  listRootElements(): Promise<StorageResult<Element[]>>;
+  getElement(id: string): Promise<StorageResult<Element | null>>;
+  listChildElements(parentId: string): Promise<StorageResult<Element[]>>;
+  listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>>;
+  nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>>;
+  createElement(input: StorageElementCreate): Promise<StorageResult<Element>>;
+  updateElement(id: string, updates: StorageElementUpdate): Promise<StorageResult<void>>;
+  softDeleteElement(id: string): Promise<StorageResult<void>>;
+  restoreElement(id: string): Promise<StorageResult<void>>;
+  getElementHistory(elementId: string): Promise<StorageResult<ElementHistory[]>>;
 }
+
+/**
+ * Property metadata for element history bookkeeping.
+ */
+export type ElementHistoryAction = 'create' | 'update' | 'delete';
+export type { ElementHistoryProperty };
 
 /**
  * Storage adapter with sync capabilities.
@@ -107,20 +96,18 @@ export interface StorageAdapter {
 export interface SyncableStorageAdapter extends StorageAdapter {
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
-  applyRemoteUpdate(entityType: 'node' | 'field' | 'fieldDefinition', entity: TreeNode | DataField | FieldDefinition): Promise<void>;
 
-  // Full collection retrieval methods
-  getAllNodes(): Promise<TreeNode[]>;
-  getAllFields(): Promise<DataField[]>;
-  getAllHistory(): Promise<DataFieldHistory[]>;
+  // FieldDefinition remote apply (server-authority upsert from a pull).
+  applyRemoteFieldDefinition(entity: FieldDefinition): Promise<void>;
   getAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
-  // History sync methods
-  applyRemoteHistory(history: DataFieldHistory): Promise<void>;
-
-  // Silent delete methods (no sync queue entry)
-  deleteNodeLocal(id: string): Promise<void>;
-  deleteFieldLocal(id: string): Promise<void>;
+  // ---- Element sync ----
+  getAllElements(): Promise<Element[]>;
+  getAllElementHistory(): Promise<ElementHistory[]>;
+  applyRemoteElement(element: Element): Promise<void>;
+  applyRemoteElementHistory(history: ElementHistory): Promise<void>;
+  /** Silent hard delete (no sync queue entry) — used by full-collection reconcile. */
+  deleteElementLocal(id: string): Promise<void>;
 }
 
 /**
@@ -129,15 +116,14 @@ export interface SyncableStorageAdapter extends StorageAdapter {
  */
 export interface RemoteSyncAdapter {
   applySyncItem(item: SyncQueueItem): Promise<void>;
-  pullEntitiesSince(type: 'node' | 'field' | 'fieldDefinition', since: number): Promise<Array<TreeNode | DataField | FieldDefinition>>;
 
   // Full collection pull methods
-  pullAllNodes(): Promise<TreeNode[]>;
-  pullAllFields(): Promise<DataField[]>;
-  pullAllHistory(): Promise<DataFieldHistory[]>;
+  pullAllElements(): Promise<Element[]>;
+  pullAllElementHistory(): Promise<ElementHistory[]>;
   pullAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
-  // Delta sync methods
-  pullHistorySince(since: number): Promise<DataFieldHistory[]>;
+  // Delta sync methods (only rows updated since the given timestamp)
+  pullElementsSince(since: number): Promise<Element[]>;
+  pullElementHistorySince(since: number): Promise<ElementHistory[]>;
   pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]>;
 }

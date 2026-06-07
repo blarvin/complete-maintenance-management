@@ -41,7 +41,7 @@ describe('uiPrefs store', () => {
 
     describe('STORAGE_KEY', () => {
         it('has expected key format', () => {
-            expect(STORAGE_KEY).toBe('treeview:ui:prefs');
+            expect(STORAGE_KEY).toBe('treeview:ui:prefs:v2');
         });
     });
 

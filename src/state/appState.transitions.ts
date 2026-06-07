@@ -31,19 +31,19 @@ export const transitions = {
     /**
      * Navigate into a node (ROOT→BRANCH or BRANCH→BRANCH)
      */
-    navigateToNode: (state: AppState, nodeId: string): void => {
+    navigateToNode: (state: AppState, elementId: string): void => {
         if (!guards.notUnderConstruction(state)) return;
-        
+
         // Push current to history if in BRANCH view
         if (state.view.state === 'BRANCH') {
-            state.history = [...state.history, state.view.nodeId];
+            state.history = [...state.history, state.view.elementId];
         }
-        
+
         // Transition to BRANCH view
-        state.view = { state: 'BRANCH', nodeId };
-        
+        state.view = { state: 'BRANCH', elementId };
+
         // Clear any editing state
-        state.editingFieldId = null;
+        state.editingElementId = null;
     },
 
     /**
@@ -59,13 +59,13 @@ export const transitions = {
             state.history = [];
         } else {
             // Transition to parent's BRANCH
-            state.view = { state: 'BRANCH', nodeId: parentId };
+            state.view = { state: 'BRANCH', elementId: parentId };
             // Pop history
             state.history = state.history.slice(0, -1);
         }
-        
+
         // Clear any editing state
-        state.editingFieldId = null;
+        state.editingElementId = null;
     },
 
     /**
@@ -76,7 +76,7 @@ export const transitions = {
         
         state.view = { state: 'ROOT' };
         state.history = [];
-        state.editingFieldId = null;
+        state.editingElementId = null;
     },
 
     /**
@@ -150,15 +150,15 @@ export const transitions = {
     /**
      * Start editing a field (DataField: DISPLAY → EDITING)
      */
-    startFieldEdit: (state: AppState, fieldId: string): void => {
+    startFieldEdit: (state: AppState, elementId: string): void => {
         // Per SPEC: "If another DataField is already editing, it is cancelled"
-        state.editingFieldId = fieldId;
+        state.editingElementId = elementId;
     },
 
     /**
      * Stop editing a field (DataField: EDITING → DISPLAY)
      */
     stopFieldEdit: (state: AppState): void => {
-        state.editingFieldId = null;
+        state.editingElementId = null;
     },
 };

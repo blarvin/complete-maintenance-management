@@ -1,8 +1,10 @@
 /**
  * Wires the in-memory node index to the StorageEventBus.
  *
- * After calling `subscribeNodeIndex()`, every NODE_WRITTEN / NODE_HARD_DELETED
- * event keeps the index current — no caller needs to touch the index directly.
+ * After calling `subscribeNodeIndex()`, every ELEMENT_WRITTEN (kind "node") /
+ * ELEMENT_HARD_DELETED event keeps the index current — no caller needs to touch
+ * the index directly. Non-node elements (DataFields) are ignored: the index
+ * only tracks the navigable node tree for breadcrumb/ancestry computation.
  */
 
 import type { StorageEvent } from './storageEventBus';
@@ -12,19 +14,20 @@ import { upsertNodeSummary, removeNodeSummary } from './nodeIndex';
 /** Process a single storage event and update the node index. */
 export function handleStorageEvent(event: StorageEvent): void {
   switch (event.type) {
-    case 'NODE_WRITTEN':
-      if (event.node.deletedAt === null) {
+    case 'ELEMENT_WRITTEN':
+      if (event.element.kind !== 'node') break; // only container nodes are indexed
+      if (event.element.deletedAt === null) {
         upsertNodeSummary({
-          id: event.node.id,
-          parentId: event.node.parentId,
-          nodeName: event.node.nodeName,
+          id: event.element.id,
+          parentId: event.element.parentId,
+          nodeName: event.element.name,
         });
       } else {
-        removeNodeSummary(event.node.id);
+        removeNodeSummary(event.element.id);
       }
       break;
-    case 'NODE_HARD_DELETED':
-      removeNodeSummary(event.nodeId);
+    case 'ELEMENT_HARD_DELETED':
+      removeNodeSummary(event.elementId);
       break;
     default:
       break;

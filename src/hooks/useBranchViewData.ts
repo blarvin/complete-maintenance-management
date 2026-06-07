@@ -18,9 +18,9 @@
  */
 
 import { useSignal, $ } from '@builder.io/qwik';
-import { getNodeQueries } from '../data/queries';
+import { getElementQueries } from '../data/queries';
 import { useAppState, useAppTransitions } from '../state/appState';
-import type { TreeNode } from '../data/models';
+import { elementToTreeNode, type TreeNode } from '../data/models';
 import { useAsyncOperation, runAsync } from './useAsyncOperation';
 
 export function useBranchViewData() {
@@ -34,15 +34,20 @@ export function useBranchViewData() {
     const load$ = $(async (id: string) => {
         if (!id) return;
 
-        // Cancel construction when navigating (maintain existing behavior)
         if (appState.underConstruction) {
             cancelConstruction$();
         }
 
         await runAsync(op, async () => {
-            const result = await getNodeQueries().getNodeWithChildren(id);
-            parentNode.value = result.node;
-            children.value = result.children;
+            const q = getElementQueries();
+            const [parentEl, childEls] = await Promise.all([
+                q.getElementById(id),
+                q.getChildren(id),
+            ]);
+            parentNode.value = parentEl && parentEl.kind === 'node' ? elementToTreeNode(parentEl) : null;
+            children.value = childEls
+                .filter(e => e.kind === 'node' && e.deletedAt === null)
+                .map(elementToTreeNode);
         });
     });
 

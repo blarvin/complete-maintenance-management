@@ -77,13 +77,13 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     });
 
     const open$ = $(() => {
-        if (appState.editingFieldId === props.id) return;
+        if (appState.editingElementId === props.id) return;
         startFieldEdit$(props.id);
         isOpen.value = true;
     });
 
     const close$ = $(() => {
-        if (appState.editingFieldId === props.id) stopFieldEdit$();
+        if (appState.editingElementId === props.id) stopFieldEdit$();
         isOpen.value = false;
     });
 
@@ -99,8 +99,8 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
         }
         try {
             await getCommandBus().execute({
-                type: 'UPDATE_FIELD_VALUE',
-                payload: { fieldId, newValue: option },
+                type: 'UPDATE_ELEMENT_VALUE',
+                payload: { id: fieldId, value: option },
             });
             currentValue.value = option;
             close$();
@@ -110,8 +110,8 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
                     label: 'Undo',
                     handler: $(async () => {
                         await getCommandBus().execute({
-                            type: 'UPDATE_FIELD_VALUE',
-                            payload: { fieldId, newValue: prev },
+                            type: 'UPDATE_ELEMENT_VALUE',
+                            payload: { id: fieldId, value: prev },
                         });
                     }),
                 },

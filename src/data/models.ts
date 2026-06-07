@@ -182,46 +182,130 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // History
 // ============================================================================
 
-type DataFieldHistoryShared = {
-  id: string; // `${dataFieldId}:${rev}`
+/**
+ * View-model for the value-history viewer. ElementHistory rows are projected
+ * into this shape by `projectValueHistory` (DataFieldDetails). Only value-edit
+ * rows survive the projection, so `property` is always `"value"`; the typed
+ * value is carried via `componentType` + `prevValue`/`newValue`.
+ */
+export type DataFieldHistory = {
+  id: string; // `${elementId}:${rev}`
   dataFieldId: ID;
-  parentNodeId: ID;
   action: "create" | "update" | "delete";
   property: "value";
+  componentType: ComponentType;
+  prevValue: DataFieldValue | null;
+  newValue: DataFieldValue | null;
   updatedBy: UserId;
   updatedAt: number;
-  rev: number; // monotonic per dataFieldId, start 0 on create
+  rev: number; // monotonic per element, start 0 on create
 };
 
-export type TextKvHistory = DataFieldHistoryShared & {
-  componentType: "text-kv";
-  prevValue: TextKvValue | null;
-  newValue: TextKvValue | null;
-};
+// ============================================================================
+// Unified Element Model (in-progress refactor — see plan: unified-element-data-model)
+// ============================================================================
 
-export type EnumKvHistory = DataFieldHistoryShared & {
-  componentType: "enum-kv";
-  prevValue: EnumKvValue | null;
-  newValue: EnumKvValue | null;
-};
+/**
+ * Element kind. `"node"` denotes a container (no value); the rest are
+ * value-bearing kinds matching FieldDefinition componentTypes.
+ */
+export type Kind = "node" | ComponentType;
 
-export type NumberKvHistory = DataFieldHistoryShared & {
-  componentType: "number-kv";
-  prevValue: NumberKvValue | null;
-  newValue: NumberKvValue | null;
-};
-
-export type SingleImageHistory = DataFieldHistoryShared & {
-  componentType: "single-image";
-  prevValue: SingleImageValue | null;
-  newValue: SingleImageValue | null;
+/**
+ * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.
+ * - `name` is required (max 100 chars), stays denormalized for header hot path.
+ * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
+ * - `value` is null for `kind === "node"`; typed by `kind` otherwise.
+ * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
+ * - `fieldDefinitionId` is null for nodes.
+ */
+export type Element = {
+  id: ID;
+  kind: Kind;
+  name: string;
+  subtitle: string | null;
+  value: DataFieldValue | null;
+  parentId: ID | null;
+  siblingOrder: number;
+  fieldDefinitionId: ID | null;
+  updatedBy: UserId;
+  updatedAt: number;
+  deletedAt: number | null;
 };
 
 /**
- * Discriminated union on `componentType`. Per SPEC §Typed value fields.
+ * Unified history log replacing dataFieldHistory. Captures structural changes
+ * (name, subtitle, parentId, siblingOrder) in addition to value edits.
+ *
+ * Primary key: `${elementId}:${rev}`.
  */
-export type DataFieldHistory =
-  | TextKvHistory
-  | EnumKvHistory
-  | NumberKvHistory
-  | SingleImageHistory;
+export type ElementHistoryProperty =
+  | "value"
+  | "name"
+  | "subtitle"
+  | "parentId"
+  | "siblingOrder";
+
+export type ElementHistory = {
+  id: string; // `${elementId}:${rev}`
+  elementId: ID;
+  rev: number; // monotonic per elementId, start 0 on create
+  action: "create" | "update" | "delete";
+  property: ElementHistoryProperty;
+  prevValue: unknown;
+  newValue: unknown;
+  updatedBy: UserId;
+  updatedAt: number;
+};
+
+// ============================================================================
+// View-model adapters (transition: UI still consumes TreeNode/DataField shapes)
+// ============================================================================
+
+/**
+ * Project an Element with `kind === "node"` onto the legacy TreeNode shape so
+ * existing components keep compiling while the data path migrates. Throws if
+ * the element is a value-bearing kind.
+ */
+export function elementToTreeNode(e: Element): TreeNode {
+  if (e.kind !== "node") {
+    throw new Error(`elementToTreeNode: expected kind=node, got ${e.kind}`);
+  }
+  return {
+    id: e.id,
+    nodeName: e.name,
+    nodeSubtitle: e.subtitle ?? "",
+    parentId: e.parentId,
+    updatedBy: e.updatedBy,
+    updatedAt: e.updatedAt,
+    deletedAt: e.deletedAt,
+  };
+}
+
+/**
+ * Project a value-bearing Element onto the legacy DataField shape. Throws if
+ * the element is a container node.
+ */
+export function elementToDataField(e: Element): DataField {
+  if (e.kind === "node") {
+    throw new Error(`elementToDataField: cannot project kind=node`);
+  }
+  if (!e.fieldDefinitionId) {
+    throw new Error(`elementToDataField: element ${e.id} missing fieldDefinitionId`);
+  }
+  if (!e.parentId) {
+    throw new Error(`elementToDataField: element ${e.id} has no parentId`);
+  }
+  return {
+    id: e.id,
+    parentNodeId: e.parentId,
+    fieldDefinitionId: e.fieldDefinitionId,
+    componentType: e.kind,
+    fieldName: e.name,
+    value: e.value,
+    cardOrder: e.siblingOrder,
+    updatedBy: e.updatedBy,
+    updatedAt: e.updatedAt,
+    deletedAt: e.deletedAt,
+  };
+}

@@ -23,6 +23,25 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 ## Data Model & Schema
 
+### Unified Element refactor — remaining items
+
+The storage stack is fully unified end-to-end, including the Dexie v8 store-drop (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
+
+- **Component prop reshape (optional)** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Bridged via `elementToTreeNode` / `elementToDataField` mappers. Now that the renderer registry has landed (the Phase-1 consolidation in `src/kinds/`), this is downgraded to optional — the mappers are a defensible permanent DTO boundary. Revisit only if it causes real friction.
+- **Renderer registry — Phase 2** — The Phase-1 consolidation shipped (`src/kinds/`: one manifest per value-bearing kind, exhaustiveness-checked). Deferred until a second non-field surface (Logbook / Equipment Plate) forces them: (a) the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split; (b) generalizing the key to full `Kind` (including `node`); (c) a `placement` field for the nest-vs-navigate re-rooting threshold (Equipment Plate inlines, Job re-roots); (d) a `nature: data | reference` field so the sync layer doesn't LWW live/portal content; (e) lazy renderer loading for heavy kinds (canvas/video/iframe); (f) deriving the `Kind` / `DataFieldValue` unions from the registry.
+- **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
+- **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
+
+### `subtitle` → optional `nodeSubtitle` child element
+
+Today `Element.name` and `Element.subtitle` are columns. `name` is staying a column permanently — it's required identity, uniform across every kind (node Title / field Label), on the header hot path, and keeps the `elements` table human-readable for hand inspection ("not displayed by a renderer" ≠ "not stored"). `subtitle` is the one demotion candidate: it's node-only, semantically soft, and is the last node-only column. The pure-recursive move is to make it an optional child Element (`kind: "nodeSubtitle"`), so a node's subtitle joins the model its *fields* already live in (fields are already child Elements distinguished by `kind`) — which natively serves variable/editable/deletable headers and removes the temptation to overload `subtitle` for captions/usage-notes.
+
+**Deferred because** it's Phase-2-shaped: it only pays off once variable/editable/deletable headers actually get built, and it carries real plumbing — atomic multi-element node creation (node + subtitle child), a kind-based header-vs-card render-region split, and a one-time migration. With deterministic child ids (`${nodeId}:subtitle`) and the eager child-load the card already does, the runtime cost is modest, but it's not worth paying while the column works.
+
+**Phase-1 discipline that makes deferral safe:** do **not** overload `subtitle`. Captions live in the `single-image` value shape (`caption?`); usage-notes get their own representation when they arrive.
+
+**Coupled decision:** if/when this lands, `"subtitle"` drops out of the `ElementHistory.property` enum (a subtitle edit becomes a `value` edit on the subtitle child). `"name"`, `"parentId"`, `"siblingOrder"` stay — the latter two are structural and can't be demoted to children.
+
 ### Phase 2 TreeNode Fields
 
 - `virtualParents: string[]` — cross-references (cables, pipes, connections)
@@ -77,11 +96,10 @@ Spec called for a breadcrumb in `TreeNodeDetails` (`"Ancestor1 / Ancestor2 / Par
 
 ## DataField Components & FieldDefinition Library
 
-The FieldComponent / FieldDefinition / DataField spine plus the 4 Phase-1 FieldComponents (`text-kv`, `enum-kv`, `measurement-kv`, `single-image`-as-stub) landed in Phase 1. The FieldDefinition Authoring UI + crowdsourced shared Library is specced in SPECIFICATION.md and tracked in ISSUES.md. Open Phase-1 FieldComponent work (multiline textarea, allowOther, real single-image with blobs, history preview/revert) is tracked in ISSUES.md.
+The FieldComponent / FieldDefinition / DataField spine plus the 4 Phase-1 FieldComponents (`text-kv`, `enum-kv`, `number-kv`, `single-image`-as-stub) landed in Phase 1. The FieldDefinition Authoring UI + crowdsourced shared Library is specced in SPECIFICATION.md and tracked in ISSUES.md. Open Phase-1 FieldComponent work (multiline textarea, allowOther, real single-image with blobs, history preview/revert) is tracked in ISSUES.md.
 
 ### Phase-2 FieldComponents (not yet specced)
 
-- `number-kv` — numerical values without units (distinct from measurement-kv)
 - `date-kv` — date/datetime picker
 - `image-carousel` — multiple images, carousel UI
 - `image-grid` — multiple images, grid UI
@@ -90,7 +108,7 @@ The FieldComponent / FieldDefinition / DataField spine plus the 4 Phase-1 FieldC
 
 ### Phase-2 FieldComponent features
 
-- **Unit conversion** for `measurement-kv`
+- **Unit conversion** for `number-kv`
 - **Option styling** (badges / colors) for `enum-kv`
 
 ### FieldDefinition Library — Phase-2 enhancements
@@ -301,7 +319,6 @@ createSyncManager({
 
 - Command logging / audit middleware on CommandBus (pre/post hooks)
 - Query caching / materialized views (beyond existing `nodeIndex`)
-- Remove `INodeService` / `IFieldService` interface types from `services/index.ts` once no external code references them
 
 ### Structured Logger (Refactoring Audit 7.5)
 

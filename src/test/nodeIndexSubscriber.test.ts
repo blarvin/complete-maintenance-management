@@ -2,73 +2,72 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { handleStorageEvent } from '../data/nodeIndexSubscriber';
 import { clearNodeIndex, getAncestorPath, initializeNodeIndex } from '../data/nodeIndex';
 
+/** Build an ELEMENT_WRITTEN event payload for a node-kind element. */
+function nodeWritten(id: string, parentId: string | null, name: string, deletedAt: number | null = null) {
+    return {
+        type: 'ELEMENT_WRITTEN' as const,
+        element: { id, kind: 'node' as const, parentId, name, value: null, deletedAt },
+    };
+}
+
 describe('nodeIndexSubscriber — handleStorageEvent', () => {
     beforeEach(() => {
         clearNodeIndex();
     });
 
-    it('NODE_WRITTEN with deletedAt=null upserts into the index', () => {
-        handleStorageEvent({
-            type: 'NODE_WRITTEN',
-            node: { id: 'n1', parentId: null, nodeName: 'Root', deletedAt: null },
-        });
+    it('ELEMENT_WRITTEN (kind node, deletedAt=null) upserts into the index', () => {
+        handleStorageEvent(nodeWritten('n1', null, 'Root'));
 
         const path = getAncestorPath('n1');
         expect(path).toEqual([{ id: 'n1', name: 'Root' }]);
     });
 
-    it('NODE_WRITTEN updates an existing entry', () => {
-        // Seed initial entry
+    it('ELEMENT_WRITTEN updates an existing entry', () => {
         initializeNodeIndex([{ id: 'n1', parentId: null, nodeName: 'Old' }]);
 
-        handleStorageEvent({
-            type: 'NODE_WRITTEN',
-            node: { id: 'n1', parentId: null, nodeName: 'New', deletedAt: null },
-        });
+        handleStorageEvent(nodeWritten('n1', null, 'New'));
 
         const path = getAncestorPath('n1');
         expect(path).toEqual([{ id: 'n1', name: 'New' }]);
     });
 
-    it('NODE_WRITTEN with deletedAt set removes from the index', () => {
+    it('ELEMENT_WRITTEN with deletedAt set removes from the index', () => {
         initializeNodeIndex([{ id: 'n1', parentId: null, nodeName: 'Root' }]);
 
-        handleStorageEvent({
-            type: 'NODE_WRITTEN',
-            node: { id: 'n1', parentId: null, nodeName: 'Root', deletedAt: 1234567890 },
-        });
+        handleStorageEvent(nodeWritten('n1', null, 'Root', 1234567890));
 
         const path = getAncestorPath('n1');
         expect(path).toEqual([]);
     });
 
-    it('NODE_HARD_DELETED removes from the index', () => {
+    it('ELEMENT_WRITTEN for a non-node kind is ignored', () => {
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'VIN', value: 'X', deletedAt: null },
+        });
+
+        // Field elements never enter the node index.
+        expect(getAncestorPath('f1')).toEqual([]);
+    });
+
+    it('ELEMENT_HARD_DELETED removes from the index', () => {
         initializeNodeIndex([{ id: 'n1', parentId: null, nodeName: 'Root' }]);
 
-        handleStorageEvent({
-            type: 'NODE_HARD_DELETED',
-            nodeId: 'n1',
-        });
+        handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
 
         const path = getAncestorPath('n1');
         expect(path).toEqual([]);
     });
 
-    it('NODE_HARD_DELETED for unknown id does not throw', () => {
+    it('ELEMENT_HARD_DELETED for unknown id does not throw', () => {
         expect(() => {
-            handleStorageEvent({ type: 'NODE_HARD_DELETED', nodeId: 'unknown' });
+            handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', elementId: 'unknown' });
         }).not.toThrow();
     });
 
     it('builds correct ancestor path after a series of events', () => {
-        handleStorageEvent({
-            type: 'NODE_WRITTEN',
-            node: { id: 'root', parentId: null, nodeName: 'Root', deletedAt: null },
-        });
-        handleStorageEvent({
-            type: 'NODE_WRITTEN',
-            node: { id: 'child', parentId: 'root', nodeName: 'Child', deletedAt: null },
-        });
+        handleStorageEvent(nodeWritten('root', null, 'Root'));
+        handleStorageEvent(nodeWritten('child', 'root', 'Child'));
 
         const path = getAncestorPath('child');
         expect(path).toEqual([

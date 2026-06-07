@@ -7,7 +7,7 @@
  */
 
 import type { SyncableStorageAdapter } from '../storage/storageAdapter';
-import type { TreeNode, DataField, FieldDefinition } from '../models';
+import type { Element, FieldDefinition } from '../models';
 import type { SyncQueueManager } from './SyncQueueManager';
 
 export type ResolveResult = 'applied' | 'skipped';
@@ -24,25 +24,14 @@ export class ServerAuthorityResolver {
     return new Set(queue.map(item => item.entityId));
   }
 
-  async resolveNode(remote: TreeNode, pendingSet?: Set<string>): Promise<ResolveResult> {
+  async resolveElement(remote: Element, pendingSet?: Set<string>): Promise<ResolveResult> {
     const set = pendingSet ?? await this.loadPendingSet();
     if (set.has(remote.id)) {
       console.log('[Resolver] Skipped (pending local)', remote.id);
       return 'skipped';
     }
-    await this.local.applyRemoteUpdate('node', remote);
-    console.log('[Resolver] Applied server node', remote.id);
-    return 'applied';
-  }
-
-  async resolveField(remote: DataField, pendingSet?: Set<string>): Promise<ResolveResult> {
-    const set = pendingSet ?? await this.loadPendingSet();
-    if (set.has(remote.id)) {
-      console.log('[Resolver] Skipped (pending local)', remote.id);
-      return 'skipped';
-    }
-    await this.local.applyRemoteUpdate('field', remote);
-    console.log('[Resolver] Applied server field', remote.id);
+    await this.local.applyRemoteElement(remote);
+    console.log('[Resolver] Applied server element', remote.id);
     return 'applied';
   }
 
@@ -52,7 +41,7 @@ export class ServerAuthorityResolver {
       console.log('[Resolver] Skipped (pending local)', remote.id);
       return 'skipped';
     }
-    await this.local.applyRemoteUpdate('fieldDefinition', remote);
+    await this.local.applyRemoteFieldDefinition(remote);
     console.log('[Resolver] Applied server fieldDefinition', remote.id);
     return 'applied';
   }

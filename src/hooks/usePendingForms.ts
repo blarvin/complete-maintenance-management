@@ -144,11 +144,11 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
             // row carrying the user-entered value, instead of a null create
             // followed by an update (which produced an "Empty" history row).
             await commandBus.execute({
-                type: 'ADD_FIELD_FROM_DEFINITION',
+                type: 'CREATE_ELEMENT_FROM_DEFINITION',
                 payload: {
-                    nodeId: options.nodeId,
+                    parentId: options.nodeId,
                     fieldDefinitionId: row.fieldDefinitionId,
-                    cardOrder,
+                    siblingOrder: cardOrder,
                     initialValue: row.value ?? null,
                 },
             });

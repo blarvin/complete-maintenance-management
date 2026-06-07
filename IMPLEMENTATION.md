@@ -4,28 +4,58 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 ---
 
+## Unified Element Model (in progress on `REFACTOR-single-unified-data-model`)
+
+`TreeNode` and `DataField` are unified into a single `Element` primitive discriminated by `kind` (`"node"` for containers; the four `componentType` literals for value-bearing kinds). One `elements` Dexie store and one `elementHistory` log replace the previous `nodes` / `fields` / `history` triple.
+
+**Wipe-on-upgrade.** v7 introduces `elements` / `elementHistory` alongside the legacy stores; the legacy stores will be dropped in a v8 bump once the sync layer is retargeted. No migration path — matches the wipe pattern established by v3/v4/v5/v6.
+
+**Composite history key.** Each `ElementHistory` row uses `${elementId}:${rev}` as its primary key with a `[elementId+rev]` compound index. `property` widens from the value-only enum to `value | name | subtitle | parentId | siblingOrder`, so renames, moves, and reorders are now logged — closing a long-standing audit gap.
+
+**View-model mappers, not prop reshape.** UI components keep their TreeNode/DataField-shaped props; hooks call `getElementQueries()` and project rows through `elementToTreeNode` / `elementToDataField` (in `models.ts`) before handing them to renderers. This is a defensible permanent boundary — TreeNode/DataField become view-model DTOs rather than storage types — and let the refactor land without touching every renderer. With the renderer registry now in place (below), the prop reshape to `{ element: Element }` is downgraded from "pending" to optional — the mappers can stay as the DTO seam.
+
+**Uniform `siblingOrder`.** Every child (nodes and value-bearing kinds alike) is sorted by `siblingOrder` ascending. Mint assigns the next integer; midpoint insertion will renumber-the-run rather than use fractional keys (fractional deferred to LATER.md).
+
+**FSM rename.** `ViewState.nodeId` → `elementId`, `editingFieldId` → `editingElementId`, `UnderConstructionData` gains `kind: Kind`. UIPrefs key bumped to `treeview:ui:prefs:v2` so any stale persisted expansion sets discard cleanly.
+
+---
+
+## Renderer Registry (`src/kinds/`)
+
+The per-kind dispatch that used to be smeared across six `switch (componentType)` sites is consolidated into one manifest per value-bearing kind. `KIND_REGISTRY` (in `src/kinds/registry.ts`) maps each `ComponentType` to a `KindManifest` of `{ Renderer, ConfigForm, defaultConfig, displayPreview, pickerLabel }`, and is typed `satisfies Record<ComponentType, KindManifest>` so registering a kind and declaring it in the `ComponentType` union are checked as one act — forget a kind and it's a compile error. Consumers call `getKindManifest(type)` and render `<manifest.Renderer …>` / `<manifest.ConfigForm …>` dynamically.
+
+**`node` is privileged, not registered.** The recursion and navigation logic is inseparable from the node kind, so `TreeNode` stays in the component layer rather than becoming just-another-renderer. The registry is keyed by the four value-bearing kinds only — node is deliberately absent.
+
+**Uniform-props-via-cast seam.** Renderer props are near-uniform but not identical (`single-image` ignores `fieldDefinitionId`; only `number-kv` reads `updatedAt`) and config-form `onChange$` is 1-arg for text/single-image vs 2-arg `(cfg, error)` for enum/number. Rather than rewrite all eight components, each manifest bridges its component into the uniform `FieldRendererProps` / `ConfigFormProps` with one localized `as unknown as Component<…>` cast. Runtime is sound because the registry is keyed by the same discriminant that determines the value/config type; the small type-unsafety is confined to the manifest boundary.
+
+**Files in place, no vertical-slice move (yet).** Manifests import the existing components where they already live (`components/DataField/*`, `components/FieldComposer/configForms/*`) — the cheap "name the seam" step. The full `src/kinds/<kind>/` vertical-slice reorg and the Phase-2 manifest fields (`placement` nest-vs-navigate, `nature` data-vs-reference, lazy renderers) are deferred until a second non-field surface (Logbook / Equipment Plate) forces them — see LATER.md.
+
+**Residual switch.** `DataFieldHistory.formatHistoryValue` still switches on `componentType` — it's a units-aware *history* formatter with different single-image semantics (`'[image]'` always vs. the manifest's `caption ?? '[image]'`), so folding it into `displayPreview` would change behavior. Left intentionally.
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry
 
 **Problem**: Qwik's resumability requires serializing closures captured in `$()` functions. Context-provided services can't serialize because they contain functions.
 
-**Solution**: Module-level service registry instead of React-style context:
+**Solution**: Module-level registry (command bus + query objects) instead of React-style context:
 
 ```typescript
-// ❌ Won't work: nodes captured in closure, can't serialize functions
-const { nodes } = useContext(DataContext);
+// ❌ Won't work: queries captured in closure, can't serialize functions
+const { elements } = useContext(DataContext);
 const load$ = $(async () => {
-  await nodes.getRootNodes();
+  await elements.getRootElements();
 });
 
-// ✅ Works: nothing captured, service looked up at runtime
+// ✅ Works: nothing captured, registry looked up at runtime
 const load$ = $(async () => {
-  await getNodeService().getRootNodes();
+  await getElementQueries().getRootElements();
 });
 ```
 
-Services live at module scope (`src/data/services/index.ts`), swapped via `setNodeService()` for tests. This maintains Dependency Inversion Principle (components depend on `INodeService` interface) without serialization issues.
+The registry lives at module scope (`getCommandBus()` for writes in `src/data/commands/`, `getElementQueries()` / `getFieldDefinitionQueries()` for reads in `src/data/queries/`), swapped via `setElementQueries()` for tests. This maintains Dependency Inversion (components depend on the query/command interfaces) without serialization issues.
 
 **Why This Matters**: Without this pattern, Qwik's resumability breaks—the app can't serialize state for server-side rendering.
 
@@ -37,10 +67,10 @@ Services live at module scope (`src/data/services/index.ts`), swapped via `setNo
 
 **How It Works**:
 
-- Services (`INodeService`, `IFieldService`) are created from adapters via `nodeServiceFromAdapter()` and `fieldServiceFromAdapter()` factories
-- Default services use `FirestoreAdapter`
-- `useStorageAdapter(adapter)` swaps both node and field services to delegate through any adapter
-- Component-facing service contracts remain unchanged
+- Query objects are created from adapters via `elementQueriesFromAdapter()` / `fieldDefinitionQueriesFromAdapter()` factories (`src/data/queries/index.ts`); the command bus routes through the same adapter
+- `initializeQueries(adapter)` / `initializeCommandBus(adapter)` wire the active adapter (see `initStorage.ts`)
+- Swapping the adapter (or calling `setElementQueries()` in tests) redirects all reads/writes without touching components
+- Component-facing query/command contracts remain unchanged
 
 **Why This Matters**: Enables swapping storage backends (IndexedDB/memory for tests) without touching components. Critical for testing and future backend changes.
 
@@ -103,7 +133,7 @@ Orchestrator picks sub-component based on state.
 
 **Initialization**: `initStorage.ts` calls `initializeCommandBus(idbAdapter)` and `initializeQueries(idbAdapter)` after creating the adapter, ensuring the command bus and queries share the same adapter instance that SyncManager uses.
 
-**Deprecated but kept**: `INodeService` / `IFieldService` interfaces and `getNodeService()` / `getFieldService()` are marked `@deprecated` but remain for existing tests. `CreateNodeInput` is re-exported from `commands/types.ts` for backward compatibility.
+**Legacy service layer removed**: the old `INodeService` / `IFieldService` interfaces and `getNodeService()` / `getFieldService()` registry are gone — all reads/writes now flow through the command bus and query objects above. `CreateNodeInput` lives in `commands/types.ts`.
 
 ---
 
@@ -192,9 +222,9 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Pattern**: DataField is split into three entities:
 
-1. **Template** (`DataFieldTemplate`) — declares `componentType` (discriminated union over the 4 Phase-1 Components: `text-kv`, `enum-kv`, `measurement-kv`, `single-image`), a human label, and per-Component `config`. Stored in its own Dexie table and Firestore collection (`dataFieldTemplates`).
+1. **Template** (`DataFieldTemplate`) — declares `componentType` (discriminated union over the 4 Phase-1 Components: `text-kv`, `enum-kv`, `number-kv`, `single-image`), a human label, and per-Component `config`. Stored in its own Dexie table and Firestore collection (`dataFieldTemplates`).
 2. **Instance** (`DataField`) — attaches a Template to a TreeNode with a typed `value: DataFieldValue | null`. Snapshots `fieldName` and `componentType` from the Template at creation so later Template label edits don't rewrite persisted user data.
-3. **History** (`DataFieldHistory`) — discriminated union on `componentType`; `property` is always `"value"`; `prevValue` / `newValue` carry the Component's value shape (string for text/enum, number for measurement, image-metadata for single-image).
+3. **History** (`DataFieldHistory`) — discriminated union on `componentType`; `property` is always `"value"`; `prevValue` / `newValue` carry the Component's value shape (string for text/enum, number for number-kv, image-metadata for single-image).
 
 **Seeding on boot**: `src/data/services/seedTemplates.ts` writes 6 dev-Templates (Description, Type Of, Tags, Status, Weight, Main Image — one per componentType plus defaults) idempotently, guarded by a `syncMetadata.templatesSeededVersion` key. Seeds write directly to `db.templates` with no sync-queue enqueue: every client seeds identically, so propagating them as sync ops would be N redundant writes per N clients. Called from `initializeStorage()` after `initializeQueries()` but before `initializeSyncManager()` so queries are ready but the first-sync push doesn't see seed rows.
 
@@ -210,14 +240,14 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 - `TextKvField.tsx` — text-kv
 - `EnumKvField.tsx` — enum-kv (reuses CreateDataField's dropdown styles)
-- `MeasurementKvField.tsx` — measurement-kv (with `measurementState.ts` pure function for ok/warn/alarm state)
+- `NumberKvField.tsx` — number-kv (with `numberKvState.ts` pure function for ok/warn/alarm state)
 - `SingleImageField.tsx` — single-image stub (Phase 1 placeholder only)
 
 Sub-components render their own value column only; the dispatcher wraps them.
 
 **Shared `rootRef`**: outside-click cancel needs to cover the entire DataField row (chevron + label + value), not just the value column. The dispatcher creates a single `Signal<HTMLElement | undefined>` and passes it down to each sub-component, which passes it into `useFieldEdit`. This is why `useFieldEdit` takes `rootRef` as an option rather than creating its own.
 
-**Component-specific Template config is fetched inside the renderer** via `getTemplateQueries().getTemplateById()` wrapped in `useResource$`. For renderers that need the Template to compute display (enum options, measurement units/ranges), the resource is tracked on `props.templateId` so it re-fetches if the field's Template changes (rare but possible post-Phase-1).
+**Component-specific Template config is fetched inside the renderer** via `getTemplateQueries().getTemplateById()` wrapped in `useResource$`. For renderers that need the Template to compute display (enum options, number units/ranges), the resource is tracked on `props.templateId` so it re-fetches if the field's Template changes (rare but possible post-Phase-1).
 
 ---
 
@@ -226,7 +256,7 @@ Sub-components render their own value column only; the dispatcher wraps them.
 **Pattern**: `useFieldEdit<T extends DataFieldValue>` is parameterized on the stored value type T. The edit buffer is always a `Signal<string>` (user types into a text input regardless of T); callers supply `parse: (raw: string) => T | null` to convert on save and `format: (value: T | null) => string` to render for display and seed the edit buffer on begin.
 
 - **text-kv**: identity parse/format, with `trim() === ''` → `null`.
-- **measurement-kv**: `parseFloat` parse (throws on NaN, caught in `save$` → Snackbar error), `toFixed(decimals)` format. Optional `validate: (value: T | null) => void` callback rejects out-of-absolute-range values.
+- **number-kv**: `parseFloat` parse (throws on NaN, caught in `save$` → Snackbar error), `toFixed(decimals)` format. Optional `validate: (value: T | null) => void` callback rejects out-of-absolute-range values.
 - **enum-kv**: doesn't use `useFieldEdit` — the dropdown pick is a one-step save, not a text-buffer edit.
 - **single-image**: stub, no edit flow.
 
@@ -258,6 +288,18 @@ The `save$` flow: parse → validate (if provided) → `getCommandBus().execute(
 
 ---
 
+### Unified Element Model — Design Rationale
+
+> Design decided on `REFACTOR-single-unified-data-model`; **not yet built**. Captures *why*, so the choices aren't re-litigated. Migration steps live in ISSUES.md; full deliberation in `opus_chat_unified_data_model.md`.
+
+**One primitive, many renderers.** `TreeNode` and `DataField` collapse into one `Element`. The payoff is where complexity lands: with two primitives, every new kind of thing (Job, Logbook, Equipment Plate) risks a schema change; with one, variety lives in **renderers keyed by `kind`** — pure presentation, addable without touching storage. The schema stops being the axis that proliferates.
+
+**Why `siblingOrder` is uniform (and not `updatedAt`).** Order is an explicit, addressable scalar on every element rather than an implicit "position in the parent's array." Two reasons: (1) an explicit scalar can be *shadowed* by a future per-user override (a sparse overlay layered at read time) — an implicit position can't, without duplicating the whole array per user; (2) stable positions beat the old `updatedAt` re-sort, which reshuffled a node's siblings every time it was edited. Cost: inserting between siblings can't use plain `max+1` — the strategy is **renumber-the-run** (reassign sequential integers to the affected siblings via `computeCardOrderUpdates`), not fractional keys.
+
+**Why history keys to the element and spans all properties.** One append-only audit spine for the whole model, not just field values. Keying to `elementId` and widening `property` to `value | name | subtitle | parentId | siblingOrder` means renames, moves (a move *is* a `parentId` change), reorders, and structural deletes are all auditable and revertible through the existing `rev`/`prev`/`new` mechanism — no second system.
+
+---
+
 ### UI Prefs Serialization
 
 **Pattern**: Sets (`expandedCards`, `expandedFieldDetails`) stored as JSON arrays in localStorage. Converted on load/save in `uiPrefs.ts`.
@@ -270,7 +312,7 @@ The `save$` flow: parse → validate (if provided) → `getCommandBus().execute(
 
 ## Hook Patterns
 
-**useNodeCreation**: Extracts duplicate creation flow from RootView/BranchView. Returns `{ ucNode, start$, cancel$, complete$ }`. Internally calls `startConstruction$` (FSM transition), then on complete calls `getNodeService().createWithFields()` (data layer).
+**useNodeCreation**: Extracts duplicate creation flow from RootView/BranchView. Returns `{ ucNode, start$, cancel$, complete$ }`. Internally calls `startConstruction$` (FSM transition), then on complete dispatches the node-creation command via `getCommandBus()` (data layer).
 
 **useDoubleTap**: Returns `{ checkDoubleTap$ }` which takes `(x, y)` and returns boolean. Caller handles what to do on double-tap. Internal state persists across taps via Qwik signals.
 
@@ -306,7 +348,7 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Testing Patterns
 
-**Service Testing**: Tests use the same registry abstraction as components (`getNodeService()`/`getFieldService()`). Tests can use `setNodeService()`/`setFieldService()` to swap implementations, or `useStorageAdapter()` to swap adapters. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
+**Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
 
 **Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
 

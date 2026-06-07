@@ -57,9 +57,9 @@ async function doInitializeStorage(): Promise<void> {
     await db.open();
 
     // Check if we need to migrate from Firestore
-    const nodeCount = await db.nodes.count();
+    const elementCount = await db.elements.count();
 
-    if (nodeCount === 0) {
+    if (elementCount === 0) {
       // Check for Cypress test mode - IDB was seeded by Cypress, skip migration
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof window !== 'undefined' && (window as any).__CYPRESS_SEED_MODE__) {
@@ -75,7 +75,7 @@ async function doInitializeStorage(): Promise<void> {
         }
       }
     } else {
-      console.log('[Storage] IDB has', nodeCount, 'nodes, using existing data');
+      console.log('[Storage] IDB has', elementCount, 'elements, using existing data');
     }
 
     await seedNodeIndexFromDb();
@@ -135,31 +135,25 @@ async function migrateFromFirestore(): Promise<void> {
     const firestoreAdapter = new FirestoreAdapter();
 
     // Fetch all data via adapter methods
-    const nodes = await firestoreAdapter.pullAllNodes();
-    console.log('[Migration] Found', nodes.length, 'nodes');
+    const elements = await firestoreAdapter.pullAllElements();
+    console.log('[Migration] Found', elements.length, 'elements');
 
     const fieldDefinitions = await firestoreAdapter.pullAllFieldDefinitions();
     console.log('[Migration] Found', fieldDefinitions.length, 'field definitions');
 
-    const fields = await firestoreAdapter.pullAllFields();
-    console.log('[Migration] Found', fields.length, 'fields');
-
-    const history = await firestoreAdapter.pullAllHistory();
-    console.log('[Migration] Found', history.length, 'history entries');
+    const elementHistory = await firestoreAdapter.pullAllElementHistory();
+    console.log('[Migration] Found', elementHistory.length, 'element history entries');
 
     // Bulk insert into IDB
-    await db.transaction('rw', [db.nodes, db.fieldDefinitions, db.fields, db.history, db.syncMetadata], async () => {
-      if (nodes.length > 0) {
-        await db.nodes.bulkPut(nodes);
+    await db.transaction('rw', [db.elements, db.fieldDefinitions, db.elementHistory, db.syncMetadata], async () => {
+      if (elements.length > 0) {
+        await db.elements.bulkPut(elements);
       }
       if (fieldDefinitions.length > 0) {
         await db.fieldDefinitions.bulkPut(fieldDefinitions);
       }
-      if (fields.length > 0) {
-        await db.fields.bulkPut(fields);
-      }
-      if (history.length > 0) {
-        await db.history.bulkPut(history);
+      if (elementHistory.length > 0) {
+        await db.elementHistory.bulkPut(elementHistory);
       }
 
       // Set last sync timestamp to now (we're in sync with Firestore)
@@ -174,8 +168,10 @@ async function migrateFromFirestore(): Promise<void> {
 }
 
 async function seedNodeIndexFromDb(): Promise<void> {
-  const nodes = await db.nodes.toArray();
-  const activeNodes = nodes.filter(node => node.deletedAt === null);
+  const elements = await db.elements.toArray();
+  const activeNodes = elements
+    .filter(el => el.kind === 'node' && el.deletedAt === null)
+    .map(el => ({ id: el.id, parentId: el.parentId, nodeName: el.name }));
   initializeNodeIndex(activeNodes);
 }
 

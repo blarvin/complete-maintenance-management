@@ -8,9 +8,9 @@
  */
 
 import { useSignal, useTask$, useVisibleTask$, $ } from '@builder.io/qwik';
-import { getFieldQueries } from '../../data/queries';
+import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
-import type { DataField } from '../../data/models';
+import { elementToDataField, type DataField } from '../../data/models';
 import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
 import { useAsyncOperation, runAsync } from '../../hooks/useAsyncOperation';
 
@@ -50,7 +50,10 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         if (!currentEnabled.value) return;
         await initializeStorage();
         await runAsync(op, async () => {
-            fields.value = await getFieldQueries().getFieldsForNode(currentNodeId.value);
+            const kids = await getElementQueries().getChildren(currentNodeId.value);
+            fields.value = kids
+                .filter(e => e.kind !== 'node' && e.deletedAt === null)
+                .map(elementToDataField);
         });
     });
 
@@ -70,7 +73,10 @@ export function useTreeNodeFields(options: UseTreeNodeFieldsOptions) {
         // initializeQueries() runs (see useRootViewData.ts for the full story).
         await initializeStorage();
         await runAsync(op, async () => {
-            fields.value = await getFieldQueries().getFieldsForNode(nodeId);
+            const kids = await getElementQueries().getChildren(nodeId);
+            fields.value = kids
+                .filter(e => e.kind !== 'node' && e.deletedAt === null)
+                .map(elementToDataField);
         });
     });
 

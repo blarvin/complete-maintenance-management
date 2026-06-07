@@ -5,7 +5,7 @@
  * - Field details expansion state (isMetadataExpanded per field)
  */
 
-export const STORAGE_KEY = 'treeview:ui:prefs';
+export const STORAGE_KEY = 'treeview:ui:prefs:v2';
 
 export type UIPrefs = {
     expandedCards: Set<string>;      // node IDs

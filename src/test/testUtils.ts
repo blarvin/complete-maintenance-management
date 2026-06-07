@@ -53,51 +53,48 @@ async function cleanupCollection(collectionName: string): Promise<number> {
  * Clean up all test fixtures from all collections.
  * Call this in globalSetup/globalTeardown or after test suites.
  */
-export async function cleanupAllTestFixtures(): Promise<{ nodes: number; fields: number; history: number }> {
-    const [nodes, fields, history] = await Promise.all([
-        cleanupCollection(COLLECTIONS.NODES),
-        cleanupCollection(COLLECTIONS.FIELDS),
-        cleanupCollection(COLLECTIONS.HISTORY),
+export async function cleanupAllTestFixtures(): Promise<{ elements: number; elementHistory: number; fieldDefinitions: number }> {
+    const [elements, elementHistory, fieldDefinitions] = await Promise.all([
+        cleanupCollection(COLLECTIONS.ELEMENTS),
+        cleanupCollection(COLLECTIONS.ELEMENT_HISTORY),
+        cleanupCollection(COLLECTIONS.FIELD_DEFINITIONS),
     ]);
-    
-    return { nodes, fields, history };
+
+    return { elements, elementHistory, fieldDefinitions };
 }
 
 /**
- * Clean up test fixtures for a specific node and its related records.
- * Useful for cleaning up after individual tests.
+ * Clean up test fixtures for a specific element subtree: the element itself,
+ * its child elements, and all related element-history rows.
  */
-export async function cleanupTestNode(nodeId: string): Promise<void> {
-    if (!isTestId(nodeId)) {
-        throw new Error(`cleanupTestNode called with non-test ID: ${nodeId}`);
+export async function cleanupTestElement(elementId: string): Promise<void> {
+    if (!isTestId(elementId)) {
+        throw new Error(`cleanupTestElement called with non-test ID: ${elementId}`);
     }
-    
-    // Delete fields for this node
-    const fieldsQuery = query(
-        collection(db, COLLECTIONS.FIELDS),
-        where('parentNodeId', '==', nodeId)
-    );
-    const fieldsSnap = await getDocs(fieldsQuery);
-    
+
     const batch = writeBatch(db);
-    
-    // Delete related history entries
-    for (const fieldDoc of fieldsSnap.docs) {
-        const fieldId = fieldDoc.id;
-        const historyQuery = query(
-            collection(db, COLLECTIONS.HISTORY),
-            where('dataFieldId', '==', fieldId)
-        );
-        const historySnap = await getDocs(historyQuery);
-        for (const histDoc of historySnap.docs) {
-            batch.delete(doc(db, COLLECTIONS.HISTORY, histDoc.id));
-        }
-        batch.delete(doc(db, COLLECTIONS.FIELDS, fieldId));
+
+    // Child elements (one level — Phase 1 deletes are leaf/shallow).
+    const childrenSnap = await getDocs(query(
+        collection(db, COLLECTIONS.ELEMENTS),
+        where('parentId', '==', elementId),
+    ));
+    for (const childDoc of childrenSnap.docs) {
+        batch.delete(doc(db, COLLECTIONS.ELEMENTS, childDoc.id));
     }
-    
-    // Delete the node itself
-    batch.delete(doc(db, COLLECTIONS.NODES, nodeId));
-    
+
+    // Element history for this element.
+    const historySnap = await getDocs(query(
+        collection(db, COLLECTIONS.ELEMENT_HISTORY),
+        where('elementId', '==', elementId),
+    ));
+    for (const histDoc of historySnap.docs) {
+        batch.delete(doc(db, COLLECTIONS.ELEMENT_HISTORY, histDoc.id));
+    }
+
+    // The element itself.
+    batch.delete(doc(db, COLLECTIONS.ELEMENTS, elementId));
+
     await batch.commit();
 }
 
