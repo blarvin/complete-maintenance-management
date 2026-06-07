@@ -1,7 +1,5 @@
 # Asset Tree Management Specification
 
-> **Status (2026-06):** mid-refactor to the unified **Element** data model. The Data Model section describes the target state; built code still lags it. Migration steps live in ISSUES.md and the refactor plan; design rationale lives in IMPLEMENTATION.md and `opus_chat_unified_data_model.md`. Delete this banner when the refactor lands.
-
 ## Overview
 
 Asset maintenance and management app for physical assets (vehicles, buildings, industrial machinery, etc.) using a recursive tree structure where nodes represent things and their parts.
@@ -18,7 +16,7 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ## Concepts & Vocabulary
 
-This spec speaks in two registers, and keeping them distinct is the whole game. Many user-facing surfaces (Node, Field — and later Job, Logbook, …) sit over one storage primitive, the `Element`, so the boundary between the two registers is **declared once, here** — after which every other section may use either word set unambiguously.
+This spec speaks in two registers, and keeping them distinct is the whole game. The user navigates **surfaces**; the system stores one primitive, the `Element`. The boundary between the two registers is **declared once, here** — after which every other section may use either word set unambiguously. Two surfaces — **Node** and **Field** — are *primary*: they carry the entire experience, and every other surface is built in their terms (see **The two primary Kinds** below).
 
 **Surfaces** — what the user sees; what we say in intent and UI copy. Stable pattern language; the set grows as the product does.
 
@@ -30,7 +28,7 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 | **Field**                                                | One fact on a Card — a `Label : Value` row, or a more comoprehensive display of data or facts directly associated with the Node, such as an image carousel or chart of values.                                                       |
 | **Field Details**                                        | A Field's metadata (context) and management actions.                                                                                                                                                                                 |
 | **Field History**                                        | A Field's append-only value audit.                                                                                                                                                                                                   |
-| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surface patterns, added as the product grows.                                                                                                                                                                                    |
+| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surfaces, added as the product grows — each introduced as a **variety of Field** or a **behavior of Node** (see *The two primary Kinds*), never as a free-standing primitive beside them.                                          |
 
 
 **Storage & runtime** — what the system actually keeps and runs.
@@ -52,6 +50,17 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 - Intent/PRD prose and UI copy use **surface** words (Node, Field, Card).
 - Data-model and runtime prose use **storage** words (Element, kind, renderer).
 - `TreeNode`, `DataCard`, `DataField`, `DataFieldDetails` survive as **component (renderer) identifiers in code — not storage entities.** The only storage entities are `Element`, `ElementHistory`, and`FieldDefinition`.
+
+### The two primary Kinds
+
+The `Element` primitive is a uniformity for storage, history, and sync — not something the user ever meets generically. Every Element has a `kind`, and two Kinds are **primary**: they carry the entire experience, and everything else is built in their terms.
+
+- **Node** (rendered as a **TreeNode**) — a thing, or one of its constituent parts. A Node has identity (Title + Subtitle), nests into other Nodes, and is *navigated into*. **Nodes are the Tree.** Node is the privileged Kind: recursion, navigation, and the Data Card all exist to serve it — which is why the node renderer lives in the framework, not in the kind registry.
+- **Field** (rendered as a **DataField**) — a single unit of recorded knowledge attached to a Node: a typed `Label : Value` with its own Details and History. A Field does *not* nest into the Tree; it lives on its Node's Data Card and is *edited in place*. A Field's **type** — text, enum, number, image, and the kinds added later — is an open, extensible set: these are **varieties of Field**, each supplied by a FieldComponent (renderer).
+
+So `Element.kind` is either `node` or one of the Field varieties; "Field" is the category embracing every non-`node` kind. Node is the one fixed Kind; the Field varieties are where the system is *meant* to grow. Future surfaces (Job, Logbook, Setting, …) enter as new varieties of Field or new behaviors of Node — never as primitives standing beside them.
+
+**Design invariant — keep it Tree-, Node-, and Field-shaped.** The unified `Element` model makes it *cheap* to add surfaces; this invariant is what keeps that cheapness from dissolving the product into a featureless soup. New capability arrives as a new variety of Field hanging off a Node, or as a Node behavior — not as a new top-level concept competing with the Tree/Node/Field model. Before adding any surface, ask: *is this a Field variety, or a Node behavior?* If it is neither, be deeply suspicious — that is the road to mush. Variety is welcome; new primaries are not.
 
 ## Core Principles
 
@@ -337,7 +346,7 @@ FieldComponent (code)
        └── DataField (instance on a TreeNode: above + value + parent)
 ```
 
-The word **Template** is reserved for a future feature: a *set* of FieldDefinitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the FieldDefinition Library work; nothing in Phase 1 of this surface uses the word "Template" — anywhere it appears today (`templates` table, `DataFieldTemplate`, `TEMPLATE_IDS`, `templateId`) is a legacy artefact to be renamed (see Migration & Naming below).
+The word **Template** is reserved for a future feature: a *set* of FieldDefinitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the FieldDefinition Library work, and nothing in Phase 1 uses the word "Template".
 
 ### Phase 1 FieldComponents
 
@@ -370,7 +379,7 @@ Privacy implication for the user: labels may carry proprietary information (e.g.
 
 - **Local mirror**: Dexie table `fieldDefinitions` on every client.
 - **Source of truth**: Firestore collection `fieldDefinitions`, synced bidirectionally via the existing sync infrastructure (Push-then-Pull, LWW on `updatedAt`, queued through `SyncQueueManager`). This is the first user-mutable table beyond `elements` / `elementHistory`; the adapter contract extends to cover it.
-- **Seed entries** (the starter set): written client-side by `seedFieldDefinitions.ts` (renamed from `seedTemplates.ts`) on first run, idempotent via `SEED_VERSION`. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable IDs (`fd_description`, `fd_type_of`, …) let the UI reference defaults by constant, not by label.
+- **Seed entries** (the starter set): written client-side by `seedFieldDefinitions.ts` on first run, idempotent via `SEED_VERSION`. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable IDs (`fd_description`, `fd_type_of`, …) let the UI reference defaults by constant, not by label.
 - **User-authored entries**: enqueue through the sync queue like any other user write; appear on other clients on next pull.
 
 #### Listing in the Composer
@@ -412,37 +421,7 @@ Three FieldDefinitions are pre-checked in the Composer when a node is in `isUnde
 
 These appear as **locked checked rows** — checkbox visibly checked but disabled — so the user can't uncheck them. They commit as DataFields on node Save regardless of whether a value was entered (empty fields are allowed). Other FieldDefinitions in the Composer are unchecked by default and behave normally.
 
-UI code references these three by stable ID via the `FIELD_DEFINITION_IDS` constant (renamed from `TEMPLATE_IDS`), never by label.
-
-### Migration & Naming (work to do)
-
-The current implementation uses the legacy term "Template" throughout. Renaming is a precondition for the authoring work below; it isolates the diff and stops new code multiplying the old name.
-
-Mechanical renames (one PR, low risk because instance `fieldName` is already snapshotted):
-
-
-| From                                | To                                                                                                       |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `DataFieldTemplate` (type)          | `FieldDefinition`                                                                                        |
-| `templates` (Dexie table)           | `fieldDefinitions`                                                                                       |
-| `fieldDefinitions` (Firestore col.) | (same — first time it exists)                                                                            |
-| `templateId` (on `DataField`)       | `fieldDefinitionId`                                                                                      |
-| `TEMPLATE_IDS` (const)              | `FIELD_DEFINITION_IDS`                                                                                   |
-| `seedTemplates.ts` (file)           | `seedFieldDefinitions.ts`                                                                                |
-| `getTemplateQueries` / etc.         | `getFieldDefinitionQueries` / etc.                                                                       |
-| `pendingFormFromTemplate`           | `pendingFormFromFieldDefinition`                                                                         |
-| `Template` in UI copy               | "Field Definition" or "Library Field" (user-facing wording TBD; keep the *type* name consistent in code) |
-
-
-Composer component file names (`FieldComposer.tsx` etc.) stay as they are — "Composer" is correct.
-
-### Implementation order (Phase-1 scope of this work)
-
-1. **Rename** per the table above. Lands in one commit, before anything else.
-2. **Add `authorId`** to `FieldDefinition`. Seed writes use `"appDeveloper"`; user-authored writes use `getCurrentUserId()` (currently `"localUser"`). No UI surfaces `authorId` in Phase 1.
-3. **Wire `fieldDefinitions` through the sync layer**: `IDBAdapter` push/pull, `FirestoreAdapter` push/pull, `SyncQueueManager` enqueue on user-authored writes, LWW conflict resolution. Seed path remains local-only.
-4. **Authoring UI** in Field Composer: "+ New Field Definition…" affordance, inline form per FieldComponent, validation gates, commit → checked-row materialisation.
-5. **Defer to end of this work plan**: revisit edit/delete decisions if multi-user identity has landed; otherwise leave as specified above.
+UI code references these three by stable ID via the `FIELD_DEFINITION_IDS` constant, never by label.
 
 ### What stays in LATER.md (Phase-2+)
 
