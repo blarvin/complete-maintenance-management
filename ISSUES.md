@@ -15,19 +15,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-### UX
-
-1.) **UnderConstruction view: two Cancel buttons** — Inner composer panel has its own Cancel, plus the outer action row also has Cancel (and Create). Remove the inner Composer's Cancel button in this state.
-
-2.) **Under Construction view: "Create" enabled with empty Name** — No disabled state; should disable until Name is filled (or validate visibly on click).
-
-3.) **Composer pre-checked + disabled rows have no explanation** — Description / Tags / Type Of are pre-checked and grayed in the construction-view composer with no "(required)" label or tooltip; reads as broken rather than enforced. if they were just blue matching the optional checks, but still not un-checkable, and the tooltip said "required", then it would be clear that they are required.
-
-4.) **REVERT enabled when it shouldn't be** — The REVERT button is active when the current value or the original empty entry is selected. Should be disabled in those cases. In fact, it should be disabled if the selected value is the same as the current value, which is a common edge case. Just dont show the revert button in those cases.
-
-5.) **No ROOT view loading state** — `BranchView` shows "Loading..." while data loads; `RootView` flashes empty. Mirror the BranchView pattern.
-
-6.) **enum-kv allowOther support** — When `config.allowOther === true`, dropdown should append "Other…" that reveals an inline text input. Currently the dropdown only shows the fixed options list.
+_None open._
 
 
 ## Features

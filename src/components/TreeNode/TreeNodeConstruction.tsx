@@ -40,6 +40,12 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     const nameInputRef = useSignal<HTMLInputElement>();
     const subtitleInputRef = useSignal<HTMLInputElement>();
     const fieldListHandle = useSignal<FieldListHandle | null>(null);
+    // Reactive mirror of the Name input so the Create button can disable while empty.
+    const nameValue = useSignal('');
+
+    const handleNameInput$ = $((e: Event) => {
+        nameValue.value = (e.target as HTMLInputElement).value;
+    });
 
     useVisibleTask$(() => {
         nameInputRef.value?.focus();
@@ -47,6 +53,8 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
 
     const handleCreate$ = $(async () => {
         const nodeName = nameInputRef.value?.value || '';
+        // Guard: Name is required. The button is also disabled, but Enter can reach here.
+        if (nodeName.trim() === '') return;
         const nodeSubtitle = subtitleInputRef.value?.value || '';
 
         const handle = fieldListHandle.value;
@@ -97,6 +105,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                 nameInputRef={nameInputRef}
                 subtitleInputRef={subtitleInputRef}
                 onKeyDown$={handleKeyDown$}
+                onNameInput$={handleNameInput$}
                 chevronDisabled={true}
             />
             <DataCard isOpen={true}>
@@ -109,7 +118,13 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
 
                 <div q:slot="actions" class={styles.constructionActions}>
                     <button type="button" onClick$={handleCancel$}>Cancel</button>
-                    <button type="button" onClick$={handleCreate$}>Create</button>
+                    <button
+                        type="button"
+                        onClick$={handleCreate$}
+                        disabled={!nameValue.value.trim()}
+                    >
+                        Create
+                    </button>
                 </div>
             </DataCard>
         </div>

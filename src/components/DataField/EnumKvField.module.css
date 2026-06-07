@@ -17,3 +17,22 @@
     box-shadow: var(--shadow-dropdown);
     z-index: var(--z-dropdown);
 }
+
+/* Inline text input shown when "Other…" is chosen on an allowOther enum. */
+.otherInput {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--space-2) var(--space-4);
+    border: none;
+    border-top: var(--border-width-thin) solid var(--border-muted);
+    background: transparent;
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+}
+
+.otherInput:focus-visible {
+    outline: none;
+    background: var(--bg-active);
+}

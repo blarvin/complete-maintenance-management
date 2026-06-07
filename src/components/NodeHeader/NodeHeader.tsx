@@ -34,6 +34,8 @@ export type NodeHeaderProps = {
     subtitleInputRef?: { value: HTMLInputElement | undefined };
     /** For construction mode: keydown handler */
     onKeyDown$?: PropFunction<(e: KeyboardEvent) => void>;
+    /** For construction mode: name input handler (drives Create-button validity) */
+    onNameInput$?: PropFunction<(e: Event) => void>;
     /** For construction mode: disable chevron button */
     chevronDisabled?: boolean;
 };
@@ -92,6 +94,7 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                                 ref={props.nameInputRef}
                                 placeholder="Name"
                                 onKeyDown$={props.onKeyDown$}
+                                onInput$={props.onNameInput$}
                                 aria-label="Node name"
                                 id={props.titleId}
                             />

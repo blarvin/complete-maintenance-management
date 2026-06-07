@@ -44,6 +44,11 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     const triggerRef = useSignal<HTMLElement>();
     const popoverRef = useSignal<HTMLElement>();
     const popoverPos = useSignal<{ top: number; left: number }>({ top: 0, left: 0 });
+    // When config.allowOther is true, "Other…" swaps the option list for an
+    // inline text input so the user can type a custom value.
+    const otherMode = useSignal(false);
+    const otherText = useSignal('');
+    const otherInputRef = useSignal<HTMLInputElement>();
 
     useFieldValueSync<string>(props.id, currentValue);
 
@@ -69,11 +74,12 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
         popoverPos.value = { top, left };
     });
 
-    const optionsResource = useResource$<string[]>(async ({ track }) => {
+    const optionsResource = useResource$<{ options: string[]; allowOther: boolean }>(async ({ track }) => {
         track(() => props.fieldDefinitionId);
         const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'enum-kv') return [];
-        return (def.config as EnumKvConfig).options;
+        if (!def || def.componentType !== 'enum-kv') return { options: [], allowOther: false };
+        const config = def.config as EnumKvConfig;
+        return { options: config.options, allowOther: config.allowOther ?? false };
     });
 
     const open$ = $(() => {
@@ -85,6 +91,8 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     const close$ = $(() => {
         if (appState.editingElementId === props.id) stopFieldEdit$();
         isOpen.value = false;
+        otherMode.value = false;
+        otherText.value = '';
     });
 
     const pick$ = $(async (option: string) => {
@@ -122,6 +130,32 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
                 variant: 'error',
                 message: describeForUser(toStorageError(err)),
             });
+        }
+    });
+
+    const startOther$ = $(() => {
+        otherMode.value = true;
+        otherText.value = '';
+        setTimeout(() => {
+            positionPopover$();
+            otherInputRef.value?.focus();
+        }, 0);
+    });
+
+    const commitOther$ = $(async () => {
+        const trimmed = otherText.value.trim();
+        if (trimmed === '') return;
+        await pick$(trimmed);
+    });
+
+    const handleOtherKeyDown$ = $(async (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            await commitOther$();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            close$();
+            triggerRef.value?.focus();
         }
     });
 
@@ -258,7 +292,7 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
                     <Resource
                         value={optionsResource}
                         onPending={() => <div class={dropdownStyles.dropdownItem}>Loading…</div>}
-                        onResolved={(options) => (
+                        onResolved={({ options, allowOther }) => (
                             <>
                                 {options.map((opt, idx) => (
                                     <button
@@ -274,6 +308,31 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
                                         {opt}
                                     </button>
                                 ))}
+                                {allowOther && !otherMode.value && (
+                                    <button
+                                        type="button"
+                                        class={dropdownStyles.dropdownItem}
+                                        onClick$={startOther$}
+                                        onKeyDown$={(e) => handleOptionKeyDown$(e, options.length)}
+                                        role="option"
+                                        aria-selected={false}
+                                        tabIndex={-1}
+                                    >
+                                        Other…
+                                    </button>
+                                )}
+                                {allowOther && otherMode.value && (
+                                    <input
+                                        ref={otherInputRef}
+                                        class={enumStyles.otherInput}
+                                        type="text"
+                                        value={otherText.value}
+                                        placeholder="Custom value"
+                                        aria-label="Custom value"
+                                        onInput$={(e) => { otherText.value = (e.target as HTMLInputElement).value; }}
+                                        onKeyDown$={handleOtherKeyDown$}
+                                    />
+                                )}
                             </>
                         )}
                     />

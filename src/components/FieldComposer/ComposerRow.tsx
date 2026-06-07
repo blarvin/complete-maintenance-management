@@ -58,9 +58,11 @@ export const ComposerRow = component$<ComposerRowProps>((props) => {
         <div class={styles.row} ref={rootRef}>
             <input
                 type="checkbox"
-                class={styles.checkbox}
+                class={[styles.checkbox, props.locked && styles.checkboxLocked]}
                 checked={props.checked}
-                disabled={props.locked}
+                title={props.locked ? 'Required' : undefined}
+                aria-disabled={props.locked ? 'true' : undefined}
+                tabIndex={props.locked ? -1 : undefined}
                 onChange$={handleCheckboxChange$}
                 aria-labelledby={labelId}
                 ref={checkboxRef}
@@ -75,6 +77,8 @@ export const ComposerRow = component$<ComposerRowProps>((props) => {
                     onValueChange$={props.onValueChange$}
                 />
             )}
+            {/* Auto-flows into the column after the value (the spacer column). */}
+            {props.locked && <span class={styles.requiredTag}>(required)</span>}
         </div>
     );
 });

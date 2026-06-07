@@ -9,8 +9,10 @@
  *
  * Revert: when a row is selected, a small dot button appears in the left
  * gutter. Tapping it dispatches UPDATE_FIELD_VALUE with that entry's value
- * and shows a snackbar with Undo. We skip the dispatch entirely if the
- * selected entry's value already matches the live value (no-op gate).
+ * and shows a snackbar with Undo. The button is hidden when the selected
+ * entry matches the live value (would be a no-op) or when it's an empty value
+ * — emptying a field is done by deleting its value, not by reverting to a
+ * prior empty entry. A no-op gate in revert$ stays as a defensive guard.
  */
 
 import { component$, useSignal, $ } from '@builder.io/qwik';
@@ -110,7 +112,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                                 role="listitem"
                                 onClick$={() => toggleSelect$(entry.id)}
                             >
-                                {isSelected && (
+                                {isSelected && formatted !== '' && entry.newValue !== liveValue && (
                                     <button
                                         type="button"
                                         class={styles.revertButton}

@@ -110,6 +110,7 @@ The FieldComponent / FieldDefinition / DataField spine plus the 4 Phase-1 FieldC
 
 - **Unit conversion** for `number-kv`
 - **Option styling** (badges / colors) for `enum-kv`
+- **Promote `enum-kv` "Other…" entries into the FieldDefinition config** — when `allowOther` is on and a user types a custom value, it's stored only as the field's value today. Capture distinct "Other" values back into the shared FieldDefinition's `config.options` so they become first-class picks for everyone (one user's "Other" grows the canonical list). Needs dedup against existing options, and a moderation/ownership story (FieldDefinitions are a crowdsourced global pool — see "User-facing edit & delete of FieldDefinitions" above), so it's coupled to the Phase-2 Library work rather than a quick add.
 
 ### FieldDefinition Library — Phase-2 enhancements
 

@@ -134,3 +134,8 @@ input.nodeSubtitle {
     gap: var(--space-4);
     margin-top: var(--space-3);
 }
+
+.constructionActions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
