@@ -76,7 +76,7 @@ The registry lives at module scope (`getCommandBus()` for writes in `src/data/co
 
 **StorageResult Metadata**: Adapters return `StorageResult<T>` with lightweight metadata (adapter id, optional cache flag, latency). Enables future optimizations and debugging.
 
-**StorageError Contract**: Normalized error shape with codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers. Maps adapter-level failures to user-friendly messages (Snackbar integration pending).
+**StorageError Contract**: Normalized error shape with codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers. Both adapters normalize failures uniformly (see Error Handling below); surfaced to users via the Snackbar.
 
 ---
 
@@ -360,4 +360,4 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 **Pattern**: `safeAsync(operation, fallback, context)` wraps async calls with try/catch, logs with context string, returns fallback on error. Not currently applied everywhere—Firestore's offline persistence handles most failures. Becomes important when adding Snackbar error notifications.
 
-**StorageError Contract**: Normalized error shape enables consistent error handling across adapters. Future: map to Snackbar-friendly messages via `describeForUser()` helper.
+**StorageError Contract**: Normalized error shape enables consistent error handling across adapters. Both adapters wrap every public method in the same `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })` shape, each with a backend-specific code mapper: `mapFirestoreError` keys off `FirestoreError.code`, `mapDexieError` (in `IDBAdapter.ts`) keys off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`).

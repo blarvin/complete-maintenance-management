@@ -255,6 +255,12 @@ Phase 1 loads eagerly; background progressive loading deferred.
 - "Export Collection (JSON)" and "Import Collection" actions
 - Per-collection export before destructive ops (see Destructive Operations)
 
+### Emulator Round-Trip Sync Coverage
+
+The Element refactor traded the live-emulator adapter/sync suite for mock-based unit tests (`fieldDefinitionSync.test.ts` / `SyncPusher.test.ts` mock `RemoteSyncAdapter`). The whole unit suite passes without the Firebase emulator, but nothing automatically verifies real Firestore push/pull against the Element model. Reinstate a round-trip suite (Vitest against the emulator, or Cypress E2E) covering `elements` + `elementHistory` + `fieldDefinitions`.
+
+**Wiring needed before this is possible:** emulator connect in `src/data/firebase.ts` is gated on `isBrowser`, so Node/Vitest never connects — a round-trip Vitest run needs a Node connect path (e.g. honor `FIRESTORE_EMULATOR_HOST`) plus a separate vitest config + opt-in script so the default `npm test` stays emulator-free. Also: the `test:firestore` npm script currently points at a non-existent `src/test/firestoreAdapter.test.ts` — remove or repoint it as part of this work.
+
 ### Extract Sync System as Standalone Package (Refactoring Audit 8.3)
 
 Package the offline sync subsystem as a reusable module — provisional name `@blarvin/offline-sync`. The pieces are already reasonably decoupled and event-driven, so the extraction is mostly a packaging exercise rather than a rewrite.

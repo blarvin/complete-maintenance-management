@@ -17,6 +17,7 @@ import { component$, useSignal, $ } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
 import { getSnackbarService } from '../../services/snackbar';
 import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
+import { formatTimestampShort } from '../../utils/time';
 import type { ComponentType, DataFieldHistory as HistoryEntry, DataFieldValue } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
@@ -53,16 +54,6 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     // Latest entry's newValue is the live current value.
     const liveValue: DataFieldValue | null =
         props.history.length > 0 ? props.history[props.history.length - 1].newValue : null;
-
-    const formatDateTime = (ts: number): string => {
-        const d = new Date(ts);
-        const day = d.getDate().toString().padStart(2, '0');
-        const month = (d.getMonth() + 1).toString().padStart(2, '0');
-        const year = d.getFullYear();
-        const hours = d.getHours().toString().padStart(2, '0');
-        const mins = d.getMinutes().toString().padStart(2, '0');
-        return `${day}/${month}/${year}, ${hours}:${mins}`;
-    };
 
     const hasHistory = allEntries.length > 0;
     const units = props.units ?? '';
@@ -137,7 +128,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                                     {formatted || <em>Empty</em>}
                                 </span>
                                 <span class={styles.historyMeta}>
-                                    {formatDateTime(entry.updatedAt)} {entry.updatedBy}
+                                    {formatTimestampShort(entry.updatedAt)} {entry.updatedBy}
                                 </span>
                             </div>
                         );
