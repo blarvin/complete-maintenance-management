@@ -228,6 +228,7 @@ Phase 1 implements minimal append-only history for `DataField.dataValue` in `dat
 - Multi-user provenance with real user IDs and server-assigned timestamps
 - Merge strategy guidance for sync conflicts (event-level dedupe via `id`, causal ordering)
 - Pruning / archival policies for very long histories
+- **Real single-image Component** — Replace the "Image upload coming soon" stub with: Dexie `imageBlobs` table, file picker, preview + full-size modal, MIME/size validation, caption input when `requireCaption`. Firestore blob sync and orphaned-blob GC are separate follow-ups (see LATER.md).
 
 ### getFieldHistory and Soft-Deleted Fields
 
