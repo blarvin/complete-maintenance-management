@@ -80,9 +80,16 @@ describe('formatTimestamp', () => {
         // Create a timestamp with distinct seconds
         const ts = Date.UTC(2024, 0, 15, 12, 30, 45);
         const result = formatTimestamp(ts);
-        
+
         // formatTimestamp uses toLocaleString which includes seconds
         expect(result).toContain('45');
+    });
+
+    it('returns the "—" placeholder for missing or invalid input', () => {
+        expect(formatTimestamp(null)).toBe('—');
+        expect(formatTimestamp(undefined)).toBe('—');
+        expect(formatTimestamp(NaN)).toBe('—');
+        expect(formatTimestamp(Infinity)).toBe('—');
     });
 });
 
@@ -117,9 +124,16 @@ describe('formatTimestampShort', () => {
         const ts = Date.now();
         const full = formatTimestamp(ts);
         const short = formatTimestampShort(ts);
-        
+
         // Short format should generally be shorter or equal
         expect(short.length).toBeLessThanOrEqual(full.length);
+    });
+
+    it('returns the "—" placeholder for missing or invalid input', () => {
+        expect(formatTimestampShort(null)).toBe('—');
+        expect(formatTimestampShort(undefined)).toBe('—');
+        expect(formatTimestampShort(NaN)).toBe('—');
+        expect(formatTimestampShort(Infinity)).toBe('—');
     });
 });
 

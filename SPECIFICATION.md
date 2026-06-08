@@ -21,14 +21,14 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 **Surfaces** — what the user sees; what we say in intent and UI copy. Stable pattern language; the set grows as the product does.
 
 
-| Surface                                                  | What it is to the user                                                                                                                                                                                                               |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Node**                                                 | A navigable thing in the tree — an asset or a logical container. Has a Header (Title + Subtitle) and one Data Card. Has two view states, isParent and isChild. A Nodes children can only be seen when the Node is shown as isParent. |
-| **Data Card**                                            | The body of a Node: the list of its Fields. Some Fields and properties properly belonging to Node may also appear on other surfaces, particularly a Node's Header which is just a visual sectioning.                                 |
-| **Field**                                                | One fact on a Card — a `Label : Value` row, or a more comoprehensive display of data or facts directly associated with the Node, such as an image carousel or chart of values.                                                       |
-| **Field Details**                                        | A Field's metadata (context) and management actions.                                                                                                                                                                                 |
-| **Field History**                                        | A Field's append-only value audit.                                                                                                                                                                                                   |
-| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surfaces, added as the product grows — each introduced as a **variety of Field** or a **behavior of Node** (see *The two primary Kinds*), never as a free-standing primitive beside them.                                          |
+| Surface                                                  | What it is to the user                                                                                                                                                                                                                                                                                |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Node**                                                 | A navigable thing in the tree — an asset or a logical container. Has a Header (Title + Subtitle) and one Data Card. Has two view states, isParent and isChild. In isChild state its Data Card can be expanded and all Fields interacted. In isParent state its children also appear in isChild state. |
+| **Data Card**                                            | The body of a Node: the list of its Fields. Some Fields and properties properly belonging to Node may also appear on other surfaces, particularly a Node's Header which is just a visual sectioning.                                                                                                  |
+| **Field**                                                | One fact on a Card — a `Label : Value` row, or a more comoprehensive display of data or facts directly associated with the Node, such as an image carousel or chart of values.                                                                                                                        |
+| **Field Details**                                        | A Field's metadata (context) and management actions.                                                                                                                                                                                                                                                  |
+| **Field History**                                        | A Field's append-only value audit.                                                                                                                                                                                                                                                                    |
+| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surfaces, added as the product grows — each introduced as a **variety of Field** or a **behavior of Node** (see *The two primary Kinds*), never as a free-standing primitive beside them.                                                                                                         |
 
 
 **Storage & runtime** — what the system actually keeps and runs.
@@ -674,19 +674,19 @@ The data model is a single recursive primitive, the **Element**. A node is an El
 **Shared fields**:
 
 
-| Field     | Type          | Required | Description                        | Constraints                                                                                                                  |
-| --------- | ------------- | -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| id        | string        | Yes      | Primary key                        | Composite key `${elementId}:${rev}`                                                                                          |
-| elementId | string (UUID) | Yes      | Reference to `Element.id`          | Must exist in `elements` table                                                                                               |
-| parentId  | string (UUID) | null     | Yes                                | Owning/canonical parent at time of change                                                                                    |
-| kind      | string        | Yes      | Discriminator                      | Matches `Element.kind`                                                                                                       |
-| action    | enum          | Yes      | `"create"`                         | `"update"`                                                                                                                   |
-| property  | enum          | Yes      | Which property changed.            | `"value"` | `"name"` | `"subtitle"` | `"parentId"` | `"siblingOrder"`. Open set — grows as new tracked properties are added. |
-| prevValue | JSON          | null     | Cond.                              | Prior value of the changed property                                                                                          |
-| newValue  | JSON          | null     | Cond.                              | New value of the changed property                                                                                            |
-| updatedBy | string        | Yes      | Editor identifier                  | Constant `"localUser"`; real user IDs [Phase 2+]                                                                             |
-| updatedAt | timestamp     | Yes      | When the change occurred (epoch)   | Client-assigned; server-assigned [Phase 2+]                                                                                  |
-| rev       | number        | Yes      | Monotonic revision per `elementId` | Starts at 0 for create                                                                                                       |
+| Field     | Type          | Required | Description                        | Constraints                                      |
+| --------- | ------------- | -------- | ---------------------------------- | ------------------------------------------------ |
+| id        | string        | Yes      | Primary key                        | Composite key `${elementId}:${rev}`              |
+| elementId | string (UUID) | Yes      | Reference to `Element.id`          | Must exist in `elements` table                   |
+| parentId  | string (UUID) | null     | Yes                                | Owning/canonical parent at time of change        |
+| kind      | string        | Yes      | Discriminator                      | Matches `Element.kind`                           |
+| action    | enum          | Yes      | `"create"`                         | `"update"`                                       |
+| property  | enum          | Yes      | Which property changed.            | `"value"`                                        |
+| prevValue | JSON          | null     | Cond.                              | Prior value of the changed property              |
+| newValue  | JSON          | null     | Cond.                              | New value of the changed property                |
+| updatedBy | string        | Yes      | Editor identifier                  | Constant `"localUser"`; real user IDs [Phase 2+] |
+| updatedAt | timestamp     | Yes      | When the change occurred (epoch)   | Client-assigned; server-assigned [Phase 2+]      |
+| rev       | number        | Yes      | Monotonic revision per `elementId` | Starts at 0 for create                           |
 
 
 `**prevValue` / `newValue` shapes**:

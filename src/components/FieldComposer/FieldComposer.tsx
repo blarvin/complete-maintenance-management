@@ -227,11 +227,13 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
                 }}
             />
 
-            <div class={styles.footer}>
-                <button type="button" class={styles.cancelBtn} onClick$={handleCancel$}>
-                    Cancel
-                </button>
-                {props.mode === 'display' && (
+            {/* Construction mode is driven by the parent node's Cancel/Create row,
+                so the composer hides its own footer to avoid a duplicate Cancel. */}
+            {props.mode === 'display' && (
+                <div class={styles.footer}>
+                    <button type="button" class={styles.cancelBtn} onClick$={handleCancel$}>
+                        Cancel
+                    </button>
                     <button
                         type="button"
                         class={styles.saveBtn}
@@ -240,8 +242,8 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
                     >
                         Save
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 });

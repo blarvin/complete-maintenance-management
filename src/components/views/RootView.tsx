@@ -15,7 +15,7 @@ export const RootView = component$(() => {
     const { navigateToNode$ } = useAppTransitions();
     
     // Use the extracted hook for data loading
-    const { nodes, reload$ } = useRootViewData();
+    const { nodes, isLoading, reload$ } = useRootViewData();
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
@@ -28,6 +28,13 @@ export const RootView = component$(() => {
     const displayNodes = ucNode
         ? nodes.value.filter(n => n.id !== ucNode.id)
         : nodes.value;
+
+    // Mirror BranchView's loading guard so the root list doesn't flash empty
+    // before data resolves. Guard on empty nodes so background reloads (storage
+    // change listener) don't replace the live list with "Loading...".
+    if (isLoading.value && nodes.value.length === 0) {
+        return <main class="view-root">Loading...</main>;
+    }
 
     return (
         <main class="view-root">

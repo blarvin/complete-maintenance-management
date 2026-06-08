@@ -19,7 +19,7 @@ import {
   FirestoreError,
   serverTimestamp,
 } from "firebase/firestore";
-import type { FieldDefinition, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
+import type { FieldDefinition, Element, ElementHistory, Kind } from "../models";
 import type { StorageAdapter, RemoteSyncAdapter, StorageResult, StorageFieldDefinitionCreate, StorageFieldDefinitionUpdate, StorageElementCreate, StorageElementUpdate } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
@@ -42,7 +42,7 @@ function coerceTimestamps<T>(data: any): T {
   }
   return data as T;
 }
-import { computeNextRev, createElementHistoryEntry } from "./historyHelpers";
+import { computeNextRev, createElementHistoryEntry, diffElementChanges } from "./historyHelpers";
 import { now } from "../../utils/time";
 import { toStorageError, makeStorageError, isStorageError } from "./storageErrors";
 
@@ -405,12 +405,7 @@ export class FirestoreAdapter implements StorageAdapter, RemoteSyncAdapter {
       }
       const existing = coerceTimestamps<Element>(snap.data());
 
-      const changedProps: Array<{ property: ElementHistoryProperty; prev: unknown; next: unknown }> = [];
-      if ("name" in updates && updates.name !== existing.name) changedProps.push({ property: "name", prev: existing.name, next: updates.name });
-      if ("subtitle" in updates && (updates.subtitle ?? null) !== existing.subtitle) changedProps.push({ property: "subtitle", prev: existing.subtitle, next: updates.subtitle ?? null });
-      if ("value" in updates && updates.value !== existing.value) changedProps.push({ property: "value", prev: existing.value, next: updates.value });
-      if ("parentId" in updates && (updates.parentId ?? null) !== existing.parentId) changedProps.push({ property: "parentId", prev: existing.parentId, next: updates.parentId ?? null });
-      if ("siblingOrder" in updates && updates.siblingOrder !== existing.siblingOrder) changedProps.push({ property: "siblingOrder", prev: existing.siblingOrder, next: updates.siblingOrder });
+      const changedProps = diffElementChanges(existing, updates);
 
       await updateDoc(ref, {
         ...updates,
