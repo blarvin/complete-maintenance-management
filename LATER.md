@@ -126,6 +126,16 @@ The Phase-1 model is "authoring is contributing": one global pool, all FieldDefi
 - **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md).
 - **Orphaned-blob GC** — needed once blobs are in play.
 
+### `single-image` is a latent 2-part composite
+
+`SingleImageValue` (`{ blobId, mimeType, width, height, byteSize, caption? }`) bundles **two independent edit intents** into one `value` object: *change the image* (the blob + its derived `mimeType`/`width`/`height`/`byteSize`, which all change atomically with it) and *edit the caption* (free text). It's a hardcoded 2-field composite — `{ image, caption }` — crammed into a single object rather than expressed structurally. This surfaces as two coupled symptoms:
+
+- **No per-sub-value history.** History is keyed `property: 'value'` and diffs the whole object atomically (`diffElementChanges`), so a caption edit and an image swap are indistinguishable in the audit log. Recording them separately the ad-hoc way (sub-property keys like `value.caption` / `value.image`) is throwaway single-image-only machinery. The real move is the recursive one: model single-image as a parent element with two **child Elements** (an image field + a caption field), each carrying its own history stream keyed by its own `elementId` — per-sub-value history then comes for free. This is the same recursive pattern as the `composite-kv` Phase-2 kind and the `subtitle → nodeSubtitle child element` refactor above; it rides in on the renderer-registry Phase-2 work (the flat `KindManifest` has no seam for sub-fields yet).
+
+- **`===`/`!==` value comparison is reference-equality on the object.** Because the value is an object minted fresh on every edit (`SingleImageField`'s `emptyImage(trimmed)`), the no-op guard in `diffElementChanges` (`updates.value !== existing.value`) and the revert gates in `DataFieldHistory` (lines ~71/115) never match structurally: a caption "save" with no real change still writes a history entry, and the revert button shows even on the entry equal to the live value. For the three primitive kinds (`text-kv`/`enum-kv` = string, `number-kv` = number) `!==` is correct value-equality; only this composite object is affected.
+
+**Deferred together because they're the same disease.** Once single-image is decomposed into child Elements, each sub-value is a primitive again (caption = string, image identity = `blobId` string), so structural history *and* correct `!==` equality both arrive in one stroke with the composite/registry Phase-2 work — no standalone stopgap needed for a stubbed kind. (If the over-capture noise ever bites before then, a small structural-equality helper in `diffElementChanges` + the two `DataFieldHistory` gates is the throwaway patch.)
+
 ### Media / Image Fields
 
 Media upload, preview, storage, and caching are out of scope for Phase 1. All fields treated as text.
@@ -230,6 +240,14 @@ Phase 1 implements minimal append-only history for `DataField.dataValue` in `dat
 - Merge strategy guidance for sync conflicts (event-level dedupe via `id`, causal ordering)
 - Pruning / archival policies for very long histories
 - **Real single-image Component** — Replace the "Image upload coming soon" stub with: Dexie `imageBlobs` table, file picker, preview + full-size modal, MIME/size validation, caption input when `requireCaption`. Firestore blob sync and orphaned-blob GC are separate follow-ups (see LATER.md).
+
+### Re-affirmation history (logging an unchanged value)
+
+The no-op guard in `diffElementChanges` (`historyHelpers.ts`) drops any value update where `updates.value === existing.value`, so **re-setting a field to the value it already holds writes no history entry**. That's correct for incidental no-ops (blur with no real edit), but it forecloses *deliberate re-affirmation*: an inspection-style field — e.g. an `enum-kv` "Working?" repeatedly attested `pass → pass → pass` — cannot record "checked again on this date, still pass." The single equality guard conflates "no change, suppress noise" with "same value, deliberately re-attested" and always resolves to the former.
+
+**Deferred approach:** make re-affirmation opt-in rather than changing the default dedupe. Either (a) a per-FieldDefinition config flag (e.g. `logUnchanged` / `reaffirmable`) that, when set, lets an explicit re-affirm action bypass the no-op guard and append a `value` history entry with `prevValue === newValue`; or (b) a dedicated FieldComponent kind for attestation/inspection fields that carries this semantics natively (and likely a distinct history `action` such as `'reaffirm'` so the audit log can distinguish a re-attestation from a real change). Incidental writes (no user intent) still get swallowed in both cases.
+
+**Coupled:** the history-rendering layer (`DataFieldHistory`) currently hides the most-recent entry as a live-row duplicate and gates the revert button on `newValue !== liveValue`; a re-affirm entry equal to the live value needs those rules revisited so the re-attestation is actually visible. Decide intent in SPECIFICATION.md before building.
 
 ### getFieldHistory and Soft-Deleted Fields
 
