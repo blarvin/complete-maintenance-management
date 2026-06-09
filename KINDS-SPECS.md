@@ -204,7 +204,7 @@ const assetDocManifest: KindManifest = {
 | F   | Some kinds auto-create *other* Elements when they appear (Logbook propagates down; Jobs auto-group into a synthetic container) | new **auto-provisioning / lifecycle** dimension (`AutoProvisionSpec`) — *described* in the manifest now, *deferred* to build; the render/author/sync API doesn't depend on it |
 | G   | A composite (`log-entry`) needs *collection* sub-fields (0..n tags / @-mentions) alongside *singletons* (one body)             | `SubFieldSpec` gains a **cardinality** (`one` \| `many`)                                                                                                                      |
 | H   | A reference may pin a **specific history revision** of its target (`approval` → `${targetId}:${rev}`), not just the live element. Its **validity is a function of pinned-rev vs current-rev** — the approval goes *stale* when the target advances past the approved revision. | `TargetSpec` gains `pin: 'live' \| 'revision'`; reference value widens to `{ targetId, rev? }`. Introduces a **validity/staleness** concept: the resolver compares pinned vs current rev at read; the renderer surfaces "approved @ rev N / now at rev M → stale." First **reference-side** reader of `ElementHistory` (mirrors `value-chart`'s stored-side read). |
-| I   | The `virtualParents` overlay (a first-class model property per SPEC: `{ parentId, siblingOrder, navMode, render }`, portal vs citation) must reduce onto `nature: 'reference'` with **no new primitive** — confirming the SPEC claim that "`virtualParents`, the cross-linked field, and the in-link all reduce to one edge." | *Confirmation, not extension.* `other-end` is the reference whose edge **is** a `virtualParents` entry. `render: 'portal'` → navigable tree appearance (acts like `re-root` at the other end); `render: 'citation'` → non-navigable inline row (like `asset-doc`). No new slot; `placement`/`navMode` already span it. The probe's job is to prove the reduction holds. |
+| I   | The `virtualParents` overlay (a first-class model property per SPEC: `{ parentId, siblingOrder, navMode, render }`, portal vs citation) must reduce onto `nature: 'reference'` with **no new primitive** — confirming the SPEC claim that "`virtualParents`, the cross-linked field, and the in-link all reduce to one edge." **Both authoring UX** — *adopt-here* (from the referrer's card) and *appears-also-under* (from the target element) — must be expressible without forking the model. | *Confirmation, not extension.* `other-end` is the reference whose edge **is** a `virtualParents` entry. `render: 'portal'` → navigable tree appearance (acts like `re-root` at the other end); `render: 'citation'` → non-navigable inline row (like `asset-doc`). Both authoring directions write the **same single edge**, distinguished only by `target.authorFrom: 'referrer' \| 'target' \| 'both'` (which sets the default `render` and where the `ConfigForm` mounts). No new data path; `placement`/`navMode` already span it. |
 
 
 ---
@@ -292,6 +292,7 @@ type TargetSpec = {
   scope: 'internal' | 'external';     // internal → Element id; external → URL
   pin?: 'live' | 'revision';          // Finding H — 'revision' pins ${targetId}:${rev}; default 'live'
   appearance?: 'portal' | 'citation'; // Finding I — virtualParents render mode (other-end); default 'citation'
+  authorFrom?: 'referrer' | 'target' | 'both';  // Finding I — which end's UI creates the edge; default 'referrer'
   allowedKinds?: Kind[];              // internal only: valid target kinds
   valid?: ValiditySpec;               // Finding H — when the edge counts as valid (e.g. pinned-rev current)
 };
@@ -382,7 +383,15 @@ Not a new idea: `virtualParents` is a first-class data-model property (SPEC → 
 - `render: 'portal'` — a **navigable** appearance: the element shows up as a real child in the virtual parent's tree, tap navigates into it (re-root at the other end). One identity, many appearances, never a copy — edits write through to the single canonical element.
 - `render: 'citation'` — a **non-navigable** inline reference row, like `asset-doc`.
 
-The probe **confirms** (Finding I) that this reduces to `nature: reference` with no new primitive — `placement`/`navMode` already span portal-vs-citation, and the canonical `parentId` stays the single home. Open: does authoring an `other-end` write the `virtualParents` entry on the *target* (graph overlay) or instantiate a reference field on the *referrer's* card? (Likely the former — the edge is the overlay, the field is its view.)
+The probe **confirms** (Finding I) that this reduces to `nature: reference` with no new primitive — `placement`/`navMode` already span portal-vs-citation, and the canonical `parentId` stays the single home.
+
+**Authoring works from either end, but writes one edge.** The edge is always a single `virtualParents` entry on the target element (the overlay is the source of truth; there is no second copy and no separate "referrer-owned" record). What differs is the entry-point UI, captured by `target.authorFrom`:
+
+- **`'referrer'` — adopt-here.** On a node's Data Card you add an *Other End* pointing at an existing element ("link this here"). Default `render: 'citation'` (a reference row on the card), upgradeable to `portal`. This is the in-link gesture.
+- **`'target'` — appears-also-under.** From the element itself you add an *additional parent* ("this also lives under …"). Default `render: 'portal'` (it shows up as a real, navigable child over there). This is the multi-home gesture.
+- **`'both'`** — the kind exposes both entry points; they converge on the identical `virtualParents` write, so an edge authored from one end is editable/removable from the other.
+
+So the registry accommodates both UX with one slot (`authorFrom`) and one default-render rule, without forking the data model or the manifest. The `ConfigForm` differs only in *where it's mounted* (parent card vs. element's own actions); the resulting edge is the same.
 
 ### `approval` (reference — version-pinned) — *extension probe (Finding H)*
 
