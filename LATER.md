@@ -142,7 +142,7 @@ Media upload, preview, storage, and caching are out of scope for Phase 1. All fi
 
 ### DataField Reordering UI
 
-Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Implementation will call the existing `computeCardOrderUpdates` helper (`src/data/utils/cardOrder.ts`) and write through the adapter. This is the point at which persisted gaps from deletions get compacted.
+Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Writes go through the adapter. This is the point at which persisted gaps from deletions get compacted. Algorithm note (a `computeCardOrderUpdates` helper existed at `src/data/utils/cardOrder.ts` until 2026-06-10, deleted as speculative): sort fields by current order, walk the run assigning sequential orders, and emit `{id, cardOrder}` updates only for rows whose order actually changes — minimal writes, stable for already-ordered input.
 
 ### ComposerRow check/uncheck slide-in animation
 

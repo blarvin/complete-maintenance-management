@@ -56,50 +56,6 @@ export function saveUIPrefs(prefs: UIPrefs): void {
 }
 
 /**
- * Check if a card is expanded for a given node.
- */
-export function isCardExpanded(nodeId: string): boolean {
-    const prefs = loadUIPrefs();
-    return prefs.expandedCards.has(nodeId);
-}
-
-/**
- * Check if field details are expanded for a given field.
- */
-export function isFieldDetailsExpanded(fieldId: string): boolean {
-    const prefs = loadUIPrefs();
-    return prefs.expandedFieldDetails.has(fieldId);
-}
-
-/**
- * Toggle card expansion for a node.
- * Persists the change to localStorage.
- */
-export function toggleCardExpanded(nodeId: string): void {
-    const prefs = loadUIPrefs();
-    if (prefs.expandedCards.has(nodeId)) {
-        prefs.expandedCards.delete(nodeId);
-    } else {
-        prefs.expandedCards.add(nodeId);
-    }
-    saveUIPrefs(prefs);
-}
-
-/**
- * Toggle field details expansion for a field.
- * Persists the change to localStorage.
- */
-export function toggleFieldDetailsExpanded(fieldId: string): void {
-    const prefs = loadUIPrefs();
-    if (prefs.expandedFieldDetails.has(fieldId)) {
-        prefs.expandedFieldDetails.delete(fieldId);
-    } else {
-        prefs.expandedFieldDetails.add(fieldId);
-    }
-    saveUIPrefs(prefs);
-}
-
-/**
  * Clear all UI preferences.
  * Useful for testing or reset functionality.
  */

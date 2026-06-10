@@ -19,8 +19,8 @@ export type TapState = {
 };
 
 /**
- * Pure function for double-tap detection.
- * Exported for testing. Returns [isDouble, newState].
+ * Pure function for double-tap detection. Single source of truth —
+ * `checkDoubleTap$` delegates here. Returns [isDouble, newState].
  */
 export function detectDoubleTap(
     state: TapState,
@@ -67,17 +67,18 @@ export function useDoubleTap(options: UseDoubleTapOptions = {}) {
      * Also updates internal state for next detection.
      */
     const checkDoubleTap$ = $((x: number, y: number): boolean => {
-        const now = Date.now();
-        const withinTime = now - lastDownAt.value <= thresholdMs;
-        const dx = Math.abs(x - lastDownX.value);
-        const dy = Math.abs(y - lastDownY.value);
-        const withinSlop = dx <= slopPx && dy <= slopPx;
-        const isDouble = withinTime && withinSlop;
+        const [isDouble, newState] = detectDoubleTap(
+            { lastDownAt: lastDownAt.value, lastDownX: lastDownX.value, lastDownY: lastDownY.value },
+            x,
+            y,
+            Date.now(),
+            thresholdMs,
+            slopPx
+        );
 
-        // Update state for next detection
-        lastDownAt.value = now;
-        lastDownX.value = x;
-        lastDownY.value = y;
+        lastDownAt.value = newState.lastDownAt;
+        lastDownX.value = newState.lastDownX;
+        lastDownY.value = newState.lastDownY;
 
         return isDouble;
     });

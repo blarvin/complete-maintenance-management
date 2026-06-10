@@ -87,7 +87,6 @@ export type UsePendingFormsResult = {
     setPendingValue$: ReturnType<typeof $<(formId: string, value: DataFieldValue | null) => void>>;
     commitAll$: ReturnType<typeof $<(currentMaxCardOrder: number) => Promise<number>>>;
     discardAll$: ReturnType<typeof $<() => PendingForm[]>>;
-    restoreAll$: ReturnType<typeof $<(rows: PendingForm[]) => void>>;
 };
 
 export function usePendingForms(options: UsePendingFormsOptions): UsePendingFormsResult {
@@ -164,10 +163,6 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         return cleared;
     });
 
-    const restoreAll$ = $((rows: PendingForm[]) => {
-        forms.value = rows;
-    });
-
     return {
         forms,
         lastToggledId,
@@ -175,6 +170,5 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         setPendingValue$,
         commitAll$,
         discardAll$,
-        restoreAll$,
     };
 }
