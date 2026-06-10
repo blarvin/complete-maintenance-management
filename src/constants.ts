@@ -2,6 +2,8 @@
  * Centralized constants for the application.
  */
 
+import type { AddFieldSurfaceId } from "./components/FieldList/addFieldSurfaces";
+
 /**
  * Current user ID. Phase 1 uses a constant; future phases will pull from auth.
  */
@@ -14,12 +16,14 @@ export const USER_ID = "localUser" as const;
 export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
 
 /**
- * Feature flag (no real FF system): when true, FieldList shows the legacy
- * single-pick "+ Add Field" surface BELOW the new FieldComposer. Toggle to
- * compare the two add-field UXs side-by-side. Set to false to ship with only
- * the composer.
+ * Which add-field surfaces FieldList renders in display mode (A/B roster).
+ * Construction mode always uses the composer regardless of this list.
+ * See src/components/FieldList/addFieldSurfaces.ts for the surface contract.
  */
-export const LEGACY_ADD_FIELD_ENABLED = true;
+export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [
+    "composer",
+    "legacy",
+];
 
 /**
  * Firestore collection names.

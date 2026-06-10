@@ -10,7 +10,7 @@ Scope: full read of `src/` (110 production files, ~9,250 lines TS/TSX, plus ~3,8
 
 - **The Element/ElementHistory/FieldDefinition trio** is small, honest, and matches the spec. `historyHelpers.ts` is a model citizen: pure, shared, tested.
 - **KIND_REGISTRY** (`src/kinds/`) with `satisfies Record<ComponentType, KindManifest>` is the best seam in the codebase. KINDS-SPECS.md's plan to widen the key to the full `Kind` union and derive the unions from the registry is correct — that's the plugin property, and the code is already 80% of the way there.
-- The FSM (`appState.*`) is small, guarded, and tested. Don't grow it; don't shrink it either.
+- The FSM (`appState.`*) is small, guarded, and tested. Don't grow it; don't shrink it either.
 - Sync collaborators (`SyncPusher` / strategies / `ServerAuthorityResolver` / `SyncLifecycle`) are each genuinely single-purpose. The decomposition is right even if the layer as a whole is questioned below (§2.2).
 - Test discipline: domain logic tested at the service/adapter layer, not through components.
 
@@ -86,7 +86,7 @@ Extract one `commitWithUndo$({ message, execute, undo })` service-layer QRL. Eac
 
 ### 2.7 The two add-field surfaces: decide
 
-`LEGACY_ADD_FIELD_ENABLED = true` ships **both** `CreateDataField` (single-pick dropdown) and the FieldComposer, plus the `ActiveSurface` mutex that exists only to coordinate them. The constant's own comment says it's a side-by-side comparison toggle. If the composer has won (everything in SPEC §Field Composer says it has), delete `CreateDataField/` (103 lines + CSS), the `ActiveSurface` type, the mutex signal in FieldList, and the flag. If it hasn't won, that's a product decision worth making soon — the mutex complicates every change to FieldList.
+**✅ RESOLVED 2026-06-10 — decision: keep both.** The composer has *not* won; the surfaces are a deliberate A/B comparison and more variants are planned. Instead of deleting, the coordination was generalized to scale to N surfaces: `ActiveSurface` moved to a neutral home (`src/components/FieldList/addFieldSurfaces.ts`, which also documents the surface contract), and the `LEGACY_ADD_FIELD_ENABLED` boolean was replaced by an `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts`. The mutex signal in FieldList is unchanged — one signal, last-writer-wins, opening one surface closes the rest. Winner-picking deferred to LATER.md §Add-Field Surface A/B.
 
 ---
 
@@ -94,16 +94,18 @@ Extract one `commitWithUndo$({ message, execute, undo })` service-layer QRL. Eac
 
 Verified by grep — no production references:
 
-| Item | Evidence | Action |
-| --- | --- | --- |
-| `src/data/services/withErrorHandling.ts` (`safeAsync`, `safeAsyncVoid`, `withSafeAsync`) | only referenced by its own test | delete file + `errorHandling.test.ts` |
-| `src/data/utils/cardOrder.ts` (`computeCardOrderUpdates`, `sortByCardOrder`) | test-only; reorder UI is deferred in LATER.md | delete with its test, or park the algorithm note in LATER.md — speculative code rots faster than a paragraph |
-| `uiPrefs.ts:61-100` (`isCardExpanded`, `isFieldDetailsExpanded`, `toggleCardExpanded`, `toggleFieldDetailsExpanded`) | production goes through appState transitions; only `uiPrefs.test.ts` calls these | delete the four helpers + their test blocks |
-| `usePendingForms.restoreAll$` | restore happens via remount + `restoreSeed`; nothing calls it | delete |
-| `useFieldDefinitionDraft.phase` / `start$` | `FieldDefinitionAuthoringForm` never calls `start$` or reads `phase` | delete both; the hook shrinks nicely |
-| `detectDoubleTap` (useDoubleTap.ts:25-46) | exported "for testing", but `checkDoubleTap$` **duplicates the logic inline instead of calling it** — tests exercise a copy, not the real path | make `checkDoubleTap$` call `detectDoubleTap` (one source of truth) or delete the export and test the hook |
-| `useAsyncOperation.error` | set on every failure, **read nowhere** — load errors silently vanish and views just look empty | either render it (a one-line error state in the two views) or remove the signal; current state is the worst of both |
-| Commands `UPDATE_ELEMENT_NAME`, `UPDATE_ELEMENT_SUBTITLE`, `MOVE_ELEMENT`; queries `getChildrenByKind`, `nextSiblingOrder` | handlers/tests only; rename UI is ISSUES #3, reorder deferred | fine to keep (spec'd, cheap, tested) — just know they're unwired |
+
+| Item                                                                                                                       | Evidence                                                                                                                                       | Action                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/data/services/withErrorHandling.ts` (`safeAsync`, `safeAsyncVoid`, `withSafeAsync`)                                   | only referenced by its own test                                                                                                                | delete file + `errorHandling.test.ts`                                                                               |
+| `src/data/utils/cardOrder.ts` (`computeCardOrderUpdates`, `sortByCardOrder`)                                               | test-only; reorder UI is deferred in LATER.md                                                                                                  | delete with its test, or park the algorithm note in LATER.md — speculative code rots faster than a paragraph        |
+| `uiPrefs.ts:61-100` (`isCardExpanded`, `isFieldDetailsExpanded`, `toggleCardExpanded`, `toggleFieldDetailsExpanded`)       | production goes through appState transitions; only `uiPrefs.test.ts` calls these                                                               | delete the four helpers + their test blocks                                                                         |
+| `usePendingForms.restoreAll$`                                                                                              | restore happens via remount + `restoreSeed`; nothing calls it                                                                                  | delete                                                                                                              |
+| `useFieldDefinitionDraft.phase` / `start$`                                                                                 | `FieldDefinitionAuthoringForm` never calls `start$` or reads `phase`                                                                           | delete both; the hook shrinks nicely                                                                                |
+| `detectDoubleTap` (useDoubleTap.ts:25-46)                                                                                  | exported "for testing", but `checkDoubleTap$` **duplicates the logic inline instead of calling it** — tests exercise a copy, not the real path | make `checkDoubleTap$` call `detectDoubleTap` (one source of truth) or delete the export and test the hook          |
+| `useAsyncOperation.error`                                                                                                  | set on every failure, **read nowhere** — load errors silently vanish and views just look empty                                                 | either render it (a one-line error state in the two views) or remove the signal; current state is the worst of both |
+| Commands `UPDATE_ELEMENT_NAME`, `UPDATE_ELEMENT_SUBTITLE`, `MOVE_ELEMENT`; queries `getChildrenByKind`, `nextSiblingOrder` | handlers/tests only; rename UI is ISSUES #3, reorder deferred                                                                                  | fine to keep (spec'd, cheap, tested) — just know they're unwired                                                    |
+
 
 Deleting the first three rows also deletes three whole test files — the suite gets faster and stops certifying dead code.
 
@@ -133,6 +135,7 @@ cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 s
 **4.4 Consolidate the three data-loading hooks.** `useRootViewData`, `useBranchViewData`, and `useTreeNodeFields` are the same hook three times: query children → filter by kind → map → signal + isLoading + storage-change reload. Root is just `parentId = null`. One `useElementChildren(parentIdSig, kindFilter)` covers all three (BranchView additionally fetches the parent element — a param or second tiny hook). `useTreeNodeFields`' prop-sync/loadVersion dance and its duplicated load body (`reload$` and the visible task are character-identical) fold away in the rewrite. Pairs naturally with §2.3.
 
 **4.5 Per-kind switches that the registry should own.** The manifest seam exists; finish routing through it:
+
 - `DataField.tsx:75,99`: `isImageVariant = componentType === 'single-image'` controls label suppression and wrapper class — should be a manifest flag (`hideLabel` / layout hint), not a kind comparison in the dispatcher.
 - `DataFieldHistory.formatHistoryValue` switches on `componentType` — that's `displayPreview`'s job. Bonus: today history shows raw numbers while the live row shows formatted ones (number-kv `displayPreview` is just `String(v)`); pushing real formatting into `displayPreview` fixes the inconsistency in one place.
 - `TreeNodeConstruction`'s `DEFAULT_FIELD_DEFINITION_IDS` import from seeds is fine for Phase 1, but it's the kind of framework-knows-a-kind wiring KINDS-SPECS wants in manifests eventually.
@@ -157,7 +160,7 @@ cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 s
 
 Ordered for compounding payoff and low risk; each step is independently shippable.
 
-1. **Deletions** (§3, plus §2.7 if the composer has won): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller.
+1. **Deletions** (§3): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller.
 2. **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land.
 3. **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3).
 4. **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks.

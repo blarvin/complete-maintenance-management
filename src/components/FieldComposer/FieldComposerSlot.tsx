@@ -17,9 +17,8 @@
 import { component$, useSignal, $, type Signal, type QRL, type PropFunction } from '@builder.io/qwik';
 import { FieldComposer, type FieldComposerHandle, type FieldComposerMode } from './FieldComposer';
 import type { PendingForm } from '../../hooks/usePendingForms';
+import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
 import styles from './FieldComposerSlot.module.css';
-
-export type ActiveSurface = 'none' | 'legacy' | 'composer';
 
 /** Handle exposed to a parent that needs to drive commit/discard externally
  *  (e.g. TreeNodeConstruction's Save button). */

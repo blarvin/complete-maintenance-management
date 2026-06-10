@@ -266,6 +266,14 @@ The `save$` flow: parse → validate (if provided) → `getCommandBus().execute(
 
 ---
 
+### Add-Field Surfaces: A/B Roster + Mutex
+
+**Pattern**: FieldList hosts multiple "add field" UX surfaces side by side as a deliberate A/B comparison (currently `FieldComposerSlot` and the legacy `CreateDataField` dropdown; more variants planned). Which surfaces render in display mode is controlled by the `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts` — adding/removing a surface is a roster edit, not new conditional logic.
+
+Coordination is a single parent-owned mutex signal: `useSignal<ActiveSurface>('none')` in FieldList. Each surface is open iff `activeSurface.value === <its own id>`, opens by writing its own id, closes by writing `'none'` — last writer wins, so opening any surface implicitly closes the rest, and that property holds for any number of surfaces. The `ActiveSurface` / `AddFieldSurfaceId` types and the full surface contract (including the post-persist reload callback) live in `src/components/FieldList/addFieldSurfaces.ts`, deliberately neutral ground so no surface imports from a competitor. Construction mode bypasses the roster: the composer is always rendered there (locked-defaults flow requires it) and ignores the mutex.
+
+---
+
 ### Data Model Conventions
 
 **Root Nodes**: Use `parentId: null`, not sentinel value like `"ROOT"`. Adapter queries use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.

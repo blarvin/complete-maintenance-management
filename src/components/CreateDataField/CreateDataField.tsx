@@ -19,7 +19,7 @@ import {
 import { getFieldDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import type { FieldDefinition } from '../../data/models';
-import type { ActiveSurface } from '../FieldComposer/FieldComposerSlot';
+import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
 import styles from './CreateDataField.module.css';
 
 export type CreateDataFieldProps = {

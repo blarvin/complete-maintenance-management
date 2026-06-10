@@ -1,9 +1,10 @@
 /**
  * FieldList - Renders persisted DataFields for a node and mounts the
- * FieldComposerSlot (and optionally the legacy "+ Add Field" surface).
+ * add-field surfaces enabled in ENABLED_ADD_FIELD_SURFACES.
  *
- * Hosts the `activeSurface` mutex shared by the two display-mode add-field
- * surfaces — opening one closes the other.
+ * Hosts the `activeSurface` mutex shared by all display-mode add-field
+ * surfaces — opening one closes the others. Surface contract and roster
+ * live in ./addFieldSurfaces.ts.
  *
  * Composer orchestration (open/restore plumbing, handle exposure) lives
  * inside FieldComposerSlot; FieldList just hosts and forwards reload events.
@@ -13,10 +14,11 @@
 
 import { component$, $, useComputed$, useSignal, type Signal } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
-import { FieldComposerSlot, type FieldComposerSlotHandle, type ActiveSurface } from '../FieldComposer/FieldComposerSlot';
+import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
-import { LEGACY_ADD_FIELD_ENABLED } from '../../constants';
+import { ENABLED_ADD_FIELD_SURFACES } from '../../constants';
+import type { ActiveSurface } from './addFieldSurfaces';
 import styles from './FieldList.module.css';
 
 /** Re-export so existing TreeNodeConstruction imports keep working. */
@@ -43,7 +45,7 @@ export const FieldList = component$<FieldListProps>((props) => {
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
-    // Shared mutex for the two display-mode surfaces.
+    // Shared mutex for the display-mode add-field surfaces.
     const activeSurface = useSignal<ActiveSurface>('none');
 
     const handleFieldDeleted$ = $(() => {
@@ -67,17 +69,19 @@ export const FieldList = component$<FieldListProps>((props) => {
                 />
             ))}
 
-            <FieldComposerSlot
-                nodeId={props.nodeId}
-                mode={mode}
-                currentMaxCardOrder={maxPersistedCardOrder.value}
-                initialFieldDefinitionIds={props.initialFieldDefinitionIds}
-                activeSurface={activeSurface}
-                onCommitted$={reload$}
-                handleRef={props.handleRef}
-            />
+            {(props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer')) && (
+                <FieldComposerSlot
+                    nodeId={props.nodeId}
+                    mode={mode}
+                    currentMaxCardOrder={maxPersistedCardOrder.value}
+                    initialFieldDefinitionIds={props.initialFieldDefinitionIds}
+                    activeSurface={activeSurface}
+                    onCommitted$={reload$}
+                    handleRef={props.handleRef}
+                />
+            )}
 
-            {LEGACY_ADD_FIELD_ENABLED && !props.isConstruction && (
+            {ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction && (
                 <CreateDataField
                     nodeId={props.nodeId}
                     currentMaxCardOrder={maxPersistedCardOrder.value}
