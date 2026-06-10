@@ -326,8 +326,8 @@ describe('Adapter Instance Creation', () => {
         const adapter = new FirestoreAdapter();
 
         expect(adapter).toBeDefined();
-        expect(typeof adapter.listRootElements).toBe('function');
-        expect(typeof adapter.createElement).toBe('function');
+        expect(typeof adapter.pullAllElements).toBe('function');
+        expect(typeof adapter.pullElementsSince).toBe('function');
         expect(typeof adapter.applySyncItem).toBe('function');
     });
 
