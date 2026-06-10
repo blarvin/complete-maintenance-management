@@ -63,7 +63,7 @@ The registry lives at module scope (`getCommandBus()` for writes in `src/data/co
 
 ### Storage Adapter Abstraction
 
-**Pattern**: All storage operations go through `StorageAdapter` interface. Implementations include `IDBAdapter` (IndexedDB) and `FirestoreAdapter` (cloud sync).
+**Pattern**: All domain reads/writes go through the `StorageAdapter` interface, implemented solely by `IDBAdapter` (IndexedDB via Dexie) — the single write model owning history diffing, rev minting, and sibling ordering. `FirestoreAdapter` implements only `RemoteSyncAdapter` (`applySyncItem` + pull methods): Firestore is a sync mirror, not a second CRUD backend.
 
 **How It Works**:
 
@@ -76,7 +76,7 @@ The registry lives at module scope (`getCommandBus()` for writes in `src/data/co
 
 **StorageResult Metadata**: Adapters return `StorageResult<T>` with lightweight metadata (adapter id, optional cache flag, latency). Enables future optimizations and debugging.
 
-**StorageError Contract**: Normalized error shape with codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers. Both adapters normalize failures uniformly (see Error Handling below); surfaced to users via the Snackbar.
+**StorageError Contract**: Normalized error shape with codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers. `IDBAdapter` normalizes all failures uniformly (see Error Handling below); surfaced to users via the Snackbar.
 
 ---
 
@@ -356,7 +356,7 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Testing Patterns
 
-**Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
+**Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Sync tests (`SyncPusher.test.ts`, `fieldDefinitionSync.test.ts`) mock `RemoteSyncAdapter`; no automated test currently exercises the real `FirestoreAdapter` against the emulator (see LATER.md §Emulator Round-Trip Sync Coverage).
 
 **Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
 
@@ -366,6 +366,4 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Error Handling
 
-**Pattern**: `safeAsync(operation, fallback, context)` wraps async calls with try/catch, logs with context string, returns fallback on error. Not currently applied everywhere—Firestore's offline persistence handles most failures. Becomes important when adding Snackbar error notifications.
-
-**StorageError Contract**: Normalized error shape enables consistent error handling across adapters. Both adapters wrap every public method in the same `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })` shape, each with a backend-specific code mapper: `mapFirestoreError` keys off `FirestoreError.code`, `mapDexieError` (in `IDBAdapter.ts`) keys off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`).
+**StorageError Contract**: Normalized error shape enables consistent error handling at the write model. `IDBAdapter` wraps every public method in a single private `run()` helper implementing `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })`, with `mapDexieError` keying off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`). `FirestoreAdapter`'s sync methods throw raw Firestore errors; the sync layer (`SyncPusher`) catches per-item failures and marks the queue item failed rather than surfacing them to the UI.

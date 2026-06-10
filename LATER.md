@@ -353,13 +353,17 @@ createSyncManager({
 - Command logging / audit middleware on CommandBus (pre/post hooks)
 - Query caching / materialized views (beyond existing `nodeIndex`)
 
+### Second Storage Backend → ElementWriteService (Audit §2.1)
+
+`IDBAdapter` is the sole write model; `FirestoreAdapter` was stripped to `RemoteSyncAdapter` (sync mirror only). If a second full storage backend is ever needed, do **not** resurrect a parallel CRUD adapter — build an `ElementWriteService` that owns the domain write logic (history diffing, rev minting, sibling ordering, sync-queue enqueue, event emission) over a dumb KV adapter interface, so the write model stays single-sited.
+
 ### Structured Logger (Refactoring Audit 7.5)
 
 Replace ad-hoc `console.log` with a lightweight logger (`src/utils/logger.ts`). Level filtering to silence debug/info in production. ~137 console statements across 27 files already use consistent `[Tag]` prefixes — migration is mechanical. Low priority: current logging works fine for dev.
 
 ### Error Handling & Resilience
 
-Adopt `safeAsync()` from `withErrorHandling.ts` in view-layer data loads. Wraps async calls, returns fallback (empty arrays), logs with context. Low priority for Phase 1 because Firestore's offline persistence absorbs most network failures. Becomes valuable once:
+Surface view-layer data-load errors instead of swallowing them (`useAsyncOperation` sets an `error` signal that nothing renders — failed loads just look empty). A small wrapper (fallback value + contextual logging + an error state in the two views) covers it; the old `safeAsync()`/`withErrorHandling.ts` helper was deleted as dead code (audit §3) and should be rebuilt only when actually wired in. Low priority for Phase 1. Becomes valuable once:
 
 1. Snackbar is implemented for user-facing error messages
 2. Error monitoring (Sentry, etc.) is added

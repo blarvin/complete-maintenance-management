@@ -116,7 +116,7 @@ npm run emulator     # Run Firebase emulator
 - **Unit tests**: Service layer, adapters, sync logic, FSM transitions
 - **E2E tests**: Cypress against Firestore emulator (run cleanup before tests)
 - **Fake-IndexedDB**: In-memory IndexedDB for fast unit tests
-- Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_EMULATOR', 'true')`
+- Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_FIRESTORE_EMULATOR', 'true')` or `?emulator=true` URL param
 
 ### Testing Infrastructure
 
