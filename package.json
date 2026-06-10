@@ -49,6 +49,7 @@
     "cypress": "^15.8.1",
     "eslint": "^9.34.0",
     "fake-indexeddb": "^6.2.5",
+    "firebase-tools": "^15.19.1",
     "globals": "^17.0.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.5",
