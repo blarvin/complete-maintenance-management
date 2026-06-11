@@ -26,7 +26,6 @@ export type DataFieldProps = {
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
     updatedAt?: number;
-    onDeleted$?: PropFunction<() => void>;
     onUpdated$?: PropFunction<() => void>;
 };
 
@@ -56,9 +55,6 @@ export const DataField = component$<DataFieldProps>((props) => {
                     }),
                 },
             });
-            if (props.onDeleted$) {
-                props.onDeleted$();
-            }
         } catch (err) {
             getSnackbarService().show({
                 variant: 'error',

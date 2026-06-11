@@ -13,7 +13,6 @@ import {
     useResource$,
     Resource,
     $,
-    type PropFunction,
     type Signal,
 } from '@builder.io/qwik';
 import { getFieldDefinitionQueries } from '../../data/queries';
@@ -28,8 +27,6 @@ export type CreateDataFieldProps = {
     currentMaxCardOrder: number;
     /** Shared mutex with the Composer surface. */
     activeSurface: Signal<ActiveSurface>;
-    /** Called after a field is successfully created so the parent can reload. */
-    onCreated$: PropFunction<() => void>;
 };
 
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
@@ -54,7 +51,6 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
                 siblingOrder: props.currentMaxCardOrder + 1,
             },
         });
-        await props.onCreated$();
     });
 
     return (

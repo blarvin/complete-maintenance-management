@@ -3,44 +3,45 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { component$, useTask$, $ } from '@builder.io/qwik';
+import { component$, useComputed$, useTask$ } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
-import { useAppTransitions } from '../../state/appState';
+import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
-import { useBranchViewData } from '../../hooks/useBranchViewData';
-import { useStorageChangeListener } from '../../hooks/useStorageChangeListener';
+import { useElementChildren, useElementById } from '../../hooks/useElementChildren';
+import { elementToTreeNode } from '../../data/models';
 
 export type BranchViewProps = {
     parentId: string;
 };
 
 export const BranchView = component$((props: BranchViewProps) => {
-    const { navigateToNode$, navigateUp$ } = useAppTransitions();
-    
-    // Use the extracted hook for data loading
-    const { parentNode, children, isLoading, load$, reload$ } = useBranchViewData();
+    const appState = useAppState();
+    const { navigateToNode$, navigateUp$, cancelConstruction$ } = useAppTransitions();
 
-    // Track parentId changes and reload data (must be in component to track props)
-    useTask$(async ({ track }) => {
-        const parentId = track(() => props.parentId);
-        if (!parentId) return;
-        await load$(parentId);
-    });
-    
-    useStorageChangeListener($(() => {
-        if (props.parentId) {
-            console.log('[BranchView] Storage change detected, reloading...');
-            reload$(props.parentId);
+    // Data arrives via the storage event bus; navigation re-triggers loads
+    // because the hooks track the parentId signal.
+    const parentIdSig = useComputed$(() => props.parentId);
+    const { element: parentEl } = useElementById(parentIdSig);
+    const { children: childEls, isLoading } = useElementChildren(parentIdSig, 'nodes');
+
+    const parentNode = useComputed$(() =>
+        parentEl.value && parentEl.value.kind === 'node' ? elementToTreeNode(parentEl.value) : null);
+    const children = useComputed$(() => childEls.value.map(elementToTreeNode));
+
+    // Navigating to a new branch cancels any in-flight construction.
+    // (Previously buried in useBranchViewData.load$, where background sync
+    // reloads also — wrongly — triggered it.)
+    useTask$(({ track }) => {
+        track(() => props.parentId);
+        if (appState.underConstruction) {
+            cancelConstruction$();
         }
-    }));
+    });
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
         parentId: props.parentId,
-        onCreated$: $(async () => {
-            await reload$(props.parentId);
-        }),
     });
 
     if (isLoading.value || !parentNode.value) {
@@ -84,7 +85,8 @@ export const BranchView = component$((props: BranchViewProps) => {
                 {ucNode ? (
                     <div class="branch-child-row">
                         <TreeNode
-                            key={ucNode.id}
+                            // Namespaced key — see RootView's UC TreeNode comment.
+                            key={`uc-${ucNode.id}`}
                             id={ucNode.id}
                             nodeName={ucNode.name}
                             nodeSubtitle={ucNode.subtitle}

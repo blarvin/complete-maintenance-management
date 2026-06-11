@@ -4,9 +4,10 @@
  *
  * Updates the signal directly from the event payload whenever a write
  * touches this element — including writes dispatched from sibling components
- * (e.g. revert from DataFieldHistory). This bypasses the FieldList → props
- * → renderer reactivity chain, which doesn't reliably propagate in time
- * for cross-component writes.
+ * (e.g. revert from DataFieldHistory). Writes emit; readers subscribe — this
+ * is the standard read model (see useElementChildren.ts), specialized here
+ * to patch a single value signal straight from the event payload instead of
+ * refetching.
  *
  * The renderer's edit buffer is a separate signal, so writes that arrive
  * during an in-progress edit don't disturb the user's input — only the

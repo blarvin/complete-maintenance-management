@@ -24,7 +24,6 @@ import type { QRL } from '@builder.io/qwik';
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
 import type { SyncQueueManager } from './SyncQueueManager';
 import { now } from '../../utils/time';
-import { dispatchStorageChangeEvent } from '../storage/storageEvents';
 import { getSnackbarService } from '../../services/snackbar';
 import { SYNC_PULL_TIMEOUT_MS } from '../../constants';
 import { withTimeout } from '../../utils/withTimeout';
@@ -125,9 +124,8 @@ export class SyncManager {
       await this.local.setLastSyncTimestamp(now());
 
       console.log('[SyncManager] Delta sync cycle complete');
-
-      // Dispatch event to trigger UI updates
-      dispatchStorageChangeEvent();
+      // UI updates arrive via per-element storageEventBus emissions from
+      // IDBAdapter.applyRemoteElement / applyRemoteFieldDefinition.
     } catch (err) {
       console.error('[SyncManager] Delta sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
@@ -160,9 +158,6 @@ export class SyncManager {
       await this.local.setLastSyncTimestamp(now());
 
       console.log('[SyncManager] Full sync cycle complete');
-
-      // Dispatch event to trigger UI updates
-      dispatchStorageChangeEvent();
     } catch (err) {
       console.error('[SyncManager] Full sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app

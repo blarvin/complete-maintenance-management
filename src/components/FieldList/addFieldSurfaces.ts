@@ -10,8 +10,8 @@
  *  - is open iff `activeSurface.value === <its own id>`
  *  - opens by writing its own id; closes by writing 'none'
  *    (last writer wins — opening one surface implicitly closes the rest)
- *  - calls its onCreated$/onCommitted$ callback after persisting so
- *    FieldList can reload
+ *  - persists via the command bus; no reload callback needed — writes emit
+ *    on the storage event bus and FieldList's data hook reloads itself
  *
  * Adding a new surface:
  *  1. add its id to AddFieldSurfaceId

@@ -14,7 +14,7 @@
  * irrelevant.
  */
 
-import { component$, useSignal, $, type Signal, type QRL, type PropFunction } from '@builder.io/qwik';
+import { component$, useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
 import { FieldComposer, type FieldComposerHandle, type FieldComposerMode } from './FieldComposer';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
@@ -38,8 +38,6 @@ export type FieldComposerSlotProps = {
     /** Shared mutex with the legacy "+ Add Field" surface (display mode only).
      *  Ignored in construction mode. */
     activeSurface?: Signal<ActiveSurface>;
-    /** Called after a commit successfully persists fields, so the parent can reload. */
-    onCommitted$?: PropFunction<() => void>;
     /** Optional handle for external commit/discard/restore. */
     handleRef?: Signal<FieldComposerSlotHandle | null>;
 };
@@ -57,10 +55,9 @@ export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
         if (props.activeSurface) props.activeSurface.value = 'composer';
     });
 
-    const handleDismiss$ = $(async () => {
+    const handleDismiss$ = $(() => {
         restoreSeed.value = undefined;
         if (props.activeSurface) props.activeSurface.value = 'none';
-        if (props.onCommitted$) await props.onCommitted$();
     });
 
     const handleRequestRestore$ = $((rows: PendingForm[]) => {
@@ -73,9 +70,7 @@ export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
         const commitAll$ = $(async (override?: number) => {
             if (!composerHandle.value) return 0;
             const max = override !== undefined ? override : props.currentMaxCardOrder;
-            const count = await composerHandle.value.commitAll$(max);
-            if (count > 0 && props.onCommitted$) await props.onCommitted$();
-            return count;
+            return await composerHandle.value.commitAll$(max);
         });
         const discardAll$ = $(async () => {
             if (!composerHandle.value) return [] as PendingForm[];

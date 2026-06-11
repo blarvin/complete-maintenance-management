@@ -23,13 +23,12 @@ import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
 import { seedFieldDefinitions } from '../services/seedFieldDefinitions';
-import { dispatchStorageChangeEvent } from './storageEvents';
 
 let initialized = false;
 /**
  * Memoized init promise. All callers share the same promise so concurrent
  * `await initializeStorage()` calls (e.g. one from useInitStorage and one from
- * useRootViewData) never re-enter the init body and do duplicate work.
+ * useElementChildren) never re-enter the init body and do duplicate work.
  */
 let initPromise: Promise<void> | null = null;
 
@@ -114,15 +113,12 @@ async function doInitializeStorage(): Promise<void> {
 
     initialized = true;
     console.log('[Storage] Initialization complete');
-    // Belt-and-suspenders: any data hook whose first load$ ran before queries
-    // were ready will now retry via its storage-change listener and render
-    // from IDB immediately, instead of waiting for the first Firestore pull.
-    dispatchStorageChangeEvent();
+    // No completion notification needed: data hooks await initializeStorage()
+    // before their first query (and this promise resolves on failure too).
   } catch (err) {
     console.error('[Storage] Initialization failed:', err);
     // Don't throw - app should still work offline with empty IDB
     initialized = true;
-    dispatchStorageChangeEvent();
   }
 }
 

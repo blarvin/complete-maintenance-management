@@ -276,6 +276,8 @@ Phase 1 loads eagerly; background progressive loading deferred.
 - Snackbar toast when a background pull applies remote changes to an entity currently rendered (narrow rule to avoid chatty toasts). Successful pushes of the user's own writes stay silent.
 - ~~Snackbar toast only when `SyncQueueManager` exhausts retries for an item — otherwise sync stays silent per Phase 1.~~ ✅ Implemented 2026-06-11 (audit §4.3): 5 retries riding existing sync cycles, error toast with Retry action on exhaustion, startup re-arm. See IMPLEMENTATION.md §Sync retry policy.
 - Orphaned Firestore SDK mirror IndexedDB databases linger on devices that ran builds before the `memoryLocalCache()` switch (audit §2.2). No auto-cleanup built, by design — users run `clearFirebaseIndexedDB()` in the console.
+- `applyRemoteElementHistory` does not emit on `storageEventBus` (audit §2.3 left this as-is), so a pull that applies only history rows won't refresh an open DataFieldDetails. Emit a history event if remote history-only refresh ever matters.
+- The bus read-model hooks (`useElementChildren`/`useElementById`) deliberately export no `reload$` — every imperative reload site was redundant with a bus emission. Trivially added back if a real imperative need appears.
 
 ### Export / Import
 
@@ -287,6 +289,8 @@ Phase 1 loads eagerly; background progressive loading deferred.
 The Element refactor traded the live-emulator adapter/sync suite for mock-based unit tests (`fieldDefinitionSync.test.ts` / `SyncPusher.test.ts` mock `RemoteSyncAdapter`). The whole unit suite passes without the Firebase emulator, but nothing automatically verifies real Firestore push/pull against the Element model. Reinstate a round-trip suite (Vitest against the emulator, or Cypress E2E) covering `elements` + `elementHistory` + `fieldDefinitions`.
 
 **Wiring needed before this is possible:** emulator connect in `src/data/firebase.ts` is gated on `isBrowser`, so Node/Vitest never connects — a round-trip Vitest run needs a Node connect path (e.g. honor `FIRESTORE_EMULATOR_HOST`) plus a separate vitest config + opt-in script so the default `npm test` stays emulator-free. Also: the `test:firestore` npm script currently points at a non-existent `src/test/firestoreAdapter.test.ts` — remove or repoint it as part of this work.
+
+**Note (2026-06-11):** one Cypress E2E spec now exists again — `cypress/e2e/repro-create-node.cy.ts` (regression for the UC-TreeNode key collision, audit §2.3) plus a stub `cypress/support/e2e.ts`. It currently runs against the *live* Firestore config and writes real nodes; gate it to the emulator (`?emulator=true` / `USE_FIRESTORE_EMULATOR`) before wiring into any automated run.
 
 ### Extract Sync System as Standalone Package (Refactoring Audit 8.3)
 

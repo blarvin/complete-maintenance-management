@@ -6,17 +6,19 @@
  * surfaces — opening one closes the others. Surface contract and roster
  * live in ./addFieldSurfaces.ts.
  *
- * Composer orchestration (open/restore plumbing, handle exposure) lives
- * inside FieldComposerSlot; FieldList just hosts and forwards reload events.
+ * Data arrives via useElementChildren (writes emit; readers subscribe) —
+ * no reload callbacks are threaded to children. Composer orchestration
+ * (open/restore plumbing, handle exposure) lives inside FieldComposerSlot.
  * Construction-mode parents pass `handleRef` through to drive commit/discard
  * externally from the node's Save button.
  */
 
-import { component$, $, useComputed$, useSignal, type Signal } from '@builder.io/qwik';
+import { component$, useComputed$, useSignal, type Signal } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
 import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
-import { useTreeNodeFields } from '../TreeNode/useTreeNodeFields';
+import { useElementChildren } from '../../hooks/useElementChildren';
+import { elementToDataField } from '../../data/models';
 import { ENABLED_ADD_FIELD_SURFACES } from '../../constants';
 import type { ActiveSurface } from './addFieldSurfaces';
 import styles from './FieldList.module.css';
@@ -35,28 +37,23 @@ export type FieldListProps = {
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
-    const { fields, reload$ } = useTreeNodeFields({
-        nodeId: props.nodeId,
-        enabled: true
-    });
+    const nodeIdSig = useComputed$(() => props.nodeId);
+    const { children } = useElementChildren(nodeIdSig, 'fields');
+    const fields = useComputed$(() => children.value.map(elementToDataField));
 
     const maxPersistedCardOrder = useComputed$(() => {
-        if (!fields.value || fields.value.length === 0) return -1;
+        if (fields.value.length === 0) return -1;
         return Math.max(...fields.value.map(f => f.cardOrder));
     });
 
     // Shared mutex for the display-mode add-field surfaces.
     const activeSurface = useSignal<ActiveSurface>('none');
 
-    const handleFieldDeleted$ = $(() => {
-        reload$();
-    });
-
     const mode = props.isConstruction ? 'construction' : 'display';
 
     return (
         <div class={styles.fieldList}>
-            {fields.value && fields.value.map((field) => (
+            {fields.value.map((field) => (
                 <DataField
                     key={field.id}
                     id={field.id}
@@ -65,7 +62,6 @@ export const FieldList = component$<FieldListProps>((props) => {
                     componentType={field.componentType}
                     value={field.value}
                     updatedAt={field.updatedAt}
-                    onDeleted$={handleFieldDeleted$}
                 />
             ))}
 
@@ -76,7 +72,6 @@ export const FieldList = component$<FieldListProps>((props) => {
                     currentMaxCardOrder={maxPersistedCardOrder.value}
                     initialFieldDefinitionIds={props.initialFieldDefinitionIds}
                     activeSurface={activeSurface}
-                    onCommitted$={reload$}
                     handleRef={props.handleRef}
                 />
             )}
@@ -86,7 +81,6 @@ export const FieldList = component$<FieldListProps>((props) => {
                     nodeId={props.nodeId}
                     currentMaxCardOrder={maxPersistedCardOrder.value}
                     activeSurface={activeSurface}
-                    onCreated$={reload$}
                 />
             )}
         </div>

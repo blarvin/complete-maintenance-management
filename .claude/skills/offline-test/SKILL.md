@@ -19,7 +19,7 @@ Test that the app works offline using browser offline/online events and sync beh
   - `[IDBAdapter]` prefix - IndexedDB write confirmations
   - `[SyncManager]` prefix - Sync operations
   - `[Storage]` prefix - Storage initialization
-  - `[useRootViewData]` prefix - Data loading operations
+  - `[useElementChildren]` prefix - Data loading operations
 
 ---
 
@@ -63,13 +63,13 @@ npm run preview:pwa  # background task on port 4173
 2. Wait 2 seconds for app initialization
 3. **Take screenshot #1 (initial state) - show to user with caption**
 4. Use `read_page` to get DOM structure
-5. Read console messages (pattern: "App.*ServiceWorker|App.*network|Storage.*IDB|useRootViewData.*Fetched")
+5. Read console messages (pattern: "App.*ServiceWorker|App.*network|Storage.*IDB|useElementChildren.*Loaded")
 
 **Verification - Look for these EXACT logs:**
 - `[App] ServiceWorker registered: <scope>` - Confirms SW is ready
 - `[App] Initial network state: ONLINE` - Confirms network detection working
 - `[Storage] IDB has N nodes, using existing data` - Get IDB count
-- `[useRootViewData] Fetched N root nodes` - Get fetched count
+- `[useElementChildren] Loaded N nodes under ROOT` - Get fetched count
 - Count nodes visible in DOM using `read_page`
 - **Record baseline count** (e.g., "5 root nodes before test")
 
@@ -96,11 +96,11 @@ Baseline state verified:
 5. Wait 2 seconds for node to appear and state to settle
 6. Take screenshot #2 (with new node)
 7. Use `read_page` to verify node in DOM
-8. Read console messages (pattern: "IDBAdapter.*Node created|useRootViewData")
+8. Read console messages (pattern: "IDBAdapter.*Node created|useElementChildren")
 
 **Verification - Look for these EXACT logs:**
 - `[IDBAdapter] Node created in IDB: <id> Offline Test Node` - Confirms persistence
-- `[useRootViewData] Fetched N root nodes` - Should now be X+1
+- `[useElementChildren] Loaded N nodes under ROOT` - Should now be X+1
 - Node "Offline Test Node" appears in DOM (use `find` or `read_page`)
 - Node count increased by 1
 - No console errors
@@ -145,11 +145,11 @@ Offline simulation:
 5. Wait 2 seconds for node to appear
 6. Take screenshot #3 (offline creation)
 7. Use `read_page` to verify new node in DOM
-8. Read console messages (pattern: "IDBAdapter.*Node created|useRootViewData")
+8. Read console messages (pattern: "IDBAdapter.*Node created|useElementChildren")
 
 **Verification - Look for these EXACT logs:**
 - `[IDBAdapter] Node created in IDB: <id> Created While Offline` - Confirms persistence
-- `[useRootViewData] Fetched N root nodes` - Should now be X+2
+- `[useElementChildren] Loaded N nodes under ROOT` - Should now be X+2
 - Node "Created While Offline" appears in DOM
 - Node count is now X+2
 - No errors in console

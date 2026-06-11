@@ -33,18 +33,18 @@ export type CreateNodePayload = {
 export type UseNodeCreationOptions = {
     /** Parent ID for the new node. null = root node. */
     parentId: string | null;
-    /** Called after node is successfully created. Typically reloads the node list. */
-    onCreated$: QRL<() => void | Promise<void>>;
 };
 
 /**
  * Hook that provides node creation flow management.
- * 
+ *
+ * No reload callback: CREATE_ELEMENT emits on the storage event bus and the
+ * views' data hooks reload themselves (see useElementChildren).
+ *
  * Usage:
  * ```tsx
  * const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
  *     parentId: null, // or props.parentId for children
- *     onCreated$: loadNodes$,
  * });
  * ```
  */
@@ -112,7 +112,6 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         try { localStorage.removeItem(`pendingFields:${ucData.id}`); } catch { /* ignore */ }
 
         await completeConstruction$();
-        await options.onCreated$();
     });
 
     return {

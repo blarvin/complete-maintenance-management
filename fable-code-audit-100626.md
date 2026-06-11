@@ -42,6 +42,8 @@ The bespoke sync layer is the spec-blessed, backend-agnostic one — keep it. Bu
 
 ### 2.3 Four change-propagation mechanisms; one would do
 
+**✅ RESOLVED 2026-06-11** (with §4.4) — collapsed to the bus: `useElementChildren`/`useElementById` subscribe to `storageEventBus` with pure relevance predicates (`storageEventRelevance.ts`) and a 30ms trailing debounce. Deleted: `storageEvents.ts`, `useStorageChangeListener`, all `dispatchStorageChangeEvent()` sites, and the `onDeleted$`/`onCreated$`/`onCommitted$` reload threading. `useFieldValueSync` kept as the per-field specialization of the same model. Found during verification: the UC TreeNode needed a namespaced key (`uc-${id}`) because the bus reload surfaces the new node while construction is still open, and a shared key made Qwik's reconciler reuse the construction instance instead of unmounting it (the old post-completion reload had masked this).
+
 Today, "data changed → UI updates" travels by four distinct routes:
 
 1. `storageEventBus` (in-memory pub/sub) → nodeIndex, sync trigger, `useFieldValueSync`, FieldComposer refresh, DataFieldDetails refresh.
@@ -134,7 +136,7 @@ cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 s
 
 **4.3 Failed sync items are stranded forever.** **✅ RESOLVED 2026-06-11** — bounded auto-retry (5 attempts riding existing sync cycles), error snackbar with Retry action on exhaustion, startup re-arm of failed items. Plus fail-fast timeouts on push writes and pulls — discovered during verification that the Firestore SDK never rejects writes against an unreachable server, so without timeouts nothing ever failed at all. `SyncQueueManager.markFailed` sets `status: 'failed'`, but `getSyncQueue()` only ever fetches `'pending'` — a failed item is never retried and never surfaced. `retryCount` exists but can never exceed 1. Either re-fetch `pending OR (failed AND retryCount < N)`, or explicitly document failed-means-dead and surface it (LATER.md's "Sync Status" item is the natural home). Right now it's silent data-loss-to-the-server.
 
-**4.4 Consolidate the three data-loading hooks.** `useRootViewData`, `useBranchViewData`, and `useTreeNodeFields` are the same hook three times: query children → filter by kind → map → signal + isLoading + storage-change reload. Root is just `parentId = null`. One `useElementChildren(parentIdSig, kindFilter)` covers all three (BranchView additionally fetches the parent element — a param or second tiny hook). `useTreeNodeFields`' prop-sync/loadVersion dance and its duplicated load body (`reload$` and the visible task are character-identical) fold away in the rewrite. Pairs naturally with §2.3.
+**4.4 Consolidate the three data-loading hooks.** **✅ RESOLVED 2026-06-11** (with §2.3) — `useRootViewData`/`useBranchViewData`/`useTreeNodeFields` replaced by `useElementChildren(parentIdSig, 'nodes' | 'fields')` + `useElementById`; returns raw `Element[]`, callers map via the legacy mappers in `useComputed$` (so §2.4 stays a small diff). The loadVersion dance, BranchView's manual load task, and the `enabled` option all folded away; `cancelConstruction$` now fires on navigation only, not on every reload. `useRootViewData`, `useBranchViewData`, and `useTreeNodeFields` are the same hook three times: query children → filter by kind → map → signal + isLoading + storage-change reload. Root is just `parentId = null`. One `useElementChildren(parentIdSig, kindFilter)` covers all three (BranchView additionally fetches the parent element — a param or second tiny hook). `useTreeNodeFields`' prop-sync/loadVersion dance and its duplicated load body (`reload$` and the visible task are character-identical) fold away in the rewrite. Pairs naturally with §2.3.
 
 **4.5 Per-kind switches that the registry should own.** The manifest seam exists; finish routing through it:
 
@@ -162,10 +164,10 @@ cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 s
 
 Ordered for compounding payoff and low risk; each step is independently shippable.
 
-1. **Deletions** (§3): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller.
-2. **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land.
+1. ✅ **Deletions** (§3): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller. *(done 2026-05-11)*
+2. ✅ **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land. *(done 2026-05-11)*
 3. ✅ **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3). *(done 2026-06-11)*
-4. **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks.
+4. ✅ **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks. *(done 2026-06-11)*
 5. **Element-shaped view props** (§2.4): delete the legacy vocabulary.
 6. **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles.
 7. **Manifest flag cleanup** (§4.5) as a warm-up for the KINDS-SPECS registry generalization, which this sequence leaves you cleanly positioned for.
