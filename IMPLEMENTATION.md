@@ -216,6 +216,14 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **SyncQueueManager Extracted from IDBAdapter**: The sync queue (`getSyncQueue`, `enqueue`, `markSynced`, `markFailed`) lives in `src/data/sync/SyncQueueManager.ts` rather than on the adapter. `IDBAdapter` holds a `SyncQueueManager` instance and delegates to it. This keeps the adapter a pure storage adapter and makes the queue reusable across storage backends.
 
+**Single offline cache (audit §2.2, 2026-06-11)**: Firestore is initialized with `memoryLocalCache()` unconditionally — Dexie + syncQueue is the app's only offline cache; Firestore is a dumb wire. `clearFirebaseIndexedDB()` remains as the console cleanup tool for orphaned SDK mirror DBs on devices that ran older builds.
+
+**Sync retry policy (audit §4.3, 2026-06-11)**: No dedicated backoff machinery — failed queue items simply ride existing sync cycles (write-debounce, `online` event, 10-min timer) up to `MAX_SYNC_RETRIES = 5` attempts. `getSyncQueue()` returns pending + under-cap failed items; at the cap an item is parked as exhausted. On exhaustion `SyncManager` shows an error snackbar with a **Retry** action that re-arms (`requeueFailed()`: status→pending, retryCount→0, `lastError` kept for forensics) and syncs immediately. App startup also re-arms all failed items, so a missed toast isn't permanent.
+
+**Fail-fast sync timeouts**: The Firestore SDK *never rejects* writes against an unreachable server — it buffers them and retries the transport forever — so an awaited `setDoc` hangs and would wedge the whole sync layer (`isSyncing` stuck true, every later cycle skipped). `SyncPusher` therefore races each `applySyncItem` against `SYNC_WRITE_TIMEOUT_MS` (10s); a `TimeoutError` is treated as connection-level failure and the rest of the queue is failed in lockstep (no per-item wait, items exhaust on the same cycle → one toast, not a drip-feed). Pull strategies are likewise wrapped in `SYNC_PULL_TIMEOUT_MS` (30s). Helper: `src/utils/withTimeout.ts`.
+
+**Retry-action QRL without `$()`**: `ToastAction.handler` must be a QRL, but a module-level `$()` in `syncManager.ts` crashes every Vitest import (no Qwik optimizer in tests: "Optimizer should replace all usages of $()"). The handler lives in `src/data/sync/retryFailedSync.ts` and `syncManager.ts` wraps it with the runtime API: `qrl(() => import('./retryFailedSync'), 'retryFailedSync')` — works with and without the optimizer, captures nothing, resolves `getSyncManager()` at invoke time per the registry-getter pattern.
+
 ---
 
 ### DataField Components / Templates / Instances

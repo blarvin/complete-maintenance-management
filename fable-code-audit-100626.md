@@ -32,6 +32,8 @@ That means roughly 300 lines of `firestoreAdapter.ts` (lines 78–145, 277–506
 
 ### 2.2 You are running two offline caches and two sync engines
 
+**✅ RESOLVED 2026-06-11** — Firestore now uses `memoryLocalCache()` unconditionally; Dexie + syncQueue is the only offline cache. Orphaned SDK mirror DBs on existing devices are cleanable via `clearFirebaseIndexedDB()` (kept, re-documented).
+
 `firebase.ts:62-66` initializes Firestore with `persistentLocalCache` — the SDK's own IndexedDB offline cache with queued writes and reconciliation — while the app's actual offline layer is Dexie + syncQueue + SyncManager. Every element is therefore persisted in IndexedDB **twice** (once in `complete-maintenance-management`, once in Firestore's mirror), and two write queues exist (yours, and the SDK's).
 
 The bespoke sync layer is the spec-blessed, backend-agnostic one — keep it. But then Firestore should be a dumb wire: switch to `memoryLocalCache()` in the browser too. You get one cache, one queue, and you eliminate a whole class of "which layer answered this read?" confusion (the SDK cache can serve stale pulls into your delta sync). One-line change plus retesting the emulator flows.
@@ -130,7 +132,7 @@ cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 s
 
 **4.2 `nextElementRev` is O(history) per write — and called on creates.** Both adapters fetch *all* history rows for an element to compute `max(rev)+1`. The Dexie schema already has the `[elementId+rev]` compound index — query its upper bound and take the last row instead of `toArray()`. And `createElement` calls it for a brand-new element where the answer is always 0 — skip the query there. (The Firestore copy does an unbounded `orderBy('rev','desc')` fetch with no `limit(1)` on every update — same fix, or it disappears with §2.1.)
 
-**4.3 Failed sync items are stranded forever.** `SyncQueueManager.markFailed` sets `status: 'failed'`, but `getSyncQueue()` only ever fetches `'pending'` — a failed item is never retried and never surfaced. `retryCount` exists but can never exceed 1. Either re-fetch `pending OR (failed AND retryCount < N)`, or explicitly document failed-means-dead and surface it (LATER.md's "Sync Status" item is the natural home). Right now it's silent data-loss-to-the-server.
+**4.3 Failed sync items are stranded forever.** **✅ RESOLVED 2026-06-11** — bounded auto-retry (5 attempts riding existing sync cycles), error snackbar with Retry action on exhaustion, startup re-arm of failed items. Plus fail-fast timeouts on push writes and pulls — discovered during verification that the Firestore SDK never rejects writes against an unreachable server, so without timeouts nothing ever failed at all. `SyncQueueManager.markFailed` sets `status: 'failed'`, but `getSyncQueue()` only ever fetches `'pending'` — a failed item is never retried and never surfaced. `retryCount` exists but can never exceed 1. Either re-fetch `pending OR (failed AND retryCount < N)`, or explicitly document failed-means-dead and surface it (LATER.md's "Sync Status" item is the natural home). Right now it's silent data-loss-to-the-server.
 
 **4.4 Consolidate the three data-loading hooks.** `useRootViewData`, `useBranchViewData`, and `useTreeNodeFields` are the same hook three times: query children → filter by kind → map → signal + isLoading + storage-change reload. Root is just `parentId = null`. One `useElementChildren(parentIdSig, kindFilter)` covers all three (BranchView additionally fetches the parent element — a param or second tiny hook). `useTreeNodeFields`' prop-sync/loadVersion dance and its duplicated load body (`reload$` and the visible task are character-identical) fold away in the rewrite. Pairs naturally with §2.3.
 
@@ -162,7 +164,7 @@ Ordered for compounding payoff and low risk; each step is independently shippabl
 
 1. **Deletions** (§3): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller.
 2. **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land.
-3. **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3).
+3. ✅ **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3). *(done 2026-06-11)*
 4. **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks.
 5. **Element-shaped view props** (§2.4): delete the legacy vocabulary.
 6. **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles.

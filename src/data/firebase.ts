@@ -3,8 +3,6 @@ import {
     initializeFirestore,
     getFirestore,
     connectFirestoreEmulator,
-    persistentLocalCache,
-    persistentMultipleTabManager,
     memoryLocalCache,
 } from "firebase/firestore";
 
@@ -21,7 +19,6 @@ const firebaseConfig = {
 // Prevent re-initialization on HMR
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Use persistent IndexedDB in browser; memory cache in Node (scripts)
 const isBrowser = typeof window !== "undefined" && typeof indexedDB !== "undefined";
 export const isBrowserEnv = isBrowser;
 
@@ -52,17 +49,12 @@ function shouldUseEmulator(): boolean {
 }
 
 // Initialize Firestore only once (handle HMR gracefully).
-// Multi-tab tab manager (not single-tab): single-tab mode uses an exclusive
-// IDB lock that intermittently fails to acquire (e.g. against a stale lock
-// from a not-cleanly-closed prior session), forcing every page load into
-// memory cache mode and re-fetching all docs from the server. Multi-tab uses
-// leader election and works whether one tab is open or many.
+// IDB persistence intentionally disabled — Dexie + syncQueue is the app's
+// only offline cache (audit §2.2); Firestore is a dumb wire.
 function getDb() {
     try {
         return initializeFirestore(app, {
-            localCache: isBrowser
-                ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-                : memoryLocalCache(),
+            localCache: memoryLocalCache(),
         });
     } catch {
         // Already initialized, just return the existing instance
@@ -72,8 +64,10 @@ function getDb() {
 
 /**
  * Clear all Firebase IndexedDB databases.
- * Use this if you encounter IndexedDB schema errors (e.g., missing object stores).
- * 
+ * The SDK no longer creates these (memory cache only), but orphaned mirror
+ * DBs linger on devices that ran older builds with persistentLocalCache —
+ * this is the cleanup tool for them.
+ *
  * To use: Call `clearFirebaseIndexedDB()` in the browser console.
  */
 export async function clearFirebaseIndexedDB(): Promise<void> {

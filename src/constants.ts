@@ -26,6 +26,25 @@ export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [
 ];
 
 /**
+ * Max push attempts per sync queue item before it's parked as exhausted
+ * (surfaced via error snackbar with Retry; re-armed on app startup).
+ */
+export const MAX_SYNC_RETRIES = 5;
+
+/**
+ * Per-write timeout for sync pushes. The Firestore SDK buffers writes and
+ * retries forever instead of rejecting when the server is unreachable, so
+ * without this the push (and the whole sync cycle) hangs indefinitely.
+ */
+export const SYNC_WRITE_TIMEOUT_MS = 10000;
+
+/**
+ * Timeout for the pull phase of a sync cycle — keeps a hung getDocs from
+ * wedging SyncManager's isSyncing flag (which would skip all future cycles).
+ */
+export const SYNC_PULL_TIMEOUT_MS = 30000;
+
+/**
  * Firestore collection names.
  */
 export const COLLECTIONS = {

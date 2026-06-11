@@ -84,6 +84,9 @@ async function doInitializeStorage(): Promise<void> {
 
     // Create adapters and sync queue for sync manager
     const syncQueue = new IDBSyncQueueManager();
+    // Fresh launch = fresh retry budget: re-arm failed items so they ride the
+    // startup syncFull() even if the exhaustion toast was missed last session.
+    await syncQueue.requeueFailed();
     const idbAdapter = new IDBAdapter(syncQueue);
     const firestoreAdapter = new FirestoreAdapter();
 
