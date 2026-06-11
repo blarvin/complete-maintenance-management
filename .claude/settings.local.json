@@ -41,7 +41,8 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\blarv\\\\Desktop\\\\complete-maintenance-management\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(claude mcp *)",
-      "PowerShell(Get-ChildItem -Recurse src -File | Select-Object FullName, Length | ForEach-Object { $_.FullName.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) + \"`t\" + $_.Length })"
+      "PowerShell(Get-ChildItem -Recurse src -File | Select-Object FullName, Length | ForEach-Object { $_.FullName.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) + \"`t\" + $_.Length })",
+      "PowerShell(npx vitest run src/test/initStorage.test.ts --silent 2>$null | Select-Object -Last 80)"
     ],
     "deny": [
       "Read(.env*)",
