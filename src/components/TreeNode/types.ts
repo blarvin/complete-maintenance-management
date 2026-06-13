@@ -31,8 +31,8 @@ export type ConstructionField = {
  * Payload emitted when node creation completes
  */
 export type CreateNodePayload = {
-    nodeName: string;
-    nodeSubtitle: string;
+    name: string;
+    subtitle: string;
     /**
      * Optional callback fired after the node is persisted but before the
      * construction UI unmounts. Used by TreeNodeConstruction to drive
@@ -46,8 +46,8 @@ export type CreateNodePayload = {
  */
 type TreeNodeBaseProps = {
     id: string;
-    nodeName: string;
-    nodeSubtitle: string;
+    name: string;
+    subtitle: string;
 };
 
 /**

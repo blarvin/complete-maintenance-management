@@ -18,7 +18,7 @@ import { DataField } from '../DataField/DataField';
 import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useElementChildren } from '../../hooks/useElementChildren';
-import { elementToDataField } from '../../data/models';
+import type { ComponentType } from '../../data/models';
 import { ENABLED_ADD_FIELD_SURFACES } from '../../constants';
 import type { ActiveSurface } from './addFieldSurfaces';
 import styles from './FieldList.module.css';
@@ -38,12 +38,11 @@ export type FieldListProps = {
 
 export const FieldList = component$<FieldListProps>((props) => {
     const nodeIdSig = useComputed$(() => props.nodeId);
-    const { children } = useElementChildren(nodeIdSig, 'fields');
-    const fields = useComputed$(() => children.value.map(elementToDataField));
+    const { children: fields } = useElementChildren(nodeIdSig, 'fields');
 
     const maxPersistedCardOrder = useComputed$(() => {
         if (fields.value.length === 0) return -1;
-        return Math.max(...fields.value.map(f => f.cardOrder));
+        return Math.max(...fields.value.map(f => f.siblingOrder));
     });
 
     // Shared mutex for the display-mode add-field surfaces.
@@ -57,9 +56,9 @@ export const FieldList = component$<FieldListProps>((props) => {
                 <DataField
                     key={field.id}
                     id={field.id}
-                    fieldName={field.fieldName}
-                    fieldDefinitionId={field.fieldDefinitionId}
-                    componentType={field.componentType}
+                    name={field.name}
+                    fieldDefinitionId={field.fieldDefinitionId!}
+                    kind={field.kind as ComponentType}
                     value={field.value}
                     updatedAt={field.updatedAt}
                 />

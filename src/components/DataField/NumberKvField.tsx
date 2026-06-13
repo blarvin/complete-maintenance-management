@@ -22,7 +22,6 @@ import numberStyles from './NumberKvField.module.css';
 
 export type NumberKvFieldProps = {
     id: string;
-    fieldName: string;
     fieldDefinitionId: string;
     value: number | null;
     /** Epoch ms when the value was last written. Drives stale state when the

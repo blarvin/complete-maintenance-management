@@ -22,7 +22,6 @@ import enumStyles from './EnumKvField.module.css';
 
 export type EnumKvFieldProps = {
     id: string;
-    fieldName: string;
     fieldDefinitionId: string;
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;

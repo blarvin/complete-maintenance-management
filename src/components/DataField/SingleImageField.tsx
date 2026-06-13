@@ -32,7 +32,6 @@ const emptyImage = (caption: string): SingleImageValue => ({
 
 export type SingleImageFieldProps = {
     id: string;
-    fieldName: string;
     value: SingleImageValue | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;

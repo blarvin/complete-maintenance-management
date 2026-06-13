@@ -20,7 +20,7 @@ export function handleStorageEvent(event: StorageEvent): void {
         upsertNodeSummary({
           id: event.element.id,
           parentId: event.element.parentId,
-          nodeName: event.element.name,
+          name: event.element.name,
         });
       } else {
         removeNodeSummary(event.element.id);

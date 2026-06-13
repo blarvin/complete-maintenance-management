@@ -52,10 +52,10 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     });
 
     const handleCreate$ = $(async () => {
-        const nodeName = nameInputRef.value?.value || '';
+        const name = nameInputRef.value?.value || '';
         // Guard: Name is required. The button is also disabled, but Enter can reach here.
-        if (nodeName.trim() === '') return;
-        const nodeSubtitle = subtitleInputRef.value?.value || '';
+        if (name.trim() === '') return;
+        const subtitle = subtitleInputRef.value?.value || '';
 
         const handle = fieldListHandle.value;
         const afterNodeCreated$ = handle
@@ -65,8 +65,8 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
             : undefined;
 
         await props.onCreate$({
-            nodeName,
-            nodeSubtitle,
+            name,
+            subtitle,
             afterNodeCreated$,
         });
     });
@@ -99,8 +99,8 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                 isExpanded={true}
                 isParent={false}
                 isClickable={false}
-                nodeName={props.initialName || ''}
-                nodeSubtitle={props.initialSubtitle || ''}
+                name={props.initialName || ''}
+                subtitle={props.initialSubtitle || ''}
                 isConstruction={true}
                 nameInputRef={nameInputRef}
                 subtitleInputRef={subtitleInputRef}

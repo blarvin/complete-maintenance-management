@@ -21,8 +21,8 @@ import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
-    nodeName: string;
-    nodeSubtitle: string;
+    name: string;
+    subtitle: string;
     nodeState: DisplayNodeState;
     parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
@@ -113,8 +113,8 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                 isDetailsExpanded={isDetailsExpanded}
                 isParent={isParent}
                 isClickable={isClickable}
-                nodeName={props.nodeName}
-                nodeSubtitle={props.nodeSubtitle}
+                name={props.name}
+                subtitle={props.subtitle}
                 parentId={props.parentId}
                 onNodeClick$={props.onNodeClick$}
                 onNavigateUp$={props.onNavigateUp$}

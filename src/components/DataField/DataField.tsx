@@ -19,9 +19,9 @@ import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
-    fieldName: string;
+    name: string;
     fieldDefinitionId: string;
-    componentType: ComponentType;
+    kind: ComponentType;
     value: DataFieldValue | null;
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
@@ -66,9 +66,9 @@ export const DataField = component$<DataFieldProps>((props) => {
     const labelId = `field-label-${props.id}`;
 
     // Used by DataFieldDetails for metadata and (future) history-value preview.
-    const currentDisplayValue = getKindManifest(props.componentType).displayPreview(props.value);
+    const currentDisplayValue = getKindManifest(props.kind).displayPreview(props.value);
 
-    const isImageVariant = props.componentType === 'single-image';
+    const isImageVariant = props.kind === 'single-image';
 
     return (
         <div
@@ -92,8 +92,8 @@ export const DataField = component$<DataFieldProps>((props) => {
             />
 
 
-            {props.componentType !== 'single-image' && (
-                <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
+            {props.kind !== 'single-image' && (
+                <label class={styles.datafieldLabel} id={labelId}>{props.name}:</label>
             )}
 
             {renderBody(props, rootRef)}
@@ -101,9 +101,8 @@ export const DataField = component$<DataFieldProps>((props) => {
             {isDetailsExpanded && (
                 <DataFieldDetails
                     fieldId={props.id}
-                    fieldName={props.fieldName}
                     fieldDefinitionId={props.fieldDefinitionId}
-                    componentType={props.componentType}
+                    kind={props.kind}
                     currentValue={currentDisplayValue}
                     onDelete$={handleDelete$}
                 />
@@ -116,11 +115,10 @@ function renderBody(
     props: DataFieldProps,
     rootRef: Signal<HTMLElement | undefined>,
 ) {
-    const Renderer = getKindManifest(props.componentType).Renderer;
+    const Renderer = getKindManifest(props.kind).Renderer;
     return (
         <Renderer
             id={props.id}
-            fieldName={props.fieldName}
             fieldDefinitionId={props.fieldDefinitionId}
             value={props.value}
             updatedAt={props.updatedAt}

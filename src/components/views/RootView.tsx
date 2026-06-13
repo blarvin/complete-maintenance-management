@@ -3,13 +3,12 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { component$, useComputed$, useSignal } from '@builder.io/qwik';
+import { component$, useSignal } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren } from '../../hooks/useElementChildren';
-import { elementToTreeNode } from '../../data/models';
 
 export const RootView = component$(() => {
     const appState = useAppState();
@@ -17,8 +16,7 @@ export const RootView = component$(() => {
 
     // Root = children of null. Reloads arrive via the storage event bus.
     const rootParent = useSignal<string | null>(null);
-    const { children, isLoading } = useElementChildren(rootParent, 'nodes');
-    const nodes = useComputed$(() => children.value.map(elementToTreeNode));
+    const { children: nodes, isLoading } = useElementChildren(rootParent, 'nodes');
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
@@ -44,8 +42,8 @@ export const RootView = component$(() => {
                 <TreeNode
                     key={n.id}
                     id={n.id}
-                    nodeName={n.nodeName}
-                    nodeSubtitle={n.nodeSubtitle ?? ''}
+                    name={n.name}
+                    subtitle={n.subtitle ?? ''}
                     nodeState={selectors.getDisplayNodeState(appState, n.id)}
                     onNodeClick$={() => navigateToNode$(n.id)}
                 />
@@ -59,8 +57,8 @@ export const RootView = component$(() => {
                     // instance instead of unmounting it.
                     key={`uc-${ucNode.id}`}
                     id={ucNode.id}
-                    nodeName={ucNode.name}
-                    nodeSubtitle={ucNode.subtitle}
+                    name={ucNode.name}
+                    subtitle={ucNode.subtitle}
                     nodeState="UNDER_CONSTRUCTION"
                     onCancel$={cancel$}
                     onCreate$={complete$}

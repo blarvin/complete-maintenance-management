@@ -11,28 +11,30 @@ import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@b
 import { getElementQueries, getFieldDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
-import type { ComponentType, DataFieldHistory as HistoryEntry, FieldDefinition, NumberKvConfig, ElementHistory, DataFieldValue } from '../../data/models';
+import type { ComponentType, FieldDefinition, NumberKvConfig, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
 
 export type DataFieldDetailsProps = {
     fieldId: string;
-    fieldName: string;
     fieldDefinitionId: string;
-    componentType: ComponentType;
+    kind: ComponentType;
     currentValue: string | null;
     onDelete$: PropFunction<() => void>;
 };
 
 export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
-    const history = useSignal<HistoryEntry[]>([]);
+    const history = useSignal<ElementHistory[]>([]);
     const definition = useSignal<FieldDefinition | null>(null);
     const isLoaded = useSignal(false);
     const isHistoryOpen = useSignal(false);
 
-    const fetchHistory$ = $(async (): Promise<HistoryEntry[]> => {
+    // Only value-edit rows are field-value history (name/subtitle/parentId/
+    // siblingOrder edits are not). Sorted ascending (oldest first) so the
+    // history viewer can drop the last entry as the live-duplicate.
+    const fetchHistory$ = $(async (): Promise<ElementHistory[]> => {
         const rows = await getElementQueries().getElementHistory(props.fieldId);
-        return projectValueHistory(rows, props.componentType, props.fieldId);
+        return rows.filter(r => r.property === 'value').sort((a, b) => a.rev - b.rev);
     });
 
     useVisibleTask$(async () => {
@@ -111,7 +113,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
                 <DataFieldHistory
                     fieldId={props.fieldId}
                     history={history.value}
-                    componentType={props.componentType}
+                    kind={props.kind}
                     units={units}
                     isOpen={isHistoryOpen.value}
                 />
@@ -130,30 +132,3 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         </div>
     );
 });
-
-/**
- * Project ElementHistory rows into the legacy DataFieldHistory shape the
- * history viewer expects. Only value-property rows survive — name/subtitle/
- * parentId/siblingOrder edits are not field-value history.
- */
-function projectValueHistory(
-    rows: ElementHistory[],
-    componentType: ComponentType,
-    elementId: string,
-): HistoryEntry[] {
-    return rows
-        .filter(r => r.property === 'value')
-        .sort((a, b) => a.rev - b.rev)
-        .map(r => ({
-            id: r.id,
-            dataFieldId: elementId,
-            action: r.action,
-            property: 'value',
-            componentType,
-            prevValue: r.prevValue as DataFieldValue | null,
-            newValue: r.newValue as DataFieldValue | null,
-            updatedBy: r.updatedBy,
-            updatedAt: r.updatedAt,
-            rev: r.rev,
-        }) as HistoryEntry);
-}

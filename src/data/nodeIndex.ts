@@ -3,12 +3,12 @@
  * Keeps only the minimal fields required for breadcrumbs/path computation.
  */
 
-import type { TreeNode } from './models';
+import type { Element } from './models';
 
 export type NodeSummary = {
     id: string;
     parentId: string | null;
-    nodeName: string;
+    name: string;
 };
 
 const nodeMap = new Map<string, NodeSummary>();
@@ -17,13 +17,13 @@ const nodeMap = new Map<string, NodeSummary>();
  * Fully rebuild the node index using the provided nodes.
  * Only active (non-deleted) nodes should be supplied.
  */
-export function initializeNodeIndex(nodes: Pick<TreeNode, 'id' | 'parentId' | 'nodeName'>[]): void {
+export function initializeNodeIndex(nodes: Pick<Element, 'id' | 'parentId' | 'name'>[]): void {
     nodeMap.clear();
     for (const node of nodes) {
         nodeMap.set(node.id, {
             id: node.id,
             parentId: node.parentId,
-            nodeName: node.nodeName,
+            name: node.name,
         });
     }
 }
@@ -72,7 +72,7 @@ export function getAncestorPath(nodeId: string): Array<{ id: string; name: strin
 
         path.unshift({
             id: summary.id,
-            name: summary.nodeName,
+            name: summary.name,
         });
 
         currentId = summary.parentId;

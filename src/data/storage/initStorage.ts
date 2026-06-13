@@ -170,7 +170,7 @@ async function seedNodeIndexFromDb(): Promise<void> {
   const elements = await db.elements.toArray();
   const activeNodes = elements
     .filter(el => el.kind === 'node' && el.deletedAt === null)
-    .map(el => ({ id: el.id, parentId: el.parentId, nodeName: el.name }));
+    .map(el => ({ id: el.id, parentId: el.parentId, name: el.name }));
   initializeNodeIndex(activeNodes);
 }
 

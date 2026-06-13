@@ -25,7 +25,6 @@ import type { ComponentType, DataFieldValue, FieldDefinitionConfig } from '../da
  */
 export type FieldRendererProps = {
     id: string;
-    fieldName: string;
     fieldDefinitionId: string;
     value: DataFieldValue | null;
     rootRef: Signal<HTMLElement | undefined>;

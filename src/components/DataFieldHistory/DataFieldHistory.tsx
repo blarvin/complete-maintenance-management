@@ -20,20 +20,20 @@ import { getCommandBus } from '../../data/commands';
 import { getSnackbarService } from '../../services/snackbar';
 import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import { formatTimestampShort } from '../../utils/time';
-import type { ComponentType, DataFieldHistory as HistoryEntry, DataFieldValue } from '../../data/models';
+import type { ComponentType, ElementHistory, DataFieldValue } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
 export type DataFieldHistoryProps = {
     fieldId: string;
-    history: HistoryEntry[];
-    componentType: ComponentType;
+    history: ElementHistory[];
+    kind: ComponentType;
     units?: string;
     isOpen: boolean;
 };
 
-function formatHistoryValue(entry: HistoryEntry, units: string): string {
+function formatHistoryValue(entry: ElementHistory, kind: ComponentType, units: string): string {
     if (entry.newValue === null || entry.newValue === undefined) return '';
-    switch (entry.componentType) {
+    switch (kind) {
         case 'text-kv':
         case 'enum-kv':
             return String(entry.newValue);
@@ -55,7 +55,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
 
     // Latest entry's newValue is the live current value.
     const liveValue: DataFieldValue | null =
-        props.history.length > 0 ? props.history[props.history.length - 1].newValue : null;
+        props.history.length > 0 ? (props.history[props.history.length - 1].newValue as DataFieldValue | null) : null;
 
     const hasHistory = allEntries.length > 0;
     const units = props.units ?? '';
@@ -103,7 +103,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
             {props.isOpen && hasHistory && (
                 <div class={[styles.historyList, 'no-caret']} role="list" aria-label="Field value history">
                     {allEntries.map((entry) => {
-                        const formatted = formatHistoryValue(entry, units);
+                        const formatted = formatHistoryValue(entry, props.kind, units);
                         const isSelected = selectedId.value === entry.id;
                         return (
                             <div
@@ -118,7 +118,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                                         class={styles.revertButton}
                                         onClick$={(ev) => {
                                             ev.stopPropagation();
-                                            revert$(entry.newValue);
+                                            revert$(entry.newValue as DataFieldValue | null);
                                         }}
                                         aria-label="Revert to this value"
                                         title="Revert to this value"

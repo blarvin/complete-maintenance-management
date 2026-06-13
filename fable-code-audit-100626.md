@@ -57,7 +57,9 @@ Route 4's existence is the tell: the renderers seed `currentValue` from `props.v
 
 This is the single biggest conceptual cleanup available in the UI layer, and it's also the prerequisite that makes future kinds (derived/aggregator fields from KINDS-SPECS) sane — those will need exactly this subscription model.
 
-### 2.4 Retire the legacy TreeNode/DataField data vocabulary
+### 2.4 Retire the legacy TreeNode/DataField data vocabulary ✅ *(done 2026-06-13)*
+
+> **Resolved.** The three legacy types (`TreeNode`, `DataField`, `DataFieldHistory`), both `elementTo*` mappers, and `projectValueHistory` are deleted. View props are now flat Element vocabulary (`name`, `subtitle`, `siblingOrder`, `kind`) — chosen over `{ element: Element }` because the construction branch has no persisted Element and `NodeHeader` is shared display/construction. The history viewer consumes `ElementHistory` directly. See IMPLEMENTATION.md → "Unified Element Model".
 
 The unified Element model landed in storage, but the view layer still speaks the old language through transitional adapters:
 
@@ -168,7 +170,7 @@ Ordered for compounding payoff and low risk; each step is independently shippabl
 2. ✅ **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land. *(done 2026-05-11)*
 3. ✅ **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3). *(done 2026-06-11)*
 4. ✅ **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks. *(done 2026-06-11)*
-5. **Element-shaped view props** (§2.4): delete the legacy vocabulary.
+5. ✅ **Element-shaped view props** (§2.4): delete the legacy vocabulary. *(done 2026-06-13)*
 6. **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles.
 7. **Manifest flag cleanup** (§4.5) as a warm-up for the KINDS-SPECS registry generalization, which this sequence leaves you cleanly positioned for.
 

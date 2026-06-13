@@ -14,9 +14,9 @@ describe('nodeIndex', () => {
 
     it('computes ancestor paths from seeded data', () => {
         initializeNodeIndex([
-            { id: 'root', parentId: null, nodeName: 'Root' },
-            { id: 'child', parentId: 'root', nodeName: 'Child' },
-            { id: 'grandchild', parentId: 'child', nodeName: 'Grandchild' },
+            { id: 'root', parentId: null, name: 'Root' },
+            { id: 'child', parentId: 'root', name: 'Child' },
+            { id: 'grandchild', parentId: 'child', name: 'Grandchild' },
         ]);
 
         const path = getAncestorPath('grandchild');
@@ -29,17 +29,17 @@ describe('nodeIndex', () => {
     });
 
     it('updates entries via upsert without touching descendants', () => {
-        initializeNodeIndex([{ id: 'node-1', parentId: null, nodeName: 'Old Name' }]);
+        initializeNodeIndex([{ id: 'node-1', parentId: null, name: 'Old Name' }]);
 
-        upsertNodeSummary({ id: 'node-1', parentId: null, nodeName: 'New Name' });
+        upsertNodeSummary({ id: 'node-1', parentId: null, name: 'New Name' });
 
         expect(getAncestorPath('node-1')).toEqual([{ id: 'node-1', name: 'New Name' }]);
     });
 
     it('removes entries via removeNodeSummary', () => {
         initializeNodeIndex([
-            { id: 'root', parentId: null, nodeName: 'Root' },
-            { id: 'child', parentId: 'root', nodeName: 'Child' },
+            { id: 'root', parentId: null, name: 'Root' },
+            { id: 'child', parentId: 'root', name: 'Child' },
         ]);
 
         removeNodeSummary('child');

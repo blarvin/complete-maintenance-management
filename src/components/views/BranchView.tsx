@@ -9,7 +9,6 @@ import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren, useElementById } from '../../hooks/useElementChildren';
-import { elementToTreeNode } from '../../data/models';
 
 export type BranchViewProps = {
     parentId: string;
@@ -23,11 +22,10 @@ export const BranchView = component$((props: BranchViewProps) => {
     // because the hooks track the parentId signal.
     const parentIdSig = useComputed$(() => props.parentId);
     const { element: parentEl } = useElementById(parentIdSig);
-    const { children: childEls, isLoading } = useElementChildren(parentIdSig, 'nodes');
+    const { children, isLoading } = useElementChildren(parentIdSig, 'nodes');
 
     const parentNode = useComputed$(() =>
-        parentEl.value && parentEl.value.kind === 'node' ? elementToTreeNode(parentEl.value) : null);
-    const children = useComputed$(() => childEls.value.map(elementToTreeNode));
+        parentEl.value && parentEl.value.kind === 'node' ? parentEl.value : null);
 
     // Navigating to a new branch cancels any in-flight construction.
     // (Previously buried in useBranchViewData.load$, where background sync
@@ -56,8 +54,8 @@ export const BranchView = component$((props: BranchViewProps) => {
                     <TreeNode
                         key={parentNode.value.id}
                         id={parentNode.value.id}
-                        nodeName={parentNode.value.nodeName}
-                        nodeSubtitle={parentNode.value.nodeSubtitle ?? ''}
+                        name={parentNode.value.name}
+                        subtitle={parentNode.value.subtitle ?? ''}
                         nodeState="PARENT"
                         parentId={parentNode.value.parentId}
                         onNavigateUp$={navigateUp$}
@@ -74,8 +72,8 @@ export const BranchView = component$((props: BranchViewProps) => {
                     <TreeNode
                         key={child.id}
                         id={child.id}
-                        nodeName={child.nodeName}
-                        nodeSubtitle={child.nodeSubtitle ?? ''}
+                        name={child.name}
+                        subtitle={child.subtitle ?? ''}
                         nodeState="CHILD"
                         onNodeClick$={() => navigateToNode$(child.id)}
                     />
@@ -88,8 +86,8 @@ export const BranchView = component$((props: BranchViewProps) => {
                             // Namespaced key — see RootView's UC TreeNode comment.
                             key={`uc-${ucNode.id}`}
                             id={ucNode.id}
-                            nodeName={ucNode.name}
-                            nodeSubtitle={ucNode.subtitle}
+                            name={ucNode.name}
+                            subtitle={ucNode.subtitle}
                             nodeState="UNDER_CONSTRUCTION"
                             isChildConstruction={true}
                             onCancel$={cancel$}

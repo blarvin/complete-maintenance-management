@@ -23,7 +23,7 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     });
 
     it('ELEMENT_WRITTEN updates an existing entry', () => {
-        initializeNodeIndex([{ id: 'n1', parentId: null, nodeName: 'Old' }]);
+        initializeNodeIndex([{ id: 'n1', parentId: null, name: 'Old' }]);
 
         handleStorageEvent(nodeWritten('n1', null, 'New'));
 
@@ -32,7 +32,7 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     });
 
     it('ELEMENT_WRITTEN with deletedAt set removes from the index', () => {
-        initializeNodeIndex([{ id: 'n1', parentId: null, nodeName: 'Root' }]);
+        initializeNodeIndex([{ id: 'n1', parentId: null, name: 'Root' }]);
 
         handleStorageEvent(nodeWritten('n1', null, 'Root', 1234567890));
 
@@ -51,7 +51,7 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     });
 
     it('ELEMENT_HARD_DELETED removes from the index', () => {
-        initializeNodeIndex([{ id: 'n1', parentId: null, nodeName: 'Root' }]);
+        initializeNodeIndex([{ id: 'n1', parentId: null, name: 'Root' }]);
 
         handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
 

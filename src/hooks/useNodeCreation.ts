@@ -24,8 +24,8 @@ import { generateId } from '../utils/id';
  * commit any in-flight composer batch before the construction UI unmounts.
  */
 export type CreateNodePayload = {
-    nodeName: string;
-    nodeSubtitle: string;
+    name: string;
+    subtitle: string;
     /** Optional async hook fired after the node is persisted, before FSM transitions out. */
     afterNodeCreated$?: QRL<(nodeId: string) => void | Promise<void>>;
 };
@@ -100,8 +100,8 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
                 id: ucData.id,
                 kind: 'node',
                 parentId: ucData.parentId,
-                name: payload.nodeName || 'Untitled',
-                subtitle: payload.nodeSubtitle || null,
+                name: payload.name || 'Untitled',
+                subtitle: payload.subtitle || null,
             },
         });
 
