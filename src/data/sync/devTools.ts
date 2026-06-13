@@ -8,6 +8,7 @@
 
 import { getSyncManager } from './syncManager';
 import { db } from '../storage/db';
+import { SEED_KEY } from '../services/seedFieldDefinitions';
 
 /**
  * Initialize dev tools helpers on window object
@@ -49,5 +50,24 @@ export function initializeDevTools(): void {
     }
   };
 
-  console.log('[DevTools] Sync helpers available: window.__sync(), window.__syncStatus()');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__wipeFieldDefinitions = async () => {
+    try {
+      const count = await db.fieldDefinitions.count();
+      await db.transaction('rw', [db.fieldDefinitions, db.syncMetadata], async () => {
+        await db.fieldDefinitions.clear();
+        // Reset the seed-version key so seedFieldDefinitions() runs again on the
+        // next reload, restoring the 7 dev seeds (factory-default reset). To keep
+        // the set genuinely empty instead, pin it: put({ key: SEED_KEY, value: SEED_VERSION }).
+        await db.syncMetadata.delete(SEED_KEY);
+      });
+      console.log(`[DevTools] Cleared ${count} FieldDefinition(s) from IDB. Reload to re-seed the 7 defaults.`);
+      return `Cleared ${count} FieldDefinition(s) from IDB — reload to re-seed defaults`;
+    } catch (err) {
+      console.error('[DevTools] Wipe FieldDefinitions failed:', err);
+      throw err;
+    }
+  };
+
+  console.log('[DevTools] Sync helpers available: window.__sync(), window.__syncStatus(), window.__wipeFieldDefinitions()');
 }

@@ -17,8 +17,8 @@ import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 
-const SEED_VERSION = 5;
-const SEED_KEY = 'fieldDefinitionsSeededVersion';
+export const SEED_VERSION = 5;
+export const SEED_KEY = 'fieldDefinitionsSeededVersion';
 
 /**
  * Stable FieldDefinition IDs. Use these constants wherever UI code references a

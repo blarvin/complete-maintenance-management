@@ -19,6 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cleanup": "npx tsx src/test/cleanup.ts",
+    "wipe:elements": "npx tsx scripts/wipe-elements.ts",
+    "wipe:fielddefs": "npx tsx scripts/wipe-field-definitions.ts",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
     "cypress:cleanup": "npx tsx cypress/support/cleanup-firestore.ts",
