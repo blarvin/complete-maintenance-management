@@ -6,6 +6,7 @@
  * Operations are queued for sync to Firestore.
  */
 
+import Dexie from 'dexie';
 import { db } from './db';
 import type {
   SyncableStorageAdapter,
@@ -19,7 +20,7 @@ import type { FieldDefinition, Element, ElementHistory, Kind } from '../models';
 import { filterActive } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
-import { computeNextRev, createElementHistoryEntry, diffElementChanges } from './historyHelpers';
+import { createElementHistoryEntry, diffElementChanges } from './historyHelpers';
 import { makeStorageError, toStorageError, isStorageError } from './storageErrors';
 import type { StorageErrorCode } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
@@ -256,7 +257,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.transaction('rw', db.elements, db.elementHistory, db.syncQueue, async () => {
         await db.elements.put(element);
 
-        const rev = await this.nextElementRev(element.id);
+        const rev = 0; // brand-new element — no prior history, so the first entry is rev 0
         const hist = createElementHistoryEntry({
           elementId: element.id,
           rev,
@@ -494,7 +495,13 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   private async nextElementRev(elementId: string): Promise<number> {
-    const history = await db.elementHistory.where('elementId').equals(elementId).toArray();
-    return computeNextRev(history);
+    // Single index seek on the `[elementId+rev]` compound index: the last row
+    // in the element's range carries the highest rev. O(log n) — no full-history
+    // load just to read one number.
+    const last = await db.elementHistory
+      .where('[elementId+rev]')
+      .between([elementId, Dexie.minKey], [elementId, Dexie.maxKey])
+      .last();
+    return last ? last.rev + 1 : 0;
   }
 }

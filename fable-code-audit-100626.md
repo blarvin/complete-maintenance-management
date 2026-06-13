@@ -22,6 +22,8 @@ These are the "real change" items. Each one removes a *concept*, not just lines.
 
 ### 2.1 There is one write model, not two — stop maintaining the second
 
+**✅ RESOLVED 2026-05-11** (sequence step 2) — `FirestoreAdapter` now `implements RemoteSyncAdapter` only; the duplicate CRUD half (`createElement`/`updateElement`/`listRootElements`/`diffElementChanges`/`nextElementRev`/`nextSiblingOrder`/…) is deleted, not relabeled. IDB is the sole write model; Firestore is a sync mirror. CLAUDE.md's Adapter-Pattern framing was updated to match.
+
 `FirestoreAdapter` (507 lines) implements **both** `StorageAdapter` (full CRUD with history diffing, rev minting, sibling-order minting, validation) **and** `RemoteSyncAdapter` (applySyncItem + pulls). In production, only the `RemoteSyncAdapter` half is ever reached: `initStorage.ts` wires the command bus and queries to `IDBAdapter` exclusively, and `FirestoreAdapter` is only handed to `SyncManager` and the one-time migration — both of which use only the sync surface.
 
 That means roughly 300 lines of `firestoreAdapter.ts` (lines 78–145, 277–506: `listRootElements`, `createElement` with history writes, `updateElement` with `diffElementChanges`, `softDeleteElement`, `restoreElement`, `nextSiblingOrder`, `nextElementRev`, …) are **dead in production and, worse, are a second copy of the domain write model** that must be kept in lockstep with `IDBAdapter` forever. Every future write-model change (composites' atomic multi-element create from KINDS-SPECS is coming!) currently costs 2×.
@@ -102,6 +104,8 @@ Extract one `commitWithUndo$({ message, execute, undo })` service-layer QRL. Eac
 
 ## 3. Dead and test-only code (safe deletions)
 
+**✅ RESOLVED 2026-05-11** (sequence step 1) — the dead modules and helpers below are deleted (`withErrorHandling.ts`, `cardOrder.ts`, the four `uiPrefs` expand helpers, `usePendingForms.restoreAll$`, …), taking three whole test files with them. The last table row (spec'd-but-unwired commands/queries) was intentionally kept.
+
 Verified by grep — no production references:
 
 
@@ -123,7 +127,7 @@ Deleting the first three rows also deletes three whole test files — the suite 
 
 ## 4. Mechanical simplifications (same behavior, less code)
 
-**4.1 Adapter try/catch boilerplate.** Every method in `IDBAdapter` (18×) and `FirestoreAdapter` repeats the identical `catch → isStorageError → mapDexieError → toStorageError` block. One private helper:
+**4.1 Adapter try/catch boilerplate.** **✅ RESOLVED 2026-05-11** (sequence step 2) — the `run<T>()` helper below now wraps every `IDBAdapter` method; the repeated `catch → isStorageError → mapDexieError → toStorageError` block is gone. (`FirestoreAdapter`'s copy vanished with §2.1.) Every method in `IDBAdapter` (18×) and `FirestoreAdapter` repeats the identical `catch → isStorageError → mapDexieError → toStorageError` block. One private helper:
 
 ```ts
 private async run<T>(fn: () => Promise<T>): Promise<T> {
@@ -138,7 +142,7 @@ private async run<T>(fn: () => Promise<T>): Promise<T> {
 
 cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 so you only do it once.
 
-**4.2 `nextElementRev` is O(history) per write — and called on creates.** Both adapters fetch *all* history rows for an element to compute `max(rev)+1`. The Dexie schema already has the `[elementId+rev]` compound index — query its upper bound and take the last row instead of `toArray()`. And `createElement` calls it for a brand-new element where the answer is always 0 — skip the query there. (The Firestore copy does an unbounded `orderBy('rev','desc')` fetch with no `limit(1)` on every update — same fix, or it disappears with §2.1.)
+**4.2 `nextElementRev` is O(history) per write — and called on creates.** **✅ RESOLVED 2026-06-13** — `IDBAdapter.nextElementRev` now seeks the `[elementId+rev]` compound index (`.between([id, minKey], [id, maxKey]).last()`) and returns `last.rev + 1`, a single-row index seek instead of a full-history `toArray()`. `createElement` skips the call and writes rev 0 by construction. The dead `computeNextRev` array helper was deleted. The Firestore CRUD copy is already gone (§2.1 stripped it to `RemoteSyncAdapter`). New adapter-level tests pin contiguous per-element rev sequencing across create/update/delete (`src/test/idbAdapterRev.test.ts`). Both adapters fetch *all* history rows for an element to compute `max(rev)+1`. The Dexie schema already has the `[elementId+rev]` compound index — query its upper bound and take the last row instead of `toArray()`. And `createElement` calls it for a brand-new element where the answer is always 0 — skip the query there. (The Firestore copy does an unbounded `orderBy('rev','desc')` fetch with no `limit(1)` on every update — same fix, or it disappears with §2.1.)
 
 **4.3 Failed sync items are stranded forever.** **✅ RESOLVED 2026-06-11** — bounded auto-retry (5 attempts riding existing sync cycles), error snackbar with Retry action on exhaustion, startup re-arm of failed items. Plus fail-fast timeouts on push writes and pulls — discovered during verification that the Firestore SDK never rejects writes against an unreachable server, so without timeouts nothing ever failed at all. `SyncQueueManager.markFailed` sets `status: 'failed'`, but `getSyncQueue()` only ever fetches `'pending'` — a failed item is never retried and never surfaced. `retryCount` exists but can never exceed 1. Either re-fetch `pending OR (failed AND retryCount < N)`, or explicitly document failed-means-dead and surface it (LATER.md's "Sync Status" item is the natural home). Right now it's silent data-loss-to-the-server.
 
