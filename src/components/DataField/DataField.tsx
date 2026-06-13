@@ -9,8 +9,7 @@
 
 import { component$, useSignal, $, type PropFunction, type Signal } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
-import { getSnackbarService } from '../../services/snackbar';
-import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { getKindManifest } from '../../kinds/registry';
@@ -44,23 +43,11 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const handleDelete$ = $(async () => {
         const fieldId = props.id;
-        try {
-            await getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } });
-            getSnackbarService().show({
-                message: 'Field deleted',
-                action: {
-                    label: 'Undo',
-                    handler: $(async () => {
-                        await getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } });
-                    }),
-                },
-            });
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: describeForUser(toStorageError(err)),
-            });
-        }
+        await commitWithUndo({
+            message: 'Field deleted',
+            execute$: $(() => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } })),
+            undo$: $(() => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } })),
+        });
     });
 
     const labelId = `field-label-${props.id}`;

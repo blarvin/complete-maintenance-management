@@ -10,10 +10,9 @@ import { component$, useSignal, useResource$, Resource, useVisibleTask$, $, type
 import { useOnDocument, useOnWindow } from '@builder.io/qwik';
 import { getFieldDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
-import { getSnackbarService } from '../../services/snackbar';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { EnumKvConfig } from '../../data/models';
 import styles from './DataField.module.css';
@@ -104,31 +103,15 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
             if (props.onUpdated$) await props.onUpdated$();
             return;
         }
-        try {
-            await getCommandBus().execute({
-                type: 'UPDATE_ELEMENT_VALUE',
-                payload: { id: fieldId, value: option },
-            });
+        const ok = await commitWithUndo({
+            message: 'Field updated',
+            execute$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: option } })),
+            undo$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prev } })),
+        });
+        if (ok) {
             currentValue.value = option;
             close$();
-            getSnackbarService().show({
-                message: 'Field updated',
-                action: {
-                    label: 'Undo',
-                    handler: $(async () => {
-                        await getCommandBus().execute({
-                            type: 'UPDATE_ELEMENT_VALUE',
-                            payload: { id: fieldId, value: prev },
-                        });
-                    }),
-                },
-            });
             if (props.onUpdated$) await props.onUpdated$();
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: describeForUser(toStorageError(err)),
-            });
         }
     });
 

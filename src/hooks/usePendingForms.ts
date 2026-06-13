@@ -1,68 +1,28 @@
 /**
  * usePendingForms — Hook backing the FieldComposer batch.
  *
- * A pending form is a FieldDefinition the user has checked in the composer plus
- * an in-flight (not yet persisted) value. The batch lives in localStorage keyed
- * by nodeId so picking a few FieldDefinitions, navigating away, and coming back
- * keeps the draft. commitAll$ turns the batch into real DataFields via the
- * command bus.
+ * Thin Qwik layer over the plain `pendingDraft` draft store (src/data/services):
+ * the hook owns the in-memory `forms` signal + focus state and keeps the
+ * localStorage draft current (write-through); the actual commit/discard logic
+ * lives in the module so it can also run from useNodeCreation at node-create
+ * time, with no mounted component involved.
  */
 
-import { useSignal, useVisibleTask$, useTask$, $, type Signal, type QRL } from '@builder.io/qwik';
-import { getCommandBus } from '../data/commands';
-import type { FieldDefinition, DataFieldValue, ComponentType } from '../data/models';
-import { generateId } from '../utils/id';
+import { useSignal, useVisibleTask$, $, type Signal } from '@builder.io/qwik';
+import type { FieldDefinition, DataFieldValue } from '../data/models';
+import {
+    type PendingForm,
+    pendingFormFromFieldDefinition,
+    loadPendingForms,
+    savePendingForms,
+    commitPendingDraft,
+    discardPendingDraft,
+} from '../data/services/pendingDraft';
+import type { QRL } from '@builder.io/qwik';
 
-/** A pending (un-persisted) FieldDefinition instance with its in-progress value. */
-export type PendingForm = {
-    id: string;
-    fieldDefinitionId: string;
-    componentType: ComponentType;
-    fieldName: string;
-    value: DataFieldValue | null;
-};
-
-/** Build a fresh PendingForm from a FieldDefinition. Used by composer toggle and seed loaders. */
-export const pendingFormFromFieldDefinition = (definition: FieldDefinition): PendingForm => ({
-    id: generateId(),
-    fieldDefinitionId: definition.id,
-    componentType: definition.componentType,
-    fieldName: definition.label,
-    value: null,
-});
-
-const getPendingFormsKey = (nodeId: string) => `pendingFields:${nodeId}`;
-
-const loadPendingForms = (nodeId: string): PendingForm[] => {
-    try {
-        const stored = localStorage.getItem(getPendingFormsKey(nodeId));
-        if (!stored) return [];
-        const parsed = JSON.parse(stored);
-        if (!Array.isArray(parsed)) return [];
-        return parsed.filter(
-            (f): f is PendingForm =>
-                f && typeof f === 'object' &&
-                typeof f.id === 'string' &&
-                typeof f.fieldDefinitionId === 'string' &&
-                typeof f.componentType === 'string' &&
-                typeof f.fieldName === 'string'
-        );
-    } catch {
-        return [];
-    }
-};
-
-const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
-    try {
-        if (forms.length === 0) {
-            localStorage.removeItem(getPendingFormsKey(nodeId));
-        } else {
-            localStorage.setItem(getPendingFormsKey(nodeId), JSON.stringify(forms));
-        }
-    } catch {
-        // Ignore storage errors
-    }
-};
+// Re-exported so FieldComposer/FieldComposerSlot keep importing from the hook.
+export { pendingFormFromFieldDefinition };
+export type { PendingForm };
 
 export type UsePendingFormsOptions = {
     nodeId: string;
@@ -101,16 +61,14 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
             forms.value = stored;
         } else if (options.initialSeedLoader$) {
             const seeded = await options.initialSeedLoader$();
-            if (seeded.length > 0) forms.value = seeded;
+            if (seeded.length > 0) {
+                forms.value = seeded;
+                // Persist the seed immediately so a construction commit reading
+                // localStorage sees the locked defaults even with no edits.
+                savePendingForms(options.nodeId, seeded);
+            }
         }
         initialized.value = true;
-    });
-
-    useTask$(({ track }) => {
-        const currentForms = track(() => forms.value);
-        if (typeof localStorage !== 'undefined' && initialized.value) {
-            savePendingForms(options.nodeId, currentForms);
-        }
     });
 
     const togglePending$ = $((definition: FieldDefinition) => {
@@ -123,42 +81,26 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
             forms.value = [...forms.value, fresh];
             lastToggledId.value = fresh.id;
         }
+        // Write-through: the draft must be current in localStorage the instant a
+        // construction commit (useNodeCreation) reads it, not one reactive tick later.
+        savePendingForms(options.nodeId, forms.value);
     });
 
     const setPendingValue$ = $((formId: string, value: DataFieldValue | null) => {
         forms.value = forms.value.map(f => f.id === formId ? { ...f, value } : f);
+        savePendingForms(options.nodeId, forms.value); // write-through (see togglePending$)
     });
 
     const commitAll$ = $(async (currentMaxCardOrder: number): Promise<number> => {
-        // Drop malformed entries (e.g. legacy localStorage drafts from the old
-        // pre-composer shape that lack fieldDefinitionId/fieldName).
-        const batch = forms.value.filter(f => f && f.fieldDefinitionId && typeof f.fieldName === 'string');
-        if (batch.length === 0) return 0;
-
-        const commandBus = getCommandBus();
-        for (let i = 0; i < batch.length; i++) {
-            const row = batch[i];
-            const cardOrder = currentMaxCardOrder + i + 1;
-            // Pass initialValue through so creation writes a single history
-            // row carrying the user-entered value, instead of a null create
-            // followed by an update (which produced an "Empty" history row).
-            await commandBus.execute({
-                type: 'CREATE_ELEMENT_FROM_DEFINITION',
-                payload: {
-                    parentId: options.nodeId,
-                    fieldDefinitionId: row.fieldDefinitionId,
-                    siblingOrder: cardOrder,
-                    initialValue: row.value ?? null,
-                },
-            });
-        }
-
+        savePendingForms(options.nodeId, forms.value); // flush latest in-memory state
+        const n = await commitPendingDraft(options.nodeId, currentMaxCardOrder);
         forms.value = [];
-        return batch.length;
+        return n;
     });
 
     const discardAll$ = $((): PendingForm[] => {
-        const cleared = forms.value;
+        savePendingForms(options.nodeId, forms.value); // flush so discard returns the latest rows
+        const cleared = discardPendingDraft(options.nodeId);
         forms.value = [];
         return cleared;
     });

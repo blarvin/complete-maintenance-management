@@ -20,7 +20,7 @@
 import { useSignal, $, useVisibleTask$, useOnDocument, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
 import { getSnackbarService } from '../services/snackbar';
-import { toStorageError, describeForUser } from '../data/storage/storageErrors';
+import { commitWithUndo } from '../data/services/commitWithUndo';
 import { useDoubleTap } from './useDoubleTap';
 import { useFocusManager, BLUR_SUPPRESS_WINDOW_MS } from './useFocusManager';
 import { useAppState, useAppTransitions, selectors } from '../state/appState';
@@ -151,27 +151,17 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
             stopFieldEdit$();
             return;
         }
-        try {
-            await getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: newVal } });
+        const ok = await commitWithUndo({
+            message: 'Field updated',
+            execute$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: newVal } })),
+            undo$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevVal } })),
+        });
+        if (ok) {
             currentValue.value = newVal;
             stopFieldEdit$();
-            getSnackbarService().show({
-                message: 'Field updated',
-                action: {
-                    label: 'Undo',
-                    handler: $(async () => {
-                        await getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevVal } });
-                    }),
-                },
-            });
             if (options.onUpdated$) {
                 await options.onUpdated$();
             }
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: describeForUser(toStorageError(err)),
-            });
         }
     });
 

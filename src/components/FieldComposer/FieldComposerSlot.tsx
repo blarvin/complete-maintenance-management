@@ -4,7 +4,6 @@
  * Owns:
  * - the "+ Add Fields" trigger (display mode only)
  * - the restore-from-Undo signal + remount keying
- * - the FieldComposer handle exposure (for construction-mode parent commit)
  * - the dismiss / restore plumbing the snackbar uses
  *
  * Open state is shared with FieldList's other surface (legacy `+ Add Field`
@@ -14,19 +13,11 @@
  * irrelevant.
  */
 
-import { component$, useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
-import { FieldComposer, type FieldComposerHandle, type FieldComposerMode } from './FieldComposer';
+import { component$, useSignal, $, type Signal } from '@builder.io/qwik';
+import { FieldComposer, type FieldComposerMode } from './FieldComposer';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
 import styles from './FieldComposerSlot.module.css';
-
-/** Handle exposed to a parent that needs to drive commit/discard externally
- *  (e.g. TreeNodeConstruction's Save button). */
-export type FieldComposerSlotHandle = {
-    commitAll$: QRL<(currentMaxCardOrderOverride?: number) => Promise<number>>;
-    discardAll$: QRL<() => Promise<PendingForm[]>>;
-    restoreWith$: QRL<(rows: PendingForm[]) => void>;
-};
 
 export type FieldComposerSlotProps = {
     nodeId: string;
@@ -38,12 +29,9 @@ export type FieldComposerSlotProps = {
     /** Shared mutex with the legacy "+ Add Field" surface (display mode only).
      *  Ignored in construction mode. */
     activeSurface?: Signal<ActiveSurface>;
-    /** Optional handle for external commit/discard/restore. */
-    handleRef?: Signal<FieldComposerSlotHandle | null>;
 };
 
 export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
-    const composerHandle = useSignal<FieldComposerHandle | null>(null);
     const restoreSeed = useSignal<PendingForm[] | undefined>(undefined);
 
     const isConstruction = props.mode === 'construction';
@@ -65,24 +53,6 @@ export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
         if (props.activeSurface) props.activeSurface.value = 'composer';
     });
 
-    // Wire the external handle if a parent asked for one.
-    if (props.handleRef) {
-        const commitAll$ = $(async (override?: number) => {
-            if (!composerHandle.value) return 0;
-            const max = override !== undefined ? override : props.currentMaxCardOrder;
-            return await composerHandle.value.commitAll$(max);
-        });
-        const discardAll$ = $(async () => {
-            if (!composerHandle.value) return [] as PendingForm[];
-            return await composerHandle.value.discardAll$();
-        });
-        const restoreWith$ = $((rows: PendingForm[]) => {
-            restoreSeed.value = rows;
-            if (props.activeSurface) props.activeSurface.value = 'composer';
-        });
-        props.handleRef.value = { commitAll$, discardAll$, restoreWith$ };
-    }
-
     return (
         <>
             {composerOpen && (
@@ -94,7 +64,6 @@ export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
                     lockedFieldDefinitionIds={props.initialFieldDefinitionIds}
                     restoreSeed={restoreSeed.value}
                     onDismiss$={handleDismiss$}
-                    handleRef={composerHandle}
                     onRequestRestore$={handleRequestRestore$}
                 />
             )}

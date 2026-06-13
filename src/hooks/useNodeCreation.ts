@@ -10,24 +10,22 @@
  * This allows FieldList to work identically for UC and display modes.
  */
 
-import { $, type QRL } from '@builder.io/qwik';
+import { $ } from '@builder.io/qwik';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getCommandBus } from '../data/commands';
+import { commitPendingDraft, discardPendingDraft } from '../data/services/pendingDraft';
 import { generateId } from '../utils/id';
 
 /**
  * Payload for completing node creation.
  * Matches what TreeNodeConstruction emits via onCreate$.
  *
- * Fields are now created by FieldComposer/commitAllComposer$ — the optional
- * afterNodeCreated$ callback runs after the empty node exists so callers can
- * commit any in-flight composer batch before the construction UI unmounts.
+ * Fields are created from the composer draft (localStorage, keyed by nodeId):
+ * complete$ commits the draft against the new node right after it exists.
  */
 export type CreateNodePayload = {
     name: string;
     subtitle: string;
-    /** Optional async hook fired after the node is persisted, before FSM transitions out. */
-    afterNodeCreated$?: QRL<(nodeId: string) => void | Promise<void>>;
 };
 
 export type UseNodeCreationOptions = {
@@ -80,7 +78,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
         const ucData = appState.underConstruction;
         if (ucData) {
             // Clear any pending composer draft for this nodeId.
-            try { localStorage.removeItem(`pendingFields:${ucData.id}`); } catch { /* ignore */ }
+            discardPendingDraft(ucData.id);
         }
         await cancelConstruction$();
     });
@@ -105,11 +103,10 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             },
         });
 
-        if (payload.afterNodeCreated$) {
-            await payload.afterNodeCreated$(ucData.id);
-        }
-
-        try { localStorage.removeItem(`pendingFields:${ucData.id}`); } catch { /* ignore */ }
+        // Commit the in-flight composer draft (localStorage, keyed by nodeId)
+        // against the freshly-created node. -1 so the first field lands at
+        // siblingOrder 0. Clears the draft internally.
+        await commitPendingDraft(ucData.id, -1);
 
         await completeConstruction$();
     });

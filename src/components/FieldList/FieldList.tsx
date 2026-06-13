@@ -8,14 +8,14 @@
  *
  * Data arrives via useElementChildren (writes emit; readers subscribe) —
  * no reload callbacks are threaded to children. Composer orchestration
- * (open/restore plumbing, handle exposure) lives inside FieldComposerSlot.
- * Construction-mode parents pass `handleRef` through to drive commit/discard
- * externally from the node's Save button.
+ * (open/restore plumbing) lives inside FieldComposerSlot. The construction
+ * draft is committed by useNodeCreation reading localStorage, so no handle
+ * into the composer is threaded.
  */
 
-import { component$, useComputed$, useSignal, type Signal } from '@builder.io/qwik';
+import { component$, useComputed$, useSignal } from '@builder.io/qwik';
 import { DataField } from '../DataField/DataField';
-import { FieldComposerSlot, type FieldComposerSlotHandle } from '../FieldComposer/FieldComposerSlot';
+import { FieldComposerSlot } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useElementChildren } from '../../hooks/useElementChildren';
 import type { ComponentType } from '../../data/models';
@@ -23,13 +23,8 @@ import { ENABLED_ADD_FIELD_SURFACES } from '../../constants';
 import type { ActiveSurface } from './addFieldSurfaces';
 import styles from './FieldList.module.css';
 
-/** Re-export so existing TreeNodeConstruction imports keep working. */
-export type FieldListHandle = FieldComposerSlotHandle;
-
 export type FieldListProps = {
     nodeId: string;
-    /** Optional signal to receive the composer slot's handle. */
-    handleRef?: Signal<FieldListHandle | null>;
     /** When true, operates in construction mode (composer open by default). */
     isConstruction?: boolean;
     /** FieldDefinition IDs to pre-populate as locked-in composer rows (construction defaults). */
@@ -71,7 +66,6 @@ export const FieldList = component$<FieldListProps>((props) => {
                     currentMaxCardOrder={maxPersistedCardOrder.value}
                     initialFieldDefinitionIds={props.initialFieldDefinitionIds}
                     activeSurface={activeSurface}
-                    handleRef={props.handleRef}
                 />
             )}
 

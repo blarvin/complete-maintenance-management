@@ -17,8 +17,7 @@
 
 import { component$, useSignal, $ } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
-import { getSnackbarService } from '../../services/snackbar';
-import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { formatTimestampShort } from '../../utils/time';
 import type { ComponentType, ElementHistory, DataFieldValue } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
@@ -72,29 +71,13 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
             selectedId.value = null;
             return;
         }
-        try {
-            await getCommandBus().execute({
-                type: 'UPDATE_ELEMENT_VALUE',
-                payload: { id: fieldId, value: targetValue },
-            });
+        const ok = await commitWithUndo({
+            message: 'Field reverted',
+            execute$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: targetValue } })),
+            undo$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevValue } })),
+        });
+        if (ok) {
             selectedId.value = null;
-            getSnackbarService().show({
-                message: 'Field reverted',
-                action: {
-                    label: 'Undo',
-                    handler: $(async () => {
-                        await getCommandBus().execute({
-                            type: 'UPDATE_ELEMENT_VALUE',
-                            payload: { id: fieldId, value: prevValue },
-                        });
-                    }),
-                },
-            });
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: describeForUser(toStorageError(err)),
-            });
         }
     });
 

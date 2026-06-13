@@ -20,6 +20,18 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 ---
 
+## Draft Store & commit-with-undo (audit §2.5/§2.6, done 2026-06-13)
+
+**Composer draft is the single commit source.** The pending-field batch was always persisted in `localStorage` keyed by nodeId (`pendingFields:${nodeId}`); the commit logic now lives in a plain module `src/data/services/pendingDraft.ts` (`commitPendingDraft(nodeId, baseOrder)` / `discardPendingDraft(nodeId)`), not in the mounted component. `usePendingForms` is a thin Qwik layer over it. This deleted the entire handle-threading graph — three handle types (`FieldComposerHandle`, `FieldComposerSlotHandle`, `FieldListHandle`), every `handleRef` prop, and the `afterNodeCreated$` callback relayed through `CreateNodePayload`/`useNodeCreation`.
+
+**Construction commit moved into `useNodeCreation.complete$`.** That function already had the new node's id and already cleared the draft; it now commits the draft (`commitPendingDraft(id, -1)`) right after `CREATE_ELEMENT` succeeds. No component reaches into the composer anymore.
+
+**Write-through persistence.** Because the construction commit reads localStorage from a *different* component than the mounted composer, `setPendingValue$`/`togglePending$` now write to localStorage synchronously rather than relying on a reactive `useTask$` auto-save (which could lag the Create click by a tick). The race — whether the last keystroke flushes before Create — is browser-timing-only, so it's covered by a Cypress spec, not a unit test (ISSUES.md Tech Debt).
+
+**`commitWithUndo` is a plain function, deliberately not `$`-suffixed.** It wraps *execute → success snackbar with Undo → error snackbar via `describeForUser(toStorageError(err))`* (six former copies). A `$` suffix makes the Qwik optimizer treat `commitWithUndo$({…})` as an implicit-QRL API and try to hoist the whole options object — but that object holds inline `$()` QRLs capturing local ids (`nodeId`, `prevVal`), which it can't. As a plain function, those `$()` args are captured in the *caller's* handler scope, exactly like the snackbar action handlers were before. The execute result is threaded into both the message builder and the undo handler, so the discard/restore variant (`FieldComposer` cancel) rides the same path as the command sites.
+
+---
+
 ## Renderer Registry (`src/kinds/`)
 
 The per-kind dispatch that used to be smeared across six `switch (componentType)` sites is consolidated into one manifest per value-bearing kind. `KIND_REGISTRY` (in `src/kinds/registry.ts`) maps each `ComponentType` to a `KindManifest` of `{ Renderer, ConfigForm, defaultConfig, displayPreview, pickerLabel }`, and is typed `satisfies Record<ComponentType, KindManifest>` so registering a kind and declaring it in the `ComponentType` union are checked as one act — forget a kind and it's a compile error. Consumers call `getKindManifest(type)` and render `<manifest.Renderer …>` / `<manifest.ConfigForm …>` dynamically.

@@ -69,7 +69,9 @@ The unified Element model landed in storage, but the view layer still speaks the
 
 Per SPEC, the component *names* (TreeNode, DataField) rightly survive as renderer identifiers — but the *prop shapes* can now be Element-shaped. Have `TreeNode` take `{ element: Element }` (kind `node`), `DataField` take the element row, and `DataFieldHistory` consume `ElementHistory` directly. Then delete the three legacy types, both mappers, and `projectValueHistory`. This removes the last era-1 vocabulary and ends the per-feature "which name does this layer use?" tax. (~150 lines plus real conceptual load.)
 
-### 2.5 The composer's handle-threading can be deleted — the data is already external
+### 2.5 The composer's handle-threading can be deleted — the data is already external ✅ *(done 2026-06-13)*
+
+> **Resolved.** Commit/discard moved to a plain module `src/data/services/pendingDraft.ts`; construction commit runs in `useNodeCreation.complete$` (reads localStorage by nodeId after the node exists). All handle types (`FieldComposerHandle`/`FieldComposerSlotHandle`/`FieldListHandle`), both `handleRef` props, the `afterNodeCreated$` relay, and the render-time handle wiring are deleted. Persistence is now write-through in `usePendingForms` so the draft is current at Create time. See IMPLEMENTATION.md → "Draft Store & commit-with-undo".
 
 The hairiest object graph in the app is: `TreeNodeConstruction` → `FieldList` (`handleRef`) → `FieldComposerSlot` (`FieldComposerSlotHandle`, built during render — a side effect Qwik won't love) → `FieldComposer` (`FieldComposerHandle` via `useVisibleTask$`) → `usePendingForms`. Three handle types and four files exist so the node's Save button can reach into a mounted composer and call `commitAll$`.
 
@@ -77,7 +79,9 @@ But `usePendingForms` already persists the draft in **localStorage keyed by node
 
 **Recommendation:** move `commitPendingDraft(nodeId, baseOrder)` and `discardPendingDraft(nodeId)` into a plain module (e.g. `src/data/services/pendingDraft.ts`) that reads/writes the localStorage draft directly. `TreeNodeConstruction.handleCreate$` calls it after the node exists; the composer keeps using the same functions internally. Delete `FieldComposerSlotHandle`, `FieldComposerHandle`, both `handleRef` props, the `afterNodeCreated$` callback relay in `useNodeCreation`/`CreateNodePayload`, and the render-time handle wiring in `FieldComposerSlot.tsx:73-90`. The remaining composer is just UI over a draft store — which is what it conceptually is.
 
-### 2.6 One commit-with-undo helper instead of six copies
+### 2.6 One commit-with-undo helper instead of six copies ✅ *(done 2026-06-13)*
+
+> **Resolved.** `src/data/services/commitWithUndo.ts` — a *plain* (deliberately non-`$`-suffixed) async helper now backs all six sites, including the discard/restore variant (execute result is threaded into the message builder and undo handler so cancel rides the same path). Naming it `commitWithUndo$` made the Qwik optimizer try to QRL-ify the options object and its captured ids — hence plain. See IMPLEMENTATION.md → "Draft Store & commit-with-undo".
 
 The pattern *execute command → success snackbar with Undo (inverse command) → error snackbar via `describeForUser(toStorageError(err))`* is hand-rolled in at least six places:
 
@@ -171,7 +175,7 @@ Ordered for compounding payoff and low risk; each step is independently shippabl
 3. ✅ **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3). *(done 2026-06-11)*
 4. ✅ **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks. *(done 2026-06-11)*
 5. ✅ **Element-shaped view props** (§2.4): delete the legacy vocabulary. *(done 2026-06-13)*
-6. **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles.
+6. ✅ **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles. *(done 2026-06-13)*
 7. **Manifest flag cleanup** (§4.5) as a warm-up for the KINDS-SPECS registry generalization, which this sequence leaves you cleanly positioned for.
 
 The through-line: every era of this codebase was built well, and each refactor was *almost* finished. Finishing them is cheaper than it looks, and the KINDS-SPECS future you're heading toward — manifests as the only place the framework learns a kind — gets dramatically easier on the far side of steps 2, 4, and 5.

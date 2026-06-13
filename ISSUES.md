@@ -33,3 +33,5 @@ _None open._
 
 2.) **useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
 
+3.) **Cypress: construction commit captures last keystroke** — `commitPendingDraft` reads the localStorage draft, so the composer's write-through (`setPendingValue$`) must flush before the node's Create click. A unit test can't reproduce the input→click timing; needs a Cypress spec that types a field value and immediately clicks Create, then asserts the field persisted with that value (not "Empty").
+
