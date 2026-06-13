@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     computeNumberKvState,
+    formatNumberKvDisplay,
     validateNumberKvConfig,
 } from '../components/DataField/numberKvState';
 import type { NumberKvConfig } from '../data/models';
@@ -242,6 +243,41 @@ describe('validateNumberKvConfig - discrete-mode invariants', () => {
 
     it('rejects nominalValue + tolerance > H', () => {
         expect(validateNumberKvConfig({ ...valid, high: 24.3 })).toMatch(/nominalValue.*high/);
+    });
+});
+
+describe('formatNumberKvDisplay', () => {
+    it('rounds to configured decimals', () => {
+        expect(formatNumberKvDisplay(3.14159, { unitsSymbol: '', decimals: 2 })).toBe('3.14');
+        expect(formatNumberKvDisplay(3.14159, { unitsSymbol: '', decimals: 0 })).toBe('3');
+    });
+
+    it('defaults to 2 decimals when unset', () => {
+        expect(formatNumberKvDisplay(5, { unitsSymbol: '' })).toBe('5.00');
+    });
+
+    it('appends units as suffix by default', () => {
+        expect(formatNumberKvDisplay(22, { unitsSymbol: '°C', decimals: 0 })).toBe('22 °C');
+    });
+
+    it('honors prefix affixPosition', () => {
+        expect(formatNumberKvDisplay(22, { unitsSymbol: '$', decimals: 0, affixPosition: 'prefix' })).toBe('$22');
+    });
+
+    it('defaults currency to prefix', () => {
+        expect(
+            formatNumberKvDisplay(22, { unitsSymbol: '$', decimals: 0, displayFormat: 'currency', currencyCode: 'USD' }),
+        ).toBe('$22');
+    });
+
+    it('percent does not double the symbol', () => {
+        const out = formatNumberKvDisplay(0.85, { unitsSymbol: '%', decimals: 0, displayFormat: 'percent' });
+        expect(out).toBe('85%');
+        expect(out).not.toContain('%%');
+    });
+
+    it('omits affix when unitsSymbol is empty', () => {
+        expect(formatNumberKvDisplay(22, { unitsSymbol: '', decimals: 0 })).toBe('22');
     });
 });
 

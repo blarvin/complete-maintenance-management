@@ -11,7 +11,7 @@ import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@b
 import { getElementQueries, getFieldDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
-import type { ComponentType, FieldDefinition, NumberKvConfig, ElementHistory } from '../../data/models';
+import type { ComponentType, FieldDefinition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
 
@@ -88,10 +88,6 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     // DataFieldHistory; require at least 2 entries before enabling the chevron.
     const hasHistory = history.value.length > 1;
 
-    const units = definition.value?.componentType === 'number-kv'
-        ? (definition.value.config as NumberKvConfig).unitsSymbol
-        : '';
-
     return (
         <div class={[styles.inlineWrapper, 'no-caret']}>
             <span class={[styles.metadata, 'no-caret']}>{metadataText}</span>
@@ -114,7 +110,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
                     fieldId={props.fieldId}
                     history={history.value}
                     kind={props.kind}
-                    units={units}
+                    config={definition.value?.config}
                     isOpen={isHistoryOpen.value}
                 />
             )}

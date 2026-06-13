@@ -52,17 +52,17 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const labelId = `field-label-${props.id}`;
 
-    // Used by DataFieldDetails for metadata and (future) history-value preview.
-    const currentDisplayValue = getKindManifest(props.kind).displayPreview(props.value);
+    const manifest = getKindManifest(props.kind);
 
-    const isImageVariant = props.kind === 'single-image';
+    // Used by DataFieldDetails for metadata and (future) history-value preview.
+    const currentDisplayValue = manifest.displayPreview(props.value);
 
     return (
         <div
             class={[
                 styles.datafieldWrapper,
                 isDetailsExpanded && styles.datafieldWrapperExpanded,
-                isImageVariant && styles.datafieldWrapperImage,
+                manifest.blockValueLayout && styles.datafieldWrapperImage,
                 'no-caret',
             ]}
             ref={rootRef}
@@ -79,7 +79,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             />
 
 
-            {props.kind !== 'single-image' && (
+            {!manifest.hideLabel && (
                 <label class={styles.datafieldLabel} id={labelId}>{props.name}:</label>
             )}
 

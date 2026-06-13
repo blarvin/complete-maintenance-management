@@ -11,4 +11,6 @@ export const enumKvManifest: KindManifest = {
     ConfigForm: EnumKvConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({ options: [] }),
     displayPreview: (v: DataFieldValue | null) => (v === null || v === undefined ? null : String(v)),
+    hideLabel: false,
+    blockValueLayout: false,
 };

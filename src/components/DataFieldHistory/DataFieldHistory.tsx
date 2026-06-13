@@ -18,30 +18,18 @@
 import { component$, useSignal, $ } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
+import { getKindManifest } from '../../kinds/registry';
 import { formatTimestampShort } from '../../utils/time';
-import type { ComponentType, ElementHistory, DataFieldValue } from '../../data/models';
+import type { ComponentType, ElementHistory, DataFieldValue, FieldDefinitionConfig } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
 export type DataFieldHistoryProps = {
     fieldId: string;
     history: ElementHistory[];
     kind: ComponentType;
-    units?: string;
+    config?: FieldDefinitionConfig;
     isOpen: boolean;
 };
-
-function formatHistoryValue(entry: ElementHistory, kind: ComponentType, units: string): string {
-    if (entry.newValue === null || entry.newValue === undefined) return '';
-    switch (kind) {
-        case 'text-kv':
-        case 'enum-kv':
-            return String(entry.newValue);
-        case 'number-kv':
-            return `${entry.newValue} ${units}`.trim();
-        case 'single-image':
-            return '[image]';
-    }
-}
 
 export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     const selectedId = useSignal<string | null>(null);
@@ -57,7 +45,6 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
         props.history.length > 0 ? (props.history[props.history.length - 1].newValue as DataFieldValue | null) : null;
 
     const hasHistory = allEntries.length > 0;
-    const units = props.units ?? '';
 
     const toggleSelect$ = $((entryId: string) => {
         selectedId.value = selectedId.value === entryId ? null : entryId;
@@ -86,7 +73,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
             {props.isOpen && hasHistory && (
                 <div class={[styles.historyList, 'no-caret']} role="list" aria-label="Field value history">
                     {allEntries.map((entry) => {
-                        const formatted = formatHistoryValue(entry, props.kind, units);
+                        const formatted = getKindManifest(props.kind).displayPreview(entry.newValue as DataFieldValue | null, props.config) ?? '';
                         const isSelected = selectedId.value === entry.id;
                         return (
                             <div

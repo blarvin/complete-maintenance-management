@@ -58,6 +58,12 @@ export type KindManifest = {
     ConfigForm: Component<ConfigFormProps>;
     /** Fresh default config at mint time. */
     defaultConfig: () => FieldDefinitionConfig;
-    /** Uniform string preview of a value (null → null). */
-    displayPreview: (value: DataFieldValue | null) => string | null;
+    /** Uniform string preview of a value (null → null). Config is consulted by
+     *  kinds whose display formatting depends on it (e.g. number-kv decimals /
+     *  affix); the other kinds ignore it and a 1-arg function stays assignable. */
+    displayPreview: (value: DataFieldValue | null, config?: FieldDefinitionConfig) => string | null;
+    /** Suppress the dispatcher-rendered field label (e.g. single-image owns its own heading). */
+    hideLabel: boolean;
+    /** Value occupies a tall block rather than an inline run — pins the row chevron to the top. */
+    blockValueLayout: boolean;
 };
