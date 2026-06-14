@@ -21,7 +21,7 @@ export type SyncQueueItem = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any; // Dynamic payload for different entity types
   timestamp: number;
-  status: 'pending' | 'syncing' | 'synced' | 'failed';
+  status: 'pending' | 'failed';
   retryCount: number;
   lastError?: string;
 };

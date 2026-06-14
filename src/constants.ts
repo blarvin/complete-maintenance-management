@@ -2,6 +2,8 @@
  * Centralized constants for the application.
  */
 
+import type { AddFieldSurfaceId } from "./components/FieldList/addFieldSurfaces";
+
 /**
  * Current user ID. Phase 1 uses a constant; future phases will pull from auth.
  */
@@ -14,12 +16,33 @@ export const USER_ID = "localUser" as const;
 export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
 
 /**
- * Feature flag (no real FF system): when true, FieldList shows the legacy
- * single-pick "+ Add Field" surface BELOW the new FieldComposer. Toggle to
- * compare the two add-field UXs side-by-side. Set to false to ship with only
- * the composer.
+ * Which add-field surfaces FieldList renders in display mode (A/B roster).
+ * Construction mode always uses the composer regardless of this list.
+ * See src/components/FieldList/addFieldSurfaces.ts for the surface contract.
  */
-export const LEGACY_ADD_FIELD_ENABLED = true;
+export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [
+    "composer",
+    "legacy",
+];
+
+/**
+ * Max push attempts per sync queue item before it's parked as exhausted
+ * (surfaced via error snackbar with Retry; re-armed on app startup).
+ */
+export const MAX_SYNC_RETRIES = 5;
+
+/**
+ * Per-write timeout for sync pushes. The Firestore SDK buffers writes and
+ * retries forever instead of rejecting when the server is unreachable, so
+ * without this the push (and the whole sync cycle) hangs indefinitely.
+ */
+export const SYNC_WRITE_TIMEOUT_MS = 10000;
+
+/**
+ * Timeout for the pull phase of a sync cycle — keeps a hung getDocs from
+ * wedging SyncManager's isSyncing flag (which would skip all future cycles).
+ */
+export const SYNC_PULL_TIMEOUT_MS = 30000;
 
 /**
  * Firestore collection names.

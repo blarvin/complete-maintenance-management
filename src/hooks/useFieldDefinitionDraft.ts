@@ -21,8 +21,6 @@ import type {
     FieldDefinitionConfig,
 } from '../data/models';
 
-export type FieldDefinitionDraftPhase = 'idle' | 'authoring';
-
 export const DEFAULT_COMPONENT_TYPE: ComponentType = 'text-kv';
 
 export function defaultConfigFor(type: ComponentType): FieldDefinitionConfig {
@@ -32,13 +30,11 @@ export function defaultConfigFor(type: ComponentType): FieldDefinitionConfig {
 const LABEL_MAX = 50;
 
 export type UseFieldDefinitionDraftResult = {
-    phase: Signal<FieldDefinitionDraftPhase>;
     componentType: Signal<ComponentType>;
     label: Signal<string>;
     config: Signal<FieldDefinitionConfig>;
     /** Error from the component-specific config sub-form (e.g. invariant violations). */
     configError: Signal<string | null>;
-    start$: QRL<() => void>;
     pickComponentType$: QRL<(type: ComponentType) => void>;
     setLabel$: QRL<(value: string) => void>;
     setConfig$: QRL<(cfg: FieldDefinitionConfig) => void>;
@@ -50,19 +46,10 @@ export type UseFieldDefinitionDraftResult = {
 };
 
 export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
-    const phase = useSignal<FieldDefinitionDraftPhase>('idle');
     const componentType = useSignal<ComponentType>(DEFAULT_COMPONENT_TYPE);
     const label = useSignal<string>('');
     const config = useSignal<FieldDefinitionConfig>(defaultConfigFor(DEFAULT_COMPONENT_TYPE));
     const configError = useSignal<string | null>(null);
-
-    const start$ = $(() => {
-        phase.value = 'authoring';
-        componentType.value = DEFAULT_COMPONENT_TYPE;
-        label.value = '';
-        config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
-        configError.value = null;
-    });
 
     const pickComponentType$ = $((type: ComponentType) => {
         componentType.value = type;
@@ -83,7 +70,6 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
     });
 
     const cancel$ = $(() => {
-        phase.value = 'idle';
         componentType.value = DEFAULT_COMPONENT_TYPE;
         label.value = '';
         config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
@@ -104,7 +90,6 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
                     config: config.value,
                 },
             });
-            phase.value = 'idle';
             label.value = '';
             config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
             componentType.value = DEFAULT_COMPONENT_TYPE;
@@ -116,12 +101,10 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
     });
 
     return {
-        phase,
         componentType,
         label,
         config,
         configError,
-        start$,
         pickComponentType$,
         setLabel$,
         setConfig$,

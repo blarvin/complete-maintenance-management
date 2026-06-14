@@ -15,14 +15,13 @@ import { component$, useResource$, Resource, type PropFunction, type Signal, typ
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { getFieldDefinitionQueries } from '../../data/queries';
-import type { NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
-import { computeNumberKvState, type NumberKvState } from './numberKvState';
+import type { NumberKvConfig } from '../../data/models';
+import { computeNumberKvState, formatNumberKvDisplay, type NumberKvState } from './numberKvState';
 import styles from './DataField.module.css';
 import numberStyles from './NumberKvField.module.css';
 
 export type NumberKvFieldProps = {
     id: string;
-    fieldName: string;
     fieldDefinitionId: string;
     value: number | null;
     /** Epoch ms when the value was last written. Drives stale state when the
@@ -35,53 +34,6 @@ export type NumberKvFieldProps = {
     /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
     pendingMode?: { onChange$: QRL<(value: number | null) => void>; autoFocus?: boolean };
 };
-
-function formatNumber(value: number, config: NumberKvConfig): string {
-    const decimals = config.decimals ?? 2;
-    const fmt: NumberKvDisplayFormat = config.displayFormat ?? 'decimal';
-    try {
-        switch (fmt) {
-            case 'percent':
-                return new Intl.NumberFormat(undefined, {
-                    style: 'percent',
-                    minimumFractionDigits: decimals,
-                    maximumFractionDigits: decimals,
-                }).format(value);
-            case 'scientific':
-                return new Intl.NumberFormat(undefined, {
-                    notation: 'scientific',
-                    minimumFractionDigits: decimals,
-                    maximumFractionDigits: decimals,
-                }).format(value);
-            case 'engineering':
-                return new Intl.NumberFormat(undefined, {
-                    notation: 'engineering',
-                    minimumFractionDigits: decimals,
-                    maximumFractionDigits: decimals,
-                }).format(value);
-            case 'currency':
-            case 'decimal':
-            default:
-                return new Intl.NumberFormat(undefined, {
-                    minimumFractionDigits: decimals,
-                    maximumFractionDigits: decimals,
-                }).format(value);
-        }
-    } catch {
-        // Bad locale / format options — fall back to toFixed.
-        return value.toFixed(decimals);
-    }
-}
-
-function withAffix(formatted: string, config: NumberKvConfig): string {
-    const symbol = config.unitsSymbol;
-    // `percent` is the one displayFormat where Intl already appends a symbol
-    // (locale-aware "%"). Skip the unitsSymbol affix to avoid doubling.
-    if (config.displayFormat === 'percent' || !symbol) return formatted;
-    const pos = config.affixPosition
-        ?? (config.displayFormat === 'currency' ? 'prefix' : 'suffix');
-    return pos === 'prefix' ? `${symbol}${formatted}` : `${formatted} ${symbol}`;
-}
 
 function parseNumber(raw: string): number | null {
     const trimmed = raw.trim();
@@ -232,7 +184,7 @@ const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>
     const state: NumberKvState = computeNumberKvState(currentValue.value, config, stale);
     const shown = currentValue.value === null || currentValue.value === undefined
         ? ''
-        : withAffix(formatNumber(currentValue.value, config), config);
+        : formatNumberKvDisplay(currentValue.value, config);
 
     return (
         <div

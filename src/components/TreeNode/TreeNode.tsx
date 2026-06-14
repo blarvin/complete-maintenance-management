@@ -26,8 +26,8 @@ export const TreeNode = component$((props: TreeNodeProps) => {
         return (
             <TreeNodeConstruction
                 id={props.id}
-                initialName={props.nodeName}
-                initialSubtitle={props.nodeSubtitle}
+                initialName={props.name}
+                initialSubtitle={props.subtitle}
                 isChildConstruction={props.isChildConstruction}
                 onCancel$={props.onCancel$}
                 onCreate$={props.onCreate$}
@@ -39,8 +39,8 @@ export const TreeNode = component$((props: TreeNodeProps) => {
     return (
         <TreeNodeDisplay
             id={props.id}
-            nodeName={props.nodeName}
-            nodeSubtitle={props.nodeSubtitle}
+            name={props.name}
+            subtitle={props.subtitle}
             nodeState={props.nodeState}
             parentId={props.parentId}
             onNodeClick$={props.onNodeClick$}

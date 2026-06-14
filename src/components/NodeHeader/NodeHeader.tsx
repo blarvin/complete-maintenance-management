@@ -19,8 +19,8 @@ export type NodeHeaderProps = {
     isDetailsExpanded?: boolean;
     isParent?: boolean;
     isClickable?: boolean;
-    nodeName: string;
-    nodeSubtitle: string;
+    name: string;
+    subtitle: string;
     parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
     onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
@@ -76,7 +76,7 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                 onKeyDown$={handleBodyKeyDown$}
                 role={props.isClickable ? 'button' : undefined}
                 tabIndex={props.isClickable ? 0 : undefined}
-                aria-label={props.isClickable ? `Open ${props.nodeName || 'node'}` : undefined}
+                aria-label={props.isClickable ? `Open ${props.name || 'node'}` : undefined}
             >
                 {props.isParent && props.onNavigateUp$ && (
                     <div class={styles.upButtonWrapper}>
@@ -108,8 +108,8 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                         </>
                     ) : (
                         <>
-                            <NodeTitle nodeName={props.nodeName} id={props.titleId} />
-                            <NodeSubtitle nodeSubtitle={props.nodeSubtitle} />
+                            <NodeTitle nodeName={props.name} id={props.titleId} />
+                            <NodeSubtitle nodeSubtitle={props.subtitle} />
                         </>
                     )}
                 </div>

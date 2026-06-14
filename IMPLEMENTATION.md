@@ -10,13 +10,25 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 **Wipe-on-upgrade.** v7 introduces `elements` / `elementHistory` alongside the legacy stores; the legacy stores will be dropped in a v8 bump once the sync layer is retargeted. No migration path — matches the wipe pattern established by v3/v4/v5/v6.
 
-**Composite history key.** Each `ElementHistory` row uses `${elementId}:${rev}` as its primary key with a `[elementId+rev]` compound index. `property` widens from the value-only enum to `value | name | subtitle | parentId | siblingOrder`, so renames, moves, and reorders are now logged — closing a long-standing audit gap.
+**Composite history key.** Each `ElementHistory` row uses `${elementId}:${rev}` as its primary key with a `[elementId+rev]` compound index. `property` widens from the value-only enum to `value | name | subtitle | parentId | siblingOrder`, so renames, moves, and reorders are now logged — closing a long-standing audit gap. **Next-rev is an index seek (audit §4.2, done 2026-06-13):** `IDBAdapter.nextElementRev` reads the highest existing rev via a single `[elementId+rev]` range seek (`.between(...).last()`) rather than loading the element's whole history to take `max(rev)+1`; `createElement` skips the query entirely and writes rev 0 by construction (a fresh id has no prior history). The old `computeNextRev` array helper is gone.
 
-**View-model mappers, not prop reshape.** UI components keep their TreeNode/DataField-shaped props; hooks call `getElementQueries()` and project rows through `elementToTreeNode` / `elementToDataField` (in `models.ts`) before handing them to renderers. This is a defensible permanent boundary — TreeNode/DataField become view-model DTOs rather than storage types — and let the refactor land without touching every renderer. With the renderer registry now in place (below), the prop reshape to `{ element: Element }` is downgraded from "pending" to optional — the mappers can stay as the DTO seam.
+**Element-shaped view props (done 2026-06-13, audit §2.4).** The view layer now speaks Element vocabulary end-to-end. The legacy `TreeNode` / `DataField` / `DataFieldHistory` types, the `elementToTreeNode` / `elementToDataField` mappers, and `projectValueHistory` are all deleted. View components consume `Element` / `ElementHistory` fields directly: `name`, `subtitle`, `siblingOrder`, `kind` (the `componentType` synonym survives only on `FieldDefinition` and `KindManifest`, where it's a real concept). Props are **flat**, not `{ element: Element }` — the construction branch (`TreeNodeConstruction`) has no persisted Element and `NodeHeader` is shared between display and construction, so a wrapper object would just be re-destructured immediately; flat renames removed every synonym with no destructuring churn. The component *names* `TreeNode` / `DataField` survive as renderer identifiers (per SPEC), only their data shapes changed.
 
 **Uniform `siblingOrder`.** Every child (nodes and value-bearing kinds alike) is sorted by `siblingOrder` ascending. Mint assigns the next integer; midpoint insertion will renumber-the-run rather than use fractional keys (fractional deferred to LATER.md).
 
 **FSM rename.** `ViewState.nodeId` → `elementId`, `editingFieldId` → `editingElementId`, `UnderConstructionData` gains `kind: Kind`. UIPrefs key bumped to `treeview:ui:prefs:v2` so any stale persisted expansion sets discard cleanly.
+
+---
+
+## Draft Store & commit-with-undo (audit §2.5/§2.6, done 2026-06-13)
+
+**Composer draft is the single commit source.** The pending-field batch was always persisted in `localStorage` keyed by nodeId (`pendingFields:${nodeId}`); the commit logic now lives in a plain module `src/data/services/pendingDraft.ts` (`commitPendingDraft(nodeId, baseOrder)` / `discardPendingDraft(nodeId)`), not in the mounted component. `usePendingForms` is a thin Qwik layer over it. This deleted the entire handle-threading graph — three handle types (`FieldComposerHandle`, `FieldComposerSlotHandle`, `FieldListHandle`), every `handleRef` prop, and the `afterNodeCreated$` callback relayed through `CreateNodePayload`/`useNodeCreation`.
+
+**Construction commit moved into `useNodeCreation.complete$`.** That function already had the new node's id and already cleared the draft; it now commits the draft (`commitPendingDraft(id, -1)`) right after `CREATE_ELEMENT` succeeds. No component reaches into the composer anymore.
+
+**Write-through persistence.** Because the construction commit reads localStorage from a *different* component than the mounted composer, `setPendingValue$`/`togglePending$` now write to localStorage synchronously rather than relying on a reactive `useTask$` auto-save (which could lag the Create click by a tick). The race — whether the last keystroke flushes before Create — is browser-timing-only, so it's covered by a Cypress spec, not a unit test (ISSUES.md Tech Debt).
+
+**`commitWithUndo` is a plain function, deliberately not `$`-suffixed.** It wraps *execute → success snackbar with Undo → error snackbar via `describeForUser(toStorageError(err))`* (six former copies). A `$` suffix makes the Qwik optimizer treat `commitWithUndo$({…})` as an implicit-QRL API and try to hoist the whole options object — but that object holds inline `$()` QRLs capturing local ids (`nodeId`, `prevVal`), which it can't. As a plain function, those `$()` args are captured in the *caller's* handler scope, exactly like the snackbar action handlers were before. The execute result is threaded into both the message builder and the undo handler, so the discard/restore variant (`FieldComposer` cancel) rides the same path as the command sites.
 
 ---
 
@@ -30,7 +42,9 @@ The per-kind dispatch that used to be smeared across six `switch (componentType)
 
 **Files in place, no vertical-slice move (yet).** Manifests import the existing components where they already live (`components/DataField/*`, `components/FieldComposer/configForms/*`) — the cheap "name the seam" step. The full `src/kinds/<kind>/` vertical-slice reorg and the Phase-2 manifest fields (`placement` nest-vs-navigate, `nature` data-vs-reference, lazy renderers) are deferred until a second non-field surface (Logbook / Equipment Plate) forces them — see LATER.md.
 
-**Residual switch.** `DataFieldHistory.formatHistoryValue` still switches on `componentType` — it's a units-aware *history* formatter with different single-image semantics (`'[image]'` always vs. the manifest's `caption ?? '[image]'`), so folding it into `displayPreview` would change behavior. Left intentionally.
+**History routes through `displayPreview` (audit §4.5, done 2026-06-13).** `DataFieldHistory.formatHistoryValue`'s `switch (componentType)` is gone — history rows now call `getKindManifest(kind).displayPreview(value, config)`, the same formatter the live row uses, so the two can no longer diverge. To make this possible, `displayPreview` was widened to `(value, config?)` (the three config-free kinds ignore the second arg; a 1-arg function stays assignable), and the `number-kv` value formatting (`formatNumber` + `withAffix`) was lifted out of `NumberKvField` into `numberKvState.formatNumberKvDisplay` so both the renderer and the manifest share one implementation — history now shows fully-formatted numbers (decimals / affix / percent / currency) instead of raw `value units`. Two intentional behavior changes rode along: single-image history shows the manifest's `caption ?? '[image]'` (previously always `'[image]'`), and `DataFieldDetails` passes the FieldDefinition `config` down in place of the old precomputed `units` string.
+
+**Label/layout are manifest flags, not kind comparisons.** `DataField`'s dispatcher previously compared `kind === 'single-image'` to suppress the label and pick the block-layout wrapper class. Those are now two `KindManifest` booleans — `hideLabel` and `blockValueLayout` — so the dispatcher learns each kind's framing from the manifest like everything else. Only `single-image` sets them `true`; `satisfies Record<ComponentType, KindManifest>` forces every kind to declare both.
 
 ---
 
@@ -63,7 +77,7 @@ The registry lives at module scope (`getCommandBus()` for writes in `src/data/co
 
 ### Storage Adapter Abstraction
 
-**Pattern**: All storage operations go through `StorageAdapter` interface. Implementations include `IDBAdapter` (IndexedDB) and `FirestoreAdapter` (cloud sync).
+**Pattern**: All domain reads/writes go through the `StorageAdapter` interface, implemented solely by `IDBAdapter` (IndexedDB via Dexie) — the single write model owning history diffing, rev minting, and sibling ordering. `FirestoreAdapter` implements only `RemoteSyncAdapter` (`applySyncItem` + pull methods): Firestore is a sync mirror, not a second CRUD backend.
 
 **How It Works**:
 
@@ -76,7 +90,7 @@ The registry lives at module scope (`getCommandBus()` for writes in `src/data/co
 
 **StorageResult Metadata**: Adapters return `StorageResult<T>` with lightweight metadata (adapter id, optional cache flag, latency). Enables future optimizations and debugging.
 
-**StorageError Contract**: Normalized error shape with codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers. Both adapters normalize failures uniformly (see Error Handling below); surfaced to users via the Snackbar.
+**StorageError Contract**: Normalized error shape with codes (`not-found`, `validation`, `conflict`, `unauthorized`, `unavailable`, `internal`), retryable flag, and helpers. `IDBAdapter` normalizes all failures uniformly (see Error Handling below); surfaced to users via the Snackbar.
 
 ---
 
@@ -210,11 +224,21 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Protect Pending Items**: Don't delete local items that are pending push. Ensures local changes aren't lost if remote has newer version.
 
-**Post-Sync UI Refresh**: `dispatchStorageChangeEvent()` triggers components to reload data. Components listen for `storage-change` CustomEvent and refresh their queries.
+**Post-Sync UI Refresh (audit §2.3 + §4.4, 2026-06-11)**: One reactive model — *writes emit; readers subscribe*. Every write (local command or remote sync apply via `applyRemoteElement`/`applyRemoteFieldDefinition`) emits a per-element event on `storageEventBus` from `IDBAdapter`. Views read through `useElementChildren`/`useElementById` (`src/hooks/useElementChildren.ts`), which subscribe to the bus and reload when a relevant event lands (relevance predicates in `src/data/storageEventRelevance.ts`; 30ms trailing debounce coalesces write bursts). The former window `storage-change` CustomEvent and the `onDeleted$`/`onCreated$`/`onCommitted$` reload-callback threading were deleted — no reload callbacks are threaded through props.
+
+**Under-construction TreeNode key must be namespaced (`uc-${id}`)**: the bus reload puts a newly created node into the view's `nodes` list while the construction card is still mounted (it's filtered from display, but present). If the UC `<TreeNode>` and the display `<TreeNode>` share the raw element id as key, Qwik's keyed reconciler identity-matches them on the completion render and *reuses the construction component instance* instead of unmounting it — the construction card sticks on screen even though the FSM cleared correctly. Namespacing the UC key (`RootView.tsx` / `BranchView.tsx`) forces a clean unmount+mount. Regression spec: `cypress/e2e/repro-create-node.cy.ts`.
 
 **Event-Driven Sync Triggering**: Sync is triggered via `StorageEventBus` rather than manual `triggerSync()` calls in UI code. `IDBAdapter` emits typed events (`NODE_WRITTEN`, `NODE_HARD_DELETED`, `FIELD_WRITTEN`, `FIELD_DELETED`) after local CUD operations. `syncSubscriber.ts` subscribes to all events and calls `triggerSync()`, which debounces at 500ms. Remote/sync-originated operations (`applyRemoteUpdate`, `applyRemoteHistory`, `deleteFieldLocal`) do NOT emit events to avoid sync loops. UI code never calls `triggerSync()` directly.
 
 **SyncQueueManager Extracted from IDBAdapter**: The sync queue (`getSyncQueue`, `enqueue`, `markSynced`, `markFailed`) lives in `src/data/sync/SyncQueueManager.ts` rather than on the adapter. `IDBAdapter` holds a `SyncQueueManager` instance and delegates to it. This keeps the adapter a pure storage adapter and makes the queue reusable across storage backends.
+
+**Single offline cache (audit §2.2, 2026-06-11)**: Firestore is initialized with `memoryLocalCache()` unconditionally — Dexie + syncQueue is the app's only offline cache; Firestore is a dumb wire. `clearFirebaseIndexedDB()` remains as the console cleanup tool for orphaned SDK mirror DBs on devices that ran older builds.
+
+**Sync retry policy (audit §4.3, 2026-06-11)**: No dedicated backoff machinery — failed queue items simply ride existing sync cycles (write-debounce, `online` event, 10-min timer) up to `MAX_SYNC_RETRIES = 5` attempts. `getSyncQueue()` returns pending + under-cap failed items; at the cap an item is parked as exhausted. On exhaustion `SyncManager` shows an error snackbar with a **Retry** action that re-arms (`requeueFailed()`: status→pending, retryCount→0, `lastError` kept for forensics) and syncs immediately. App startup also re-arms all failed items, so a missed toast isn't permanent.
+
+**Fail-fast sync timeouts**: The Firestore SDK *never rejects* writes against an unreachable server — it buffers them and retries the transport forever — so an awaited `setDoc` hangs and would wedge the whole sync layer (`isSyncing` stuck true, every later cycle skipped). `SyncPusher` therefore races each `applySyncItem` against `SYNC_WRITE_TIMEOUT_MS` (10s); a `TimeoutError` is treated as connection-level failure and the rest of the queue is failed in lockstep (no per-item wait, items exhaust on the same cycle → one toast, not a drip-feed). Pull strategies are likewise wrapped in `SYNC_PULL_TIMEOUT_MS` (30s). Helper: `src/utils/withTimeout.ts`.
+
+**Retry-action QRL without `$()`**: `ToastAction.handler` must be a QRL, but a module-level `$()` in `syncManager.ts` crashes every Vitest import (no Qwik optimizer in tests: "Optimizer should replace all usages of $()"). The handler lives in `src/data/sync/retryFailedSync.ts` and `syncManager.ts` wraps it with the runtime API: `qrl(() => import('./retryFailedSync'), 'retryFailedSync')` — works with and without the optimizer, captures nothing, resolves `getSyncManager()` at invoke time per the registry-getter pattern.
 
 ---
 
@@ -263,6 +287,14 @@ Sub-components render their own value column only; the dispatcher wraps them.
 The `save$` flow: parse → validate (if provided) → `getCommandBus().execute({ type: 'UPDATE_FIELD_VALUE', ... })` → Snackbar with Undo action. Parse/validate errors surface as a Snackbar error variant and leave edit mode open.
 
 **Preview/revert from history was removed** during the Component split — it was tightly coupled to the old monolithic `useFieldEdit` and hoisting it across the Component boundary is deferred (see ISSUES.md).
+
+---
+
+### Add-Field Surfaces: A/B Roster + Mutex
+
+**Pattern**: FieldList hosts multiple "add field" UX surfaces side by side as a deliberate A/B comparison (currently `FieldComposerSlot` and the legacy `CreateDataField` dropdown; more variants planned). Which surfaces render in display mode is controlled by the `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts` — adding/removing a surface is a roster edit, not new conditional logic.
+
+Coordination is a single parent-owned mutex signal: `useSignal<ActiveSurface>('none')` in FieldList. Each surface is open iff `activeSurface.value === <its own id>`, opens by writing its own id, closes by writing `'none'` — last writer wins, so opening any surface implicitly closes the rest, and that property holds for any number of surfaces. The `ActiveSurface` / `AddFieldSurfaceId` types and the full surface contract (including the post-persist reload callback) live in `src/components/FieldList/addFieldSurfaces.ts`, deliberately neutral ground so no surface imports from a competitor. Construction mode bypasses the roster: the composer is always rendered there (locked-defaults flow requires it) and ignores the mutex.
 
 ---
 
@@ -348,7 +380,7 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Testing Patterns
 
-**Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Integration tests use the real `FirestoreAdapter` against the emulator; no adapter mocks—tests exercise the real abstraction.
+**Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Sync tests (`SyncPusher.test.ts`, `fieldDefinitionSync.test.ts`) mock `RemoteSyncAdapter`; no automated test currently exercises the real `FirestoreAdapter` against the emulator (see LATER.md §Emulator Round-Trip Sync Coverage).
 
 **Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
 
@@ -358,6 +390,4 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Error Handling
 
-**Pattern**: `safeAsync(operation, fallback, context)` wraps async calls with try/catch, logs with context string, returns fallback on error. Not currently applied everywhere—Firestore's offline persistence handles most failures. Becomes important when adding Snackbar error notifications.
-
-**StorageError Contract**: Normalized error shape enables consistent error handling across adapters. Both adapters wrap every public method in the same `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })` shape, each with a backend-specific code mapper: `mapFirestoreError` keys off `FirestoreError.code`, `mapDexieError` (in `IDBAdapter.ts`) keys off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`).
+**StorageError Contract**: Normalized error shape enables consistent error handling at the write model. `IDBAdapter` wraps every public method in a single private `run()` helper implementing `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })`, with `mapDexieError` keying off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`). `FirestoreAdapter`'s sync methods throw raw Firestore errors; the sync layer (`SyncPusher`) catches per-item failures and marks the queue item failed rather than surfacing them to the UI.

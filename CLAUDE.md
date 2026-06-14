@@ -44,8 +44,8 @@
 ### 2. Adapter Pattern (Backend Abstraction)
 
 **Location**: `src/data/storage/`
-**Interface**: `StorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus FieldDefinition CRUD
-**Implementations**: `IDBAdapter` (primary, offline-first via Dexie), `FirestoreAdapter` (cloud sync)
+**Write model**: `IDBAdapter` is the sole `StorageAdapter`/`SyncableStorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus FieldDefinition CRUD, offline-first via Dexie
+**Sync mirror**: `FirestoreAdapter` implements `RemoteSyncAdapter` only (`applySyncItem` + pull methods) — Firestore is a dumb mirror, not a second CRUD backend; the swappable-backend story is served by `RemoteSyncAdapter`
 **Command/query registry**: `src/data/commands/` and `src/data/queries/`
 
 - Module-level getters: `getCommandBus()`, `getElementQueries()`, `getFieldDefinitionQueries()`
@@ -116,7 +116,7 @@ npm run emulator     # Run Firebase emulator
 - **Unit tests**: Service layer, adapters, sync logic, FSM transitions
 - **E2E tests**: Cypress against Firestore emulator (run cleanup before tests)
 - **Fake-IndexedDB**: In-memory IndexedDB for fast unit tests
-- Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_EMULATOR', 'true')`
+- Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_FIRESTORE_EMULATOR', 'true')` or `?emulator=true` URL param
 
 ### Testing Infrastructure
 

@@ -3,24 +3,24 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { component$ } from '@builder.io/qwik';
+import { component$, useSignal } from '@builder.io/qwik';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
-import { useRootViewData } from '../../hooks/useRootViewData';
+import { useElementChildren } from '../../hooks/useElementChildren';
 
 export const RootView = component$(() => {
     const appState = useAppState();
     const { navigateToNode$ } = useAppTransitions();
-    
-    // Use the extracted hook for data loading
-    const { nodes, isLoading, reload$ } = useRootViewData();
+
+    // Root = children of null. Reloads arrive via the storage event bus.
+    const rootParent = useSignal<string | null>(null);
+    const { children: nodes, isLoading } = useElementChildren(rootParent, 'nodes');
 
     // Use the extracted hook for creation flow
     const { ucNode, start$, cancel$, complete$ } = useNodeCreation({
         parentId: null,
-        onCreated$: reload$,
     });
 
     // Filter out the UC node from the list to prevent dual rendering
@@ -30,8 +30,8 @@ export const RootView = component$(() => {
         : nodes.value;
 
     // Mirror BranchView's loading guard so the root list doesn't flash empty
-    // before data resolves. Guard on empty nodes so background reloads (storage
-    // change listener) don't replace the live list with "Loading...".
+    // before data resolves. Guard on empty nodes so background reloads don't
+    // replace the live list with "Loading...".
     if (isLoading.value && nodes.value.length === 0) {
         return <main class="view-root">Loading...</main>;
     }
@@ -42,18 +42,23 @@ export const RootView = component$(() => {
                 <TreeNode
                     key={n.id}
                     id={n.id}
-                    nodeName={n.nodeName}
-                    nodeSubtitle={n.nodeSubtitle ?? ''}
+                    name={n.name}
+                    subtitle={n.subtitle ?? ''}
                     nodeState={selectors.getDisplayNodeState(appState, n.id)}
                     onNodeClick$={() => navigateToNode$(n.id)}
                 />
             ))}
             {ucNode ? (
                 <TreeNode
-                    key={ucNode.id}
+                    // Key is namespaced so Qwik never identity-matches this vnode with
+                    // the display TreeNode of the same id: the bus reload can put the
+                    // newly created node into `nodes` while construction is still open,
+                    // and a shared key would make the reconciler reuse the construction
+                    // instance instead of unmounting it.
+                    key={`uc-${ucNode.id}`}
                     id={ucNode.id}
-                    nodeName={ucNode.name}
-                    nodeSubtitle={ucNode.subtitle}
+                    name={ucNode.name}
+                    subtitle={ucNode.subtitle}
                     nodeState="UNDER_CONSTRUCTION"
                     onCancel$={cancel$}
                     onCreate$={complete$}

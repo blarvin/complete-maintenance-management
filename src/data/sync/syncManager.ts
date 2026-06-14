@@ -19,15 +19,32 @@
  * - Manual: syncOnce(), syncDelta(), syncFull() can be called directly
  */
 
+import { qrl } from '@builder.io/qwik';
+import type { QRL } from '@builder.io/qwik';
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
 import type { SyncQueueManager } from './SyncQueueManager';
 import { now } from '../../utils/time';
-import { dispatchStorageChangeEvent } from '../storage/storageEvents';
+import { getSnackbarService } from '../../services/snackbar';
+import { SYNC_PULL_TIMEOUT_MS } from '../../constants';
+import { withTimeout } from '../../utils/withTimeout';
 import { SyncPusher } from './SyncPusher';
+import type { PushResult } from './SyncPusher';
 import { SyncLifecycle } from './SyncLifecycle';
 import { ServerAuthorityResolver } from './ServerAuthorityResolver';
 import { FullCollectionSync, DeltaSync } from './strategies';
 import type { SyncStrategy } from './strategies';
+
+/**
+ * Retry action for the exhausted-retries toast. ToastAction handlers must be
+ * QRLs; built with the runtime `qrl()` API (not `$()`, which requires the
+ * optimizer and would crash Vitest imports — see retryFailedSync.ts).
+ * Captures nothing; resolves getSyncManager at invoke time per the
+ * registry-getter pattern.
+ */
+export const retryFailedSyncQrl: QRL<() => Promise<void>> = qrl(
+  () => import('./retryFailedSync'),
+  'retryFailedSync'
+);
 
 export class SyncManager {
   private _enabled: boolean = true;
@@ -38,6 +55,7 @@ export class SyncManager {
   private readonly fullStrategy: SyncStrategy;
   private readonly lifecycle: SyncLifecycle;
   private readonly local: SyncableStorageAdapter;
+  private readonly syncQueue: SyncQueueManager;
 
   constructor(
     local: SyncableStorageAdapter,
@@ -46,6 +64,7 @@ export class SyncManager {
     pollIntervalMs: number = 600000 // 10 minutes
   ) {
     this.local = local;
+    this.syncQueue = syncQueue;
 
     // Initialize collaborators
     const resolver = new ServerAuthorityResolver(local, syncQueue);
@@ -93,19 +112,20 @@ export class SyncManager {
 
     try {
       // Push local changes first
-      await this.pusher.push();
+      const pushResult = await this.pusher.push();
+      this.notifyIfExhausted(pushResult);
 
-      // Then pull remote changes (delta)
+      // Then pull remote changes (delta). Timeout so a hung pull can't wedge
+      // _isSyncing and silently stop all future cycles.
       console.log('[SyncManager] Pull: Starting', this.deltaStrategy.name, 'sync');
-      await this.deltaStrategy.sync();
+      await withTimeout(this.deltaStrategy.sync(), SYNC_PULL_TIMEOUT_MS, 'delta pull');
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
       console.log('[SyncManager] Delta sync cycle complete');
-
-      // Dispatch event to trigger UI updates
-      dispatchStorageChangeEvent();
+      // UI updates arrive via per-element storageEventBus emissions from
+      // IDBAdapter.applyRemoteElement / applyRemoteFieldDefinition.
     } catch (err) {
       console.error('[SyncManager] Delta sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
@@ -126,25 +146,34 @@ export class SyncManager {
 
     try {
       // Push local changes first
-      await this.pusher.push();
+      const pushResult = await this.pusher.push();
+      this.notifyIfExhausted(pushResult);
 
-      // Then pull remote changes (full collection)
+      // Then pull remote changes (full collection). Timeout so a hung pull
+      // can't wedge _isSyncing and silently stop all future cycles.
       console.log('[SyncManager] Pull: Starting', this.fullStrategy.name, 'sync');
-      await this.fullStrategy.sync();
+      await withTimeout(this.fullStrategy.sync(), SYNC_PULL_TIMEOUT_MS, 'full pull');
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
       console.log('[SyncManager] Full sync cycle complete');
-
-      // Dispatch event to trigger UI updates
-      dispatchStorageChangeEvent();
     } catch (err) {
       console.error('[SyncManager] Full sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
     } finally {
       this._isSyncing = false;
     }
+  }
+
+  /**
+   * Re-arm all exhausted/failed queue items with a fresh retry budget and
+   * sync immediately. Invoked by the exhausted-retries toast's Retry action.
+   */
+  async retryFailed(): Promise<void> {
+    const requeued = await this.syncQueue.requeueFailed();
+    console.log('[SyncManager] Re-armed', requeued, 'failed item(s)');
+    await this.syncOnce();
   }
 
   /**
@@ -172,6 +201,20 @@ export class SyncManager {
   // ============================================================================
   // Private
   // ============================================================================
+
+  /**
+   * Surface newly exhausted items as an error toast with a Retry action.
+   * Self-limiting: an item only becomes exhausted once (it then drops out of
+   * getSyncQueue()), so this fires on that one cycle, not every cycle.
+   */
+  private notifyIfExhausted(pushResult: PushResult): void {
+    if (pushResult.exhausted === 0) return;
+    getSnackbarService().show({
+      message: `${pushResult.exhausted} change(s) failed to sync`,
+      variant: 'error',
+      action: { label: 'Retry', handler: retryFailedSyncQrl },
+    });
+  }
 
   private canSync(): boolean {
     // Skip if disabled

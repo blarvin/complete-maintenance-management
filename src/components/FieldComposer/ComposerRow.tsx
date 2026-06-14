@@ -101,7 +101,6 @@ const RowBody = component$<RowBodyProps>((props) => {
     return (
         <Renderer
             id={props.pendingForm.id}
-            fieldName={props.definition.label}
             fieldDefinitionId={props.definition.id}
             value={props.pendingForm.value ?? null}
             rootRef={props.rootRef}

@@ -2,17 +2,15 @@
  * TreeNodeConstruction - Under-construction mode UI for TreeNode.
  *
  * Renders inputs for name/subtitle and uses FieldList (composer-mode) for the
- * field batch. On Save:
- *   1. props.onCreate$ creates the empty node.
- *   2. Inside its `afterNodeCreated$` callback we run FieldList handle commitAll$
- *      so the in-flight composer rows become real DataFields against the new
- *      node id while the FieldList is still mounted.
+ * field batch. On Save, props.onCreate$ creates the empty node; the in-flight
+ * composer rows (persisted in localStorage by nodeId) are committed by
+ * useNodeCreation right after the node exists — no handle into the composer.
  */
 
 import { component$, useSignal, $, PropFunction, useVisibleTask$ } from '@builder.io/qwik';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
-import { FieldList, type FieldListHandle } from '../FieldList/FieldList';
+import { FieldList } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
 import { FIELD_DEFINITION_IDS } from '../../data/services/seedFieldDefinitions';
 import styles from './TreeNode.module.css';
@@ -39,7 +37,6 @@ export type TreeNodeConstructionProps = {
 export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps) => {
     const nameInputRef = useSignal<HTMLInputElement>();
     const subtitleInputRef = useSignal<HTMLInputElement>();
-    const fieldListHandle = useSignal<FieldListHandle | null>(null);
     // Reactive mirror of the Name input so the Create button can disable while empty.
     const nameValue = useSignal('');
 
@@ -52,29 +49,16 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
     });
 
     const handleCreate$ = $(async () => {
-        const nodeName = nameInputRef.value?.value || '';
+        const name = nameInputRef.value?.value || '';
         // Guard: Name is required. The button is also disabled, but Enter can reach here.
-        if (nodeName.trim() === '') return;
-        const nodeSubtitle = subtitleInputRef.value?.value || '';
+        if (name.trim() === '') return;
+        const subtitle = subtitleInputRef.value?.value || '';
 
-        const handle = fieldListHandle.value;
-        const afterNodeCreated$ = handle
-            ? $(async () => {
-                  await handle.commitAll$(-1);
-              })
-            : undefined;
-
-        await props.onCreate$({
-            nodeName,
-            nodeSubtitle,
-            afterNodeCreated$,
-        });
+        await props.onCreate$({ name, subtitle });
     });
 
     const handleCancel$ = $(async () => {
-        if (fieldListHandle.value) {
-            await fieldListHandle.value.discardAll$();
-        }
+        // The composer draft is discarded by useNodeCreation.cancel$ (localStorage).
         await props.onCancel$();
     });
 
@@ -99,8 +83,8 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                 isExpanded={true}
                 isParent={false}
                 isClickable={false}
-                nodeName={props.initialName || ''}
-                nodeSubtitle={props.initialSubtitle || ''}
+                name={props.initialName || ''}
+                subtitle={props.initialSubtitle || ''}
                 isConstruction={true}
                 nameInputRef={nameInputRef}
                 subtitleInputRef={subtitleInputRef}
@@ -111,7 +95,6 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
             <DataCard isOpen={true}>
                 <FieldList
                     nodeId={props.id}
-                    handleRef={fieldListHandle}
                     isConstruction={true}
                     initialFieldDefinitionIds={DEFAULT_FIELD_DEFINITION_IDS}
                 />

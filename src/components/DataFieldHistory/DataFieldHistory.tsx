@@ -17,32 +17,19 @@
 
 import { component$, useSignal, $ } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
-import { getSnackbarService } from '../../services/snackbar';
-import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
+import { getKindManifest } from '../../kinds/registry';
 import { formatTimestampShort } from '../../utils/time';
-import type { ComponentType, DataFieldHistory as HistoryEntry, DataFieldValue } from '../../data/models';
+import type { ComponentType, ElementHistory, DataFieldValue, FieldDefinitionConfig } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
 export type DataFieldHistoryProps = {
     fieldId: string;
-    history: HistoryEntry[];
-    componentType: ComponentType;
-    units?: string;
+    history: ElementHistory[];
+    kind: ComponentType;
+    config?: FieldDefinitionConfig;
     isOpen: boolean;
 };
-
-function formatHistoryValue(entry: HistoryEntry, units: string): string {
-    if (entry.newValue === null || entry.newValue === undefined) return '';
-    switch (entry.componentType) {
-        case 'text-kv':
-        case 'enum-kv':
-            return String(entry.newValue);
-        case 'number-kv':
-            return `${entry.newValue} ${units}`.trim();
-        case 'single-image':
-            return '[image]';
-    }
-}
 
 export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
     const selectedId = useSignal<string | null>(null);
@@ -55,10 +42,9 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
 
     // Latest entry's newValue is the live current value.
     const liveValue: DataFieldValue | null =
-        props.history.length > 0 ? props.history[props.history.length - 1].newValue : null;
+        props.history.length > 0 ? (props.history[props.history.length - 1].newValue as DataFieldValue | null) : null;
 
     const hasHistory = allEntries.length > 0;
-    const units = props.units ?? '';
 
     const toggleSelect$ = $((entryId: string) => {
         selectedId.value = selectedId.value === entryId ? null : entryId;
@@ -72,29 +58,13 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
             selectedId.value = null;
             return;
         }
-        try {
-            await getCommandBus().execute({
-                type: 'UPDATE_ELEMENT_VALUE',
-                payload: { id: fieldId, value: targetValue },
-            });
+        const ok = await commitWithUndo({
+            message: 'Field reverted',
+            execute$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: targetValue } })),
+            undo$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevValue } })),
+        });
+        if (ok) {
             selectedId.value = null;
-            getSnackbarService().show({
-                message: 'Field reverted',
-                action: {
-                    label: 'Undo',
-                    handler: $(async () => {
-                        await getCommandBus().execute({
-                            type: 'UPDATE_ELEMENT_VALUE',
-                            payload: { id: fieldId, value: prevValue },
-                        });
-                    }),
-                },
-            });
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: describeForUser(toStorageError(err)),
-            });
         }
     });
 
@@ -103,7 +73,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
             {props.isOpen && hasHistory && (
                 <div class={[styles.historyList, 'no-caret']} role="list" aria-label="Field value history">
                     {allEntries.map((entry) => {
-                        const formatted = formatHistoryValue(entry, units);
+                        const formatted = getKindManifest(props.kind).displayPreview(entry.newValue as DataFieldValue | null, props.config) ?? '';
                         const isSelected = selectedId.value === entry.id;
                         return (
                             <div
@@ -118,7 +88,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
                                         class={styles.revertButton}
                                         onClick$={(ev) => {
                                             ev.stopPropagation();
-                                            revert$(entry.newValue);
+                                            revert$(entry.newValue as DataFieldValue | null);
                                         }}
                                         aria-label="Revert to this value"
                                         title="Revert to this value"

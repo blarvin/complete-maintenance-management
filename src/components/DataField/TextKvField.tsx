@@ -19,7 +19,6 @@ import styles from './DataField.module.css';
 
 export type TextKvFieldProps = {
     id: string;
-    fieldName: string;
     fieldDefinitionId: string;
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;

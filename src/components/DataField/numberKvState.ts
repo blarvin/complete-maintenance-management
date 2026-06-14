@@ -11,9 +11,70 @@
  * whether the value is in nominal range.
  */
 
-import type { NumberKvConfig } from '../../data/models';
+import type { NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
 
 export type NumberKvState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
+
+/**
+ * Format a numeric value per its config's `decimals` / `displayFormat`, before
+ * any units affix. Locale-aware via Intl; falls back to `toFixed` if Intl
+ * rejects the options.
+ */
+export function formatNumber(value: number, config: NumberKvConfig): string {
+    const decimals = config.decimals ?? 2;
+    const fmt: NumberKvDisplayFormat = config.displayFormat ?? 'decimal';
+    try {
+        switch (fmt) {
+            case 'percent':
+                return new Intl.NumberFormat(undefined, {
+                    style: 'percent',
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals,
+                }).format(value);
+            case 'scientific':
+                return new Intl.NumberFormat(undefined, {
+                    notation: 'scientific',
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals,
+                }).format(value);
+            case 'engineering':
+                return new Intl.NumberFormat(undefined, {
+                    notation: 'engineering',
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals,
+                }).format(value);
+            case 'currency':
+            case 'decimal':
+            default:
+                return new Intl.NumberFormat(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals,
+                }).format(value);
+        }
+    } catch {
+        // Bad locale / format options — fall back to toFixed.
+        return value.toFixed(decimals);
+    }
+}
+
+/**
+ * Append the units symbol to an already-formatted number, honoring
+ * `affixPosition` (currency defaults to prefix, everything else to suffix).
+ * `percent` already carries a locale "%" so the affix is skipped to avoid
+ * doubling.
+ */
+export function withAffix(formatted: string, config: NumberKvConfig): string {
+    const symbol = config.unitsSymbol;
+    if (config.displayFormat === 'percent' || !symbol) return formatted;
+    const pos = config.affixPosition
+        ?? (config.displayFormat === 'currency' ? 'prefix' : 'suffix');
+    return pos === 'prefix' ? `${symbol}${formatted}` : `${formatted} ${symbol}`;
+}
+
+/** Combined value formatter: number formatting + units affix. */
+export function formatNumberKvDisplay(value: number, config: NumberKvConfig): string {
+    return withAffix(formatNumber(value, config), config);
+}
 
 /**
  * Compute the display state for a value against its config.

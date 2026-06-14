@@ -27,13 +27,11 @@ import {
     useVisibleTask$,
     Resource,
     $,
-    type Signal,
-    type QRL,
     type PropFunction,
 } from '@builder.io/qwik';
 import { getFieldDefinitionQueries } from '../../data/queries';
 import { storageEventBus } from '../../data/storageEventBus';
-import { getSnackbarService } from '../../services/snackbar';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { usePendingForms, pendingFormFromFieldDefinition, type PendingForm } from '../../hooks/usePendingForms';
 import type { FieldDefinition } from '../../data/models';
 import { ComposerRow } from './ComposerRow';
@@ -41,11 +39,6 @@ import { FieldDefinitionAuthoringForm } from './FieldDefinitionAuthoringForm';
 import styles from './FieldComposer.module.css';
 
 export type FieldComposerMode = 'display' | 'construction';
-
-export type FieldComposerHandle = {
-    commitAll$: QRL<(currentMaxCardOrder: number) => Promise<number>>;
-    discardAll$: QRL<() => PendingForm[]>;
-};
 
 export type FieldComposerProps = {
     nodeId: string;
@@ -61,8 +54,6 @@ export type FieldComposerProps = {
     restoreSeed?: PendingForm[];
     /** Called when the composer should close itself (after Save / Cancel). */
     onDismiss$: PropFunction<() => void>;
-    /** Optional signal to receive the composer handle for external commit/discard. */
-    handleRef?: Signal<FieldComposerHandle | null>;
     /** Re-open the composer with the given rows (Snackbar Undo path). */
     onRequestRestore$?: PropFunction<(rows: PendingForm[]) => void>;
 };
@@ -87,13 +78,6 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
     const { forms, lastToggledId, togglePending$, setPendingValue$, commitAll$, discardAll$ } = usePendingForms({
         nodeId: props.nodeId,
         initialSeedLoader$,
-    });
-
-    useVisibleTask$(({ track }) => {
-        track(() => forms.value);
-        if (props.handleRef) {
-            props.handleRef.value = { commitAll$, discardAll$ };
-        }
     });
 
     // FieldDefinitions created during this Composer session — pinned above the
@@ -124,17 +108,18 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
     });
 
     const handleCancel$ = $(async () => {
-        const captured = await discardAll$();
-        await props.onDismiss$();
-        const count = captured.length;
-        if (count === 0) return;
-        getSnackbarService().show({
-            message: `${count} field${count === 1 ? '' : 's'} discarded`,
-            action: {
-                label: 'Undo',
-                handler: $(async () => {
-                    if (props.onRequestRestore$) await props.onRequestRestore$(captured);
-                }),
+        await commitWithUndo({
+            execute$: $(async () => {
+                const captured = await discardAll$();
+                await props.onDismiss$();
+                return captured; // PendingForm[]
+            }),
+            undo$: $(async (captured) => {
+                if (props.onRequestRestore$) await props.onRequestRestore$(captured as PendingForm[]);
+            }),
+            message: (captured) => {
+                const n = (captured as PendingForm[]).length;
+                return n ? `${n} field${n === 1 ? '' : 's'} discarded` : null; // null ⇒ no toast
             },
         });
     });

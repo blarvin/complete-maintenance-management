@@ -13,16 +13,6 @@ export type SoftDeletable = {
   deletedAt: number | null;
 };
 
-export type TreeNode = {
-  id: ID;
-  nodeName: string;
-  nodeSubtitle?: string;
-  parentId: ID | null;
-  updatedBy: UserId;
-  updatedAt: number; // epoch ms
-  deletedAt: number | null; // soft delete timestamp, null = active
-};
-
 // ============================================================================
 // DataField Component / FieldDefinition / Instance
 // ============================================================================
@@ -144,24 +134,6 @@ export type FieldDefinition = {
   deletedAt: number | null;
 };
 
-/**
- * Instance of a FieldDefinition attached to a TreeNode. `fieldName` is
- * snapshotted from `FieldDefinition.label` at creation time so later
- * FieldDefinition label edits don't rewrite user-visible data.
- */
-export type DataField = {
-  id: ID;
-  parentNodeId: ID;
-  fieldDefinitionId: ID;
-  componentType: ComponentType;
-  fieldName: string;
-  value: DataFieldValue | null;
-  cardOrder: number;
-  updatedBy: UserId;
-  updatedAt: number;
-  deletedAt: number | null;
-};
-
 // ============================================================================
 // Soft Delete Helper Functions
 // ============================================================================
@@ -181,25 +153,6 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // ============================================================================
 // History
 // ============================================================================
-
-/**
- * View-model for the value-history viewer. ElementHistory rows are projected
- * into this shape by `projectValueHistory` (DataFieldDetails). Only value-edit
- * rows survive the projection, so `property` is always `"value"`; the typed
- * value is carried via `componentType` + `prevValue`/`newValue`.
- */
-export type DataFieldHistory = {
-  id: string; // `${elementId}:${rev}`
-  dataFieldId: ID;
-  action: "create" | "update" | "delete";
-  property: "value";
-  componentType: ComponentType;
-  prevValue: DataFieldValue | null;
-  newValue: DataFieldValue | null;
-  updatedBy: UserId;
-  updatedAt: number;
-  rev: number; // monotonic per element, start 0 on create
-};
 
 // ============================================================================
 // Unified Element Model (in-progress refactor — see plan: unified-element-data-model)
@@ -257,55 +210,3 @@ export type ElementHistory = {
   updatedBy: UserId;
   updatedAt: number;
 };
-
-// ============================================================================
-// View-model adapters (transition: UI still consumes TreeNode/DataField shapes)
-// ============================================================================
-
-/**
- * Project an Element with `kind === "node"` onto the legacy TreeNode shape so
- * existing components keep compiling while the data path migrates. Throws if
- * the element is a value-bearing kind.
- */
-export function elementToTreeNode(e: Element): TreeNode {
-  if (e.kind !== "node") {
-    throw new Error(`elementToTreeNode: expected kind=node, got ${e.kind}`);
-  }
-  return {
-    id: e.id,
-    nodeName: e.name,
-    nodeSubtitle: e.subtitle ?? "",
-    parentId: e.parentId,
-    updatedBy: e.updatedBy,
-    updatedAt: e.updatedAt,
-    deletedAt: e.deletedAt,
-  };
-}
-
-/**
- * Project a value-bearing Element onto the legacy DataField shape. Throws if
- * the element is a container node.
- */
-export function elementToDataField(e: Element): DataField {
-  if (e.kind === "node") {
-    throw new Error(`elementToDataField: cannot project kind=node`);
-  }
-  if (!e.fieldDefinitionId) {
-    throw new Error(`elementToDataField: element ${e.id} missing fieldDefinitionId`);
-  }
-  if (!e.parentId) {
-    throw new Error(`elementToDataField: element ${e.id} has no parentId`);
-  }
-  return {
-    id: e.id,
-    parentNodeId: e.parentId,
-    fieldDefinitionId: e.fieldDefinitionId,
-    componentType: e.kind,
-    fieldName: e.name,
-    value: e.value,
-    cardOrder: e.siblingOrder,
-    updatedBy: e.updatedBy,
-    updatedAt: e.updatedAt,
-    deletedAt: e.deletedAt,
-  };
-}

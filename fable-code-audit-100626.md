@@ -10,7 +10,7 @@ Scope: full read of `src/` (110 production files, ~9,250 lines TS/TSX, plus ~3,8
 
 - **The Element/ElementHistory/FieldDefinition trio** is small, honest, and matches the spec. `historyHelpers.ts` is a model citizen: pure, shared, tested.
 - **KIND_REGISTRY** (`src/kinds/`) with `satisfies Record<ComponentType, KindManifest>` is the best seam in the codebase. KINDS-SPECS.md's plan to widen the key to the full `Kind` union and derive the unions from the registry is correct — that's the plugin property, and the code is already 80% of the way there.
-- The FSM (`appState.*`) is small, guarded, and tested. Don't grow it; don't shrink it either.
+- The FSM (`appState.`*) is small, guarded, and tested. Don't grow it; don't shrink it either.
 - Sync collaborators (`SyncPusher` / strategies / `ServerAuthorityResolver` / `SyncLifecycle`) are each genuinely single-purpose. The decomposition is right even if the layer as a whole is questioned below (§2.2).
 - Test discipline: domain logic tested at the service/adapter layer, not through components.
 
@@ -22,6 +22,8 @@ These are the "real change" items. Each one removes a *concept*, not just lines.
 
 ### 2.1 There is one write model, not two — stop maintaining the second
 
+**✅ RESOLVED 2026-05-11** (sequence step 2) — `FirestoreAdapter` now `implements RemoteSyncAdapter` only; the duplicate CRUD half (`createElement`/`updateElement`/`listRootElements`/`diffElementChanges`/`nextElementRev`/`nextSiblingOrder`/…) is deleted, not relabeled. IDB is the sole write model; Firestore is a sync mirror. CLAUDE.md's Adapter-Pattern framing was updated to match.
+
 `FirestoreAdapter` (507 lines) implements **both** `StorageAdapter` (full CRUD with history diffing, rev minting, sibling-order minting, validation) **and** `RemoteSyncAdapter` (applySyncItem + pulls). In production, only the `RemoteSyncAdapter` half is ever reached: `initStorage.ts` wires the command bus and queries to `IDBAdapter` exclusively, and `FirestoreAdapter` is only handed to `SyncManager` and the one-time migration — both of which use only the sync surface.
 
 That means roughly 300 lines of `firestoreAdapter.ts` (lines 78–145, 277–506: `listRootElements`, `createElement` with history writes, `updateElement` with `diffElementChanges`, `softDeleteElement`, `restoreElement`, `nextSiblingOrder`, `nextElementRev`, …) are **dead in production and, worse, are a second copy of the domain write model** that must be kept in lockstep with `IDBAdapter` forever. Every future write-model change (composites' atomic multi-element create from KINDS-SPECS is coming!) currently costs 2×.
@@ -32,6 +34,8 @@ That means roughly 300 lines of `firestoreAdapter.ts` (lines 78–145, 277–506
 
 ### 2.2 You are running two offline caches and two sync engines
 
+**✅ RESOLVED 2026-06-11** — Firestore now uses `memoryLocalCache()` unconditionally; Dexie + syncQueue is the only offline cache. Orphaned SDK mirror DBs on existing devices are cleanable via `clearFirebaseIndexedDB()` (kept, re-documented).
+
 `firebase.ts:62-66` initializes Firestore with `persistentLocalCache` — the SDK's own IndexedDB offline cache with queued writes and reconciliation — while the app's actual offline layer is Dexie + syncQueue + SyncManager. Every element is therefore persisted in IndexedDB **twice** (once in `complete-maintenance-management`, once in Firestore's mirror), and two write queues exist (yours, and the SDK's).
 
 The bespoke sync layer is the spec-blessed, backend-agnostic one — keep it. But then Firestore should be a dumb wire: switch to `memoryLocalCache()` in the browser too. You get one cache, one queue, and you eliminate a whole class of "which layer answered this read?" confusion (the SDK cache can serve stale pulls into your delta sync). One-line change plus retesting the emulator flows.
@@ -39,6 +43,8 @@ The bespoke sync layer is the spec-blessed, backend-agnostic one — keep it. Bu
 (The radical alternative — delete the custom sync layer (~600 lines + 5 test files) and lean on Firestore offline persistence — is real, but it forfeits backend independence and server-authority semantics the spec wants. Naming it so it's a decision, not an accident.)
 
 ### 2.3 Four change-propagation mechanisms; one would do
+
+**✅ RESOLVED 2026-06-11** (with §4.4) — collapsed to the bus: `useElementChildren`/`useElementById` subscribe to `storageEventBus` with pure relevance predicates (`storageEventRelevance.ts`) and a 30ms trailing debounce. Deleted: `storageEvents.ts`, `useStorageChangeListener`, all `dispatchStorageChangeEvent()` sites, and the `onDeleted$`/`onCreated$`/`onCommitted$` reload threading. `useFieldValueSync` kept as the per-field specialization of the same model. Found during verification: the UC TreeNode needed a namespaced key (`uc-${id}`) because the bus reload surfaces the new node while construction is still open, and a shared key made Qwik's reconciler reuse the construction instance instead of unmounting it (the old post-completion reload had masked this).
 
 Today, "data changed → UI updates" travels by four distinct routes:
 
@@ -53,7 +59,9 @@ Route 4's existence is the tell: the renderers seed `currentValue` from `props.v
 
 This is the single biggest conceptual cleanup available in the UI layer, and it's also the prerequisite that makes future kinds (derived/aggregator fields from KINDS-SPECS) sane — those will need exactly this subscription model.
 
-### 2.4 Retire the legacy TreeNode/DataField data vocabulary
+### 2.4 Retire the legacy TreeNode/DataField data vocabulary ✅ *(done 2026-06-13)*
+
+> **Resolved.** The three legacy types (`TreeNode`, `DataField`, `DataFieldHistory`), both `elementTo*` mappers, and `projectValueHistory` are deleted. View props are now flat Element vocabulary (`name`, `subtitle`, `siblingOrder`, `kind`) — chosen over `{ element: Element }` because the construction branch has no persisted Element and `NodeHeader` is shared display/construction. The history viewer consumes `ElementHistory` directly. See IMPLEMENTATION.md → "Unified Element Model".
 
 The unified Element model landed in storage, but the view layer still speaks the old language through transitional adapters:
 
@@ -63,7 +71,9 @@ The unified Element model landed in storage, but the view layer still speaks the
 
 Per SPEC, the component *names* (TreeNode, DataField) rightly survive as renderer identifiers — but the *prop shapes* can now be Element-shaped. Have `TreeNode` take `{ element: Element }` (kind `node`), `DataField` take the element row, and `DataFieldHistory` consume `ElementHistory` directly. Then delete the three legacy types, both mappers, and `projectValueHistory`. This removes the last era-1 vocabulary and ends the per-feature "which name does this layer use?" tax. (~150 lines plus real conceptual load.)
 
-### 2.5 The composer's handle-threading can be deleted — the data is already external
+### 2.5 The composer's handle-threading can be deleted — the data is already external ✅ *(done 2026-06-13)*
+
+> **Resolved.** Commit/discard moved to a plain module `src/data/services/pendingDraft.ts`; construction commit runs in `useNodeCreation.complete$` (reads localStorage by nodeId after the node exists). All handle types (`FieldComposerHandle`/`FieldComposerSlotHandle`/`FieldListHandle`), both `handleRef` props, the `afterNodeCreated$` relay, and the render-time handle wiring are deleted. Persistence is now write-through in `usePendingForms` so the draft is current at Create time. See IMPLEMENTATION.md → "Draft Store & commit-with-undo".
 
 The hairiest object graph in the app is: `TreeNodeConstruction` → `FieldList` (`handleRef`) → `FieldComposerSlot` (`FieldComposerSlotHandle`, built during render — a side effect Qwik won't love) → `FieldComposer` (`FieldComposerHandle` via `useVisibleTask$`) → `usePendingForms`. Three handle types and four files exist so the node's Save button can reach into a mounted composer and call `commitAll$`.
 
@@ -71,7 +81,9 @@ But `usePendingForms` already persists the draft in **localStorage keyed by node
 
 **Recommendation:** move `commitPendingDraft(nodeId, baseOrder)` and `discardPendingDraft(nodeId)` into a plain module (e.g. `src/data/services/pendingDraft.ts`) that reads/writes the localStorage draft directly. `TreeNodeConstruction.handleCreate$` calls it after the node exists; the composer keeps using the same functions internally. Delete `FieldComposerSlotHandle`, `FieldComposerHandle`, both `handleRef` props, the `afterNodeCreated$` callback relay in `useNodeCreation`/`CreateNodePayload`, and the render-time handle wiring in `FieldComposerSlot.tsx:73-90`. The remaining composer is just UI over a draft store — which is what it conceptually is.
 
-### 2.6 One commit-with-undo helper instead of six copies
+### 2.6 One commit-with-undo helper instead of six copies ✅ *(done 2026-06-13)*
+
+> **Resolved.** `src/data/services/commitWithUndo.ts` — a *plain* (deliberately non-`$`-suffixed) async helper now backs all six sites, including the discard/restore variant (execute result is threaded into the message builder and undo handler so cancel rides the same path). Naming it `commitWithUndo$` made the Qwik optimizer try to QRL-ify the options object and its captured ids — hence plain. See IMPLEMENTATION.md → "Draft Store & commit-with-undo".
 
 The pattern *execute command → success snackbar with Undo (inverse command) → error snackbar via `describeForUser(toStorageError(err))`* is hand-rolled in at least six places:
 
@@ -86,24 +98,28 @@ Extract one `commitWithUndo$({ message, execute, undo })` service-layer QRL. Eac
 
 ### 2.7 The two add-field surfaces: decide
 
-`LEGACY_ADD_FIELD_ENABLED = true` ships **both** `CreateDataField` (single-pick dropdown) and the FieldComposer, plus the `ActiveSurface` mutex that exists only to coordinate them. The constant's own comment says it's a side-by-side comparison toggle. If the composer has won (everything in SPEC §Field Composer says it has), delete `CreateDataField/` (103 lines + CSS), the `ActiveSurface` type, the mutex signal in FieldList, and the flag. If it hasn't won, that's a product decision worth making soon — the mutex complicates every change to FieldList.
+**✅ RESOLVED 2026-06-10 — decision: keep both.** The composer has *not* won; the surfaces are a deliberate A/B comparison and more variants are planned. Instead of deleting, the coordination was generalized to scale to N surfaces: `ActiveSurface` moved to a neutral home (`src/components/FieldList/addFieldSurfaces.ts`, which also documents the surface contract), and the `LEGACY_ADD_FIELD_ENABLED` boolean was replaced by an `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts`. The mutex signal in FieldList is unchanged — one signal, last-writer-wins, opening one surface closes the rest. Winner-picking deferred to LATER.md §Add-Field Surface A/B.
 
 ---
 
 ## 3. Dead and test-only code (safe deletions)
 
+**✅ RESOLVED 2026-05-11** (sequence step 1) — the dead modules and helpers below are deleted (`withErrorHandling.ts`, `cardOrder.ts`, the four `uiPrefs` expand helpers, `usePendingForms.restoreAll$`, …), taking three whole test files with them. The last table row (spec'd-but-unwired commands/queries) was intentionally kept.
+
 Verified by grep — no production references:
 
-| Item | Evidence | Action |
-| --- | --- | --- |
-| `src/data/services/withErrorHandling.ts` (`safeAsync`, `safeAsyncVoid`, `withSafeAsync`) | only referenced by its own test | delete file + `errorHandling.test.ts` |
-| `src/data/utils/cardOrder.ts` (`computeCardOrderUpdates`, `sortByCardOrder`) | test-only; reorder UI is deferred in LATER.md | delete with its test, or park the algorithm note in LATER.md — speculative code rots faster than a paragraph |
-| `uiPrefs.ts:61-100` (`isCardExpanded`, `isFieldDetailsExpanded`, `toggleCardExpanded`, `toggleFieldDetailsExpanded`) | production goes through appState transitions; only `uiPrefs.test.ts` calls these | delete the four helpers + their test blocks |
-| `usePendingForms.restoreAll$` | restore happens via remount + `restoreSeed`; nothing calls it | delete |
-| `useFieldDefinitionDraft.phase` / `start$` | `FieldDefinitionAuthoringForm` never calls `start$` or reads `phase` | delete both; the hook shrinks nicely |
-| `detectDoubleTap` (useDoubleTap.ts:25-46) | exported "for testing", but `checkDoubleTap$` **duplicates the logic inline instead of calling it** — tests exercise a copy, not the real path | make `checkDoubleTap$` call `detectDoubleTap` (one source of truth) or delete the export and test the hook |
-| `useAsyncOperation.error` | set on every failure, **read nowhere** — load errors silently vanish and views just look empty | either render it (a one-line error state in the two views) or remove the signal; current state is the worst of both |
-| Commands `UPDATE_ELEMENT_NAME`, `UPDATE_ELEMENT_SUBTITLE`, `MOVE_ELEMENT`; queries `getChildrenByKind`, `nextSiblingOrder` | handlers/tests only; rename UI is ISSUES #3, reorder deferred | fine to keep (spec'd, cheap, tested) — just know they're unwired |
+
+| Item                                                                                                                       | Evidence                                                                                                                                       | Action                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `src/data/services/withErrorHandling.ts` (`safeAsync`, `safeAsyncVoid`, `withSafeAsync`)                                   | only referenced by its own test                                                                                                                | delete file + `errorHandling.test.ts`                                                                               |
+| `src/data/utils/cardOrder.ts` (`computeCardOrderUpdates`, `sortByCardOrder`)                                               | test-only; reorder UI is deferred in LATER.md                                                                                                  | delete with its test, or park the algorithm note in LATER.md — speculative code rots faster than a paragraph        |
+| `uiPrefs.ts:61-100` (`isCardExpanded`, `isFieldDetailsExpanded`, `toggleCardExpanded`, `toggleFieldDetailsExpanded`)       | production goes through appState transitions; only `uiPrefs.test.ts` calls these                                                               | delete the four helpers + their test blocks                                                                         |
+| `usePendingForms.restoreAll$`                                                                                              | restore happens via remount + `restoreSeed`; nothing calls it                                                                                  | delete                                                                                                              |
+| `useFieldDefinitionDraft.phase` / `start$`                                                                                 | `FieldDefinitionAuthoringForm` never calls `start$` or reads `phase`                                                                           | delete both; the hook shrinks nicely                                                                                |
+| `detectDoubleTap` (useDoubleTap.ts:25-46)                                                                                  | exported "for testing", but `checkDoubleTap$` **duplicates the logic inline instead of calling it** — tests exercise a copy, not the real path | make `checkDoubleTap$` call `detectDoubleTap` (one source of truth) or delete the export and test the hook          |
+| `useAsyncOperation.error`                                                                                                  | set on every failure, **read nowhere** — load errors silently vanish and views just look empty                                                 | either render it (a one-line error state in the two views) or remove the signal; current state is the worst of both |
+| Commands `UPDATE_ELEMENT_NAME`, `UPDATE_ELEMENT_SUBTITLE`, `MOVE_ELEMENT`; queries `getChildrenByKind`, `nextSiblingOrder` | handlers/tests only; rename UI is ISSUES #3, reorder deferred                                                                                  | fine to keep (spec'd, cheap, tested) — just know they're unwired                                                    |
+
 
 Deleting the first three rows also deletes three whole test files — the suite gets faster and stops certifying dead code.
 
@@ -111,7 +127,7 @@ Deleting the first three rows also deletes three whole test files — the suite 
 
 ## 4. Mechanical simplifications (same behavior, less code)
 
-**4.1 Adapter try/catch boilerplate.** Every method in `IDBAdapter` (18×) and `FirestoreAdapter` repeats the identical `catch → isStorageError → mapDexieError → toStorageError` block. One private helper:
+**4.1 Adapter try/catch boilerplate.** **✅ RESOLVED 2026-05-11** (sequence step 2) — the `run<T>()` helper below now wraps every `IDBAdapter` method; the repeated `catch → isStorageError → mapDexieError → toStorageError` block is gone. (`FirestoreAdapter`'s copy vanished with §2.1.) Every method in `IDBAdapter` (18×) and `FirestoreAdapter` repeats the identical `catch → isStorageError → mapDexieError → toStorageError` block. One private helper:
 
 ```ts
 private async run<T>(fn: () => Promise<T>): Promise<T> {
@@ -126,16 +142,17 @@ private async run<T>(fn: () => Promise<T>): Promise<T> {
 
 cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 so you only do it once.
 
-**4.2 `nextElementRev` is O(history) per write — and called on creates.** Both adapters fetch *all* history rows for an element to compute `max(rev)+1`. The Dexie schema already has the `[elementId+rev]` compound index — query its upper bound and take the last row instead of `toArray()`. And `createElement` calls it for a brand-new element where the answer is always 0 — skip the query there. (The Firestore copy does an unbounded `orderBy('rev','desc')` fetch with no `limit(1)` on every update — same fix, or it disappears with §2.1.)
+**4.2 `nextElementRev` is O(history) per write — and called on creates.** **✅ RESOLVED 2026-06-13** — `IDBAdapter.nextElementRev` now seeks the `[elementId+rev]` compound index (`.between([id, minKey], [id, maxKey]).last()`) and returns `last.rev + 1`, a single-row index seek instead of a full-history `toArray()`. `createElement` skips the call and writes rev 0 by construction. The dead `computeNextRev` array helper was deleted. The Firestore CRUD copy is already gone (§2.1 stripped it to `RemoteSyncAdapter`). New adapter-level tests pin contiguous per-element rev sequencing across create/update/delete (`src/test/idbAdapterRev.test.ts`). Both adapters fetch *all* history rows for an element to compute `max(rev)+1`. The Dexie schema already has the `[elementId+rev]` compound index — query its upper bound and take the last row instead of `toArray()`. And `createElement` calls it for a brand-new element where the answer is always 0 — skip the query there. (The Firestore copy does an unbounded `orderBy('rev','desc')` fetch with no `limit(1)` on every update — same fix, or it disappears with §2.1.)
 
-**4.3 Failed sync items are stranded forever.** `SyncQueueManager.markFailed` sets `status: 'failed'`, but `getSyncQueue()` only ever fetches `'pending'` — a failed item is never retried and never surfaced. `retryCount` exists but can never exceed 1. Either re-fetch `pending OR (failed AND retryCount < N)`, or explicitly document failed-means-dead and surface it (LATER.md's "Sync Status" item is the natural home). Right now it's silent data-loss-to-the-server.
+**4.3 Failed sync items are stranded forever.** **✅ RESOLVED 2026-06-11** — bounded auto-retry (5 attempts riding existing sync cycles), error snackbar with Retry action on exhaustion, startup re-arm of failed items. Plus fail-fast timeouts on push writes and pulls — discovered during verification that the Firestore SDK never rejects writes against an unreachable server, so without timeouts nothing ever failed at all. `SyncQueueManager.markFailed` sets `status: 'failed'`, but `getSyncQueue()` only ever fetches `'pending'` — a failed item is never retried and never surfaced. `retryCount` exists but can never exceed 1. Either re-fetch `pending OR (failed AND retryCount < N)`, or explicitly document failed-means-dead and surface it (LATER.md's "Sync Status" item is the natural home). Right now it's silent data-loss-to-the-server.
 
-**4.4 Consolidate the three data-loading hooks.** `useRootViewData`, `useBranchViewData`, and `useTreeNodeFields` are the same hook three times: query children → filter by kind → map → signal + isLoading + storage-change reload. Root is just `parentId = null`. One `useElementChildren(parentIdSig, kindFilter)` covers all three (BranchView additionally fetches the parent element — a param or second tiny hook). `useTreeNodeFields`' prop-sync/loadVersion dance and its duplicated load body (`reload$` and the visible task are character-identical) fold away in the rewrite. Pairs naturally with §2.3.
+**4.4 Consolidate the three data-loading hooks.** **✅ RESOLVED 2026-06-11** (with §2.3) — `useRootViewData`/`useBranchViewData`/`useTreeNodeFields` replaced by `useElementChildren(parentIdSig, 'nodes' | 'fields')` + `useElementById`; returns raw `Element[]`, callers map via the legacy mappers in `useComputed$` (so §2.4 stays a small diff). The loadVersion dance, BranchView's manual load task, and the `enabled` option all folded away; `cancelConstruction$` now fires on navigation only, not on every reload. `useRootViewData`, `useBranchViewData`, and `useTreeNodeFields` are the same hook three times: query children → filter by kind → map → signal + isLoading + storage-change reload. Root is just `parentId = null`. One `useElementChildren(parentIdSig, kindFilter)` covers all three (BranchView additionally fetches the parent element — a param or second tiny hook). `useTreeNodeFields`' prop-sync/loadVersion dance and its duplicated load body (`reload$` and the visible task are character-identical) fold away in the rewrite. Pairs naturally with §2.3.
 
-**4.5 Per-kind switches that the registry should own.** The manifest seam exists; finish routing through it:
-- `DataField.tsx:75,99`: `isImageVariant = componentType === 'single-image'` controls label suppression and wrapper class — should be a manifest flag (`hideLabel` / layout hint), not a kind comparison in the dispatcher.
-- `DataFieldHistory.formatHistoryValue` switches on `componentType` — that's `displayPreview`'s job. Bonus: today history shows raw numbers while the live row shows formatted ones (number-kv `displayPreview` is just `String(v)`); pushing real formatting into `displayPreview` fixes the inconsistency in one place.
-- `TreeNodeConstruction`'s `DEFAULT_FIELD_DEFINITION_IDS` import from seeds is fine for Phase 1, but it's the kind of framework-knows-a-kind wiring KINDS-SPECS wants in manifests eventually.
+**4.5 Per-kind switches that the registry should own.** **✅ RESOLVED 2026-06-13** (bullets 1–2; bullet 3 deferred to LATER.md). The manifest seam exists; finish routing through it:
+
+- ✅ `DataField.tsx:75,99`: `isImageVariant = componentType === 'single-image'` controls label suppression and wrapper class — should be a manifest flag (`hideLabel` / layout hint), not a kind comparison in the dispatcher. *Now two `KindManifest` booleans, `hideLabel` + `blockValueLayout`; only `single-image` sets them true and `satisfies Record<ComponentType, …>` forces every kind to declare both.*
+- ✅ `DataFieldHistory.formatHistoryValue` switches on `componentType` — that's `displayPreview`'s job. Bonus: today history shows raw numbers while the live row shows formatted ones (number-kv `displayPreview` is just `String(v)`); pushing real formatting into `displayPreview` fixes the inconsistency in one place. *`formatHistoryValue` deleted; history now calls `displayPreview(value, config)` — the widened signature — and `number-kv` formatting was lifted into `numberKvState.formatNumberKvDisplay`, shared by the renderer and the manifest, so history and live row can't diverge. (Side effect, accepted: single-image history now shows `caption ?? '[image]'`.)*
+- ⏭ `TreeNodeConstruction`'s `DEFAULT_FIELD_DEFINITION_IDS` import from seeds is fine for Phase 1, but it's the kind of framework-knows-a-kind wiring KINDS-SPECS wants in manifests eventually. *Deferred — no manifest field owns default-field-set knowledge yet; recorded in LATER.md under "Renderer registry — Phase 2" (g).*
 
 **4.6 appState file count overstates the machinery.** Five files (`appState.ts` barrel, `.types`, `.transitions`, `.selectors`, `.context`, plus `guards.ts`) for an ~80-line FSM. The barrel and `guards.ts` (two one-line predicates) can fold into neighbors without loss. Also `useAppTransitions` mints 11 fresh QRLs per consumer; harmless at this scale, but consumers could import `transitions` and call with `useAppState()` directly.
 
@@ -157,12 +174,12 @@ cuts ~150 lines and makes the actual storage logic readable. Do it after §2.1 s
 
 Ordered for compounding payoff and low risk; each step is independently shippable.
 
-1. **Deletions** (§3, plus §2.7 if the composer has won): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller.
-2. **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land.
-3. **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3).
-4. **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks.
-5. **Element-shaped view props** (§2.4): delete the legacy vocabulary.
-6. **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles.
-7. **Manifest flag cleanup** (§4.5) as a warm-up for the KINDS-SPECS registry generalization, which this sequence leaves you cleanly positioned for.
+1. ✅ **Deletions** (§3): zero behavior change, ~600+ lines and three test files gone, every later diff gets smaller. *(done 2026-05-11)*
+2. ✅ **Strip FirestoreAdapter to RemoteSyncAdapter** (§2.1) + adapter `run()` helper (§4.1): the write model becomes single-sited *before* composites land. *(done 2026-05-11)*
+3. ✅ **Single cache** (§2.2, one line) + **failed-queue decision** (§4.3). *(done 2026-06-11)*
+4. ✅ **Bus-only change propagation** (§2.3) + **data-hook consolidation** (§4.4): one reactive model; do together since they touch the same hooks. *(done 2026-06-11)*
+5. ✅ **Element-shaped view props** (§2.4): delete the legacy vocabulary. *(done 2026-06-13)*
+6. ✅ **Draft-store commit functions** (§2.5) + **commitWithUndo** (§2.6): the UI layer's two worst tangles. *(done 2026-06-13)*
+7. ✅ **Manifest flag cleanup** (§4.5) as a warm-up for the KINDS-SPECS registry generalization, which this sequence leaves you cleanly positioned for. *(done 2026-06-13)*
 
 The through-line: every era of this codebase was built well, and each refactor was *almost* finished. Finishing them is cheaper than it looks, and the KINDS-SPECS future you're heading toward — manifests as the only place the framework learns a kind — gets dramatically easier on the far side of steps 2, 4, and 5.

@@ -6,6 +6,7 @@
  * Operations are queued for sync to Firestore.
  */
 
+import Dexie from 'dexie';
 import { db } from './db';
 import type {
   SyncableStorageAdapter,
@@ -19,7 +20,7 @@ import type { FieldDefinition, Element, ElementHistory, Kind } from '../models';
 import { filterActive } from '../models';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
-import { computeNextRev, createElementHistoryEntry, diffElementChanges } from './historyHelpers';
+import { createElementHistoryEntry, diffElementChanges } from './historyHelpers';
 import { makeStorageError, toStorageError, isStorageError } from './storageErrors';
 import type { StorageErrorCode } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
@@ -33,9 +34,8 @@ function createResult<T>(data: T, fromCache = true): StorageResult<T> {
 }
 
 /**
- * Maps Dexie / IndexedDB error names to StorageError codes (mirror of
- * FirestoreAdapter's `mapFirestoreError`). Dexie surfaces failures via the
- * DOMException-style `.name`.
+ * Maps Dexie / IndexedDB error names to StorageError codes. Dexie surfaces
+ * failures via the DOMException-style `.name`.
  */
 function mapDexieError(err: unknown): { code: StorageErrorCode; retryable: boolean } {
   const name = (err as { name?: string } | null | undefined)?.name;
@@ -72,31 +72,23 @@ export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
 
   async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
-    try {
+    return this.run(async () => {
       const all = await db.fieldDefinitions.toArray();
       const active = filterActive(all);
       active.sort((a, b) => a.label.localeCompare(b.label));
       return createResult(active);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>> {
-    try {
+    return this.run(async () => {
       const def = await db.fieldDefinitions.get(id);
       return createResult(def ?? null);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>> {
-    try {
+    return this.run(async () => {
       const timestamp = now();
       const userId = getCurrentUserId();
 
@@ -123,15 +115,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       console.log('[IDBAdapter] FieldDefinition created in IDB:', definition.id, definition.label);
       return createResult(definition);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>> {
-    try {
+    return this.run(async () => {
       const timestamp = now();
       const userId = getCurrentUserId();
 
@@ -153,11 +141,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       });
 
       return createResult(undefined);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   // ============================================================================
@@ -165,35 +149,23 @@ export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
 
   async getLastSyncTimestamp(): Promise<number> {
-    try {
+    return this.run(async () => {
       const meta = await db.syncMetadata.get('lastSyncTimestamp');
       return meta?.value ?? 0;
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async setLastSyncTimestamp(timestamp: number): Promise<void> {
-    try {
+    return this.run(async () => {
       await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: timestamp });
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async applyRemoteFieldDefinition(def: FieldDefinition): Promise<void> {
-    try {
+    return this.run(async () => {
       await db.fieldDefinitions.put(def);
       storageEventBus.emit({ type: 'FIELD_DEFINITION_WRITTEN', definition: { id: def.id, deletedAt: def.deletedAt } });
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   // ============================================================================
@@ -201,13 +173,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
 
   async getAllFieldDefinitions(): Promise<FieldDefinition[]> {
-    try {
-      return await db.fieldDefinitions.toArray();
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    return this.run(() => db.fieldDefinitions.toArray());
   }
 
   // ============================================================================
@@ -215,71 +181,51 @@ export class IDBAdapter implements SyncableStorageAdapter {
   // ============================================================================
 
   async listRootElements(): Promise<StorageResult<Element[]>> {
-    try {
+    return this.run(async () => {
       const all = await db.elements.toArray();
       const active = all.filter(e => e.parentId === null && e.deletedAt === null);
       active.sort((a, b) => a.siblingOrder - b.siblingOrder);
       return createResult(active);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async getElement(id: string): Promise<StorageResult<Element | null>> {
-    try {
+    return this.run(async () => {
       const e = await db.elements.get(id);
       return createResult(e ?? null);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async listChildElements(parentId: string): Promise<StorageResult<Element[]>> {
-    try {
+    return this.run(async () => {
       const all = await db.elements.where('parentId').equals(parentId).toArray();
       const active = filterActive(all);
       active.sort((a, b) => a.siblingOrder - b.siblingOrder);
       return createResult(active);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>> {
-    try {
+    return this.run(async () => {
       const all = await db.elements.where('parentId').equals(parentId).toArray();
       const active = filterActive(all).filter(e => e.kind === kind);
       active.sort((a, b) => a.siblingOrder - b.siblingOrder);
       return createResult(active);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>> {
-    try {
+    return this.run(async () => {
       const all = parentId === null
         ? (await db.elements.toArray()).filter(e => e.parentId === null)
         : await db.elements.where('parentId').equals(parentId).toArray();
       if (all.length === 0) return createResult(0);
       return createResult(Math.max(...all.map(e => e.siblingOrder)) + 1);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async createElement(input: StorageElementCreate): Promise<StorageResult<Element>> {
-    try {
+    return this.run(async () => {
       if (input.kind !== 'node' && !input.fieldDefinitionId) {
         throw makeStorageError('validation', `fieldDefinitionId required for kind=${input.kind}`, { retryable: false });
       }
@@ -311,7 +257,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.transaction('rw', db.elements, db.elementHistory, db.syncQueue, async () => {
         await db.elements.put(element);
 
-        const rev = await this.nextElementRev(element.id);
+        const rev = 0; // brand-new element — no prior history, so the first entry is rev 0
         const hist = createElementHistoryEntry({
           elementId: element.id,
           rev,
@@ -342,15 +288,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
         element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, deletedAt: element.deletedAt },
       });
       return createResult(element);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async updateElement(id: string, updates: StorageElementUpdate): Promise<StorageResult<void>> {
-    try {
+    return this.run(async () => {
       const existing = await db.elements.get(id);
       if (!existing) {
         throw makeStorageError('not-found', `Element not found: ${id}`, { retryable: false });
@@ -406,15 +348,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
         });
       }
       return createResult(undefined);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async softDeleteElement(id: string): Promise<StorageResult<void>> {
-    try {
+    return this.run(async () => {
       const existing = await db.elements.get(id);
       if (!existing) return createResult(undefined);
 
@@ -461,15 +399,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
         element: { id, kind: existing.kind, parentId: existing.parentId, name: existing.name, value: existing.value, deletedAt: timestamp },
       });
       return createResult(undefined);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async restoreElement(id: string): Promise<StorageResult<void>> {
-    try {
+    return this.run(async () => {
       const timestamp = now();
       const userId = getCurrentUserId();
 
@@ -497,88 +431,77 @@ export class IDBAdapter implements SyncableStorageAdapter {
         });
       }
       return createResult(undefined);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async getElementHistory(elementId: string): Promise<StorageResult<ElementHistory[]>> {
-    try {
+    return this.run(async () => {
       const all = await db.elementHistory.where('elementId').equals(elementId).toArray();
       all.sort((a, b) => a.rev - b.rev);
       return createResult(all);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   // ---- Element sync ----
 
   async getAllElements(): Promise<Element[]> {
-    try {
-      return await db.elements.toArray();
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    return this.run(() => db.elements.toArray());
   }
 
   async getAllElementHistory(): Promise<ElementHistory[]> {
-    try {
-      return await db.elementHistory.toArray();
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    return this.run(() => db.elementHistory.toArray());
   }
 
   async applyRemoteElement(element: Element): Promise<void> {
-    try {
+    return this.run(async () => {
       await db.elements.put(element);
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
         element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, deletedAt: element.deletedAt },
       });
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async applyRemoteElementHistory(history: ElementHistory): Promise<void> {
-    try {
+    return this.run(async () => {
       await db.elementHistory.put(history);
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   async deleteElementLocal(id: string): Promise<void> {
-    try {
+    return this.run(async () => {
       await db.elements.delete(id);
       storageEventBus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: id });
-    } catch (err) {
-      if (isStorageError(err)) throw err;
-      const { code, retryable } = mapDexieError(err);
-      throw toStorageError(err, { code, retryable });
-    }
+    });
   }
 
   // ============================================================================
   // Internal Helpers
   // ============================================================================
 
+  /**
+   * Wrap a storage operation with error normalization: hand-thrown
+   * StorageErrors pass through unwrapped; Dexie/IndexedDB failures are
+   * mapped to StorageErrors with the right code.
+   */
+  private async run<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (err) {
+      if (isStorageError(err)) throw err;
+      const { code, retryable } = mapDexieError(err);
+      throw toStorageError(err, { code, retryable });
+    }
+  }
+
   private async nextElementRev(elementId: string): Promise<number> {
-    const history = await db.elementHistory.where('elementId').equals(elementId).toArray();
-    return computeNextRev(history);
+    // Single index seek on the `[elementId+rev]` compound index: the last row
+    // in the element's range carries the highest rev. O(log n) — no full-history
+    // load just to read one number.
+    const last = await db.elementHistory
+      .where('[elementId+rev]')
+      .between([elementId, Dexie.minKey], [elementId, Dexie.maxKey])
+      .last();
+    return last ? last.rev + 1 : 0;
   }
 }

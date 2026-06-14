@@ -1,7 +1,7 @@
 /**
- * useAsyncOperation - Hook for managing loading/error state around async work.
+ * useAsyncOperation - Hook for managing loading state around async work.
  *
- * Provides a pair of signals (isLoading, error) and a plain `runAsync` helper
+ * Provides an isLoading signal and a plain `runAsync` helper
  * that wraps any async function with try/catch/finally state management.
  *
  * Usage inside a $() handler:
@@ -23,18 +23,16 @@ import { useSignal, type Signal } from '@builder.io/qwik';
 
 export type AsyncOperation = {
     isLoading: Signal<boolean>;
-    error: Signal<Error | null>;
 };
 
 export function useAsyncOperation(): AsyncOperation {
     return {
         isLoading: useSignal(false),
-        error: useSignal<Error | null>(null),
     };
 }
 
 /**
- * Wraps an async function with loading/error state management.
+ * Wraps an async function with loading state management.
  * Call inside $() handlers — signals are safe to capture in Qwik closures.
  *
  * Returns the result of `fn` on success, or `null` if an error was caught.
@@ -44,11 +42,10 @@ export async function runAsync<T>(
     fn: () => Promise<T>,
 ): Promise<T | null> {
     op.isLoading.value = true;
-    op.error.value = null;
     try {
         return await fn();
     } catch (e) {
-        op.error.value = e instanceof Error ? e : new Error(String(e));
+        console.error('[runAsync] Operation failed:', e);
         return null;
     } finally {
         op.isLoading.value = false;

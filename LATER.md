@@ -27,10 +27,13 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 The storage stack is fully unified end-to-end, including the Dexie v8 store-drop (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
 
-- **Component prop reshape (optional)** — Reshape `TreeNodeDisplayProps`, `DataFieldProps`, etc. to `{ element: Element }`. Bridged via `elementToTreeNode` / `elementToDataField` mappers. Now that the renderer registry has landed (the Phase-1 consolidation in `src/kinds/`), this is downgraded to optional — the mappers are a defensible permanent DTO boundary. Revisit only if it causes real friction.
-- **Renderer registry — Phase 2** — The Phase-1 consolidation shipped (`src/kinds/`: one manifest per value-bearing kind, exhaustiveness-checked). Deferred until a second non-field surface (Logbook / Equipment Plate) forces them: (a) the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split; (b) generalizing the key to full `Kind` (including `node`); (c) a `placement` field for the nest-vs-navigate re-rooting threshold (Equipment Plate inlines, Job re-roots); (d) a `nature: data | reference` field so the sync layer doesn't LWW live/portal content; (e) lazy renderer loading for heavy kinds (canvas/video/iframe); (f) deriving the `Kind` / `DataFieldValue` unions from the registry.
+- **Element-vocabulary leaf-prop polish (minor)** — The view-prop retirement (audit §2.4, done 2026-06-13) renamed the boundary props but left a few legacy-flavored *internal* names untouched, as deliberately out of scope: the presentational leaf components `NodeTitle` / `NodeSubtitle` still take `nodeName` / `nodeSubtitle`, and the composer-ordering param `currentMaxCardOrder` (threaded through `CreateDataField` / `FieldComposer` / `FieldComposerSlot` / `usePendingForms`) derives from `siblingOrder` but keeps the `cardOrder` name. Pure renames; do only if they bother someone.
+- **Renderer registry — Phase 2** — The Phase-1 consolidation shipped (`src/kinds/`: one manifest per value-bearing kind, exhaustiveness-checked). Deferred until a second non-field surface (Logbook / Equipment Plate) forces them: (a) the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split; (b) generalizing the key to full `Kind` (including `node`); (c) a `placement` field for the nest-vs-navigate re-rooting threshold (Equipment Plate inlines, Job re-roots); (d) a `nature: data | reference` field so the sync layer doesn't LWW live/portal content; (e) lazy renderer loading for heavy kinds (canvas/video/iframe); (f) deriving the `Kind` / `DataFieldValue` unions from the registry; (g) a manifest home for default-field-set knowledge — `TreeNodeConstruction`'s `DEFAULT_FIELD_DEFINITION_IDS` seed import (audit §4.5 bullet 3) stays a hardcoded import until then, since no manifest field owns "which fields a new node starts with."
+- **Dead `currentValue` prop on `DataFieldDetails`** — `DataField.tsx` computes `currentDisplayValue` via `displayPreview` and passes it as `<DataFieldDetails currentValue=…>`, but `DataFieldDetails` never reads it (pre-existing; surfaced during audit §4.5). Drop the prop and the computation, or wire it into the metadata display if a use emerges.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
 - **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
+- **Composer discard → real command** — `FieldComposer` cancel rides `commitWithUndo` via a no-throw `execute$` (discard) + restore-callback undo, so its error branch is inert. When draft discard becomes a real command (e.g. `DISCARD_DRAFT`), it slots into the standard command/inverse path and the dead branch goes live.
+- **Drop the `usePendingForms` auto-save backstop** — Persistence is now write-through in `setPendingValue$`/`togglePending$` (audit §2.5). The old reactive `useTask$` auto-save was removed; if write-through proves fully sufficient in practice, no action — this note just records that the backstop is gone intentionally.
 
 ### `subtitle` → optional `nodeSubtitle` child element
 
@@ -142,7 +145,7 @@ Media upload, preview, storage, and caching are out of scope for Phase 1. All fi
 
 ### DataField Reordering UI
 
-Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Implementation will call the existing `computeCardOrderUpdates` helper (`src/data/utils/cardOrder.ts`) and write through the adapter. This is the point at which persisted gaps from deletions get compacted.
+Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Writes go through the adapter. This is the point at which persisted gaps from deletions get compacted. Algorithm note (a `computeCardOrderUpdates` helper existed at `src/data/utils/cardOrder.ts` until 2026-06-10, deleted as speculative): sort fields by current order, walk the run assigning sequential orders, and emit `{id, cardOrder}` updates only for rows whose order actually changes — minimal writes, stable for already-ordered input.
 
 ### ComposerRow check/uncheck slide-in animation
 
@@ -161,6 +164,13 @@ Currently deleting a field leaves a gap in `cardOrder`. Display sorts ascending 
 **Rich Construction UI** (per spec): multiple default rows, five dropdowns for user-selected fields, Add button in row 10, Save/Cancel in row 11, empty rows skipped on save.
 
 Phase 1 creation is minimal (Name + Subtitle); fields added post-creation from the DataCard.
+
+### Add-Field Surface A/B
+
+Both add-field surfaces (FieldComposer and the legacy `CreateDataField` single-pick dropdown) ship side by side as a deliberate A/B experiment, coordinated by the `ActiveSurface` mutex and the `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts` (audit item 2.7, resolved as keep-both). Deferred:
+
+- **More surface variants** — follow the contract in `src/components/FieldList/addFieldSurfaces.ts` (add id to `AddFieldSurfaceId`, build to contract, add to roster, render in FieldList).
+- **Winner picking** — eventually decide which surface(s) earn their keep and delete the losers (component + CSS + roster entry + union member).
 
 ### Tree Decorations
 
@@ -267,7 +277,10 @@ Phase 1 loads eagerly; background progressive loading deferred.
 
 - Subtle sync-status indicator (e.g. "Synced · 2m ago" / "Offline" chip) — already noted in SPECIFICATION §Sync feedback.
 - Snackbar toast when a background pull applies remote changes to an entity currently rendered (narrow rule to avoid chatty toasts). Successful pushes of the user's own writes stay silent.
-- Snackbar toast only when `SyncQueueManager` exhausts retries for an item — otherwise sync stays silent per Phase 1.
+- ~~Snackbar toast only when `SyncQueueManager` exhausts retries for an item — otherwise sync stays silent per Phase 1.~~ ✅ Implemented 2026-06-11 (audit §4.3): 5 retries riding existing sync cycles, error toast with Retry action on exhaustion, startup re-arm. See IMPLEMENTATION.md §Sync retry policy.
+- Orphaned Firestore SDK mirror IndexedDB databases linger on devices that ran builds before the `memoryLocalCache()` switch (audit §2.2). No auto-cleanup built, by design — users run `clearFirebaseIndexedDB()` in the console.
+- `applyRemoteElementHistory` does not emit on `storageEventBus` (audit §2.3 left this as-is), so a pull that applies only history rows won't refresh an open DataFieldDetails. Emit a history event if remote history-only refresh ever matters.
+- The bus read-model hooks (`useElementChildren`/`useElementById`) deliberately export no `reload$` — every imperative reload site was redundant with a bus emission. Trivially added back if a real imperative need appears.
 
 ### Export / Import
 
@@ -279,6 +292,8 @@ Phase 1 loads eagerly; background progressive loading deferred.
 The Element refactor traded the live-emulator adapter/sync suite for mock-based unit tests (`fieldDefinitionSync.test.ts` / `SyncPusher.test.ts` mock `RemoteSyncAdapter`). The whole unit suite passes without the Firebase emulator, but nothing automatically verifies real Firestore push/pull against the Element model. Reinstate a round-trip suite (Vitest against the emulator, or Cypress E2E) covering `elements` + `elementHistory` + `fieldDefinitions`.
 
 **Wiring needed before this is possible:** emulator connect in `src/data/firebase.ts` is gated on `isBrowser`, so Node/Vitest never connects — a round-trip Vitest run needs a Node connect path (e.g. honor `FIRESTORE_EMULATOR_HOST`) plus a separate vitest config + opt-in script so the default `npm test` stays emulator-free. Also: the `test:firestore` npm script currently points at a non-existent `src/test/firestoreAdapter.test.ts` — remove or repoint it as part of this work.
+
+**Note (2026-06-11):** one Cypress E2E spec now exists again — `cypress/e2e/repro-create-node.cy.ts` (regression for the UC-TreeNode key collision, audit §2.3) plus a stub `cypress/support/e2e.ts`. It currently runs against the *live* Firestore config and writes real nodes; gate it to the emulator (`?emulator=true` / `USE_FIRESTORE_EMULATOR`) before wiring into any automated run.
 
 ### Extract Sync System as Standalone Package (Refactoring Audit 8.3)
 
@@ -346,13 +361,17 @@ createSyncManager({
 - Command logging / audit middleware on CommandBus (pre/post hooks)
 - Query caching / materialized views (beyond existing `nodeIndex`)
 
+### Second Storage Backend → ElementWriteService (Audit §2.1)
+
+`IDBAdapter` is the sole write model; `FirestoreAdapter` was stripped to `RemoteSyncAdapter` (sync mirror only). If a second full storage backend is ever needed, do **not** resurrect a parallel CRUD adapter — build an `ElementWriteService` that owns the domain write logic (history diffing, rev minting, sibling ordering, sync-queue enqueue, event emission) over a dumb KV adapter interface, so the write model stays single-sited.
+
 ### Structured Logger (Refactoring Audit 7.5)
 
 Replace ad-hoc `console.log` with a lightweight logger (`src/utils/logger.ts`). Level filtering to silence debug/info in production. ~137 console statements across 27 files already use consistent `[Tag]` prefixes — migration is mechanical. Low priority: current logging works fine for dev.
 
 ### Error Handling & Resilience
 
-Adopt `safeAsync()` from `withErrorHandling.ts` in view-layer data loads. Wraps async calls, returns fallback (empty arrays), logs with context. Low priority for Phase 1 because Firestore's offline persistence absorbs most network failures. Becomes valuable once:
+Surface view-layer data-load errors instead of swallowing them (`useAsyncOperation` sets an `error` signal that nothing renders — failed loads just look empty). A small wrapper (fallback value + contextual logging + an error state in the two views) covers it; the old `safeAsync()`/`withErrorHandling.ts` helper was deleted as dead code (audit §3) and should be rebuilt only when actually wired in. Low priority for Phase 1. Becomes valuable once:
 
 1. Snackbar is implemented for user-facing error messages
 2. Error monitoring (Sentry, etc.) is added

@@ -9,8 +9,7 @@
 
 import { component$, useSignal, $, type PropFunction, type Signal } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
-import { getSnackbarService } from '../../services/snackbar';
-import { toStorageError, describeForUser } from '../../data/storage/storageErrors';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { getKindManifest } from '../../kinds/registry';
@@ -19,14 +18,13 @@ import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
-    fieldName: string;
+    name: string;
     fieldDefinitionId: string;
-    componentType: ComponentType;
+    kind: ComponentType;
     value: DataFieldValue | null;
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
     updatedAt?: number;
-    onDeleted$?: PropFunction<() => void>;
     onUpdated$?: PropFunction<() => void>;
 };
 
@@ -45,41 +43,26 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const handleDelete$ = $(async () => {
         const fieldId = props.id;
-        try {
-            await getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } });
-            getSnackbarService().show({
-                message: 'Field deleted',
-                action: {
-                    label: 'Undo',
-                    handler: $(async () => {
-                        await getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } });
-                    }),
-                },
-            });
-            if (props.onDeleted$) {
-                props.onDeleted$();
-            }
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: describeForUser(toStorageError(err)),
-            });
-        }
+        await commitWithUndo({
+            message: 'Field deleted',
+            execute$: $(() => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } })),
+            undo$: $(() => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } })),
+        });
     });
 
     const labelId = `field-label-${props.id}`;
 
-    // Used by DataFieldDetails for metadata and (future) history-value preview.
-    const currentDisplayValue = getKindManifest(props.componentType).displayPreview(props.value);
+    const manifest = getKindManifest(props.kind);
 
-    const isImageVariant = props.componentType === 'single-image';
+    // Used by DataFieldDetails for metadata and (future) history-value preview.
+    const currentDisplayValue = manifest.displayPreview(props.value);
 
     return (
         <div
             class={[
                 styles.datafieldWrapper,
                 isDetailsExpanded && styles.datafieldWrapperExpanded,
-                isImageVariant && styles.datafieldWrapperImage,
+                manifest.blockValueLayout && styles.datafieldWrapperImage,
                 'no-caret',
             ]}
             ref={rootRef}
@@ -96,8 +79,8 @@ export const DataField = component$<DataFieldProps>((props) => {
             />
 
 
-            {props.componentType !== 'single-image' && (
-                <label class={styles.datafieldLabel} id={labelId}>{props.fieldName}:</label>
+            {!manifest.hideLabel && (
+                <label class={styles.datafieldLabel} id={labelId}>{props.name}:</label>
             )}
 
             {renderBody(props, rootRef)}
@@ -105,9 +88,8 @@ export const DataField = component$<DataFieldProps>((props) => {
             {isDetailsExpanded && (
                 <DataFieldDetails
                     fieldId={props.id}
-                    fieldName={props.fieldName}
                     fieldDefinitionId={props.fieldDefinitionId}
-                    componentType={props.componentType}
+                    kind={props.kind}
                     currentValue={currentDisplayValue}
                     onDelete$={handleDelete$}
                 />
@@ -120,11 +102,10 @@ function renderBody(
     props: DataFieldProps,
     rootRef: Signal<HTMLElement | undefined>,
 ) {
-    const Renderer = getKindManifest(props.componentType).Renderer;
+    const Renderer = getKindManifest(props.kind).Renderer;
     return (
         <Renderer
             id={props.id}
-            fieldName={props.fieldName}
             fieldDefinitionId={props.fieldDefinitionId}
             value={props.value}
             updatedAt={props.updatedAt}

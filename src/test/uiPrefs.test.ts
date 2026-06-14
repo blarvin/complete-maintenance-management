@@ -10,10 +10,6 @@ import {
     STORAGE_KEY,
     loadUIPrefs,
     saveUIPrefs,
-    isCardExpanded,
-    isFieldDetailsExpanded,
-    toggleCardExpanded,
-    toggleFieldDetailsExpanded,
     clearUIPrefs,
 } from '../state/uiPrefs';
 
@@ -146,170 +142,19 @@ describe('uiPrefs store', () => {
         });
     });
 
-    describe('isCardExpanded', () => {
-        it('returns false when no prefs exist', () => {
-            expect(isCardExpanded('node-1')).toBe(false);
-        });
-
-        it('returns true when card is in expanded set', () => {
-            const prefs = {
-                expandedCards: new Set(['node-1']),
-                expandedFieldDetails: new Set<string>(),
-                expandedNodeDetails: new Set<string>(),
-            };
-            saveUIPrefs(prefs);
-
-            expect(isCardExpanded('node-1')).toBe(true);
-        });
-
-        it('returns false when card is not in expanded set', () => {
-            const prefs = {
-                expandedCards: new Set(['node-1']),
-                expandedFieldDetails: new Set<string>(),
-                expandedNodeDetails: new Set<string>(),
-            };
-            saveUIPrefs(prefs);
-
-            expect(isCardExpanded('node-2')).toBe(false);
-        });
-    });
-
-    describe('isFieldDetailsExpanded', () => {
-        it('returns false when no prefs exist', () => {
-            expect(isFieldDetailsExpanded('field-1')).toBe(false);
-        });
-
-        it('returns true when field details is in expanded set', () => {
-            const prefs = {
-                expandedCards: new Set<string>(),
-                expandedFieldDetails: new Set(['field-1']),
-                expandedNodeDetails: new Set<string>(),
-            };
-            saveUIPrefs(prefs);
-
-            expect(isFieldDetailsExpanded('field-1')).toBe(true);
-        });
-
-        it('returns false when field details is not in expanded set', () => {
-            const prefs = {
-                expandedCards: new Set<string>(),
-                expandedFieldDetails: new Set(['field-1']),
-                expandedNodeDetails: new Set<string>(),
-            };
-            saveUIPrefs(prefs);
-
-            expect(isFieldDetailsExpanded('field-2')).toBe(false);
-        });
-    });
-
-    describe('toggleCardExpanded', () => {
-        it('adds card to expanded set when not present', () => {
-            toggleCardExpanded('node-1');
-            expect(isCardExpanded('node-1')).toBe(true);
-        });
-
-        it('removes card from expanded set when already present', () => {
-            toggleCardExpanded('node-1');
-            expect(isCardExpanded('node-1')).toBe(true);
-
-            toggleCardExpanded('node-1');
-            expect(isCardExpanded('node-1')).toBe(false);
-        });
-
-        it('persists changes to localStorage', () => {
-            toggleCardExpanded('node-1');
-
-            // Reload from localStorage
-            const prefs = loadUIPrefs();
-            expect(prefs.expandedCards.has('node-1')).toBe(true);
-        });
-
-        it('preserves other expanded cards', () => {
-            toggleCardExpanded('node-1');
-            toggleCardExpanded('node-2');
-
-            expect(isCardExpanded('node-1')).toBe(true);
-            expect(isCardExpanded('node-2')).toBe(true);
-
-            toggleCardExpanded('node-1'); // Toggle off node-1
-
-            expect(isCardExpanded('node-1')).toBe(false);
-            expect(isCardExpanded('node-2')).toBe(true); // Still expanded
-        });
-
-        it('preserves expanded field details', () => {
-            const prefs = {
-                expandedCards: new Set<string>(),
-                expandedFieldDetails: new Set(['field-1']),
-                expandedNodeDetails: new Set<string>(),
-            };
-            saveUIPrefs(prefs);
-
-            toggleCardExpanded('node-1');
-
-            expect(isFieldDetailsExpanded('field-1')).toBe(true);
-            expect(isCardExpanded('node-1')).toBe(true);
-        });
-    });
-
-    describe('toggleFieldDetailsExpanded', () => {
-        it('adds field to expanded set when not present', () => {
-            toggleFieldDetailsExpanded('field-1');
-            expect(isFieldDetailsExpanded('field-1')).toBe(true);
-        });
-
-        it('removes field from expanded set when already present', () => {
-            toggleFieldDetailsExpanded('field-1');
-            expect(isFieldDetailsExpanded('field-1')).toBe(true);
-
-            toggleFieldDetailsExpanded('field-1');
-            expect(isFieldDetailsExpanded('field-1')).toBe(false);
-        });
-
-        it('persists changes to localStorage', () => {
-            toggleFieldDetailsExpanded('field-1');
-
-            const prefs = loadUIPrefs();
-            expect(prefs.expandedFieldDetails.has('field-1')).toBe(true);
-        });
-
-        it('preserves other expanded field details', () => {
-            toggleFieldDetailsExpanded('field-1');
-            toggleFieldDetailsExpanded('field-2');
-
-            expect(isFieldDetailsExpanded('field-1')).toBe(true);
-            expect(isFieldDetailsExpanded('field-2')).toBe(true);
-
-            toggleFieldDetailsExpanded('field-1');
-
-            expect(isFieldDetailsExpanded('field-1')).toBe(false);
-            expect(isFieldDetailsExpanded('field-2')).toBe(true);
-        });
-
-        it('preserves expanded cards', () => {
-            const prefs = {
-                expandedCards: new Set(['node-1']),
-                expandedFieldDetails: new Set<string>(),
-                expandedNodeDetails: new Set<string>(),
-            };
-            saveUIPrefs(prefs);
-
-            toggleFieldDetailsExpanded('field-1');
-
-            expect(isCardExpanded('node-1')).toBe(true);
-            expect(isFieldDetailsExpanded('field-1')).toBe(true);
-        });
-    });
-
     describe('clearUIPrefs', () => {
         it('removes all prefs from localStorage', () => {
-            toggleCardExpanded('node-1');
-            toggleFieldDetailsExpanded('field-1');
+            saveUIPrefs({
+                expandedCards: new Set(['node-1']),
+                expandedFieldDetails: new Set(['field-1']),
+                expandedNodeDetails: new Set<string>(),
+            });
 
             clearUIPrefs();
 
-            expect(isCardExpanded('node-1')).toBe(false);
-            expect(isFieldDetailsExpanded('field-1')).toBe(false);
+            const prefs = loadUIPrefs();
+            expect(prefs.expandedCards.size).toBe(0);
+            expect(prefs.expandedFieldDetails.size).toBe(0);
         });
     });
 });
