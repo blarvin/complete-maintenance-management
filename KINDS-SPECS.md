@@ -63,11 +63,11 @@ Capabilities are orthogonal in **storage and representation**. They are *not* or
 **Asterisk 1 — Arbitration (invariants that live *between* capabilities).** Some pairs contend for one decision the resolution of which belongs to neither capability:
 
 - **OwnValue + Derivation** = *inherit-unless-override* (criticality / cost-center / rated-pressure cascading down the tree until a node pins its own). Runtime state decides which is live: value present → OwnValue, LWW'd; value absent → Derivation, recomputed, never stored. The sync rule *flips with state*. Requires an explicit `arbiter` — a third thing, owned by neither.
-- **Render precedence** across `OwnValue + Children + Edges`: when one element draws a value, child rows, and a link affordance at once, draw-order/layout is in no single capability.
+- **Render precedence** across `OwnValue + Children + Edges`: when one element could draw a value, child rows, and a link affordance at once, draw-order/layout is in no single capability. **Resolved by surface assignment, not a layout algorithm:** the element's *primary surface* — its value, or its edge-link, or its children *when children are the only content capability* (`image-with-caption`) — owns the inline Data Card row **alone**; `Children` co-occurring with an `OwnValue` or `Edges` is **annotation** and renders one surface deeper, in **Field Details**. So the inline row is always single-capability and never has to arbitrate; the children get their own surface. Annotation that genuinely needs at-a-glance visibility is a deliberate escalation (into the row's subtitle or a badge), handled case-by-case, not the default.
 
 > The former *fixed core + open tail* arbiter (Composition vs. TreeBehavior) is **gone** — it is now internal to one `ChildrenSpec` that may hold both a `template` and an `open` bag. Merging the two capabilities removed the arbitration case rather than resolving it.
 
-→ the model needs an `arbiter?` slot per remaining contending pair. **Describe now, build when a concrete kind forces it.**
+→ the remaining contending pair is **OwnValue + Derivation** (needs an `arbiter?` slot — describe now, build when a concrete kind forces it); **render precedence is resolved by the surface-assignment rule above**, so it needs a convention, not an arbiter.
 
 **Asterisk 2 — Validity (not all 2ⁿ subsets are coherent — and coherence is codeable).** The capability bag is a *product type*; most of the 2ⁿ combinations are nonsense. There is no curated enum to guarantee every member is sensible, so coherence is paid back as an explicit **predicate**. **This is the plug-in seam:** authoring a new kind = composing capabilities, and the predicate answers "does this one work, or not?" — "some that work, some that don't" becomes a *computed* property of the manifest, not a matter of taste.
 
@@ -293,13 +293,35 @@ The one substrate (`Element` + capabilities) carries **two populations**, distin
 
 `FieldDefinition` was Fields-only. The concept generalizes to **any kind whose instances benefit from a reusable, named, configured shape**: a *Daily Inspection* Logbook, a *Work Order* Job, an *HPU-with-Accumulator* template (the word "Template" `LATER.md` already reserves). There is **no separate `NodeDefinition` type** — there is one `Definition` concept, per-kind, optional. Plain ad-hoc Assets need none; you just make one.
 
-A Definition lives in the Library population and declares the **configured** form of a kind: its config values (units, enum options, colours), and — crucially — its **child policy** (which `template` / `open` children its instances get). This is where "what children may a Log Entry have" is authored: in the Log-Entry Definition, not hardcoded and not user-grown willy-nilly.
+A Definition lives in the Library population and declares the **configured** form of a kind: its config values (units, enum options, colours), and — crucially — its **child policy** (which `template` / `open` children its instances get). This is where "what children may a Log Entry have" is authored: in the Log-Entry Definition, not hardcoded and not user-grown willy-nilly. It is also where `equipment-plate`'s variability lives — a general dev-authored *Equipment Plate* Definition and a user's narrower *Equipment Plate (AC motor)* are the **same kind, different Definitions** (see *Per-kind specifications → equipment-plate*); users author Definitions, never kinds.
 
 ### Meta-fields, and why the turtles terminate
 
-A Definition's configurable knobs are themselves modeled as child Fields — **meta-fields** — editable, add/removable, history-tracked and LWW'd like any Field (in the Library's history, not the business tree's). Config that can have config gives **meta-meta-fields**: a *Water Level* `number-kv` with a *Low Warn* threshold that itself carries an *alert type* / *notification channel* / *display colour*.
+A Field's extra structure — config knobs, author guidance, local notes — is modeled as **child Fields on the Field**: **meta-fields**, editable, add/removable, history-tracked and LWW'd like any Field. Almost every kind may carry them: a meta-field is just the `OwnValue + Children(template)` diagonal (the *usage-annotated field*), and that diagonal is universally valid. Whether a given kind *uses* it is per-manifest.
 
-The recursion is real but **structurally terminating**: every child set — at every level — is **policy-declared** by a manifest `template` or a kind-constrained `open` bag; it is never a free, user-grown tree. A meta-meta-field bottoms out because its manifest declares no further config worth exposing (an *alert type* is an `enum-kv` with a fixed option list and nothing beneath it). Turtles stop where a manifest says "no more turtles" — sanity is guaranteed by construction, not by a remembered rule. Depth is bounded by developer-authored manifests, not by users.
+**Meta-fields live in both populations — a 2×2, not a diagonal.** It is tempting to say "guidance is on the Definition, data is on the instance"; that is wrong as a rule. The population axis (Library vs business) and the content axis (guidance/notes vs value-data) are independent, so all four cells are real:
+
+| | **Library (Definition)** — applies to every instance minted from it | **Business (instance)** — this one placed element only |
+| ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| **guidance / notes**    | standard usage note on the *Sediment Depth* Definition                | "Roger insists we measure at the inlet" on *this* field |
+| **value-data**          | default value, units, thresholds baked into the Definition           | the reading + its history; a link's "last verified" date |
+
+The same mechanism (a Field carrying child Fields) covers all four; cells differ only by **which population the child lives in** (Library history vs business history) and **what surface it renders on** (config knobs and notes mostly drill into *Field Details*; see Asterisk 1's surface-assignment rule). A Definition's config knobs are Library meta-fields; the labeled-edge annotations and per-instance notes are business meta-fields. One concept, two populations.
+
+This also gives the **specificity spectrum** for any per-field guidance: a *generic Definition* note (all instances) → a *narrower Definition* note (*Sediment Depth (Roger's Reservoir)*, every instance minted from it — the same Library move as `equipment-plate (AC motor)`) → a *per-instance* note (one placed element). Same mechanism throughout; only the population/breadth changes.
+
+**Why the turtles terminate — finite, acyclic manifest chain.** Config that can have config gives meta-meta-fields: a *Water Level* `number-kv` whose *Low Warn* threshold itself carries an *alert type* / *channel* / *colour*. The recursion is real but bounded, and the guarantee is **not** a depth counter — it is that **each level's meta-field is minted from a deliberately *smaller, different* kind than its parent**, until one declares no config at all:
+
+```
+Water Level   (number-kv)
+   └─ Low Warn threshold        ← level 1   (kind: threshold, config: {alert})
+         └─ Alert Type          ← level 2   (kind: enum-kv, FIXED options, config: {})
+               └─ ⊥             ← level 3   (no config worth exposing → stop)
+```
+
+The danger the rule rules out is a **cycle**: if *Low Warn* were itself a full `number-kv` that *also* declares a *Low Warn*, it would loop forever. The model forbids that by construction — a threshold's config kind is `threshold`, whose config is `{alert}`, whose config is `{}`: a strictly *descending* chain. So sanity is "the manifest chain is finite and acyclic," guaranteed by construction, not "depth ≤ N" remembered as a rule.
+
+**Mechanism vs. policy on depth.** Structural depth is therefore manifest-bounded, not fixed — user-grown chains nearly always halt at ~2 (a `text-kv` note's only config is `maxLength`, which bottoms out), while rich dev-authored config can reach ~3 (field → threshold → alert). On top of that mechanism the **product policy caps *user*-authored meta-fields at two levels**; anything deeper is dev-authored config only. The structural guarantee makes deeper chains *safe*; the policy makes the authoring UI *teachable* — a flat, comprehensible 2-level ceiling for users, with the rare deeper chains reserved for manifests.
 
 ---
 
@@ -315,14 +337,14 @@ The catalogue of needs the model must absorb. Each row is a capability subset; i
 | **text-kv / enum-kv / number-kv** | stored field              | `OwnValue`                                                       | `inline`             | current  |
 | **image**                         | stored primitive          | `OwnValue(blob)`                                                 | `inline`             | describe |
 | **image-with-caption**            | composite                 | `Children(template)`                                             | `inline`             | describe |
-| **equipment-plate**               | composite (at scale)      | `Children(template)`                                             | `inline`             | open     |
+| **equipment-plate**               | configurable composite    | `Children(template/open:['text-kv'])` (Definition-sourced)       | `inline`             | describe |
 | **usage-annotated field**         | field + author guidance   | `OwnValue + Children(template)`                                  | `inline`             | describe |
 | **asset-gallery**                 | aggregator                | `Derivation + Reads.resolver`                                    | `inline`             | describe |
 | **asset-doc**                     | in-link                   | `Edges(internal,live) + Reads.resolver`                          | `inline`             | describe |
 | **part-supplier-link**            | out-link                  | `Edges(external)`                                                | `inline`             | describe |
 | **other-end**                     | virtual-parent appearance | `Edges(internal,virtual) + Reads.resolver`                       | `inline` / `re-root` | describe |
 | **approval**                      | version reference         | `Edges(internal,revision) + Reads.resolver`                      | `inline`             | describe |
-| **labeled inline edge**           | annotated reference       | `Edges + Children(template)`                                     | `inline`             | open     |
+| **labeled inline edge**           | annotated reference       | `Edges + Children(template)`                                     | `inline`             | describe |
 | **maintained edge**               | derived reference         | `Edges(derived target) + Derivation`                             | `inline`             | open     |
 | **inherit-unless-override**       | cascading value           | `OwnValue + Derivation + arbiter`                                | `inline`             | describe |
 | **value-chart**                   | stored, graphical         | `OwnValue + Reads.historyStream`                                 | `inline` (lazy)      | describe |
@@ -370,11 +392,35 @@ const imageWithCaptionManifest: KindManifest = {
 - **Creation is atomic multi-Element.** Minting the field mints the parent + both `cardinality:'one'` template children in one transaction, with deterministic child ids (`${parentId}:image`, `${parentId}:caption`). One commit, one rollback boundary.
 - **History is per-child, free.** A caption edit writes history on the caption child; an image swap writes history on the image child. The recursive model pays off here with zero extra machinery.
 - **The parent renderer composes child renderers** — it positions `getKindManifest('image').Renderer` and `getKindManifest('text-kv').Renderer`. The framework provides a "render this child Element by its manifest" entry point the composite renderer calls.
-- **`children.spec.template` declares structure, not values** — which children exist, their kinds, labels, per-child config. A configurable composite (variable child set) is a later concern.
+- **`children.spec.template` declares structure, not values** — which children exist, their kinds, labels, per-child config. Here the template is **manifest-fixed**; the *configurable* composite (variable, user-grown child set) is `equipment-plate`, where the template is instead **Definition-sourced** — same `ChildrenSpec.template` shape, different origin.
 
-### `equipment-plate` (composite, at scale) — *open*
+### `equipment-plate` (configurable composite via Definitions)
 
-Grid of `Label : Value` children (Manufacturer / Model / Serial / …). Stresses `Children(template)` beyond two children; `placement: inline`. **Open:** fixed vs. user-configurable child set — a configurable composite needs a non-trivial authoring form and runtime template editing, which `image-with-caption` deliberately avoids. (When configurable, the child policy is declared by a *Definition*, per *Two populations*.)
+The on-asset nameplate: a grid of pure `Label : Value` rows (Manufacturer / Model / Serial / Voltage / RPM / …) transcribed from the physical plate. It is the stress test for `Children(template)` *at scale*, and — unlike `image-with-caption`, whose template is hardcoded — its child set is **user-configurable**. The resolution is the *Two populations* seam, **not** runtime template mutation:
+
+- **Kinds are dev-authored; Definitions are user-authored.** There is **one** `equipment-plate` kind. "Equipment Plate (AC motor)" is **not** a new kind — it is a **narrower Definition** in the Library, minted from the general one. Users compose Definitions; they never author kinds (that would be a framework change). This is precisely why the two populations exist (Q3): the general dev Definition and a user's narrowed Definitions are the same kind, different Library entries.
+- **The template is Definition-sourced, not manifest-fixed.** `image-with-caption` hardcodes its 2-entry template in the manifest because it is a fixed primitive with no Definition. equipment-plate's manifest declares only that this kind *has* a Definition-authored child set; the template **contents come from the chosen Definition** — exactly the "a Definition declares its instances' child policy" rule (*Definition generalizes*). One `ChildrenSpec.template` shape, two sources: manifest-fixed (primitive) vs. Definition-authored (configurable composite).
+- **Pure children — `text-kv` only.** A nameplate is verbatim text: no units, no ranges, no `LL ≤ L ≤ nominal ≤ H ≤ HH` validity, no decimals. So every plate row is a `text-kv` (label = the child's `name`, value = free text), and `ValueSpec`-config complexity never enters. The authoring form is therefore just the **enum-kv option-editor pattern** — "add any number of rows" — pointed at label:value specs instead of enum options.
+- **General vs. narrow = open tail vs. pinned template.** A *general* plate Definition leans on an **open `text-kv` tail** (`open: { childKinds: ['text-kv'] }`) so the field user transcribes whatever rows their plate actually has. A *narrow* Definition (AC motor) **pins** the expected rows as a `template` and may drop the tail. Same kind; this fixed-core + open-tail combination is the Asterisk-2 *valid* case, kept entirely within `text-kv`.
+
+```ts
+const equipmentPlateManifest: KindManifest = {
+  kind: 'equipment-plate',
+  pickerLabel: 'Equipment Plate',
+  placement: 'inline',
+  children: {
+    // The manifest declares only that this kind HAS a Definition-authored child set;
+    // template CONTENTS come from the chosen Definition (Library), not hardcoded here.
+    spec: { open: { childKinds: ['text-kv'] } },   // general default; a narrow Definition pins a template of text-kv rows
+    validateChild: (child) => child.kind === 'text-kv',
+    onCreate: (parentId) => [ /* rows from the active Definition's template, deterministic ids */ ],
+  },
+  Renderer: EquipmentPlateField,   // lays out child text-kv renderers as a Label:Value grid
+  // no ownValue → the plate has no own value; each row is its own text-kv child with its own history
+};
+```
+
+**Authoring UI — deferred but tractable.** The Definition editor is a meta-field collection form: the same "add/remove N entries" interaction enum-kv already uses for its options, populating the template's `text-kv` rows. The detailed authoring/editing UX is **deferred**; the *model* is settled — it is config (meta-fields on a Definition), introduces no new capability, and reuses an interaction the app already needs.
 
 ### `usage-annotated field` (`OwnValue + Children(template)`)
 
@@ -443,9 +489,11 @@ External URL reference. `target.scope: 'external'`, value `{ url }`. "Open out" 
 
 An approval points at a **specific revision** of a Job / Task / Doc, not its live state: value `{ targetId, rev }` resolving to `${targetId}:${rev}` in `ElementHistory`. `target.pin: 'revision'`, `valid: { rule: 'pinned-rev-is-current' }`. The resolver-aware renderer compares the pinned rev against the target's current rev and renders **valid** vs **stale** ("approved @ rev 4 / target now at rev 7"). The edge is **immutable once set** — re-approving mints a new approval against the new rev rather than repointing, so the audit answers *what exactly was approved*. First edge-side consumer of `ElementHistory` (the mirror of `value-chart`'s stored-side read). **Open:** is "valid" only rev-staleness, or also state predicates (valid while the Job is in state X)? Scoped here to rev-staleness; general predicates are a future `ValiditySpec` rule.
 
-### `labeled inline edge` (`Edges + Children(template)`) — *open*
+### `labeled inline edge` (`Edges + Children(template)`)
 
-A reference that carries its own local annotation, authored at the link site rather than on the target: a `part-supplier-link` with a "last verified" date and a "why this supplier" note; an `asset-doc` with a relationship label. The heavyweight version — reify the relationship as a navigable node with its own fields — already exists (a `node` with an `Edges` field). What this row adds is the **lightweight** version: an inline link row that owns one or two annotation children without being promoted to a navigable node. An association-class in embryo. **Open:** confirm render precedence (Asterisk 1) for an edge row that also renders annotation children.
+A reference that carries its own local annotation, authored at the link site rather than on the target: a `part-supplier-link` with a "last verified" date and a "why this supplier" note; an `asset-doc` with a relationship label. The heavyweight version — reify the relationship as a navigable node with its own fields — already exists (a `node` with an `Edges` field). What this row adds is the **lightweight** version: an inline link row that owns one or two annotation children without being promoted to a navigable node. An association-class in embryo.
+
+The annotation children are **business meta-fields** (per-instance, local to the edge element, with business history — the bottom-right cell of the *Meta-fields* 2×2), distinct from the target's own (non-local) content. **Render precedence (Asterisk 1) resolves by surface assignment:** the edge owns the inline Data Card row (target's live identity + tap-to-navigate); the annotation children render in **Field Details**, the same drawer every field's extras use. A *relationship label* that is a single word is usually the element's `name`, not a child — reserve annotation *children* for the richer extras (dates, notes) that want Field Details anyway. No layout arbiter is needed.
 
 ### `maintained edge` (`Edges(derived target) + Derivation`) — *open*
 
@@ -507,6 +555,9 @@ These settle the former Open Questions Q1–Q6 and the capability-set discussion
 - **Q4 — embrace the collapse.** Resolved by the `Children` merger: do not police "composite vs node." Child policy (`template` / `open`, kind constraints) is declared per kind; most kinds bottom out shallowly.
 - **Q5 — one canonical parent, overlay appearances; no graph DB.** Distinguish **detach** (remove an appearance) from **delete** (remove the canonical element). Moving an end edits a parent. Single canonical `parentId`.
 - **Q6 — Logbook is a descendant rollup.** Logbook = node of Log Entries; Log Entry = bounded node (body + tag/flag children) whose child set is declared by its Definition. Body is author-only-editable; flags/etc. may be others-editable — a per-field edit policy that is itself config (a meta-field). All business data with history.
+- **`equipment-plate` / configurable composites — Definition-sourced templates.** A configurable composite is solved by the *two populations*, not by runtime template editing: **one** dev-authored `equipment-plate` kind, whose template **contents come from a Definition**, with users authoring **narrower Definitions** (e.g. *AC motor*) of that same kind. Children are pure `text-kv` (no units/ranges), so the Definition-authoring form is the existing enum-kv option-editor ("add N rows"). General plate = open `text-kv` tail; narrow plate = pinned `template`. Contrast: `image-with-caption` is manifest-fixed, equipment-plate is Definition-sourced — same `ChildrenSpec.template` shape, two origins. Detailed authoring **UX deferred**; model settled.
+- **Meta-fields live in both populations (a 2×2), and recursion terminates by an acyclic manifest chain.** Guidance/notes and value-data each exist at both the Library (Definition) and business (instance) level — including **per-instance** notes, not only Definition-level guidance. Same mechanism (a Field carrying child Fields); cells differ by population and render surface (extras mostly drill into Field Details). Termination is **not** a depth counter: each level's meta-field is minted from a strictly *smaller* kind than its parent until one declares no config (`field → threshold → alert-type → ⊥`), forbidding cycles by construction. Structural depth is manifest-bounded (~2 user-grown, ~3 dev-authored); **product policy caps user-authored depth at two levels**, deeper config is dev-only. See *Meta-fields, and why the turtles terminate*.
+- **Render precedence (Asterisk 1) — surface assignment, not a layout arbiter.** The primary surface (value / edge-link / children-when-sole-content) owns the inline Data Card row alone; `Children` co-occurring with `OwnValue` or `Edges` is annotation and renders in **Field Details**. So `labeled inline edge` needs no arbiter: the edge is the inline row, its annotation children (business meta-fields) live in Field Details. The only remaining `arbiter?` consumer is **OwnValue + Derivation** (inherit-unless-override).
 
 ## Open questions
 
@@ -514,8 +565,6 @@ These settle the former Open Questions Q1–Q6 and the capability-set discussion
 2. **`value-chart` / `status`.** Does value-status (stale / warn / alarm) live as a `ValueSpec` method or as a `Reads.historyStream` capability, since it reads history? (Loops back to the capability-vs-kind test.)
 3. **`other-end` target-owned edge** — confirm the resolver/sync path treats a target-owned edge identically to a referrer-owned one.
 4. **Action exactly-once** — the offline-replay idempotency mechanism (keys, dedupe window) for `Action`, when it is eventually built.
-5. **`equipment-plate` / configurable composites** — fixed vs. user-configurable child set, and the Definition-side authoring UI it implies.
-6. **`labeled inline edge` render precedence** — layout for an edge row that also renders annotation children (Asterisk 1, the remaining render-precedence case).
 
 ---
 
