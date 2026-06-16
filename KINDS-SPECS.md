@@ -1,4 +1,4 @@
-# KINDS-SPECS.md — Field Kinds, the Capability Model, and the Manifest API
+# KINDS-SPECS.md — Element Kinds, the Capability Model, and the Manifest API
 
 ***Intent:*** *the `Element` model makes new surfaces cheap; this document is where we design the plug-in seam that keeps them honest — one manifest per kind, against one registry, proven by a catalogue of concrete kinds.*
 
@@ -19,6 +19,8 @@ The capability model is how that invariant is *enforced cheaply*. Because a kind
 ---
 
 ## The Capability Model
+
+**These are *Element* kinds, not only Field kinds.** A kind is a kind of `Element`: one manifest + capability mechanism describes inline field-kinds (`text-kv`, `image`, `asset-doc`) and re-root node-kinds (`node`, `logbook`, `job`, `person`) alike, with `placement` the axis that separates them. The only irreducible privilege is the framework **shell** (current-root view, navigation, Up, ROOT) plus the **root position** (`parentId: null`); every kind — `node` included — is an ordinary registry entry that opts into re-rooting via `placement`, never a privileged primitive. (SPEC and today's code still frame `node` as the privileged Kind rendered outside the registry; this document relocates that privilege to the shell, and the migration notes carry the reframing back.)
 
 ### A kind is a composition, not an enum point
 
@@ -44,9 +46,9 @@ The set is **closed to modification, open to extension** (Open/Closed): adding a
 | **Action**        | `ActionSpec`                  | command bus (the write / effect path)             | emits commands; **stores no value**; effects are ordinary Element mutations elsewhere (which carry their own history); activation may be logged as an event |
 | **Reads** (flags) | `{resolver?, historyStream?}` | renderer (injected read-only)                     | none — pure read capability, no sync effect                                                                    |
 
-Two of these came out of the design dialogue and are worth stating plainly:
+Two points are worth stating plainly:
 
-- **`Children` merges the former `Composition` + `TreeBehavior`.** "Has a fixed sub-template" and "has an open child set" were two facets of one fact — *this Element has children* — so they are one capability whose descriptor (`ChildrenSpec`) carries a `template`, an `open` bag, or both. Composite vs. node is now the two ends of one knob; `placement` (inline vs. re-root) carries the UX distinction. This *removed* a cross-capability arbiter (see Asterisk 1).
+- **`Children` is one capability for "this Element has children."** "Has a fixed sub-template" and "has an open child set" are two facets of one fact, so they are one capability whose descriptor (`ChildrenSpec`) carries a `template`, an `open` bag, or both. Composite vs. node is the two ends of one knob; `placement` (inline vs. re-root) carries the UX distinction. No cross-capability arbiter stands between them (see Asterisk 1).
 - **`Action` is the only write/effect capability.** Every other capability is *declarative state* (convergent, LWW, offline-safe); `Action` is an *imperative command*. It is described for completeness and gated hard (see *Action* below and Resolved decisions).
 
 A kind = origin + a subset of these. Worked subsets:
@@ -58,14 +60,12 @@ A kind = origin + a subset of these. Worked subsets:
 
 ### The three asterisks — where "independent" needs care
 
-Capabilities are orthogonal in **storage and representation**. They are *not* orthogonal in three specific gaps, and those gaps — not the capabilities themselves — are the real spec surface. (The system has an irreducible kernel; when the `nature` enum dissolved into capabilities, the kernel did not vanish — it shrank into these three.)
+Capabilities are orthogonal in **storage and representation**. They are *not* orthogonal in three specific gaps, and those gaps — not the capabilities themselves — are the real spec surface. They are the system's irreducible kernel.
 
 **Asterisk 1 — Arbitration (invariants that live *between* capabilities).** Some pairs contend for one decision the resolution of which belongs to neither capability:
 
 - **OwnValue + Derivation** = *inherit-unless-override* (criticality / cost-center / rated-pressure cascading down the tree until a node pins its own). Runtime state decides which is live: value present → OwnValue, LWW'd; value absent → Derivation, recomputed, never stored. The sync rule *flips with state*. Requires an explicit `arbiter` — a third thing, owned by neither.
 - **Render precedence** across `OwnValue + Children + Edges`: when one element could draw a value, child rows, and a link affordance at once, draw-order/layout is in no single capability. **Resolved by surface assignment, not a layout algorithm:** the element's *primary surface* — its value, or its edge-link, or its children *when children are the only content capability* (`image-with-caption`) — owns the inline Data Card row **alone**; `Children` co-occurring with an `OwnValue` or `Edges` is **annotation** and renders one surface deeper, in **Field Details**. So the inline row is always single-capability and never has to arbitrate; the children get their own surface. Annotation that genuinely needs at-a-glance visibility is a deliberate escalation (into the row's subtitle or a badge), handled case-by-case, not the default.
-
-> The former *fixed core + open tail* arbiter (Composition vs. TreeBehavior) is **gone** — it is now internal to one `ChildrenSpec` that may hold both a `template` and an `open` bag. Merging the two capabilities removed the arbitration case rather than resolving it.
 
 → the remaining contending pair is **OwnValue + Derivation** (needs an `arbiter?` slot — describe now, build when a concrete kind forces it); **render precedence is resolved by the surface-assignment rule above**, so it needs a convention, not an arbiter.
 
@@ -84,9 +84,9 @@ Capabilities are orthogonal in **storage and representation**. They are *not* or
 | `Edges` `pin:'revision'`, no `ValiditySpec`  | **valid (defaulted)** | defaults to `pinned-rev-is-current`, not an error                             |
 
 
-→ `coherence?: (caps) => Result<void, string[]>` is itself manifest code; a kind whose set fails it **does not register**. The table above is the seed rule set, **per-manifest** for now (extract to a central engine once many kinds exist — Resolved decisions, Q2).
+→ `coherence?: (caps) => Result<void, string[]>` is itself manifest code; a kind whose set fails it **does not register**. The table above is the seed rule set, **per-manifest** for now (extract to a central engine once many kinds exist).
 
-**Asterisk 3 — Identity (the nominal residue structure can't absorb).** A kind is **a name + a capability subset**, and the name is load-bearing on its own. `person` is capability-identical to base `node`, yet must be a distinct kind — it is the typed cross-`Element` reference target (`allowedKinds: ['person']`), its own picker entry, its own semantic type. Structure differentiates *behavior*; it cannot differentiate *identity*. So `kind` (the nominal slug) and `pickerLabel` live in the manifest's **identity layer**, outside the capability bag. Two kinds may share every capability and still be different kinds.
+**Asterisk 3 — Identity (the nominal residue structure can't absorb).** A kind is **a name + a capability subset**, and the name is load-bearing on its own. `person` is capability-identical to base `node`, yet must be a distinct kind — it is the typed cross-`Element` reference target (`allowedKinds: ['person']`), its own minting-affordance entry, its own semantic type. Structure differentiates *behavior*; it cannot differentiate *identity*. So `kind` (the nominal slug), `pickerLabel`, and `mintVia` (which surface mints it) live in the manifest's **identity layer**, outside the capability bag. Two kinds may share every capability and still be different kinds.
 
 ### The coded manifest — logic lives in the manifest, never on the Element
 
@@ -100,10 +100,11 @@ So *"a `person` node admits only an actual person as a child"* is **not** state 
 type KindManifest = {
   // --- identity layer (Asterisk 3 — irreducible; capabilities don't determine it) ---
   kind: Kind;
-  pickerLabel: string;
+  pickerLabel: string;                       // display name in its minting affordance
+  mintVia: 'composer' | 'node-create';       // which surface offers this kind: inline field-composer vs CreateNode button
 
   // --- presentation (a skin over the bag, not a capability) ---
-  Renderer: Component<FieldRendererProps>;   // every kind renders something; +resolver iff reads.resolver
+  Renderer: Component<RendererProps>;        // kind-agnostic: inline kinds draw a Card row, re-root kinds draw a view; +resolver iff reads.resolver
   placement: 'inline' | 're-root';           // where this kind draws its own surface (≠ navigability)
 
   // --- capabilities (each optional; absence = origin in that axis) ---
@@ -137,16 +138,18 @@ type KindManifest = {
 
 `Kind` and `DataFieldValue` are **derived from** the registry of these manifests, not hand-maintained beside it (closes LATER registry item (f)): a missing or mistyped kind is a compile error.
 
-Note the value-presupposing machinery — `defaultConfig`, `ConfigForm`, `displayPreview`, value `validate`/`equals` — now lives **inside `ownValue` (`ValueSpec`)**, not at the top level (Q1). A value-less kind (`node`, `image-with-caption`, `asset-doc`) omits `ownValue` and all of it disappears, instead of supplying no-op stubs. `Renderer` and `placement` stay top-level because every kind renders something somewhere.
+Note the value-presupposing machinery — `defaultConfig`, `ConfigForm`, `displayPreview`, value `validate`/`equals` — lives **inside `ownValue` (`ValueSpec`)**, not at the top level. A value-less kind (`node`, `image-with-caption`, `asset-doc`) omits `ownValue` and all of it disappears, instead of supplying no-op stubs. `Renderer` and `placement` stay top-level because every kind renders something somewhere.
 
 `placement` is orthogonal to **navigation-on-tap**. A reference kind is `inline` (its row lives on the Card) yet navigates to its *target* on tap; that is a reference behavior, not a placement. `placement` only says where *this* kind's surface is drawn — on the parent's Card (`inline`) or as its own view you navigate *into* (`re-root`).
+
+`RendererProps` generalizes today's field-only `FieldRendererProps` (`id` / `fieldDefinitionId` / `value` / `pendingMode`): an `inline` kind receives the field-row contract, a `re-root` kind the view contract, dispatched on `placement`. `mintVia` is a separate axis because the minting surface is *not* derivable from `placement` alone — `other-end` is both `inline` and `re-root`, and inline field-kinds (`text-kv`, …) all mint via `'composer'`.
 
 ### Descriptor types
 
 Exactly the descriptor referenced by each present capability applies.
 
 ```ts
-// OwnValue descriptor — everything that presupposes the element has its own value (Q1).
+// OwnValue descriptor — everything that presupposes the element has its own value.
 type ValueSpec<TValue = DataFieldValue, TConfig = FieldDefinitionConfig> = {
   defaultValue?: TValue | null;
   equals?: (a: TValue | null, b: TValue | null) => boolean;          // structural; default === (avoids bundled-object ref bugs)
@@ -158,11 +161,11 @@ type ValueSpec<TValue = DataFieldValue, TConfig = FieldDefinitionConfig> = {
   displayPreview: (value: TValue | null, config: TConfig) => string | null;
 };
 
-// Children — merges the former Composition + TreeBehavior. One capability for "this Element has children."
+// Children — one capability for "this Element has children."
 type ChildrenSpec = {
-  template?: SubFieldSpec[];               // fixed core (the former composite): kind-constrained, minted atomically
-  open?: { childKinds: '*' | Kind[] };     // open user-grown bag (the former node)
-  // a kind may have template, open, or BOTH (fixed core + open tail) — no longer a cross-capability arbiter
+  template?: SubFieldSpec[];               // fixed core: kind-constrained, minted atomically
+  open?: { childKinds: '*' | Kind[] };     // open user-grown bag
+  // a kind may have template, open, or BOTH (fixed core + open tail)
   aggregates?: SourceSpec;                 // node-scoped rollup (Logbook); same SourceSpec as Derivation
   autoProvision?: AutoProvisionSpec;
   container?: 'physical' | 'logical';
@@ -213,14 +216,14 @@ type ActionSpec = {
   idempotencyKey?: (el: Element) => string;   // exactly-once guard so offline replay can't double-fire
 };
 
-// Auto-provisioning / lifecycle; DESCRIBED for completeness, DEFERRED to build.
+// Auto-provisioning / lifecycle — declarative, idempotent, framework-executed (NOT Action). DESCRIBED; build DEFERRED.
 type AutoProvisionSpec =
   | { rule: 'propagate-down' }                          // logbook seeds down the subtree
   | { rule: 'synthetic-container'; container: Kind };   // job → minted Jobs container
 
 // Arbitration — resolves a contending capability pair (Asterisk 1). DESCRIBED now.
 type ArbiterSpec =
-  | { rule: 'own-value-overrides-derivation' };   // inherit-unless-override (the fixed-core/open-tail arbiter is retired)
+  | { rule: 'own-value-overrides-derivation' };   // inherit-unless-override
 ```
 
 ### The resolver capability
@@ -269,6 +272,8 @@ export const KIND_REGISTRY = {
 } satisfies Record<Kind, KindManifest>;
 ```
 
+*(Target shape. Today `KIND_REGISTRY` is typed `satisfies Record<ComponentType, KindManifest>` and holds only the four field kinds — `node` is excluded and rendered by the framework `TreeNode`. Widening the registry key from `ComponentType` to `Kind` is the migration step that admits `node` and the node-behavior kinds.)*
+
 Adding a kind is the **only** place the framework learns about it:
 
 1. Add the kind to the registry source of truth (the `Kind` union derives from it).
@@ -287,7 +292,7 @@ The one substrate (`Element` + capabilities) carries **two populations**, distin
 - **The business tree** — Assets / Nodes / Fields / Jobs / Logbooks / Persons. Per-asset-tree user data with full **business history** ("who changed this torque value, when"). This is what the app is *about*.
 - **The Library** — the authored **Definitions** (a.k.a. **Templates**) that instances are minted from. Globally shared, with its own edit history so a Definition can *evolve in place* rather than a Field dying when superseded — but **not** business history; who minted a Definition is irrelevant to an Asset.
 
-**Turtles all the way down in *mechanism*; two trees in *population*.** Both populations are built from the same recursive Element+capability machinery (children, LWW, history); they differ only in tree and sync rules. So a `FieldDefinition` is **not** a business Element (Q3 answered: *no*) — yet it is edited through the same Treeview and built from the same parts.
+**Turtles all the way down in *mechanism*; two trees in *population*.** Both populations are built from the same recursive Element+capability machinery (children, LWW, history); they differ only in tree and sync rules. So a `FieldDefinition` is **not** a business Element — yet it is edited through the same Treeview and built from the same parts.
 
 ### Definition generalizes (FieldDefinition → Definition / Template)
 
@@ -398,7 +403,7 @@ const imageWithCaptionManifest: KindManifest = {
 
 The on-asset nameplate: a grid of pure `Label : Value` rows (Manufacturer / Model / Serial / Voltage / RPM / …) transcribed from the physical plate. It is the stress test for `Children(template)` *at scale*, and — unlike `image-with-caption`, whose template is hardcoded — its child set is **user-configurable**. The resolution is the *Two populations* seam, **not** runtime template mutation:
 
-- **Kinds are dev-authored; Definitions are user-authored.** There is **one** `equipment-plate` kind. "Equipment Plate (AC motor)" is **not** a new kind — it is a **narrower Definition** in the Library, minted from the general one. Users compose Definitions; they never author kinds (that would be a framework change). This is precisely why the two populations exist (Q3): the general dev Definition and a user's narrowed Definitions are the same kind, different Library entries.
+- **Kinds are dev-authored; Definitions are user-authored.** There is **one** `equipment-plate` kind. "Equipment Plate (AC motor)" is **not** a new kind — it is a **narrower Definition** in the Library, minted from the general one. Users compose Definitions; they never author kinds (that would be a framework change). This is precisely why the two populations exist: the general dev Definition and a user's narrowed Definitions are the same kind, different Library entries.
 - **The template is Definition-sourced, not manifest-fixed.** `image-with-caption` hardcodes its 2-entry template in the manifest because it is a fixed primitive with no Definition. equipment-plate's manifest declares only that this kind *has* a Definition-authored child set; the template **contents come from the chosen Definition** — exactly the "a Definition declares its instances' child policy" rule (*Definition generalizes*). One `ChildrenSpec.template` shape, two sources: manifest-fixed (primitive) vs. Definition-authored (configurable composite).
 - **Pure children — `text-kv` only.** A nameplate is verbatim text: no units, no ranges, no `LL ≤ L ≤ nominal ≤ H ≤ HH` validity, no decimals. So every plate row is a `text-kv` (label = the child's `name`, value = free text), and `ValueSpec`-config complexity never enters. The authoring form is therefore just the **enum-kv option-editor pattern** — "add any number of rows" — pointed at label:value specs instead of enum options.
 - **General vs. narrow = open tail vs. pinned template.** A *general* plate Definition leans on an **open `text-kv` tail** (`open: { childKinds: ['text-kv'] }`) so the field user transcribes whatever rows their plate actually has. A *narrow* Definition (AC motor) **pins** the expected rows as a `template` and may drop the tail. Same kind; this fixed-core + open-tail combination is the Asterisk-2 *valid* case, kept entirely within `text-kv`.
@@ -483,7 +488,7 @@ External URL reference. `target.scope: 'external'`, value `{ url }`. "Open out" 
 - `authorFrom: 'target'` — *appears-also-under*. From the element itself you add an additional parent. Default `render: 'portal'`.
 - `authorFrom: 'both'` — both entry points; they converge on the identical write.
 
-**Data-model rule (Q5):** there is **one canonical `parentId`**; virtual appearances are overlay edges, not a second graph. A virtual parent sees the virtual child as its own child. Distinguish **detach** (remove a virtual appearance → element survives under its canonical parent) from **delete** (remove the canonical element → it and all appearances vanish). Moving an end edits a parent (canonical, or the virtual edge). No graph DB. **Open:** confirm the resolver/sync path treats this target-owned edge identically to a referrer-owned one.
+**Data-model rule:** there is **one canonical `parentId`**; virtual appearances are overlay edges, not a second graph. A virtual parent sees the virtual child as its own child. Distinguish **detach** (remove a virtual appearance → element survives under its canonical parent) from **delete** (remove the canonical element → it and all appearances vanish). Moving an end edits a parent (canonical, or the virtual edge). No graph DB. **Open:** confirm the resolver/sync path treats this target-owned edge identically to a referrer-owned one.
 
 ### `approval` (version reference, `Edges(internal,revision) + Reads.resolver`)
 
@@ -513,11 +518,11 @@ A node with an intrinsic value — a Job's status, a Logbook's open-count — re
 
 ### `logbook` (node behavior) + `log-entry` (bounded node)
 
-`logbook`: `Children(open: { childKinds: ['log-entry'] }, aggregates: SourceSpec(subtree, ['log-entry']), container: physical, autoProvision: propagate-down)`. A Logbook is a node whose children are Log Entries. Its card shows **its own direct entries and a rollup of its descendants' entries** — an entry authored locally at any node surfaces on every ancestor Logbook without losing where it was written (Q6: descendant rollup).
+`logbook`: `Children(open: { childKinds: ['log-entry'] }, aggregates: SourceSpec(subtree, ['log-entry']), container: physical, autoProvision: propagate-down)`. A Logbook is a node whose children are Log Entries. Its card shows **its own direct entries and a rollup of its descendants' entries** — an entry authored locally at any node surfaces on every ancestor Logbook without losing where it was written.
 
-`log-entry`: a node with a **bounded** child policy (`Children(template + kind-constrained tails)`, `placement: inline`) — embracing the composite/node collapse (Q4). Its parts are child Elements (each with its own history): a **body** (singleton `text-kv`) plus **collections** of tags / flags / ratings / @-mentions (`cardinality: 'many'`, kind-constrained — the fixed core + open tail, now internal to one `ChildrenSpec`). The child set is declared by the **Log-Entry Definition**, not user-grown willy-nilly (*Two populations*). 
+`log-entry`: a node with a **bounded** child policy (`Children(template + kind-constrained tails)`, `placement: inline`). Its parts are child Elements (each with its own history): a **body** (singleton `text-kv`) plus **collections** of tags / flags / ratings / @-mentions (`cardinality: 'many'`, kind-constrained — the fixed core + open tail, now internal to one `ChildrenSpec`). The child set is declared by the **Log-Entry Definition**, not user-grown willy-nilly (*Two populations*). 
 
-**Per-field edit policy (new, Q6).** The body is editable **only by the original author**; flags / ratings / etc. may be **others-editable** — a per-field authorization that is itself **config** (a meta-field on the Definition), not a new capability. All of it is business data with history.
+**Per-field edit policy.** The body is editable **only by the original author**; flags / ratings / etc. may be **others-editable** — a per-field authorization that is itself **config** (a meta-field on the Definition), not a new capability. All of it is business data with history.
 
 Cross-cutting services — notifications, bubbling alerts, action icons, @-mention *delivery* — are systems over entries, **not** structural children; deferred and kept out of the template. (Bubbling alerts is the same descendant-propagation concept as the Logbook rollup — a system, not a field.)
 
@@ -544,24 +549,25 @@ An element that, when activated, **emits commands that affect a different part o
 
 ## Resolved decisions
 
-These settle the former Open Questions Q1–Q6 and the capability-set discussion.
+The settled decisions behind the model above.
 
 - **Capability set is closed and small (Open/Closed).** Six: **OwnValue · Children · Edges · Derivation · Reads · Action**. Adding a kind is cheap; adding a capability is a deliberate framework change. A need is a new capability only if it introduces a sync rule or a read/compute/**write** path none of the six has.
-- **`Children` merges Composition + TreeBehavior.** One capability for "this Element has children," with a `ChildrenSpec` that may carry a `template`, an `open` bag, or both. Removed a cross-capability arbiter (Asterisk 1). `placement` carries the inline-vs-re-root UX distinction.
-- **`Action` is the sixth capability — the only write/effect path.** Imperative command (reuses the CommandBus); effects are ordinary Element mutations. Non-idempotent under offline replay → needs `idempotencyKey` + `confirm`. Build last; likely never user-authorable.
-- **Two populations, one substrate (Q3 answered: *no*).** `FieldDefinition` is **not** a business Element. The Library and the business tree are two populations over the same Element+capability mechanism; Definitions/Templates generalize across kinds; meta-field recursion terminates structurally. See *Two populations and Definitions*.
-- **Q1 — `ValueSpec` defined.** `OwnValue`'s descriptor holds everything that presupposes an own value: value default / validate / equals / `displayPreview` **and** the value config schema (`defaultConfig` / `validateConfig` / `ConfigForm`). These moved off the top-level manifest into `ownValue`, so value-less kinds omit them. The *concrete* configured values (units="psi", decimals=2) remain per-Definition data, not in `ValueSpec`.
-- **Q2 — `coherence` is per-manifest for now.** Each kind validates its own capability set; extract to a central rule engine once many kinds exist.
-- **Q4 — embrace the collapse.** Resolved by the `Children` merger: do not police "composite vs node." Child policy (`template` / `open`, kind constraints) is declared per kind; most kinds bottom out shallowly.
-- **Q5 — one canonical parent, overlay appearances; no graph DB.** Distinguish **detach** (remove an appearance) from **delete** (remove the canonical element). Moving an end edits a parent. Single canonical `parentId`.
-- **Q6 — Logbook is a descendant rollup.** Logbook = node of Log Entries; Log Entry = bounded node (body + tag/flag children) whose child set is declared by its Definition. Body is author-only-editable; flags/etc. may be others-editable — a per-field edit policy that is itself config (a meta-field). All business data with history.
+- **`Children` is one capability.** "This Element has children," with a `ChildrenSpec` that may carry a `template`, an `open` bag, or both — no cross-capability arbiter (Asterisk 1). `placement` carries the inline-vs-re-root UX distinction.
+- **`Action` is the only write/effect path.** Imperative command (reuses the CommandBus); effects are ordinary Element mutations. Non-idempotent under offline replay → needs `idempotencyKey` + `confirm`. Build last; likely never user-authorable.
+- **Two populations, one substrate.** `FieldDefinition` is **not** a business Element. The Library and the business tree are two populations over the same Element+capability mechanism; Definitions/Templates generalize across kinds; meta-field recursion terminates structurally. See *Two populations and Definitions*.
+- **`ValueSpec` holds the value-presupposing machinery.** Value default / validate / equals / `displayPreview` **and** the value config schema (`defaultConfig` / `validateConfig` / `ConfigForm`) live in `ownValue`, so value-less kinds omit them. The *concrete* configured values (units="psi", decimals=2) remain per-Definition data, not in `ValueSpec`.
+- **`coherence` is per-manifest for now.** Each kind validates its own capability set; extract to a central rule engine once many kinds exist.
+- **Embrace the composite/node collapse.** Do not police "composite vs node." Child policy (`template` / `open`, kind constraints) is declared per kind; most kinds bottom out shallowly.
+- **One canonical parent, overlay appearances; no graph DB.** Distinguish **detach** (remove an appearance) from **delete** (remove the canonical element). Moving an end edits a parent. Single canonical `parentId`.
+- **Logbook is a descendant rollup.** Logbook = node of Log Entries; Log Entry = bounded node (body + tag/flag children) whose child set is declared by its Definition. Body is author-only-editable; flags/etc. may be others-editable — a per-field edit policy that is itself config (a meta-field). All business data with history.
+- **Node-behavior traits don't breach the closed-capability set.** Two `ChildrenSpec` traits reach past plain child-holding, and neither adds a capability. `aggregates` is **`Derivation` scoped to a subtree** (one `SourceSpec`, two consumers — node-scoped rollup and field-scoped derivation), not a Children-native compute. `autoProvision` mints Elements but is **declarative, idempotent, and framework-executed** — the synthetic container is minted-once / exists-or-created, seeding is deterministic, over the *same* create path `onCreate` already uses, introducing no new sync rule. `Action` stays the **only** write/effect capability because `Action` is **imperative, user-triggered, and non-idempotent under offline replay**; `autoProvision` is none of those. So `autoProvision` is lifecycle policy on `Children`, not `Action` and not its own capability — the six stay closed.
 - **`equipment-plate` / configurable composites — Definition-sourced templates.** A configurable composite is solved by the *two populations*, not by runtime template editing: **one** dev-authored `equipment-plate` kind, whose template **contents come from a Definition**, with users authoring **narrower Definitions** (e.g. *AC motor*) of that same kind. Children are pure `text-kv` (no units/ranges), so the Definition-authoring form is the existing enum-kv option-editor ("add N rows"). General plate = open `text-kv` tail; narrow plate = pinned `template`. Contrast: `image-with-caption` is manifest-fixed, equipment-plate is Definition-sourced — same `ChildrenSpec.template` shape, two origins. Detailed authoring **UX deferred**; model settled.
 - **Meta-fields live in both populations (a 2×2), and recursion terminates by an acyclic manifest chain.** Guidance/notes and value-data each exist at both the Library (Definition) and business (instance) level — including **per-instance** notes, not only Definition-level guidance. Same mechanism (a Field carrying child Fields); cells differ by population and render surface (extras mostly drill into Field Details). Termination is **not** a depth counter: each level's meta-field is minted from a strictly *smaller* kind than its parent until one declares no config (`field → threshold → alert-type → ⊥`), forbidding cycles by construction. Structural depth is manifest-bounded (~2 user-grown, ~3 dev-authored); **product policy caps user-authored depth at two levels**, deeper config is dev-only. See *Meta-fields, and why the turtles terminate*.
 - **Render precedence (Asterisk 1) — surface assignment, not a layout arbiter.** The primary surface (value / edge-link / children-when-sole-content) owns the inline Data Card row alone; `Children` co-occurring with `OwnValue` or `Edges` is annotation and renders in **Field Details**. So `labeled inline edge` needs no arbiter: the edge is the inline row, its annotation children (business meta-fields) live in Field Details. The only remaining `arbiter?` consumer is **OwnValue + Derivation** (inherit-unless-override).
 
 ## Open questions
 
-1. **Arbiter & auto-provision classification.** Is `ArbiterSpec` a closed set of pairwise rules or a general resolver? Is `autoProvision` a `Children` sub-property (as now) or its own capability a non-tree kind might want?
+1. **Arbiter classification.** Is `ArbiterSpec` a closed set of pairwise rules or a general resolver? (`autoProvision`'s classification is resolved above — it stays a declarative `Children` sub-property, not its own capability.)
 2. **`value-chart` / `status`.** Does value-status (stale / warn / alarm) live as a `ValueSpec` method or as a `Reads.historyStream` capability, since it reads history? (Loops back to the capability-vs-kind test.)
 3. **`other-end` target-owned edge** — confirm the resolver/sync path treats a target-owned edge identically to a referrer-owned one.
 4. **Action exactly-once** — the offline-replay idempotency mechanism (keys, dedupe window) for `Action`, when it is eventually built.
@@ -572,6 +578,7 @@ These settle the former Open Questions Q1–Q6 and the capability-set discussion
 
 This is a planning/docs document; the "implementation" is this file. As sections settle and are reviewed:
 
-1. **SPECIFICATION.md** — migrate the settled **Capability Model** (the manifest, the three asterisks, the validity rules, the resolver contract, the two populations) into the main spec under DataField Components.
+1. **SPECIFICATION.md** — migrate the settled **Capability Model** (the manifest, the three asterisks, the validity rules, the resolver contract, the two populations) into the main spec under DataField Components. Two framing edits travel with it: rewrite SPEC's *"Node is the privileged Kind / node renderer lives outside the registry"* to *"the **shell** is privileged; `node` is the degenerate re-root kind in the registry,"* and rename Field-kind framing to **Element**-kind where SPEC over-narrows.
+   - **Code touch-points (today → target).** `src/kinds/types.ts` already flags these as Phase-2 (its header: *"the `node` kind is privileged — its recursion/navigation lives in the framework (TreeNode), not here. Phase-2 manifest fields (placement, nature, icon, lazy renderers) are intentionally absent"*). Migration: widen `Kind` / `KIND_REGISTRY` from `Record<ComponentType, KindManifest>` (four field kinds today) to admit `node` and the node-behavior kinds; add `placement` + the capability fields to `KindManifest`; add `mintVia` to the identity layer; generalize `FieldRendererProps` → a placement-keyed `RendererProps`.
 2. **LATER.md** — remove the now-superseded notes: "Renderer registry — Phase 2", "`single-image` is a latent 2-part composite", the Phase-2 FieldComponents promoted into the catalogue, and any reference/composite notes folded into this doc.
 3. **ISSUES.md** — file the implementation work items that fall out of the settled API (start with `base + ownValue + children(template)`, then the resolver for `edges`/`derivation`).
