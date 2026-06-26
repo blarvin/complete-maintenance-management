@@ -16,7 +16,7 @@ This structure enables users to construct, explore, and understand detailed hier
 
 ## Concepts & Vocabulary
 
-This spec speaks in two registers, and keeping them distinct is the whole game. The user navigates **surfaces**; the system stores one primitive, the `Element`. The boundary between the two registers is **declared once, here** — after which every other section may use either word set unambiguously. Two surfaces — **Node** and **Field** — are *primary*: they carry the entire experience, and every other surface is built in their terms (see **The two primary Kinds** below).
+This spec speaks in two registers, and keeping them distinct is the whole game. The user navigates **surfaces**; the system stores one primitive, the `Element`, drawn by the **manifest** its `kind` selects. The boundary between the two registers is **declared once, here** — after which every other section may use either word set unambiguously. Two surfaces — **Node** and **Field** — are *primary*: they carry the entire experience. At the storage layer they are not two systems but two regions of one spectrum of kinds (see **One substrate, a spectrum of kinds** below).
 
 **Surfaces** — what the user sees; what we say in intent and UI copy. Stable pattern language; the set grows as the product does.
 
@@ -28,7 +28,7 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 | **Field**                                                | One fact on a Card — a `Label : Value` row, or a more comoprehensive display of data or facts directly associated with the Node, such as an image carousel or chart of values.                                                                                                                        |
 | **Field Details**                                        | A Field's metadata (context) and management actions.                                                                                                                                                                                                                                                  |
 | **Field History**                                        | A Field's append-only value audit.                                                                                                                                                                                                                                                                    |
-| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surfaces, added as the product grows — each introduced as a **variety of Field** or a **behavior of Node** (see *The two primary Kinds*), never as a free-standing primitive beside them.                                                                                                         |
+| *(future)* **Job, Logbook, Log Entry, Setting, Person…** | New surfaces, added as the product grows — each introduced as a new **kind** composing the six capabilities (see *One substrate, a spectrum of kinds*), never as a free-standing primitive beside them.                                                                                                         |
 
 
 **Storage & runtime** — what the system actually keeps and runs.
@@ -37,35 +37,39 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 | Term                | What it is to the system                                                                                                                                                                 |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Element**         | The single recursive record. *Every surface above is an Element.*                                                                                                                        |
-| **kind**            | The field on an Element that selects how it is drawn (`node`, `text-kv`, `image-gallery, value-chart`…).                                                                                 |
-| **Renderer**        | Code that draws an Element for a surface. The `TreeNode` component renders Node surfaces; each `FieldComponent` renders a Field. **New surfaces ship as new renderers, not new tables.** |
-| **FieldDefinition** | A Library entry — a named, configured `kind` users pick to mint a Field. Many instances of a given FieldDefinition may appear across the app, associated with their parent Node.         |
-| **FieldComponent**  | The dev-authored renderer + value type + config schema behind a field `kind`.                                                                                                            |
+| **kind**            | The immutable field on an Element that dispatches into the registry (`node`, `text-kv`, `number-kv`, `job`, `value-chart`…). The *only* hard discriminant in the system.                 |
+| **manifest**        | The module-level record, keyed by `kind`, holding all of that kind's behaviour — capability subset, descriptors, and `Renderer`. Looked up at runtime; **never stored on an Element.**   |
+| **capability**      | One of the six composable behaviours (OwnValue, Children, Edges, Derivation, Action, Reads) a manifest draws from. A kind is the origin displaced by a capability subset.                |
+| **placement**       | A manifest field: where a kind draws its surface — `inline` (a Field-like row on a Data Card) or `re-root` (a Node-like navigable view). Placement, not a separate table, separates node-like from field-like. |
+| **Renderer**        | Code that draws an Element for a surface, selected by `placement`. **New surfaces ship as new manifests, not new tables.**                                                              |
+| **FieldDefinition** | A Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose config is its child sub-field Elements. Instances bind to it by `fieldDefinitionId`.                                                                                                            |
 
 
-**The bridge, in one sentence:** *every surface is one Element drawn by the renderer its `kind` selects — the user navigates surfaces; the system stores Elements.*
+**The bridge, in one sentence:** *every surface is one Element drawn by the renderer its `kind`'s manifest supplies — the user navigates surfaces; the system stores Elements and looks up behaviour by `kind`.*
 
 **Naming discipline:**
 
 - Intent/PRD prose and UI copy use **surface** words (Node, Field, Card).
 - Data-model and runtime prose use **storage** words (Element, kind, renderer).
-- `TreeNode`, `DataCard`, `DataField`, `DataFieldDetails` survive as **component (renderer) identifiers in code — not storage entities.** The only storage entities are `Element`, `ElementHistory`, and`FieldDefinition`.
+- `TreeNode`, `DataCard`, `DataField`, `DataFieldDetails` survive as **component (renderer) identifiers in code — not storage entities.** The only storage entity is the `Element` (with its append-only `ElementHistory`); a FieldDefinition is just an Element in the `library` tree.
 
-### The two primary Kinds
+### One substrate, a spectrum of kinds
 
-The `Element` primitive is a uniformity for storage, history, and sync — not something the user ever meets generically. Every Element has a `kind`, and two Kinds are **primary**: they carry the entire experience, and everything else is built in their terms.
+The `Element` primitive is a uniformity for storage, history, and sync — not something the user ever meets generically. Every Element has a single immutable `kind`, and every kind — node-like or field-like — is composed from **one** closed capability vocabulary (see *Data Model*). Node-like and field-like are **not two systems**; they are two regions of one composition space, distinguished by `placement` (`re-root` vs `inline`) plus capability emphasis.
 
-- **Node** (rendered as a **TreeNode**) — a thing, or one of its constituent parts. A Node has identity (Title + Subtitle), nests into other Nodes, and is *navigated into*. **Nodes are the Tree.** Node is the privileged Kind: recursion, navigation, and the Data Card all exist to serve it — which is why the node renderer lives in the framework, not in the kind registry.
-- **Field** (rendered as a **DataField**) — a single unit of recorded knowledge attached to a Node: a typed `Label : Value` with its own Details and History. A Field does *not* nest into the Tree; it lives on its Node's Data Card and is *edited in place*. A Field's **type** — text, enum, number, image, and the kinds added later — is an open, extensible set: these are **varieties of Field**, each supplied by a FieldComponent (renderer).
+At the **surface** layer, the user meets two primary surfaces:
 
-So `Element.kind` is either `node` or one of the Field varieties; "Field" is the category embracing every non-`node` kind. Node is the one fixed Kind; the Field varieties are where the system is *meant* to grow. Future surfaces (Job, Logbook, Setting, …) enter as new varieties of Field or new behaviors of Node — never as primitives standing beside them.
+- **Node** (rendered as a **TreeNode**) — a thing, or one of its constituent parts. A Node has identity (Title + Subtitle), nests into other Nodes, and is *navigated into*. **Nodes are the Tree.** `node` is a kind in the registry like any other (`{Children(open)}`); its recursion and navigation are owned by the **shell**, not by a kind privilege. There is no privileged *kind* — only a privileged *shell* and *root position* (`parentId: null`).
+- **Field** (rendered as a **DataField**) — a single unit of recorded knowledge attached to a Node: a typed `Label : Value` (and richer surfaces — galleries, charts, links) with its own Details and History. A Field does *not* nest into the Tree; it lives on its Node's Data Card and is *edited in place*. The set of field kinds is open and extensible — each supplied by a manifest.
 
-**Design invariant — keep it Tree-, Node-, and Field-shaped.** The unified `Element` model makes it *cheap* to add surfaces; this invariant is what keeps that cheapness from dissolving the product into a featureless soup. New capability arrives as a new variety of Field hanging off a Node, or as a Node behavior — not as a new top-level concept competing with the Tree/Node/Field model. Before adding any surface, ask: *is this a Field variety, or a Node behavior?* If it is neither, be deeply suspicious — that is the road to mush. Variety is welcome; new primaries are not.
+So `Element.kind` is `node` or any other kind; "Field-like" is the inline region of the spectrum, "Node-like" the re-root region. The kinds are where the system is *meant* to grow: future surfaces (Job, Logbook, Setting, …) enter as new kinds composing the same six capabilities — never as primitives standing beside the Element model. The full catalogue of kinds lives in **ELEMENT-MODEL.md**.
+
+**Design invariant — keep it Tree-, Node-, and Field-shaped.** The unified `Element` model makes it *cheap* to add surfaces; this invariant keeps that cheapness from dissolving the product into a featureless soup. A new kind must **earn the registry** by composing non-trivial behaviour from the six capabilities (see *Data Model → Earning a kind*); a behaviour-free domain label is a soft `typeOf` tag, not a kind. Before adding any kind, ask: *what does it compose that the existing vocabulary can't already express?* If the answer is "nothing," it is a tag or a renderer, not a new kind. Variety is welcome; new primitives are not.
 
 ## Core Principles
 
 - **Recursive Tree Structure**: Every node is much the same as any other and can have any number of child nodes.
-- **Self Similarity**: A single node-renderer (the `TreeNode` component) draws every Node at every depth — and the same self-similarity now spans the Node/Field merge: one `Element` model underlies both, drawn by the renderer its `kind` selects (see Concepts & Vocabulary). New surfaces (Jobs, Logbook, …) are new renderers over that one model, not new data models.
+- **Self Similarity**: A single node-renderer (the `TreeNode` component) draws every Node at every depth — and the same self-similarity spans the whole spectrum: one `Element` model underlies node-like and field-like alike, each drawn by the renderer its `kind`'s manifest supplies (see Concepts & Vocabulary). New surfaces (Jobs, Logbook, …) are new manifests over that one model, not new data models.
 - **Self-Construction**: Users are fully enabled to create and edit assets, structure, and attributes.
 - **All-Editable**: Everything is edited, changed, added by Users (except metadata).
 - **Modeless In-Situ Editing**: Edit without leaving the tree view or entering edit modes
@@ -152,7 +156,7 @@ So `Element.kind` is either `node` or one of the Field varieties; "Field" is the
 ***Intent:*** *facts about a thing are captured and corrected right where they sit, and every change is kept — so the record can always be trusted and walked back.*
 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
-- **Create Data Fields**: Two surfaces sit at the bottom of the DataCard in display mode. A legacy **+ Add Field** (singular) dropdown is the quick-add path — pick one FieldDefinition, the DataField is created immediately. A **+ Add Fields** (plural) button expands the **Field Composer** alongside it for batch-add and FieldDefinition authoring: an inline section showing every available FieldDefinition as a row in a single list, each with a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that FieldDefinition (rendered with its real FieldComponent). Save commits every checked row as a real DataField on the node; Cancel discards them. The Composer also hosts the "+ New Field Definition…" authoring affordance. See "Field Composer" and "DataField Components, Field Definitions, and Library" below.
+- **Create Data Fields**: Two surfaces sit at the bottom of the DataCard in display mode. A legacy **+ Add Field** (singular) dropdown is the quick-add path — pick one FieldDefinition, the DataField is created immediately. A **+ Add Fields** (plural) button expands the **Field Composer** alongside it for batch-add and FieldDefinition authoring: an inline section showing every available FieldDefinition as a row in a single list, each with a checkbox; checking a row replaces the label-only row in-place with a live editable preview of that Definition (rendered with its real kind manifest). Save commits every checked row as a real DataField on the node; Cancel discards them. The Composer also hosts the "+ New Field Definition…" authoring affordance. See "Field Composer" and "DataField Components, Field Definitions, and Library" below.
 - **Delete Data Field**: Expand the DataFieldDetails to see a "Delete" button at the bottom of the section. Snackbar with Undo follows (see Snackbar & Undo).
   - **Soft Delete**: DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
   - A `DataFieldHistory` entry with `action: "delete"`, `property: "value"`, and `newValue: null` is written only after the undo window elapses.
@@ -299,10 +303,10 @@ The composer is a single inline-expanded section within the DataCard, distinguis
 
 1. **In-situ FieldDefinition list** — every active FieldDefinition appears as a row, sorted alphabetically by label. Each row has a checkbox. A **"+ New Field Definition…"** affordance appears as the first row, expanding inline into the authoring form (see FieldDefinition Authoring UI).
   - **Unchecked row**: checkbox + FieldDefinition label only.
-  - **Checked row**: checkbox + a live, editable preview of that FieldDefinition, rendered with its actual FieldComponent (TextKvField, EnumKvField, NumberKvField, SingleImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full FieldComponent preview; unchecking collapses it back to label-only.
+  - **Checked row**: checkbox + a live, editable preview of that Definition, rendered with its actual kind manifest renderer (TextKvField, EnumKvField, NumberKvField, ImageField). Toggling the checkbox replaces the row in-place — checking expands the row into the full manifest preview; unchecking collapses it back to label-only.
   - **Locked checked row** (construction mode defaults only): rendered as a checked row, but the checkbox is disabled.
   - The preview is fully editable: the user can set the value, etc. Nothing is persisted to storage until **Save**.
-  - Rows transition smoothly (~200ms) on toggle. On check, the *checkbox* is anchored in the viewport so a tall preview (single-image especially) doesn't shove the user's place off-screen.
+  - Rows transition smoothly (~200ms) on toggle. On check, the *checkbox* is anchored in the viewport so a tall preview (an `image` especially) doesn't shove the user's place off-screen.
   - (Grouping rows by `category` into collapsible sections is [Phase 2+], deferred until FieldDefinition count makes a flat list unwieldy.)
 2. **Sticky Save / Cancel footer** — pinned to the bottom of the viewport while the composer is in view, so a long list doesn't bury the actions. Save disabled (display mode) when no rows are checked.
 
@@ -324,7 +328,7 @@ Construction-mode "pending forms" and display-mode "newly-added field draft" are
 The two pending-state shapes inside the Composer are distinct:
 
 - **Pending DataField draft** (`pendingForm` in `usePendingForms`) — a checked row holds an in-progress *value* for an existing FieldDefinition. Committed by Save → writes a `DataField`.
-- **Pending FieldDefinition draft** — the "+ New Field Definition…" form holds an in-progress *FieldDefinition* (componentType, label, config). Committed by Save → writes a `FieldDefinition`, then *immediately* spawns a pre-checked pending DataField draft for it at the same row position.
+- **Pending FieldDefinition draft** — the "+ New Field Definition…" form holds an in-progress *Definition* (kind, label, config sub-fields). Committed by Save → writes a Library-tree Definition Element (and its config subtree), then *immediately* spawns a pre-checked pending DataField draft for it at the same row position.
 
 These are deliberately separate hooks/states because a DataField cannot exist without a FieldDefinition to anchor it.
 
@@ -334,30 +338,30 @@ These are deliberately separate hooks/states because a DataField cannot exist wi
 
 ### Conceptual hierarchy
 
-Three concepts, three layers — each is the precondition for the next:
+Three layers — each is the precondition for the next:
 
-1. **FieldComponent** — dev-authored code: a renderer + value type + config schema, identified by `componentType` (e.g. `"text-kv"`, `"enum-kv"`). The closed set is owned by the dev team; users cannot create FieldComponents.
-2. **FieldDefinition** — a persisted, named, fully-configured kind of field: `{ componentType, label, config, authorId, … }`. FieldDefinitions populate the Library and are what users pick from in the Field Composer. Both dev-seeded entries and every user-authored entry are FieldDefinitions — there is no other species.
-3. **DataField** — an instance of a FieldDefinition, attached to a TreeNode, holding one typed `value`. Snapshots `fieldName` from the FieldDefinition's `label` at creation, so the rare cases of FieldDefinition change don't rewrite user data.
+1. **kind manifest** — dev-authored code: a `Renderer` + capability subset + descriptors, keyed by `kind` (e.g. `"text-kv"`, `"number-kv"`) in the registry. The closed set is owned by the dev team; users cannot author kinds (see *Data Model → Earning a kind*).
+2. **FieldDefinition** — a Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose **config is its child sub-field Elements** (units, thresholds, flags — not a config blob). Definitions are what users pick from in the Field Composer. Both dev-seeded and user-authored entries are Library-tree Elements — there is no other species.
+3. **DataField** (instance) — an Element minted from a Definition, attached to a Node, holding one typed `value` and bound to its Definition by `fieldDefinitionId`. It **copies** its meaning-defining config (owned sub-fields: units, thresholds) at mint and **delegates** the rest (read live from the Definition); `name` is snapshotted at creation, so a forked Definition never rewrites user data.
 
 ```
-FieldComponent (code)
-  └── FieldDefinition (persisted Library entry: Component + label + config)
-       └── DataField (instance on a TreeNode: above + value + parent)
+kind manifest (code: Renderer + capabilities + descriptors)
+  └── FieldDefinition (library-tree Element; config = child sub-field Elements)
+       └── DataField instance (Element on a Node: + value + fieldDefinitionId binding)
 ```
 
-The word **Template** is reserved for a future feature: a *set* of FieldDefinitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the FieldDefinition Library work, and nothing in Phase 1 uses the word "Template".
+The word **Template** is reserved for a future feature: a *set* of Definitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the Library work, and nothing in Phase 1 uses the word "Template".
 
-### Phase 1 FieldComponents
+### Phase 1 field kinds
 
-Four FieldComponents, defined per the per-Component specs further down this section:
+Four field-like kinds, specced in **ELEMENT-MODEL.md → Field-like kinds**:
 
 - `text-kv` — free-form text
 - `enum-kv` — selection from a fixed option list
 - `number-kv` — number with units, display format, nominal value or range, alarm thresholds, and freshness expectation
-- `single-image` — one image attached to a field
+- `image` — one image attached to a field (`image-with-caption` adds a caption sub-field)
 
-Additional FieldComponents (`date-kv`, `composite-kv`, `image-carousel`, `image-grid`, `image-aggregator`, …) are deferred. [Phase 2+]
+Additional field kinds (`date-kv`, `composite-kv`, `image-carousel`, `image-grid`, `asset-gallery`, …) are catalogued in ELEMENT-MODEL.md; build is deferred. [Phase 2+]
 
 ### The Library
 
@@ -365,21 +369,21 @@ The Library is the set of all active FieldDefinitions, surfaced to users as the 
 
 #### One global, shared Library
 
-There is exactly **one** Library, shared across all users via Firestore sync. **Authoring is contributing**: every user-authored FieldDefinition becomes visible in every other user's Composer the next time their client syncs. There is no private/public toggle, no per-workspace scope, no opt-in import step, no moderation, no "personal vs. community" tabs in Phase 1. The picker is the discovery surface.
+There is exactly **one** Library — the `library` typed tree (see *Data Model → Populations are typed trees*) — shared across all users via sync. **Authoring is contributing**: every user-authored Definition becomes visible in every other user's Composer the next time their client syncs. There is no private/public toggle, no per-workspace scope, no opt-in import step, no moderation, no "personal vs. community" tabs in Phase 1. The picker is the discovery surface.
 
 Consequences worth being explicit about:
 
-- A user's authored FieldDefinitions are visible to all other users immediately.
-- Two users can independently author entries with the same `label` — both will appear in the Library. Label uniqueness is not enforced. The Composer's live-preview row (rendered with the actual FieldComponent) is the disambiguation affordance. Deduplication / merging is a future concern.
-- Once authored and synced, a FieldDefinition cannot be removed by any end user (see Edit / Delete below).
+- A user's authored Definitions are visible to all other users immediately.
+- Two users can independently author entries with the same `name` — both will appear in the Library. Label uniqueness is not enforced. The Composer's live-preview row (rendered with the actual kind manifest) is the disambiguation affordance. Deduplication / merging is a future concern.
+- Once authored and synced, a Definition cannot be removed by any end user (see Edit / Delete below).
 
 Privacy implication for the user: labels may carry proprietary information (e.g. a specific manufacturer's serial-format field name). Users should know that what they author is shared. Surfacing this expectation in the authoring UI is a UX concern tracked in ISSUES.md, not a SPEC-level toggle.
 
 #### Where the Library lives
 
-- **Local mirror**: Dexie table `fieldDefinitions` on every client.
-- **Source of truth**: Firestore collection `fieldDefinitions`, synced bidirectionally via the existing sync infrastructure (Push-then-Pull, LWW on `updatedAt`, queued through `SyncQueueManager`). This is the first user-mutable table beyond `elements` / `elementHistory`; the adapter contract extends to cover it.
-- **Seed entries** (the starter set): written client-side by `seedFieldDefinitions.ts` on first run, idempotent via `SEED_VERSION`. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable IDs (`fd_description`, `fd_type_of`, …) let the UI reference defaults by constant, not by label.
+- **A typed tree, not a side table**: a Definition is an `Element` (with `treeType: library`) and its config is its child sub-field Elements; it syncs, history-tracks, and reverts like any other Element. (Current code still keeps a separate `fieldDefinitions` Dexie table with a `config` blob — that is a migration touch-point, see ISSUES.md, not the target.)
+- **Sync**: Library Elements ride the same bidirectional sync as the business tree (Push-then-Pull, LWW on `updatedAt`, queued through `SyncQueueManager`), routed by `treeType` for history/visibility.
+- **Seed entries** (the starter set): written client-side on first run, idempotent via a seed version. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable deterministic ids let the UI reference defaults by constant (`FIELD_DEFINITION_IDS`), not by label.
 - **User-authored entries**: enqueue through the sync queue like any other user write; appear on other clients on next pull.
 
 #### Listing in the Composer
@@ -394,11 +398,11 @@ The "+ New Field Definition…" affordance lives **inside the Field Composer**. 
 
 Clicking the affordance expands an inline authoring form in-place:
 
-1. **Pick FieldComponent** — segmented control with the four Phase-1 choices (`text-kv`, `enum-kv`, `number-kv`, `single-image`).
-2. **Enter label** — text input, max 50 chars, required (must be non-empty trimmed string).
-3. **Component-specific config** — form fields shaped by the chosen FieldComponent (see per-Component specs for the available knobs). Required config (e.g. `enum-kv.options` non-empty, `number-kv.unitsSymbol` non-empty) is enforced before Save. `number-kv` threshold invariants (`LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` in range mode; the equivalent chain across `(nominalValue ± tolerance)` in discrete mode) are validated here — this is the validation gate the SPEC has long promised.
-4. **Save** — commits the FieldDefinition (sync-queued for upload with `authorId: <currentUserId>`, currently `"localUser"`), collapses the authoring form, and **immediately materialises a checked Composer row** at the same position, so the user can fill in the value and proceed to the batch Save in one continuous motion.
-5. **Cancel** — discards the in-progress authoring form. No FieldDefinition is written. The Composer returns to its prior state.
+1. **Pick kind** — segmented control with the four Phase-1 field choices (`text-kv`, `enum-kv`, `number-kv`, `image`).
+2. **Enter label** — text input, max 50 chars, required (must be non-empty trimmed string); becomes the Definition Element's `name`.
+3. **Config sub-fields** — the kind's config schema is its manifest `ChildrenSpec` over config sub-field kinds (template core + open tail); authoring fills those sub-field Elements (see *Data Model → Config is Elements*, and ELEMENT-MODEL.md for each kind's config). Required config (e.g. `enum-kv.options` non-empty, `number-kv` units) is enforced before Save. `number-kv` threshold invariants (`LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` in range mode; the equivalent chain across `(nominalValue ± tolerance)` in discrete mode) are validated here. The generic Treeview is the default authoring UI; a per-kind `ConfigForm` is an optional override for cross-field invariants / progressive disclosure (e.g. `number-kv`).
+4. **Save** — commits the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`, currently `"localUser"`), collapses the authoring form, and **immediately materialises a checked Composer row** at the same position, so the user can fill in the value and proceed to the batch Save in one continuous motion.
+5. **Cancel** — discards the in-progress authoring form. No Definition is written. The Composer returns to its prior state.
 
 The authoring form has **its own pending-state shape**: it is *not* a `pendingForm` from `usePendingForms`, because no DataField exists yet — the FieldDefinition has to commit first before a DataField draft can attach to it. The hook surface for this state is a separate concern; naming TBD during implementation (working name: `useFieldDefinitionDraft`).
 
@@ -428,172 +432,28 @@ UI code references these three by stable ID via the `FIELD_DEFINITION_IDS` const
 - **Templates** (composite sets of FieldDefinitions, e.g. "HPU with Accumulator") — distinct, larger feature.
 - **Composer discovery UX**: typeahead filter, category grouping, popularity ranking, "recently added" sort, dropdown-flip behaviour.
 - **Moderation / promotion to canonical** for crowdsourced entries.
-- `**componentVersion`** for per-FieldComponent contract versioning — only matters once config schemas evolve.
-- **User-facing edit/delete** of FieldDefinitions with real ownership rules.
+- **Versioning by identity, not a field** — `fieldDefinitionId` answers "which version"; a Definition is forked (new id), never mutated, so no `componentVersion` column is needed (value/config shapes are widen-only).
+- **User-facing edit/delete** of Definitions with real ownership rules.
 - **Label uniqueness / dedup / merge** flows.
 - **Dedicated Library view** (the "TreeNode stack under the app's main menu").
-- `**number-kv` per-instance metadata**: a user-set Valid-Until date on each entered value (distinct from the config-level `expectedRefreshSeconds`); per-instance Priority/Severity, Redaction Rule, Source. These belong on `DataField`, not in FieldDefinition `config`, and interact with history/audit in ways the other knobs don't.
+- `**number-kv` per-instance metadata**: a user-set Valid-Until date on each entered value (distinct from the config-level `expectedRefreshSeconds`); per-instance Priority/Severity, Redaction Rule, Source. These belong on the instance Element, not in the Definition's config, and interact with history/audit in ways the other knobs don't.
 - `**number-kv` unit conversion at display time** (e.g. user-preferred metric/imperial). Storage stays canonical; display does the work.
 - **ISO-4217 currency-code picker** for `number-kv` `currencyCode`. Phase 1 is free-text.
-- **Recursive sub-field composition** — config values that are themselves FieldComponent instances (e.g. a fully-composed sub-`number-kv` for `expectedRefresh`). Phase 1 keeps such config as structured primitives.
-- **Reusable config sub-shape extraction** — naming and sharing sub-shapes (e.g. a "ThresholdSet" or "Freshness" used across multiple FieldComponents) once a second Component needs them. Premature in Phase 1.
 
-### Per-FieldComponent specs
+(Recursive sub-field composition and reusable config sub-shape extraction are no longer deferred items — config **is** child Elements; see *Data Model → Config is Elements*.)
 
-#### FieldComponent: `text-kv`
+### Field-kind specs → ELEMENT-MODEL.md
 
-**Purpose**: Free-form text. Current Phase-1 default.
+The full per-kind specifications — composition, value shape, config sub-fields, and edit / display / validation UX — live in **ELEMENT-MODEL.md → Field-like kinds**, one self-contained entry per kind. Phase-1 field kinds: `text-kv`, `enum-kv`, `number-kv` (the deliberately rich one), `image` / `image-with-caption`. The `number-kv` entry is the canonical exercise for the progressive-disclosure + value-driven conditional-reveal authoring patterns the wider Library-authoring UI reuses.
 
-**FieldDefinition config**:
-
-
-| Field       | Type    | Default | Notes                     |
-| ----------- | ------- | ------- | ------------------------- |
-| maxLength   | number? | 500     | Hard limit on input       |
-| multiline   | boolean | false   | `true` renders a textarea |
-| placeholder | string? | —       | Shown when value is empty |
-
-
-**Instance value**: `string | null`
-
-**Edit UX**: Single-line input (or textarea if `multiline`). Double-tap activates edit. Enter saves, Escape cancels. If `multiline`, Enter inserts newline and Cmd/Ctrl+Enter saves.
-
-**Display UX**: Plain text. Multi-line renders with preserved line breaks.
-
-**Validation**: length ≤ `maxLength`.
-
-#### FieldComponent: `enum-kv`
-
-**Purpose**: Selection from a fixed option list (Status, Condition, Category, …).
-
-**FieldDefinition config**:
-
-
-| Field      | Type     | Default | Notes                                     |
-| ---------- | -------- | ------- | ----------------------------------------- |
-| options    | string[] | —       | **Required.** Selectable values.          |
-| allowOther | boolean  | false   | If `true`, user may enter an ad-hoc value |
-| default    | string?  | —       | Pre-selected on new instance              |
-
-
-**Instance value**: `string | null` — must match an `options` entry unless `allowOther`.
-
-**Edit UX**: Dropdown. If `allowOther`, final item is "Other…" which reveals a text input.
-
-**Display UX**: Plain text. Option styling (badges, colors) [Phase 2+].
-
-**Validation**: value ∈ `options` (or `allowOther === true`).
-
-#### FieldComponent: `number-kv`
-
-**Purpose**: A numeric quantity with semantic units, display formatting, an expected nominal (range or discrete with tolerance), ISA-18.2-style alarm thresholds (L/LL/H/HH), and an optional freshness expectation. Covers Pressure, Temperature, Current, Voltage, Flow Rate, Weight, Power Rating, currency-denominated values, percentages, etc.
-
-This is the deliberately rich Component — its breadth of config exists to exercise the FieldDefinition authoring UI's progressive-disclosure and value-driven conditional reveal patterns. Other Components stay deliberately thin.
-
-**FieldDefinition config**:
-
-
-| Field                    | Type    | Required | Notes                                                                                                  |
-| ------------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| `unitsSymbol`            | string  | Yes      | Short unit token affixed to the value (e.g. `"V"`, `"psi"`, `"°C"`, `"kg"`, `"%"`, `"$"`)              |
-| `unitsLongForm`          | string? | No       | Full unit name shown in Field Details / authoring preview (e.g. `"Volts"`, `"pounds per square inch"`) |
-| `affixPosition`          | enum    | No       | `"prefix"`                                                                                             |
-| `decimals`               | number? | No       | Display precision (default 2). Storage is full IEEE-754                                                |
-| `displayFormat`          | enum    | No       | `"decimal"` (default)                                                                                  |
-| `currencyCode`           | string? | Cond.    | **Required iff** `displayFormat === "currency"`. Free-text in Phase 1 (e.g. `"USD"`, `"EUR"`)          |
-| `nominalMode`            | enum    | No       | `"range"` (default)                                                                                    |
-| `nominalMin`             | number? | Cond.    | Range-mode only. Lower bound of expected operating range                                               |
-| `nominalMax`             | number? | Cond.    | Range-mode only. Upper bound of expected operating range                                               |
-| `nominalValue`           | number? | Cond.    | Discrete-mode only. Expected exact value                                                               |
-| `tolerance`              | number? | Cond.    | Discrete-mode only. Acceptable ± deviation from `nominalValue`                                         |
-| `low` (`L`)              | number? | No       | Below this is a warning state. ISA-18.2 "L" threshold                                                  |
-| `lowLow` (`LL`)          | number? | No       | Below this is an alarm state and input is rejected. ISA-18.2 "LL" threshold                            |
-| `high` (`H`)             | number? | No       | Above this is a warning state. ISA-18.2 "H" threshold                                                  |
-| `highHigh` (`HH`)        | number? | No       | Above this is an alarm state and input is rejected. ISA-18.2 "HH" threshold                            |
-| `expectedRefreshSeconds` | number? | No       | If set, a value older than this is rendered as **stale**. Stored in canonical seconds                  |
-
-
-**Config invariants** (enforced at FieldDefinition authoring time):
-
-- **Range mode**: `LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH`. Any subset may be omitted; provided values must satisfy the chain.
-- **Discrete mode**: `LL ≤ L ≤ (nominalValue − tolerance)` and `(nominalValue + tolerance) ≤ H ≤ HH`. `tolerance ≥ 0`. Any subset of thresholds may be omitted.
-- `decimals ≥ 0`. `expectedRefreshSeconds > 0` if set.
-- `displayFormat === "currency"` ⇒ `currencyCode` non-empty.
-
-**Authoring form — progressive disclosure**:
-
-The `number-kv` authoring form is the canonical exercise for the progressive-disclosure + conditional-reveal patterns the wider FieldDefinition Authoring UI will use. Three tiers:
-
-- **Required** (always visible): `unitsSymbol`. (Plus the cross-Component `label` and `componentType` from the surrounding authoring form.)
-- **Common** (visible, in a collapsible "Display & nominal" section, expanded by default): `unitsLongForm`, `affixPosition`, `decimals`, `displayFormat`, `nominalMode` and the inputs it reveals.
-- **Advanced** (collapsed by default, in an "Alarms & freshness" section): `low`, `lowLow`, `high`, `highHigh`, `expectedRefreshSeconds`.
-
-**Value-driven conditional reveal** within the form:
-
-- `displayFormat === "currency"` → reveal `currencyCode` input directly under it; **and** auto-default `affixPosition` to `"prefix"` (user can override).
-- `nominalMode === "range"` → show `nominalMin` and `nominalMax` inputs; hide `nominalValue` and `tolerance`.
-- `nominalMode === "discrete"` → show `nominalValue` and `tolerance` inputs; hide `nominalMin` and `nominalMax`.
-- `expectedRefreshSeconds` input pairs a numeric field with a unit picker (`sec` / `min` / `hr` / `day`); on Save the picker resolves to canonical seconds in storage.
-- Threshold inputs render as a single visual chain so the LL ≤ L ≤ … ≤ HH invariant reads at a glance; entering a value that violates the chain marks the offending input in error state and blocks Save with an inline message naming the broken link.
-
-**Instance value**: `number | null`. Units, format, thresholds, and refresh expectation are **not** stored per-instance — they come from the FieldDefinition and are fixed for the field's life (per the "edit-is-fork" rule). Unit conversion [Phase 2+].
-
-**Edit UX**: Numeric input with the units affix (prefix or suffix per config) shown statically. Helper text summarises the active nominal (range: `"Nominal 20–25 °C"`; discrete: `"Nominal 24 ±0.5 °C"`) if configured. For `displayFormat === "percent"`, the input accepts the underlying number (entering `0.42` displays as `42%`); for `displayFormat === "scientific"` / `"engineering"`, the input accepts decimal but the display formats it on blur.
-
-**Display UX**: `{prefix}{value}{suffix}` rendered per `displayFormat` and `decimals`. Visual state:
-
-- **stale** (precedence: shown if `expectedRefreshSeconds` set and `now − updatedAt > expectedRefreshSeconds`) — value rendered dimmed with a subtle "stale" affordance.
-- **alarm** — value outside `[LL, HH]` or outside the equivalent discrete-mode bounds. Strongest visual.
-- **warn** — value outside `[L, H]` (or the equivalent discrete-mode bounds) but inside `[LL, HH]`.
-- **ok** — value inside the nominal band.
-
-Stale takes precedence over alarm/warn/ok because freshness is a separate signal axis. Subtle background color on value in Phase 1; no icons.
-
-**Validation**: input rejected outside `[LL, HH]` (or outside the discrete equivalent) if those thresholds are set. `L`/`H` and the nominal band are informational, not blocking.
-
-#### FieldComponent: `single-image`
-
-**Purpose**: One image attached to a field (Asset Main Image, Nameplate Photo, Field Observation).
-
-**FieldDefinition config**:
-
-
-| Field          | Type    | Default | Notes                                     |
-| -------------- | ------- | ------- | ----------------------------------------- |
-| maxSizeMB      | number  | 5       | Reject uploads above this size            |
-| requireCaption | boolean | false   | Caption shown and required                |
-| aspectHint     | string? | —       | e.g. `"4:3"` — display hint, not enforced |
-
-
-**Instance value**:
-
-```ts
-{
-  blobId: string;       // key into blob storage
-  mimeType: string;     // "image/jpeg" | "image/png" | "image/webp"
-  width: number;        // px
-  height: number;       // px
-  byteSize: number;
-  caption?: string;
-} | null
-```
-
-**Storage**: Blob payload in a separate Dexie table (`imageBlobs`), keyed by `blobId`. DataField stores only the metadata object above. Firestore blob sync [Phase 2+] — Phase 1 images are local-device only.
-
-**Edit UX**: Double-tap → file picker. Preview with "Replace" / "Remove" and (if configured) caption input. Save commits the new blob and writes history.
-
-**Display UX**: Image at container width, respecting `aspectHint` if set. Tap opens full-size modal (no zoom in Phase 1).
-
-**Validation**: MIME in allowed set; `byteSize ≤ maxSizeMB * 1024 * 1024`.
-
-**History**: stores the metadata object (including `blobId`), not the blob bytes. Replacing an image writes history; prior blob retained. Orphaned-blob GC [Phase 2+].
+(The former `single-image` kind — which crammed image + caption into one value object — is superseded by `image` + `image-with-caption`, where the caption is a sibling `text-kv` sub-field and so gains its own history.)
 
 ### Seeded FieldDefinitions (starter Library)
 
-Phase 1 ships with a set of dev-seeded FieldDefinitions (`authorId: "appDeveloper"`) so the Library is non-empty on first run. The starter set is small and biased toward fields any asset is likely to have — the user-authoring path is expected to grow the Library from here.
+Phase 1 ships with a set of dev-seeded Definitions (Library-tree Elements, `updatedBy: "appDeveloper"`) so the Library is non-empty on first run. The starter set is small and biased toward fields any asset is likely to have — the user-authoring path is expected to grow the Library from here.
 
 
-| Label          | componentType | Notes                                               |
+| Label          | kind          | Notes                                               |
 | -------------- | ------------- | --------------------------------------------------- |
 | Description    | text-kv       | `multiline: true`                                   |
 | Type Of        | text-kv       | User-defined categories                             |
@@ -604,11 +464,11 @@ Phase 1 ships with a set of dev-seeded FieldDefinitions (`authorId: "appDevelope
 | Manufacturer   | text-kv       | Equipment manufacturer                              |
 | Model          | text-kv       | Equipment model                                     |
 | Status         | enum-kv       | `options: ["In Service", "Maintenance", "Retired"]` |
-| Installed Date | text-kv       | ISO date; `date-kv` FieldComponent [Phase 2+]       |
+| Installed Date | text-kv       | ISO date; `date-kv` kind [Phase 2+]                 |
 | Weight         | number-kv     | `unitsSymbol: "kg", unitsLongForm: "kilograms"`     |
 | Power Rating   | number-kv     | `unitsSymbol: "W", unitsLongForm: "Watts"`          |
 | Note           | text-kv       | `multiline: true`                                   |
-| Main Image     | single-image  | `requireCaption: false`                             |
+| Main Image     | image         | one image                                           |
 
 
 The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) are a subset of this list and are described under "Default DataFields at Node Creation" above.
@@ -632,40 +492,157 @@ The data model is a single recursive primitive, the **Element**. A node is an El
 | Field             | Type          | Required | Description                                                                                      | Constraints                                                                                                                           |
 | ----------------- | ------------- | -------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | id                | string (UUID) | Yes      | Unique identifier                                                                                | Generated client-side; canonical ID                                                                                                   |
-| kind              | string        | Yes      | Renderer key / element type; the dispatch discriminator.                                         | `"node"` for structural/container elements; a value-bearing componentType (`"text-kv"`, `"enum-kv"`, `"number-kv"`, `"single-image"`) |
+| kind              | string        | Yes      | Immutable dispatch discriminant into the registry; the *only* hard discriminant. Behaviour is looked up in the manifest, never stored. | A registry key (`"node"`, `"text-kv"`, `"enum-kv"`, `"number-kv"`, `"image"`, `"job"`, …); `Kind` derives from the registry. Immutable after mint |
 | name              | string        | Yes      | Level-I/II label (the element's Title).                                                          | Max 100 chars; required (empty names not allowed)                                                                                     |
 | subtitle          | string        | null     | No                                                                                               | Description/location (the element's Subtitle).                                                                                        |
 | value             | JSON          | null     | No                                                                                               | Typed value, shape discriminated by `kind`. `null` for pure container (`kind: "node"`) elements.                                      |
 | parentId          | string        | null     | Yes                                                                                              | Canonical ("home") parent element. `null` = tree root.                                                                                |
 | siblingOrder      | number        | Yes      | Order among siblings under the canonical parent, assigned incrementally at mint (every element). | Auto-assigned: next integer after the last sibling; inserting between siblings renumbers the affected run (see Sorting policy)        |
-| fieldDefinitionId | string (UUID) | null     | No                                                                                               | Set for elements minted from a Library `FieldDefinition`. `null` for hand-created container nodes.                                    |
+| fieldDefinitionId | string (UUID) | null     | No                                                                                               | Set for field-like elements minted from a Library Definition; binds the instance to it (cascade source). `null` for hand-created nodes.|
 | updatedBy         | string        | Yes      | User ID of last editor                                                                           | Valid user ID                                                                                                                         |
 | updatedAt         | timestamp     | Yes      | Last modification time (epoch)                                                                   | Client-assigned; server-assigned [Phase 2+]                                                                                           |
 | deletedAt         | timestamp     | null     | Yes                                                                                              | Soft delete timestamp                                                                                                                 |
 
 
-> The Phase-1 `Element` is exactly the columns above. Graph features (multiple
-> appearances, computed values, smart-element config) add further columns later
-> but are **not part of Phase 1** — see "Future Architecture (Phase 2+)" at the
-> end of this section. They are listed there so the eventual additions are
-> column-adds, not migrations.
+> The Phase-1 `Element` is exactly the columns above. `name` and `siblingOrder` are
+> **permanent columns** — identity and order are uniform across every kind and on the
+> hot path; a feature that would force them into child Elements is, by that fact,
+> chrome or derived state, not an Element. Capabilities (below) add behaviour, not
+> columns; the graph features in *Future Architecture* are the only column-adds, and
+> they are additive — column-adds, not migrations.
 
-#### FieldDefinition Entity
+### The registry & manifest
 
-**Purpose:** A Library entry: a `componentType` + `config` + `label` that users pick from in the Field Composer. The persisted form of "what kind of field this is."
+All kind-specific behaviour lives in a module-level **manifest** keyed by `kind`, never serialized onto an Element (Qwik cannot serialize methods — a framework fact). The manifest is the entire plug-in seam, identical in shape for node-like and field-like kinds:
 
+```ts
+type KindManifest = {
+  // identity
+  kind: Kind;
+  pickerLabel: string;
+  mintVia: "composer" | "node-create"; // which create affordance offers this kind
+  placement: "inline" | "re-root";     // where this kind draws ITS surface
+  Renderer: Component<RendererProps>;   // placement-keyed (inline row | re-root view)
 
-| Field         | Type          | Required | Description                             | Constraints                                                                          |
-| ------------- | ------------- | -------- | --------------------------------------- | ------------------------------------------------------------------------------------ |
-| id            | string (UUID) | Yes      | Unique identifier                       | Generated client-side; canonical ID. Seeds use stable string IDs (`fd_`*).           |
-| componentType | string        | Yes      | Which FieldComponent this entry targets | One of the Phase 1 componentTypes                                                    |
-| label         | string        | Yes      | User-facing field name                  | Max 50 chars; **uniqueness not enforced** in Phase 1                                 |
-| config        | JSON          | Yes      | FieldComponent-specific config          | Shape discriminated by `componentType` (see per-FieldComponent specs)                |
-| authorId      | string        | Yes      | Who created it                          | `"appDeveloper"` for seeds; `getCurrentUserId()` (currently `"localUser"`) otherwise |
-| updatedBy     | string        | Yes      | User ID of last editor                  | Valid user ID                                                                        |
-| updatedAt     | timestamp     | Yes      | Last modification time (epoch)          | Client-assigned; server-assigned [Phase 2+]                                          |
-| deletedAt     | timestamp     | null     | Yes                                     | Soft delete (admin-only in Phase 1)                                                  |
+  // capabilities — each optional; absence = origin in that axis
+  ownValue?: ValueSpec;
+  children?: { spec: ChildrenSpec; validateChild?; onCreate?; };
+  edges?: { target: TargetSpec; validateTarget?; };
+  derivation?: { source: SourceSpec; compute?; };
+  action?: { spec: ActionSpec; run?; };
 
+  // node-oriented descriptors (ride on the six; not new capabilities)
+  provision?: ProvisionSpec;
+  container?: "physical" | "logical";
+
+  // cross-capability + meta
+  arbiter?: ArbiterSpec;
+  coherence?: (caps: CapabilitySet) => Result<void, string[]>;
+  reads?: { resolver?: boolean; historyStream?: boolean };
+  lazy?: boolean;
+};
+
+export const KIND_REGISTRY = { node, 'text-kv': …, 'number-kv': …, job, jobs, … }
+  satisfies Record<Kind, KindManifest>;
+```
+
+`Kind` and `Value` **derive from the registry**, not hand-maintained — a missing or mistyped kind is a compile error. **There is no privileged kind** — only the privileged *shell* and *root position* (`parentId: null`). Adding a kind is the only place the framework learns of it: add it to the registry, drop a `<kind>.manifest.ts` declaring its subset + descriptors, implement its `Renderer`, and the `satisfies Record<Kind, …>` check enforces completeness.
+
+### The six capabilities
+
+Closed to modification, open to extension: a new **kind** is cheap (a manifest recomposing these); a new **capability** is a deliberate framework change, warranted only by a sync/read/compute/write path none of the six has. A kind is `origin + subset`; field-like kinds lean on **OwnValue**, node-like kinds on **Children / Edges / Derivation**.
+
+| Capability     | Descriptor    | Sync contract                                                  |
+| -------------- | ------------- | -------------------------------------------------------------- |
+| **OwnValue**   | `ValueSpec`   | LWW `value` by `updatedAt`                                     |
+| **Children**   | `ChildrenSpec`| parent has no own value to LWW; each child LWW'd independently |
+| **Edges**      | `TargetSpec`  | LWW the edge only; target content untouched                   |
+| **Derivation** | `SourceSpec`  | never stored, never synced, never in history (pure compute)   |
+| **Action**     | `ActionSpec`  | emits commands; stores no value; effects are ordinary mutations |
+| **Reads**      | `{ resolver?, historyStream? }` | none — pure read (injected, read-only)      |
+
+- **Children** carries `mode: template` (fixed core) `| open` (user-grown); `open` is always type-constrained (`open(allowlist)`, never `open(any)`).
+- **Action** is the only imperative capability — non-idempotent under replay, so it needs `idempotencyKey` + `confirm`. Everything else is declarative, convergent, offline-safe. Built last; likely never user-authorable.
+
+**Descriptors** parameterize the capabilities (same closed set for node-like and field-like):
+
+- **`ValueSpec`** — value shape, validation, renderer input (field-like core).
+- **`ChildrenSpec`** — `{ mode, allowedKinds, cardinality, validateChild, onCreate }`. `cardinality` defaults to `'one'`; repeatable data is one list-valued child. `onCreate` provisions an atomic multi-Element draft at mint and per sub-field may **pre-fill a copied value** (owned) or **leave it absent** (delegated, read live).
+- **`TargetSpec`** — `{ scope, pin?, appearance?, allowedKinds?, valid? }`. `scope`: `internal` (value is an Element id) `| external` (`{ url }`, no resolver). `pin`: `'live'` (resolves current state) `| 'revision'` (pins `${targetId}:${rev}`, immutable — an approval). `appearance`: `'citation'` (inline reference) `| 'portal'` (navigable child of a *virtual* parent; one canonical `parentId`, appearances layered on top, so **detach ≠ delete**).
+- **`SourceSpec`** — `{ relation, reach }` matched to a target kind: `relation` ∈ `children` (down) / `ancestors` (up) / `edges` (out); `reach` ∈ `direct` / `transitive`. So `children/transitive` = subtree rollup (and the gather behind a **lens**); `ancestors/transitive` = inheritance (nearest-first); `edges/direct` = curated membership.
+- **`ProvisionSpec`** — declarative, idempotent, **framework-reconciled** materialization `{ trigger, target, idScheme }`: ensure **exactly one node exists at each target place**, keyed by a deterministic id, so concurrent creates converge (never duplicates). Not `Action` — declarative and convergent, never imperative.
+- **`container`** — `physical` (membership via Children/`parentId`, single home, cascade-delete) `| logical` (membership via Edges, many, resolved, no cascade).
+- **`ArbiterSpec` / `ValiditySpec`** — resolve a contending capability pair (§ the cascade); decide when a pinned edge still counts.
+
+Node behaviour decomposes entirely into these: **aggregation** = Derivation reading `children/transitive`; **a lens** = that gather provisioned upward at every level; **inheritance** = Derivation reading `ancestors/transitive`; **auto-provisioning** = Derivation + ProvisionSpec; **membership-mode** = container; **lifecycle** = constrained Action or validated OwnValue. The per-kind catalogue (ELEMENT-MODEL.md) gives each kind's exact composition.
+
+### Earning a kind
+
+A kind exists **iff it composes non-trivial behaviour** from the six capabilities — the rule is identical for node-like and field-like kinds.
+
+- **Behaviour-bearing → kind.** `number-kv` composes OwnValue(+thresholds); `jobs` composes `Derivation(children/transitive) + ProvisionSpec` (the lens). These earn the registry.
+- **Behaviour-free label → not a kind.** `pump`, `vessel`, `fuse` compose nothing — they are `typeOf` *tags* (soft data) on `node`, shipped as forkable seed data. A capability-empty kind that is neither the base `node` nor justified by composed behaviour is the **degeneration anti-pattern** (a domain label masquerading as code); it is CI-lintable.
+- **Targeting alone does not earn a kind.** Being an Edges *target* is a use of a kind, not a behaviour it composes.
+
+So the **registry holds composed behaviour; `typeOf` holds the open domain typology.** Users mint *instances* and coin *`typeOf` tags* (both unbounded data); they never author kinds. `kind` being immutable means reclassifying an instance's *domain label* is a `typeOf` edit, while changing a node's *behavioural kind* is rare and destructive (delete-and-recreate) — correct, because it is a change of behaviour, not of label.
+
+Three places capabilities aren't orthogonal: **arbitration** (a contending pair, e.g. `OwnValue + Derivation` = inherit-unless-override, needs an `arbiter`); **validity** (`coherence(caps)` rejects incoherent subsets — `Derivation + historyStream` stores nothing → invalid; `Children + OwnValue` is valid but flagged); and **identity/targeting** (`kind` is the one hard match key, spanning node-like and field-like alike, which is why no separate classifier column is needed).
+
+### Config is Elements
+
+A field's secondary values — units, quantity-kind, decimals, ranges, alert points, channels, staleness, source link — are **child Elements** (sub-fields), each minted from its own kind, editable, history-tracked, LWW'd. **There is no `config` blob.** A Definition lives as an Element in the `library` tree and its config *is* its child subtree, so config becomes business-grade data: synced, history-tracked, revertible.
+
+- **Most config sub-fields reuse existing field-like kinds** — a units sub-field is an `enum-kv`, decimals/staleness are `number-kv`, multiline/requireCaption are flags. A kind's **config schema** is just its manifest `ChildrenSpec` over config sub-field kinds (template core + open tail); `ValueSpec` carries only the *own* value.
+- **The only object-valued residue is the compound sub-field** — co-varying values that must move together (`thresholds: {LL,L,H,HH}`) bundle into one atomic LWW'd object, by necessity (atomicity), not by default.
+- **Locking — three mechanisms, no new primitive**, hardest to softest: `kind`-immutability (the units sub-field's kind is `length-unit`; "= mass" is not in its vocabulary); `template` presence-lock (the fixed config core minted by `onCreate`, not user-removable); cascade `pin` (a Definition author pins a sub-field so instances can't override).
+- **Disposition — owned · delegated · pinned** — set per sub-field, all branches of inherit-unless-override: **owned** (copied at mint; Definition edits don't propagate — meaning-defining config like units/thresholds), **delegated** (absent at mint, read live; Definition edits propagate — cascade config like criticality), **pinned** (delegated with override disabled).
+- **Renderer reads sub-fields directly** as reactive signals — no persisted/synced derived config object (it would be a second source of truth racing the children under LWW). Reading own children is a bounded, local read.
+- **Granularity is a choice** — decomposed config can tear under concurrent offline edits (`L` and `H` converging to `L > H`); this is allowed, flagged, and revertible. Validation is **advisory** by default; reserve the atomic compound for the few values where a wrong combination is *dangerous*, not merely silly.
+- **Termination (⊥).** Each level's sub-field is a strictly smaller kind than its parent, until one declares no config (a pin is a boolean; a boolean's config is `{}`). The recursion cannot cycle because the chain strictly descends.
+
+### The cascade — one arbiter, three jobs
+
+`inherit-unless-override` is shadow-and-delegate: an own value present shadows; absent, it delegates upward (a Derivation reading `ancestors/transitive` — the nearest ancestor that has a value) and recomputes. Inheritance is therefore the same `SourceSpec` as aggregation, pointed up. One arbiter serves three jobs:
+
+1. **Business value inheritance** down the asset tree (criticality, rated pressure) until a node sets its own.
+2. **Definition specificity** — general → narrow → instance; a narrow Definition stores only overrides and delegates the rest (config-as-Elements + inherit-unless-override *is* the specificity spectrum).
+3. **App → org → role → user config** down the authority hierarchy, each layer's prefs being Fields on a Node.
+
+**Audit-safe by construction:** config and prefs file in **Library / overlay** history, not business history, so delegating them touches no business audit. A Definition is **forked, never mutated** (editing one mints a new id; existing instances stay bound to the one they were minted from); `fieldDefinitionId` *is* the version, so there is no `componentVersion` and no migration runner.
+
+### Populations are typed trees
+
+Each tree is rooted at its own Element (`parentId: null`); the ROOT view lists the business-tree roots; `Up` walks `parentId` to a root, then to the ROOT view — never above a root. Structure is uniform; **policy travels per-tree** as a `treeType` axis:
+
+| `treeType`   | example contents                          | history  | sync                     |
+| ------------ | ----------------------------------------- | -------- | ------------------------ |
+| `business`   | assets, fields, jobs, logs                | business | shared, LWW              |
+| `library`    | field Definitions + their config subtrees | Library  | shared, LWW              |
+| `config`     | org / role / user prefs                   | overlay  | shared or per-user       |
+| `view-state` | expansion, ordering overlays              | none     | device-local, not synced |
+
+Per-viewer resolution layers `config` / `view-state` at read time through a single `effectiveChildren(node, viewer)` chokepoint — never written into the shared Element. (Personal `siblingOrder` is such an overlay: the canonical order is the column; a personal reorder is a sparse per-viewer overlay.) This **supersedes** the old "Tree Partitioning (Multi-Collection)" deferral — populations are typed trees, each with its own root.
+
+### Manifest → chrome (one-way entailment)
+
+Chrome is never an Element. Each affordance is a consequence of the kind's composed set, drawn by the renderer reading the manifest; the entailment runs one way (manifest → chrome):
+
+| Affordance               | Entailed by                               | Stored as                          |
+| ------------------------ | ----------------------------------------- | ---------------------------------- |
+| Up button                | `placement: re-root` + own `parentId`     | nothing (derived)                  |
+| Expand/collapse chevron  | has children                              | device-local view state (`isExpanded`) |
+| Breadcrumb               | own `parentId` walk                       | nothing (derived)                  |
+| Add surface(s)           | `Children(open)` + child kinds' `mintVia` | nothing (rendered expression of `open`) |
+| Field Details / Settings | has meta-field children                   | region is chrome; its contents are config Elements |
+| Section header           | a grouping tag on the items               | nothing (a render grouping, not a node) |
+
+Chrome is always **derived**, **device-local view state**, or **the rendered expression of a capability** — never content. The shell is **fractal**: every Node carries a tiny shell, the renderer reading that Node's manifest. **Presentation follows from a value's shape, not per-kind flags:** a small closed vocabulary of value shapes (`scalar | block | stream | composite`) carries the arrangement rules once — a kind picks a shape; it never declares the layout. Layout is entailed, never declared.
+
+#### FieldDefinition (a Library-tree Element)
+
+**Purpose:** A Library entry — a field-like Element of the kind it defines, living in the `library` tree (`treeType: library`), whose config is its child sub-field Elements. Instances bind to it by `fieldDefinitionId`. It is **not a separate entity**: its columns are the Element columns (`kind` = the kind it defines, `name` = the label), and it has no `config` column — config is its subtree.
+
+> Migration note: current code still keeps a separate `fieldDefinitions` Dexie table carrying a `config` JSON blob and an `authorId`/`componentType` column. The target collapses that table into the `library` tree, the blob into a config subtree, and `authorId` into `updatedBy` + Library-tree history. Tracked in ISSUES.md.
 
 #### ElementHistory Entity
 
@@ -702,15 +679,14 @@ The data model is a single recursive primitive, the **Element**. A node is an El
 | `text-kv`      | `string                                                  |
 | `enum-kv`      | `string                                                  |
 | `number-kv`    | `number                                                  |
-| `single-image` | `{ blobId, mimeType, width, height, byteSize, caption? } |
+| `image`        | `{ blobId, mimeType, width, height, byteSize }           |
 
 
 Reversion and audit are central to the app, so the history record must preserve the typed value exactly as stored on the element at that revision.
 
 **Indexes**:
 
-- elements: by parentId, by updatedAt, by kind, by fieldDefinitionId — (`*virtualParents` multi-entry index [Phase 2+])
-- fieldDefinitions: by componentType, by updatedAt, by authorId
+- elements: by parentId, by updatedAt, by kind, by fieldDefinitionId, by treeType — (`*virtualParents` multi-entry index [Phase 2+])
 - elementHistory: by elementId, by updatedAt, by parentId
 - imageBlobs: by blobId (primary)
 
@@ -718,9 +694,8 @@ Reversion and audit are central to the app, so the history record must preserve 
 
 - Element has 0..1 canonical parent Element (self-referential, via `parentId`)
 - Element has 0..n child Elements
-- A value-bearing Element references 0..1 `FieldDefinition` (via `fieldDefinitionId`); container (`kind: "node"`) elements typically reference none
-- FieldDefinition has 0..n Elements (one-to-many)
-- `single-image` Element references exactly 1 `imageBlobs` row per non-null value
+- A field-like instance Element references 0..1 Definition Element (via `fieldDefinitionId`); a Definition Element has 0..n instances; nodes typically reference none
+- An `image` Element references exactly 1 `imageBlobs` row per non-null value
 - [Phase 2+] Element has 0..n virtual appearances (`virtualParents`) and 0..n `reference` edges to other elements
 
 **Sorting policy**:
@@ -741,7 +716,7 @@ Every element carries a `siblingOrder`, assigned incrementally when it is minted
 **Data Persistence**:
 
 - **Storage Abstraction**: Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
-- **Stores**: `elements`, `elementHistory`, `fieldDefinitions`, `imageBlobs`
+- **Stores**: `elements` (all `treeType`s, including the `library` tree), `elementHistory`, `imageBlobs`. (Current code still has a separate `fieldDefinitions` store; collapsing it into `elements` is a migration touch-point — see ISSUES.md.)
 - **Primary Storage**: Local browser storage for offline-first capability. All operations persist locally first.
 - **Cloud Sync**: Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
 - **Sync Triggers**: Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
@@ -749,12 +724,12 @@ Every element carries a `siblingOrder`, assigned incrementally when it is minted
 
 ### Future Architecture (Phase 2+)
 
-Everything below is **deferred** — out of Phase-1 scope and not to be built now. It is recorded so the eventual schema changes are additive column-adds, not migrations. Full rationale lives in `opus_chat_unified_data_model.md`.
+The capability model above already *expresses* the graph features below; what is **deferred is their build**, not their design. Each lands as an additive column-add against the Element, never a migration. The kinds that consume them are catalogued in ELEMENT-MODEL.md.
 
-- **Virtual appearances (`virtualParents`)** — the graph overlay. An element keeps its one canonical `parentId` (home) plus zero-or-more virtual appearances under other parents: one identity, many appearances, never a copy; edits write through to the single element. Stored as objects `{ parentId, siblingOrder, navMode, render }` so each appearance carries its own ordering and **portal-vs-citation** behaviour (navigable here, a non-navigable reference there). `virtualParents`, the cross-linked field, and the in-link all reduce to this one edge.
-- **Reference edges (`references`)** — one-way `depends-on` links, needed the first time an element's `value` is *computed* from other elements (sums, match rules, service-due countdowns). Walked backwards to answer "who recomputes when I change." A `relation` discriminator (`appearance` | `reference`) keeps these distinct from parent/appearance edges.
-- **Instance `config`** — authored answers to a `kind`'s contract for "smart" elements (bindings, thresholds, formulas-as-text, queries-as-text). Holds **values, never references** — a pointer to another element is an edge, not config. Phase 1 keeps per-`kind` config on `FieldDefinition`.
-- **Per-viewer overlays** — a user's/team's personal ordering and topology, layered sparsely at read time, never written into the shared element. Implies rollups/badges/search resolve against the *viewer's effective graph*, via a single `effectiveChildren(node, viewer)` chokepoint.
+- **Virtual appearances (`virtualParents`)** — the graph overlay, expressed by **Edges** (`TargetSpec.appearance: 'portal' | 'citation'`). An element keeps its one canonical `parentId` (home) plus zero-or-more appearances under other parents: one identity, many appearances, never a copy; **detach ≠ delete**. Consumed by the `other-end` kind. Stored as objects `{ parentId, siblingOrder, navMode, render }` so each appearance carries its own ordering and portal-vs-citation behaviour.
+- **Reference edges (`references`)** — one-way `depends-on` links, expressed by **Edges** + **Derivation**, needed the first time an element's value is *computed* from other elements (sums, match rules, service-due countdowns). A `relation` discriminator keeps these distinct from parent/appearance edges.
+- **Smart-element compute** — `Derivation(SourceSpec)` reading children/ancestors/edges; never stored, never synced (the lens, asset-gallery, rollups, inherit-unless-override). Authored config is **Elements**, not a blob — see *Config is Elements* above; a pointer to another element is an edge, not config.
+- **Per-viewer overlays** — the `view-state` typed tree: a user's/team's personal ordering and topology, layered sparsely at read time via the single `effectiveChildren(node, viewer)` chokepoint, never written into the shared element. Rollups/badges/search resolve against the *viewer's effective graph*.
 
 ## Storage Architecture
 
@@ -773,6 +748,7 @@ Storage operations are abstracted through a backend-agnostic interface, enabling
   - Full Collection Sync: Pulls all entities (used on startup)
   - Delta Sync: Pulls only changes since last sync (faster, used periodically)
 - **Sync Queue**: Local changes are enqueued and processed sequentially. Failed items are marked for retry.
+- **Routed by `treeType`**: sync, history, and visibility follow the tree's `treeType` (see *Data Model → Populations are typed trees*) — `business` and `library` sync shared+LWW, `config` shared-or-per-user, `view-state` stays device-local and is never synced.
 
 ### Soft Deletion
 
@@ -904,5 +880,7 @@ Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (ope
 3. **Component tokens** — local overrides in CSS modules, referencing semantic tokens
 
 Components never reference primitives directly. This makes the unstyled look a deliberate choice rather than an absence — the system is ready for theming by overriding the semantic layer.
+
+**Layout is entailed by value shape, not declared per-kind.** A small closed vocabulary of value shapes (`scalar | block | stream | composite`) carries the arrangement rules once: a `scalar` renders inline with a centred chevron; a `block` is tall and pins the chevron to the top; a `composite` draws its own sub-structure and suppresses the generic label. A kind picks a shape; it never declares the layout (same one-way rule as *Data Model → Manifest → chrome*). A new shape must carry a distinct *arrangement law*, not merely a different look — otherwise it is styling and belongs in the renderer.
 
 **[Phase 2+]**: Per-user and per-org style configuration (colour scheme, font size, contrast/accessibility preferences) via semantic token overrides. The three-layer architecture was designed with this in mind.
