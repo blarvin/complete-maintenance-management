@@ -28,7 +28,7 @@ Scope exclusions that keep the Phase 1 MVP small:
 The storage stack is fully unified end-to-end, including the Dexie v8 store-drop (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
 
 - **Element-vocabulary leaf-prop polish (minor)** — The view-prop retirement (audit §2.4, done 2026-06-13) renamed the boundary props but left a few legacy-flavored *internal* names untouched, as deliberately out of scope: the presentational leaf components `NodeTitle` / `NodeSubtitle` still take `nodeName` / `nodeSubtitle`, and the composer-ordering param `currentMaxCardOrder` (threaded through `CreateDataField` / `FieldComposer` / `FieldComposerSlot` / `usePendingForms`) derives from `siblingOrder` but keeps the `cardOrder` name. Pure renames; do only if they bother someone.
-- **Renderer registry — Phase 2** — The Phase-1 consolidation shipped (`src/kinds/`: one manifest per value-bearing kind, exhaustiveness-checked). Deferred until a second non-field surface (Logbook / Equipment Plate) forces them: (a) the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split; (b) generalizing the key to full `Kind` (including `node`); (c) a `placement` field for the nest-vs-navigate re-rooting threshold (Equipment Plate inlines, Job re-roots); (d) a `nature: data | reference` field so the sync layer doesn't LWW live/portal content; (e) lazy renderer loading for heavy kinds (canvas/video/iframe); (f) deriving the `Kind` / `DataFieldValue` unions from the registry; (g) a manifest home for default-field-set knowledge — `TreeNodeConstruction`'s `DEFAULT_FIELD_DEFINITION_IDS` seed import (audit §4.5 bullet 3) stays a hardcoded import until then, since no manifest field owns "which fields a new node starts with."
+- **Renderer registry — now decided, build tracked in ISSUES.md** — The registry/manifest model is settled (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md): generalizing the key to full `Kind` incl. `node`, the `placement` field, `treeType` (the old `nature: data | reference`), deriving the `Kind`/`Value` unions from the registry, and a manifest home for default-field-set knowledge are migration work items, not deferrals. Still genuinely deferred: the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split, and lazy renderer loading for heavy kinds (canvas/video/iframe) — both wait on a second non-field surface forcing them.
 - **Dead `currentValue` prop on `DataFieldDetails`** — `DataField.tsx` computes `currentDisplayValue` via `displayPreview` and passes it as `<DataFieldDetails currentValue=…>`, but `DataFieldDetails` never reads it (pre-existing; surfaced during audit §4.5). Drop the prop and the computation, or wire it into the metadata display if a use emerges.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
 - **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
@@ -67,25 +67,14 @@ Today `Element.name` and `Element.subtitle` are columns. `name` is staying a col
 - Until server ack, `updatedAt` treated as pending
 - Phase 1 uses client-assigned `Date.now()` via `now()` helper (already mockable)
 
-### Tree Partitioning (Multi-Collection Support)
+### Tree Partitioning → typed trees (decided)
 
-All records would carry `treeID` and `treeType` to support multiple independent trees per user.
+Superseded by **typed trees** (SPECIFICATION.md → Data Model → Populations are typed trees): each tree is rooted at its own Element (`parentId: null`) and carries a `treeType` (`business` / `library` / `config` / `view-state`) that routes history/sync/visibility; per-viewer state layers at read time via `effectiveChildren(node, viewer)`, never written into the shared Element. The `treeType` introduction is a migration work item (ISSUES.md). Still deferred under this banner:
 
-**Semantics:**
-
-- Root node: `treeID = id` (self-reference)
-- Child nodes, fields, history: `treeID = parent.treeID` (inherited)
-- `treeType` (Phase 1 would be fixed `"AssetTree"`; Phase 2 adds other tree kinds)
-- ASSET/BRANCH view always scoped to one `treeID`
-- `createNodeButton.isRoot` creates a new tree (sets `treeID = id`) and navigates to its BRANCH view
-
-**Related follow-ups:**
-
-- Cross-collection references and moves
-- Per-collection settings and field libraries
-- Multi-collection search and dashboards
-- Startup migration: walk up to root and stamp `treeID` on any record missing it
-- Implementation helpers: `deriveCollectionId(nodeId)`, `stampCollectionIds()`, `filterByCollection<T>(records, collectionId)`
+- Cross-tree references and moves
+- Per-tree settings and field libraries
+- Multi-tree search and dashboards
+- Startup migration: walk up to root and stamp `treeType` on any record missing it
 
 ### Breadcrumbs & Ancestor Path
 
@@ -129,15 +118,9 @@ The Phase-1 model is "authoring is contributing": one global pool, all FieldDefi
 - **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md).
 - **Orphaned-blob GC** — needed once blobs are in play.
 
-### `single-image` is a latent 2-part composite
+### `single-image` → `image` + `image-with-caption` (decided)
 
-`SingleImageValue` (`{ blobId, mimeType, width, height, byteSize, caption? }`) bundles **two independent edit intents** into one `value` object: *change the image* (the blob + its derived `mimeType`/`width`/`height`/`byteSize`, which all change atomically with it) and *edit the caption* (free text). It's a hardcoded 2-field composite — `{ image, caption }` — crammed into a single object rather than expressed structurally. This surfaces as two coupled symptoms:
-
-- **No per-sub-value history.** History is keyed `property: 'value'` and diffs the whole object atomically (`diffElementChanges`), so a caption edit and an image swap are indistinguishable in the audit log. Recording them separately the ad-hoc way (sub-property keys like `value.caption` / `value.image`) is throwaway single-image-only machinery. The real move is the recursive one: model single-image as a parent element with two **child Elements** (an image field + a caption field), each carrying its own history stream keyed by its own `elementId` — per-sub-value history then comes for free. This is the same recursive pattern as the `composite-kv` Phase-2 kind and the `subtitle → nodeSubtitle child element` refactor above; it rides in on the renderer-registry Phase-2 work (the flat `KindManifest` has no seam for sub-fields yet).
-
-- **`===`/`!==` value comparison is reference-equality on the object.** Because the value is an object minted fresh on every edit (`SingleImageField`'s `emptyImage(trimmed)`), the no-op guard in `diffElementChanges` (`updates.value !== existing.value`) and the revert gates in `DataFieldHistory` (lines ~71/115) never match structurally: a caption "save" with no real change still writes a history entry, and the revert button shows even on the entry equal to the live value. For the three primitive kinds (`text-kv`/`enum-kv` = string, `number-kv` = number) `!==` is correct value-equality; only this composite object is affected.
-
-**Deferred together because they're the same disease.** Once single-image is decomposed into child Elements, each sub-value is a primitive again (caption = string, image identity = `blobId` string), so structural history *and* correct `!==` equality both arrive in one stroke with the composite/registry Phase-2 work — no standalone stopgap needed for a stubbed kind. (If the over-capture noise ever bites before then, a small structural-equality helper in `diffElementChanges` + the two `DataFieldHistory` gates is the throwaway patch.)
+The old `single-image` kind crammed two independent edit intents (*change the image* and *edit the caption*) into one `value` object — a hardcoded `{ image, caption }` composite with no per-sub-value history and reference-equality bugs in the no-op/revert gates (the value object was minted fresh on every edit, so `!==` never matched structurally). **Resolved by decomposition** (SPECIFICATION.md → Field-kind specs; ELEMENT-MODEL.md): `image` carries only the blob metadata as its `OwnValue`; `image-with-caption` is `Children(template: image + text-kv)`, so the caption becomes a sibling `text-kv` sub-field. Each sub-value is then a primitive again (caption = string, image identity = `blobId`), so structural history *and* correct value-equality both come for free. Build rides in on the lens/`Edges`/sub-field migration work (ISSUES.md). (If over-capture noise bites the stub before then, a small structural-equality helper in `diffElementChanges` + the two `DataFieldHistory` gates is the throwaway patch.)
 
 ### Media / Image Fields
 
