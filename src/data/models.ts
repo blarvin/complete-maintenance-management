@@ -1,3 +1,7 @@
+// Type-only import: erased at runtime, so no `models → registry` cycle. Used
+// solely to derive the kind vocabulary from KIND_REGISTRY's keys below.
+import type { KIND_REGISTRY } from '../kinds/registry';
+
 export type ID = string;
 
 /**
@@ -16,11 +20,6 @@ export type SoftDeletable = {
 // ============================================================================
 // DataField Component / FieldDefinition / Instance
 // ============================================================================
-
-/**
- * Component type discriminator. Phase 1 Components per SPEC.
- */
-export type ComponentType = "text-kv" | "enum-kv" | "number-kv" | "single-image";
 
 // Per-Component config shapes
 export type TextKvConfig = {
@@ -84,8 +83,8 @@ export type SingleImageConfig = {
 };
 
 /**
- * Union of FieldDefinition configs, discriminated externally by FieldDefinition.componentType.
- * Narrow on `definition.componentType === "text-kv"` etc. before accessing config.
+ * Union of FieldDefinition configs, discriminated externally by FieldDefinition.kind.
+ * Narrow on `definition.kind === "text-kv"` etc. before accessing config.
  */
 export type FieldDefinitionConfig =
   | TextKvConfig
@@ -107,7 +106,7 @@ export type SingleImageValue = {
 };
 
 /**
- * Union of DataField value types, discriminated by DataField.componentType.
+ * Union of DataField value types, discriminated by Element.kind.
  */
 export type DataFieldValue =
   | TextKvValue
@@ -125,7 +124,7 @@ export type DataFieldValue =
  */
 export type FieldDefinition = {
   id: ID;
-  componentType: ComponentType;
+  kind: Kind;
   label: string;
   config: FieldDefinitionConfig;
   authorId: UserId;
@@ -159,10 +158,13 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // ============================================================================
 
 /**
- * Element kind. `"node"` denotes a container (no value); the rest are
- * value-bearing kinds matching FieldDefinition componentTypes.
+ * Element kind. Derived from KIND_REGISTRY: `"node"` denotes a container (no
+ * value); the rest are the value-bearing kinds the registry knows about, so a
+ * kind can never drift from its manifest. Adding a manifest widens this union
+ * automatically. (When `node` joins the registry — cluster #2 — the `"node" |`
+ * prefix drops and this becomes `keyof typeof KIND_REGISTRY`.)
  */
-export type Kind = "node" | ComponentType;
+export type Kind = "node" | keyof typeof KIND_REGISTRY;
 
 /**
  * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.

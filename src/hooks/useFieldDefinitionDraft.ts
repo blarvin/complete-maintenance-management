@@ -16,26 +16,26 @@ import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
 import { getKindManifest } from '../kinds/registry';
 import type {
-    ComponentType,
+    Kind,
     FieldDefinition,
     FieldDefinitionConfig,
 } from '../data/models';
 
-export const DEFAULT_COMPONENT_TYPE: ComponentType = 'text-kv';
+export const DEFAULT_KIND: Kind = 'text-kv';
 
-export function defaultConfigFor(type: ComponentType): FieldDefinitionConfig {
-    return getKindManifest(type).defaultConfig();
+export function defaultConfigFor(kind: Kind): FieldDefinitionConfig {
+    return getKindManifest(kind).defaultConfig();
 }
 
 const LABEL_MAX = 50;
 
 export type UseFieldDefinitionDraftResult = {
-    componentType: Signal<ComponentType>;
+    kind: Signal<Kind>;
     label: Signal<string>;
     config: Signal<FieldDefinitionConfig>;
-    /** Error from the component-specific config sub-form (e.g. invariant violations). */
+    /** Error from the kind-specific config sub-form (e.g. invariant violations). */
     configError: Signal<string | null>;
-    pickComponentType$: QRL<(type: ComponentType) => void>;
+    pickKind$: QRL<(kind: Kind) => void>;
     setLabel$: QRL<(value: string) => void>;
     setConfig$: QRL<(cfg: FieldDefinitionConfig) => void>;
     /** Push a config-level error from the sub-form; null means valid. */
@@ -46,14 +46,14 @@ export type UseFieldDefinitionDraftResult = {
 };
 
 export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
-    const componentType = useSignal<ComponentType>(DEFAULT_COMPONENT_TYPE);
+    const kind = useSignal<Kind>(DEFAULT_KIND);
     const label = useSignal<string>('');
-    const config = useSignal<FieldDefinitionConfig>(defaultConfigFor(DEFAULT_COMPONENT_TYPE));
+    const config = useSignal<FieldDefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
     const configError = useSignal<string | null>(null);
 
-    const pickComponentType$ = $((type: ComponentType) => {
-        componentType.value = type;
-        config.value = defaultConfigFor(type);
+    const pickKind$ = $((next: Kind) => {
+        kind.value = next;
+        config.value = defaultConfigFor(next);
         configError.value = null;
     });
 
@@ -70,9 +70,9 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
     });
 
     const cancel$ = $(() => {
-        componentType.value = DEFAULT_COMPONENT_TYPE;
+        kind.value = DEFAULT_KIND;
         label.value = '';
-        config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
+        config.value = defaultConfigFor(DEFAULT_KIND);
         configError.value = null;
     });
 
@@ -85,14 +85,14 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
                 type: 'CREATE_FIELD_DEFINITION',
                 payload: {
                     id: `fd_user_${generateId()}`,
-                    componentType: componentType.value,
+                    kind: kind.value,
                     label: trimmed,
                     config: config.value,
                 },
             });
             label.value = '';
-            config.value = defaultConfigFor(DEFAULT_COMPONENT_TYPE);
-            componentType.value = DEFAULT_COMPONENT_TYPE;
+            config.value = defaultConfigFor(DEFAULT_KIND);
+            kind.value = DEFAULT_KIND;
             configError.value = null;
             return result;
         } catch {
@@ -101,11 +101,11 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
     });
 
     return {
-        componentType,
+        kind,
         label,
         config,
         configError,
-        pickComponentType$,
+        pickKind$,
         setLabel$,
         setConfig$,
         setConfigError$,

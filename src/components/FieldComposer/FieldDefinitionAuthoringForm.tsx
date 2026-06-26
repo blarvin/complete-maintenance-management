@@ -33,11 +33,11 @@ export type FieldDefinitionAuthoringFormProps = {
 
 export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringFormProps>((props) => {
     const {
-        componentType,
+        kind,
         label,
         config,
         configError,
-        pickComponentType$,
+        pickKind$,
         setLabel$,
         setConfig$,
         setConfigError$,
@@ -55,7 +55,7 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
         if (def) await props.onCreated$(def);
     });
 
-    const ConfigForm = getKindManifest(componentType.value).ConfigForm;
+    const ConfigForm = getKindManifest(kind.value).ConfigForm;
 
     return (
         <div class={styles.form}>
@@ -67,12 +67,12 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                             key={c.type}
                             type="button"
                             role="radio"
-                            aria-checked={componentType.value === c.type}
+                            aria-checked={kind.value === c.type}
                             class={[
                                 styles.segment,
-                                componentType.value === c.type && styles.segmentActive,
+                                kind.value === c.type && styles.segmentActive,
                             ]}
-                            onClick$={() => pickComponentType$(c.type)}
+                            onClick$={() => pickKind$(c.type)}
                         >
                             {c.label}
                         </button>

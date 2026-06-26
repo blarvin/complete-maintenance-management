@@ -5,7 +5,7 @@ import type { DataFieldValue, FieldDefinitionConfig, SingleImageValue } from '..
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const singleImageManifest: KindManifest = {
-    componentType: 'single-image',
+    kind: 'single-image',
     pickerLabel: 'Image',
     Renderer: SingleImageField as unknown as Component<FieldRendererProps>,
     ConfigForm: SingleImageConfigForm as unknown as Component<ConfigFormProps>,

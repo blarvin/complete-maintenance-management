@@ -86,7 +86,7 @@ export const NumberKvField = component$<NumberKvFieldProps>((props) => {
     const configResource = useResource$(async ({ track }) => {
         track(() => props.fieldDefinitionId);
         const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'number-kv') return null;
+        if (!def || def.kind !== 'number-kv') return null;
         return def.config as NumberKvConfig;
     });
 

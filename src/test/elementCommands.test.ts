@@ -36,7 +36,7 @@ describe('Element commands + queries', () => {
   it('CREATE_ELEMENT_FROM_DEFINITION snapshots label as name and uses kind from definition', async () => {
     await db.fieldDefinitions.put({
       id: 'fd-vin',
-      componentType: 'text-kv',
+      kind: 'text-kv',
       label: 'VIN',
       config: {},
       authorId: 'appDeveloper',
@@ -98,7 +98,7 @@ describe('Element commands + queries', () => {
   it('getChildrenByKind separates node children from field children', async () => {
     await db.fieldDefinitions.put({
       id: 'fd-1',
-      componentType: 'text-kv',
+      kind: 'text-kv',
       label: 'L',
       config: {},
       authorId: 'appDeveloper',

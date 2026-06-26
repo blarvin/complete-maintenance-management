@@ -1,7 +1,7 @@
-import type { ComponentType, DataFieldValue, FieldDefinition, FieldDefinitionConfig, Element, Kind } from '../models';
+import type { DataFieldValue, FieldDefinition, FieldDefinitionConfig, Element, Kind } from '../models';
 
 export type Command =
-  | { type: 'CREATE_FIELD_DEFINITION'; payload: { id: string; componentType: ComponentType; label: string; config: FieldDefinitionConfig } }
+  | { type: 'CREATE_FIELD_DEFINITION'; payload: { id: string; kind: Kind; label: string; config: FieldDefinitionConfig } }
   | { type: 'CREATE_ELEMENT'; payload: { id?: string; kind: Kind; parentId: string | null; name: string; subtitle?: string | null; fieldDefinitionId?: string | null; value?: DataFieldValue | null; siblingOrder?: number } }
   | { type: 'CREATE_ELEMENT_FROM_DEFINITION'; payload: { id?: string; parentId: string; fieldDefinitionId: string; initialValue?: DataFieldValue | null; siblingOrder?: number } }
   | { type: 'UPDATE_ELEMENT_NAME'; payload: { id: string; name: string } }

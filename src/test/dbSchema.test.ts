@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 
-describe('AppDatabase schema (v8 — unified Element model, legacy stores dropped)', () => {
+describe('AppDatabase schema (v9 — FieldDefinition componentType index → kind)', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
@@ -11,8 +11,8 @@ describe('AppDatabase schema (v8 — unified Element model, legacy stores droppe
     await db.delete();
   });
 
-  it('opens at version 8', () => {
-    expect(db.verno).toBe(8);
+  it('opens at version 9', () => {
+    expect(db.verno).toBe(9);
   });
 
   it('no longer exposes the legacy nodes/fields/history stores', () => {
@@ -32,6 +32,13 @@ describe('AppDatabase schema (v8 — unified Element model, legacy stores droppe
     expect(indexNames).toEqual(
       expect.arrayContaining(['parentId', 'kind', 'fieldDefinitionId', 'siblingOrder', 'updatedAt', 'deletedAt']),
     );
+  });
+
+  it('indexes fieldDefinitions by kind (renamed from componentType in v9)', () => {
+    const t = db.table('fieldDefinitions');
+    const indexNames = t.schema.indexes.map((i) => i.name);
+    expect(indexNames).toContain('kind');
+    expect(indexNames).not.toContain('componentType');
   });
 
   it('has elementHistory store with elementId+rev compound index', () => {

@@ -195,6 +195,26 @@ export class AppDatabase extends Dexie {
         tx.table('syncMetadata').clear(),
       ]);
     });
+
+    // Version 9: FieldDefinition `componentType` field/index → `kind`, aligning
+    // the Library discriminant with Element.kind ahead of the registry widening.
+    // The index is renamed; the rename also lives in row payloads. `elements`
+    // already indexes `kind` — unchanged. Clear-on-upgrade — no migration path.
+    this.version(9).stores({
+      fieldDefinitions: 'id, kind, authorId, updatedAt, deletedAt',
+      elements: 'id, parentId, kind, fieldDefinitionId, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('fieldDefinitions').clear(),
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
   }
 }
 

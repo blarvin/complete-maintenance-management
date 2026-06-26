@@ -5,7 +5,7 @@ import type { DataFieldValue, FieldDefinitionConfig } from '../data/models';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const enumKvManifest: KindManifest = {
-    componentType: 'enum-kv',
+    kind: 'enum-kv',
     pickerLabel: 'Enum',
     Renderer: EnumKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: EnumKvConfigForm as unknown as Component<ConfigFormProps>,

@@ -11,14 +11,14 @@ import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@b
 import { getElementQueries, getFieldDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
-import type { ComponentType, FieldDefinition, ElementHistory } from '../../data/models';
+import type { Kind, FieldDefinition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
 
 export type DataFieldDetailsProps = {
     fieldId: string;
     fieldDefinitionId: string;
-    kind: ComponentType;
+    kind: Kind;
     currentValue: string | null;
     onDelete$: PropFunction<() => void>;
 };

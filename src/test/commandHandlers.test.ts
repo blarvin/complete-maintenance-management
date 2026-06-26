@@ -9,17 +9,17 @@ import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { initializeCommandBus, getCommandBus, resetCommandBus } from '../data/commands';
 import { initializeQueries, resetQueries } from '../data/queries';
-import type { ComponentType, FieldDefinitionConfig } from '../data/models';
+import type { Kind, FieldDefinitionConfig } from '../data/models';
 
 async function seedDefinition(
   id: string,
-  componentType: ComponentType,
+  kind: Kind,
   label: string,
   config: FieldDefinitionConfig,
 ): Promise<void> {
   await db.fieldDefinitions.put({
     id,
-    componentType,
+    kind,
     label,
     config,
     authorId: 'test',

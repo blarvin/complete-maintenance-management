@@ -6,7 +6,7 @@ import type { FieldDefinition } from '../data/models';
 function makeFieldDef(id: string, label = 'Test'): FieldDefinition {
   return {
     id,
-    componentType: 'text-kv',
+    kind: 'text-kv',
     label,
     config: {},
     authorId: 'appDeveloper',

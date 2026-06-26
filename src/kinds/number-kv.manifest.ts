@@ -6,7 +6,7 @@ import type { DataFieldValue, FieldDefinitionConfig, NumberKvConfig } from '../d
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const numberKvManifest: KindManifest = {
-    componentType: 'number-kv',
+    kind: 'number-kv',
     pickerLabel: 'Number',
     Renderer: NumberKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: NumberKvConfigForm as unknown as Component<ConfigFormProps>,

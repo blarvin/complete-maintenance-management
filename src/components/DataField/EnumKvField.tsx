@@ -75,7 +75,7 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     const optionsResource = useResource$<{ options: string[]; allowOther: boolean }>(async ({ track }) => {
         track(() => props.fieldDefinitionId);
         const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'enum-kv') return { options: [], allowOther: false };
+        if (!def || def.kind !== 'enum-kv') return { options: [], allowOther: false };
         const config = def.config as EnumKvConfig;
         return { options: config.options, allowOther: config.allowOther ?? false };
     });

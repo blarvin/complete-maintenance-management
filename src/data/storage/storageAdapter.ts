@@ -1,4 +1,4 @@
-import type { FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
+import type { FieldDefinition, DataFieldValue, FieldDefinitionConfig, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -18,7 +18,7 @@ export type StorageResult<T> = {
 
 export type StorageFieldDefinitionCreate = {
   id: string;
-  componentType: ComponentType;
+  kind: Kind;
   label: string;
   config: FieldDefinitionConfig;
 };

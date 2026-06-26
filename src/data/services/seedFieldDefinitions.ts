@@ -39,31 +39,31 @@ type SeedRow = Omit<FieldDefinition, 'authorId' | 'updatedBy' | 'updatedAt' | 'd
 const SEEDS: SeedRow[] = [
   {
     id: FIELD_DEFINITION_IDS.description,
-    componentType: 'text-kv',
+    kind: 'text-kv',
     label: 'Description',
     config: { multiline: true },
   },
   {
     id: FIELD_DEFINITION_IDS.typeOf,
-    componentType: 'text-kv',
+    kind: 'text-kv',
     label: 'Type Of',
     config: { maxWords: 2 },
   },
   {
     id: FIELD_DEFINITION_IDS.tags,
-    componentType: 'text-kv',
+    kind: 'text-kv',
     label: 'Tags',
     config: {},
   },
   {
     id: FIELD_DEFINITION_IDS.status,
-    componentType: 'enum-kv',
+    kind: 'enum-kv',
     label: 'Status',
     config: { options: ['In Service', 'Maintenance', 'Retired'] },
   },
   {
     id: FIELD_DEFINITION_IDS.weight,
-    componentType: 'number-kv',
+    kind: 'number-kv',
     label: 'Weight',
     config: {
       unitsSymbol: 'kg',
@@ -74,7 +74,7 @@ const SEEDS: SeedRow[] = [
   },
   {
     id: FIELD_DEFINITION_IDS.powerRating,
-    componentType: 'number-kv',
+    kind: 'number-kv',
     label: 'Power Rating',
     config: {
       unitsSymbol: 'W',
@@ -85,7 +85,7 @@ const SEEDS: SeedRow[] = [
   },
   {
     id: FIELD_DEFINITION_IDS.mainImage,
-    componentType: 'single-image',
+    kind: 'single-image',
     label: 'Main Image',
     config: { requireCaption: false },
   },

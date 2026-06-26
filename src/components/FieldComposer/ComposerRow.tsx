@@ -97,7 +97,7 @@ const RowBody = component$<RowBodyProps>((props) => {
         return props.onValueChange$(formId, value);
     });
 
-    const Renderer = getKindManifest(props.definition.componentType).Renderer;
+    const Renderer = getKindManifest(props.definition.kind).Renderer;
     return (
         <Renderer
             id={props.pendingForm.id}

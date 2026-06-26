@@ -1,6 +1,6 @@
 /**
  * DataField - Thin dispatcher: renders the chevron + label + Component-specific
- * body (via componentType switch) + optional DataFieldDetails.
+ * body (via kind-keyed manifest lookup) + optional DataFieldDetails.
  *
  * The owning rootRef is created here so outside-click detection inside each
  * renderer covers the entire row (chevron, label, value), not just the value
@@ -13,14 +13,14 @@ import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { getKindManifest } from '../../kinds/registry';
-import type { ComponentType, DataFieldValue } from '../../data/models';
+import type { Kind, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
     name: string;
     fieldDefinitionId: string;
-    kind: ComponentType;
+    kind: Kind;
     value: DataFieldValue | null;
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */

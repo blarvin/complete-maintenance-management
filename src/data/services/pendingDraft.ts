@@ -14,14 +14,14 @@
  */
 
 import { getCommandBus } from '../commands';
-import type { FieldDefinition, DataFieldValue, ComponentType } from '../models';
+import type { FieldDefinition, DataFieldValue, Kind } from '../models';
 import { generateId } from '../../utils/id';
 
 /** A pending (un-persisted) FieldDefinition instance with its in-progress value. */
 export type PendingForm = {
     id: string;
     fieldDefinitionId: string;
-    componentType: ComponentType;
+    kind: Kind;
     fieldName: string;
     value: DataFieldValue | null;
 };
@@ -30,7 +30,7 @@ export type PendingForm = {
 export const pendingFormFromFieldDefinition = (definition: FieldDefinition): PendingForm => ({
     id: generateId(),
     fieldDefinitionId: definition.id,
-    componentType: definition.componentType,
+    kind: definition.kind,
     fieldName: definition.label,
     value: null,
 });
@@ -48,7 +48,7 @@ export const loadPendingForms = (nodeId: string): PendingForm[] => {
                 f && typeof f === 'object' &&
                 typeof f.id === 'string' &&
                 typeof f.fieldDefinitionId === 'string' &&
-                typeof f.componentType === 'string' &&
+                typeof f.kind === 'string' &&
                 typeof f.fieldName === 'string'
         );
     } catch {

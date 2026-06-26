@@ -94,7 +94,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       const definition: FieldDefinition = {
         id: input.id,
-        componentType: input.componentType,
+        kind: input.kind,
         label: input.label,
         config: input.config,
         authorId: userId,

@@ -18,7 +18,6 @@ import { DataField } from '../DataField/DataField';
 import { FieldComposerSlot } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useElementChildren } from '../../hooks/useElementChildren';
-import type { ComponentType } from '../../data/models';
 import { ENABLED_ADD_FIELD_SURFACES } from '../../constants';
 import type { ActiveSurface } from './addFieldSurfaces';
 import styles from './FieldList.module.css';
@@ -53,7 +52,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                     id={field.id}
                     name={field.name}
                     fieldDefinitionId={field.fieldDefinitionId!}
-                    kind={field.kind as ComponentType}
+                    kind={field.kind}
                     value={field.value}
                     updatedAt={field.updatedAt}
                 />

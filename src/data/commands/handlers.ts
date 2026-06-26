@@ -4,8 +4,8 @@ import { generateId } from '../../utils/id';
 
 export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): void {
   bus.register('CREATE_FIELD_DEFINITION', async (cmd) => {
-    const { id, componentType, label, config } = cmd.payload;
-    const result = await adapter.createFieldDefinition({ id, componentType, label, config });
+    const { id, kind, label, config } = cmd.payload;
+    const result = await adapter.createFieldDefinition({ id, kind, label, config });
     return result.data;
   });
 
@@ -33,7 +33,7 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     }
     const result = await adapter.createElement({
       id: id ?? generateId(),
-      kind: def.componentType,
+      kind: def.kind,
       parentId,
       name: def.label, // snapshot at creation
       fieldDefinitionId: def.id,

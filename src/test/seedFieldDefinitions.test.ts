@@ -55,13 +55,13 @@ describe('seedFieldDefinitions', () => {
     expect(secondAll[0].updatedAt).toBe(firstTimestamp);
   });
 
-  it('seeds all expected componentTypes', async () => {
+  it('seeds all expected kinds', async () => {
     await seedFieldDefinitions();
     const byId = new Map((await db.fieldDefinitions.toArray()).map(d => [d.id, d]));
-    expect(byId.get(FIELD_DEFINITION_IDS.description)?.componentType).toBe('text-kv');
-    expect(byId.get(FIELD_DEFINITION_IDS.status)?.componentType).toBe('enum-kv');
-    expect(byId.get(FIELD_DEFINITION_IDS.weight)?.componentType).toBe('number-kv');
-    expect(byId.get(FIELD_DEFINITION_IDS.powerRating)?.componentType).toBe('number-kv');
-    expect(byId.get(FIELD_DEFINITION_IDS.mainImage)?.componentType).toBe('single-image');
+    expect(byId.get(FIELD_DEFINITION_IDS.description)?.kind).toBe('text-kv');
+    expect(byId.get(FIELD_DEFINITION_IDS.status)?.kind).toBe('enum-kv');
+    expect(byId.get(FIELD_DEFINITION_IDS.weight)?.kind).toBe('number-kv');
+    expect(byId.get(FIELD_DEFINITION_IDS.powerRating)?.kind).toBe('number-kv');
+    expect(byId.get(FIELD_DEFINITION_IDS.mainImage)?.kind).toBe('single-image');
   });
 });

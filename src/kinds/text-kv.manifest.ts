@@ -5,7 +5,7 @@ import type { DataFieldValue, FieldDefinitionConfig } from '../data/models';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const textKvManifest: KindManifest = {
-    componentType: 'text-kv',
+    kind: 'text-kv',
     pickerLabel: 'Text',
     Renderer: TextKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: TextKvConfigForm as unknown as Component<ConfigFormProps>,

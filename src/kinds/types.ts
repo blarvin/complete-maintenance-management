@@ -3,22 +3,23 @@
  * statements (renderer selection, config-form selection, default config,
  * value preview) into one manifest per FieldComponent kind.
  *
- * Phase 1 (pure refactor): keyed by the four value-bearing `ComponentType`s
- * only. The `"node"` kind is privileged — its recursion/navigation lives in
- * the framework (TreeNode), not here. Phase-2 manifest fields (placement,
- * nature, icon, lazy renderers) are intentionally absent until a second
- * non-field surface forces them.
+ * Phase 1: keyed by the four value-bearing field kinds only (KIND_REGISTRY's
+ * keys; `Kind` is derived from them). The `"node"` kind is privileged — its
+ * recursion/navigation lives in the framework (TreeNode), not here, so it has
+ * no manifest yet. Phase-2 manifest fields (placement, nature, icon, lazy
+ * renderers) are intentionally absent until a second non-field surface forces
+ * them.
  */
 
 import type { Component, PropFunction, QRL, Signal } from '@builder.io/qwik';
-import type { ComponentType, DataFieldValue, FieldDefinitionConfig } from '../data/models';
+import type { Kind, DataFieldValue, FieldDefinitionConfig } from '../data/models';
 
 /**
  * Uniform prop contract every field renderer is invoked with. The concrete
  * components declare narrower `value`/`pendingMode` types per kind and are
  * bridged into this shape by a localized cast in each manifest — the runtime
  * value is always correct because the registry is keyed by the same
- * discriminant (`componentType`) that determines the value type.
+ * discriminant (`kind`) that determines the value type.
  *
  * Some props are kind-specific (`single-image` ignores `fieldDefinitionId`,
  * only `number-kv` reads `updatedAt`); unread props are harmlessly ignored.
@@ -49,7 +50,7 @@ export type ConfigFormProps = {
  * the scattered switches; assembled into KIND_REGISTRY in registry.ts.
  */
 export type KindManifest = {
-    componentType: ComponentType;
+    kind: Kind;
     /** Label for the authoring-form segmented picker. */
     pickerLabel: string;
     /** Value renderer (display + composer pendingMode). */

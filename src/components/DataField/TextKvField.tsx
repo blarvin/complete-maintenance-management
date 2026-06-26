@@ -55,7 +55,7 @@ export const TextKvField = component$<TextKvFieldProps>((props) => {
     const configResource = useResource$(async ({ track }) => {
         track(() => props.fieldDefinitionId);
         const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'text-kv') return {} as TextKvConfig;
+        if (!def || def.kind !== 'text-kv') return {} as TextKvConfig;
         return def.config as TextKvConfig;
     });
 

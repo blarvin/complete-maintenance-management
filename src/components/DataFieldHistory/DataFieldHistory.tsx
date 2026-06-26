@@ -20,13 +20,13 @@ import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { getKindManifest } from '../../kinds/registry';
 import { formatTimestampShort } from '../../utils/time';
-import type { ComponentType, ElementHistory, DataFieldValue, FieldDefinitionConfig } from '../../data/models';
+import type { Kind, ElementHistory, DataFieldValue, FieldDefinitionConfig } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
 export type DataFieldHistoryProps = {
     fieldId: string;
     history: ElementHistory[];
-    kind: ComponentType;
+    kind: Kind;
     config?: FieldDefinitionConfig;
     isOpen: boolean;
 };

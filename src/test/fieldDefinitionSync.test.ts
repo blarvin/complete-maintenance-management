@@ -35,7 +35,7 @@ function mockRemote(overrides: Partial<RemoteSyncAdapter> = {}): RemoteSyncAdapt
 function makeDefinition(overrides: Partial<FieldDefinition> = {}): FieldDefinition {
     return {
         id: 'fd_test',
-        componentType: 'text-kv',
+        kind: 'text-kv',
         label: 'Test',
         config: {},
         authorId: 'remoteUser',
@@ -58,7 +58,7 @@ describe('IDBAdapter - FieldDefinitions', () => {
         const adapter = new IDBAdapter();
         const res = await adapter.createFieldDefinition({
             id: 'fd_x',
-            componentType: 'text-kv',
+            kind: 'text-kv',
             label: 'X',
             config: {},
         });
@@ -75,7 +75,7 @@ describe('IDBAdapter - FieldDefinitions', () => {
         const adapter = new IDBAdapter();
         await adapter.createFieldDefinition({
             id: 'fd_x',
-            componentType: 'text-kv',
+            kind: 'text-kv',
             label: 'X',
             config: {},
         });
@@ -129,7 +129,7 @@ describe('ServerAuthorityResolver - FieldDefinitions', () => {
         // Local create queues a pending op for fd_x.
         await adapter.createFieldDefinition({
             id: 'fd_x',
-            componentType: 'text-kv',
+            kind: 'text-kv',
             label: 'Local',
             config: {},
         });
