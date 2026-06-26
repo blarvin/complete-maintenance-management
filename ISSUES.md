@@ -27,6 +27,25 @@ _None open._
 4.) **DataField restoration UI** — Surface soft-deleted fields somewhere (recycle bin? details view?) and allow setting `deletedAt` back to null. Data model supports it; UI doesn't.
 
 
+## Architecture Migration (ELEMENT-MODEL → code)
+
+The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md). Each item below is a widening, not a rewrite.
+
+1.) **Collapse `componentType` → `kind`** — one registry-derived `Kind` union; 1:1 rename across `registry.ts`, the `*.manifest.ts`, `KindManifest`, `FieldDefinition`, and the `DataField` dispatcher.
+
+2.) **Widen `KIND_REGISTRY` to all kinds incl. `node`** — `node` registers like any other kind; manifest gains `placement` + the six capability descriptors + node descriptors (`provision`, `container`, `SourceSpec`); `FieldRendererProps` → placement-keyed `RendererProps`.
+
+3.) **Config-as-Elements** — retire `FieldDefinition.config`; Definition becomes a `library`-tree Element whose config is its sub-field subtree; `ConfigForm`s become authoring overrides; `validateNumberKvConfig` moves to the threshold compound sub-field; `seedFieldDefinitions` writes Definition subtrees with stable deterministic sub-field ids; give `FIELD_DEFINITION_IDS` a manifest/Definition home.
+
+4.) **Typed trees (`treeType`)** — introduce the axis; route sync/history/visibility by tree; `effectiveChildren(node, viewer)` for per-viewer `config`/`view-state` overlays.
+
+5.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
+
+6.) **The lens, then the rest** — build once (`Derivation(children/transitive)` gather + upward `ProvisionSpec`, deterministic id); instantiate for `jobs`/`logbook`; then `job`/`log-entry`, `org`, `person`, `logical-container`, and the `Edges` family (`asset-doc`/`part-supplier-link`/`other-end`/`approval`). Implement the `SourceSpec` `{relation, reach}` traversal.
+
+7.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
+
+
 ## Tech Debt
 
 1.) **pendingMode` boilerplate across DataField Components** — TextKv/EnumKv/NumberKv/SingleImage each repeat near-identical `pendingMode` wiring into `useFieldEdit` (and Enum has its own click-away path). Don't abstract until a 5th component lands and the pattern is clear — premature now would obscure more than it shares.
@@ -34,4 +53,8 @@ _None open._
 2.) **useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Works fine, every consumer destructures the same way, no obvious seam. Revisit only if a future Component genuinely needs a different edit lifecycle (e.g. multi-step upload flow).
 
 3.) **Cypress: construction commit captures last keystroke** — `commitPendingDraft` reads the localStorage draft, so the composer's write-through (`setPendingValue$`) must flush before the node's Create click. A unit test can't reproduce the input→click timing; needs a Cypress spec that types a field value and immediately clicks Create, then asserts the field persisted with that value (not "Empty").
+
+4.) `coerceTimestamps` only handles `updatedAt`/`deletedAt`** — fine today, but a silent trap for any future timestamp column (`createdAt` in Features above, ELEMENT-MODEL.md `approval` pins). A "coerce all `*At` keys" rule would be self-maintaining.
+
+5.) **History revisions collide across clients.** `ElementHistory.id = ${elementId}:${rev}` with `rev` minted locally from local history. Two offline clients editing the same element will mint the same `${id}:${rev}`, and the sync upsert (`applyRemoteElementHistory` / `setDoc`) silently overwrites one client's audit row with the other's. For an *append-only audit log*, that's a real integrity hole once multi-device becomes real. Phase-2 fix candidates: random history ids ordered by `(elementId, updatedAt)`, or client-scoped rev (`${elementId}:${clientId}:${rev}`). Worth a LATER.md entry now so the eventual fix is a column-add, not a migration.
 

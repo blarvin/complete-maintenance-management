@@ -9,10 +9,11 @@
 
 **Documentation Hierarchy**:
 
-1. **SPECIFICATION.md** - Product requirements, data models, UX patterns (the spec)
-2. **LATER.md** - Deferred features, Phase 2+ roadmap, resolved items
-3. **IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
-4. **ISSUES.md** - Intends to be a comprehensive listing of what needs doing.
+1. **SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
+2. **ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
+3. **LATER.md** - Deferred features, Phase 2+ roadmap, resolved items
+4. **IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
+5. **ISSUES.md** - Intends to be a comprehensive listing of what needs doing.
 
 ---
 
