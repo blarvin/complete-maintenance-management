@@ -1,20 +1,29 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../data/storage/db';
-import { seedFieldDefinitions, FIELD_DEFINITION_IDS } from '../data/services/seedFieldDefinitions';
+import { IDBAdapter } from '../data/storage/IDBAdapter';
+import {
+  seedFieldDefinitions,
+  FIELD_DEFINITION_IDS,
+  SEED_VERSION,
+  SEED_KEY,
+} from '../data/services/seedFieldDefinitions';
 import { AUTHOR_ID_APP_DEVELOPER } from '../constants';
+import { configChildId } from '../kinds/configElements';
 
-describe('seedFieldDefinitions', () => {
+const libraryDefs = async () =>
+  (await db.elements.toArray()).filter((e) => e.treeType === 'library' && e.parentId === null);
+
+describe('seedFieldDefinitions (config-as-Elements)', () => {
   beforeEach(async () => {
-    await db.fieldDefinitions.clear();
-    await db.syncMetadata.clear();
+    await db.delete();
+    await db.open();
   });
 
-  it('writes all 7 field definitions + version key on first call', async () => {
+  it('writes 7 Definitions as library-tree Elements + version key on first call', async () => {
     await seedFieldDefinitions();
-    const all = await db.fieldDefinitions.toArray();
-    expect(all).toHaveLength(7);
-    const labels = all.map(d => d.label).sort();
-    expect(labels).toEqual([
+    const defs = await libraryDefs();
+    expect(defs).toHaveLength(7);
+    expect(defs.map((d) => d.name).sort()).toEqual([
       'Description',
       'Main Image',
       'Power Rating',
@@ -23,41 +32,61 @@ describe('seedFieldDefinitions', () => {
       'Type Of',
       'Weight',
     ]);
-    const meta = await db.syncMetadata.get('fieldDefinitionsSeededVersion');
-    expect(meta?.value).toBe(5);
+    const meta = await db.syncMetadata.get(SEED_KEY);
+    expect(meta?.value).toBe(SEED_VERSION);
   });
 
-  it('stamps appDeveloper authorship and active soft-delete state on seeds', async () => {
+  it('writes config as child sub-field Elements with deterministic ids', async () => {
     await seedFieldDefinitions();
-    const all = await db.fieldDefinitions.toArray();
-    for (const row of all) {
-      expect(row.authorId).toBe(AUTHOR_ID_APP_DEVELOPER);
-      expect(row.deletedAt).toBeNull();
+    const units = await db.elements.get(configChildId(FIELD_DEFINITION_IDS.weight, 'unitsSymbol'));
+    expect(units?.value).toBe('kg');
+    expect(units?.treeType).toBe('library');
+    expect(units?.parentId).toBe(FIELD_DEFINITION_IDS.weight);
+
+    const decimals = await db.elements.get(configChildId(FIELD_DEFINITION_IDS.weight, 'decimals'));
+    expect(decimals?.value).toBe(2);
+  });
+
+  it('listFieldDefinitions assembles config back from the subtree', async () => {
+    await seedFieldDefinitions();
+    const defs = (await new IDBAdapter().listFieldDefinitions()).data;
+
+    const weight = defs.find((d) => d.id === FIELD_DEFINITION_IDS.weight);
+    expect(weight?.kind).toBe('number-kv');
+    expect(weight?.config).toMatchObject({ unitsSymbol: 'kg', decimals: 2 });
+
+    const status = defs.find((d) => d.id === FIELD_DEFINITION_IDS.status);
+    expect(status?.config).toMatchObject({ options: ['In Service', 'Maintenance', 'Retired'] });
+  });
+
+  it('stamps appDeveloper authorship and active state on the assembled views', async () => {
+    await seedFieldDefinitions();
+    const defs = (await new IDBAdapter().listFieldDefinitions()).data;
+    for (const d of defs) {
+      expect(d.authorId).toBe(AUTHOR_ID_APP_DEVELOPER);
+      expect(d.deletedAt).toBeNull();
     }
   });
 
   it('does not enqueue sync ops on the seed path', async () => {
-    await db.syncQueue.clear();
     await seedFieldDefinitions();
-    const queueLen = await db.syncQueue.count();
-    expect(queueLen).toBe(0);
+    expect(await db.syncQueue.count()).toBe(0);
   });
 
   it('is idempotent on second call', async () => {
     await seedFieldDefinitions();
-    const firstAll = await db.fieldDefinitions.toArray();
-    const firstTimestamp = firstAll[0].updatedAt;
+    const first = await libraryDefs();
+    const firstTs = first[0].updatedAt;
 
-    // Second call should not rewrite rows.
     await seedFieldDefinitions();
-    const secondAll = await db.fieldDefinitions.toArray();
-    expect(secondAll).toHaveLength(7);
-    expect(secondAll[0].updatedAt).toBe(firstTimestamp);
+    const second = await libraryDefs();
+    expect(second).toHaveLength(7);
+    expect(second.find((d) => d.id === first[0].id)?.updatedAt).toBe(firstTs);
   });
 
   it('seeds all expected kinds', async () => {
     await seedFieldDefinitions();
-    const byId = new Map((await db.fieldDefinitions.toArray()).map(d => [d.id, d]));
+    const byId = new Map((await db.elements.toArray()).map((e) => [e.id, e]));
     expect(byId.get(FIELD_DEFINITION_IDS.description)?.kind).toBe('text-kv');
     expect(byId.get(FIELD_DEFINITION_IDS.status)?.kind).toBe('enum-kv');
     expect(byId.get(FIELD_DEFINITION_IDS.weight)?.kind).toBe('number-kv');

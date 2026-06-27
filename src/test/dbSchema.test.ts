@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 
-describe('AppDatabase schema (v9 — FieldDefinition componentType index → kind)', () => {
+describe('AppDatabase schema (v10 — config-as-Elements: fieldDefinitions table dropped, elements gain treeType)', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
@@ -11,34 +11,29 @@ describe('AppDatabase schema (v9 — FieldDefinition componentType index → kin
     await db.delete();
   });
 
-  it('opens at version 9', () => {
-    expect(db.verno).toBe(9);
+  it('opens at version 10', () => {
+    expect(db.verno).toBe(10);
   });
 
-  it('no longer exposes the legacy nodes/fields/history stores', () => {
+  it('no longer exposes the legacy nodes/fields/history or fieldDefinitions stores', () => {
     const tableNames = db.tables.map((t) => t.name);
     expect(tableNames).not.toContain('nodes');
     expect(tableNames).not.toContain('fields');
     expect(tableNames).not.toContain('history');
+    // The Library now lives in `elements` (treeType: 'library') — no separate table.
+    expect(tableNames).not.toContain('fieldDefinitions');
     expect(tableNames).toEqual(
-      expect.arrayContaining(['elements', 'elementHistory', 'fieldDefinitions', 'syncQueue', 'syncMetadata']),
+      expect.arrayContaining(['elements', 'elementHistory', 'syncQueue', 'syncMetadata']),
     );
   });
 
-  it('has elements store with expected indexes', () => {
+  it('has elements store with expected indexes (incl. treeType)', () => {
     const t = db.table('elements');
     const indexNames = t.schema.indexes.map((i) => i.name);
     expect(t.schema.primKey.name).toBe('id');
     expect(indexNames).toEqual(
-      expect.arrayContaining(['parentId', 'kind', 'fieldDefinitionId', 'siblingOrder', 'updatedAt', 'deletedAt']),
+      expect.arrayContaining(['parentId', 'kind', 'fieldDefinitionId', 'treeType', 'siblingOrder', 'updatedAt', 'deletedAt']),
     );
-  });
-
-  it('indexes fieldDefinitions by kind (renamed from componentType in v9)', () => {
-    const t = db.table('fieldDefinitions');
-    const indexNames = t.schema.indexes.map((i) => i.name);
-    expect(indexNames).toContain('kind');
-    expect(indexNames).not.toContain('componentType');
   });
 
   it('has elementHistory store with elementId+rev compound index', () => {
@@ -58,6 +53,7 @@ describe('AppDatabase schema (v9 — FieldDefinition componentType index → kin
       parentId: null,
       siblingOrder: 1,
       fieldDefinitionId: null,
+      treeType: 'business',
       updatedBy: 'localUser',
       updatedAt: Date.now(),
       deletedAt: null,

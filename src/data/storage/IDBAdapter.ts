@@ -12,12 +12,12 @@ import type {
   SyncableStorageAdapter,
   StorageResult,
   StorageFieldDefinitionCreate,
-  StorageFieldDefinitionUpdate,
   StorageElementCreate,
   StorageElementUpdate,
 } from './storageAdapter';
 import type { FieldDefinition, Element, ElementHistory, Kind } from '../models';
 import { filterActive } from '../models';
+import { serializeConfig, assembleConfig } from '../../kinds/configElements';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { createElementHistoryEntry, diffElementChanges } from './historyHelpers';
@@ -73,18 +73,58 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
     return this.run(async () => {
-      const all = await db.fieldDefinitions.toArray();
-      const active = filterActive(all);
-      active.sort((a, b) => a.label.localeCompare(b.label));
-      return createResult(active);
+      const all = await db.elements.toArray();
+      const defs = all.filter(
+        (e) => e.treeType === 'library' && e.parentId === null && e.deletedAt === null,
+      );
+      defs.sort((a, b) => a.name.localeCompare(b.name));
+      // Group active library children by id once, so assembly is O(n) not N+1.
+      const childById = new Map<string, Element>();
+      for (const e of all) {
+        if (e.treeType === 'library' && e.parentId !== null && e.deletedAt === null) {
+          childById.set(e.id, e);
+        }
+      }
+      const views = defs.map((def) =>
+        this.buildFieldDefinitionView(def, (cid) => childById.get(cid)),
+      );
+      return createResult(views);
     });
   }
 
   async getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>> {
     return this.run(async () => {
-      const def = await db.fieldDefinitions.get(id);
-      return createResult(def ?? null);
+      const def = await db.elements.get(id);
+      if (!def || def.treeType !== 'library' || def.parentId !== null) {
+        return createResult(null);
+      }
+      const children = filterActive(await db.elements.where('parentId').equals(id).toArray());
+      const byId = new Map(children.map((c) => [c.id, c]));
+      return createResult(this.buildFieldDefinitionView(def, (cid) => byId.get(cid)));
     });
+  }
+
+  /**
+   * Assemble the FieldDefinition read-model view from a `library`-tree Definition
+   * Element and its config sub-field children (config-as-Elements). `config` is
+   * assembled on read — there is no stored blob. `authorId` mirrors the
+   * Definition Element's `updatedBy` (the old separate column folds into it).
+   */
+  private buildFieldDefinitionView(
+    def: Element,
+    getChild: (childId: string) => Element | undefined,
+  ): FieldDefinition {
+    const config = assembleConfig(def.id, def.kind, getChild);
+    return {
+      id: def.id,
+      kind: def.kind,
+      label: def.name,
+      config,
+      authorId: def.updatedBy,
+      updatedBy: def.updatedBy,
+      updatedAt: def.updatedAt,
+      deletedAt: def.deletedAt,
+    };
   }
 
   async createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>> {
@@ -92,55 +132,64 @@ export class IDBAdapter implements SyncableStorageAdapter {
       const timestamp = now();
       const userId = getCurrentUserId();
 
-      const definition: FieldDefinition = {
+      const defElement: Element = {
         id: input.id,
         kind: input.kind,
-        label: input.label,
-        config: input.config,
-        authorId: userId,
+        name: input.label,
+        subtitle: null,
+        value: null,
+        parentId: null,
+        siblingOrder: 0,
+        fieldDefinitionId: null,
+        treeType: 'library',
         updatedBy: userId,
         updatedAt: timestamp,
         deletedAt: null,
       };
+      const children: Element[] = serializeConfig(input.id, input.kind, input.config).map((d) => ({
+        ...d,
+        updatedBy: userId,
+        updatedAt: timestamp,
+        deletedAt: null,
+      }));
 
-      await db.transaction('rw', db.fieldDefinitions, db.syncQueue, async () => {
-        await db.fieldDefinitions.put(definition);
-        await this.syncQueue.enqueue({
-          operation: 'create-fieldDefinition',
-          entityType: 'fieldDefinition',
-          entityId: definition.id,
-          payload: definition,
-        });
-      });
-
-      console.log('[IDBAdapter] FieldDefinition created in IDB:', definition.id, definition.label);
-      return createResult(definition);
-    });
-  }
-
-  async updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>> {
-    return this.run(async () => {
-      const timestamp = now();
-      const userId = getCurrentUserId();
-
-      await db.transaction('rw', db.fieldDefinitions, db.syncQueue, async () => {
-        await db.fieldDefinitions.update(id, {
-          ...updates,
-          updatedBy: userId,
-          updatedAt: timestamp,
-        });
-        const updated = await db.fieldDefinitions.get(id);
-        if (updated) {
+      await db.transaction('rw', db.elements, db.elementHistory, db.syncQueue, async () => {
+        for (const el of [defElement, ...children]) {
+          await db.elements.put(el);
+          const hist = createElementHistoryEntry({
+            elementId: el.id,
+            rev: 0,
+            action: 'create',
+            property: 'value',
+            prevValue: null,
+            newValue: el.value,
+          });
+          await db.elementHistory.put(hist);
           await this.syncQueue.enqueue({
-            operation: 'update-fieldDefinition',
-            entityType: 'fieldDefinition',
-            entityId: id,
-            payload: updated,
+            operation: 'create-element',
+            entityType: 'element',
+            entityId: el.id,
+            payload: el,
+          });
+          await this.syncQueue.enqueue({
+            operation: 'create-element-history',
+            entityType: 'element-history',
+            entityId: hist.id,
+            payload: hist,
           });
         }
       });
 
-      return createResult(undefined);
+      const byId = new Map(children.map((c) => [c.id, c]));
+      const view = this.buildFieldDefinitionView(defElement, (cid) => byId.get(cid));
+      console.log('[IDBAdapter] FieldDefinition (library Element) created:', view.id, view.label);
+      // Keep FIELD_DEFINITION_WRITTEN as the "Library changed" signal the Composer
+      // subscribes to — its payload is just { id, deletedAt }.
+      storageEventBus.emit({
+        type: 'FIELD_DEFINITION_WRITTEN',
+        definition: { id: defElement.id, deletedAt: defElement.deletedAt },
+      });
+      return createResult(view);
     });
   }
 
@@ -161,21 +210,6 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
   }
 
-  async applyRemoteFieldDefinition(def: FieldDefinition): Promise<void> {
-    return this.run(async () => {
-      await db.fieldDefinitions.put(def);
-      storageEventBus.emit({ type: 'FIELD_DEFINITION_WRITTEN', definition: { id: def.id, deletedAt: def.deletedAt } });
-    });
-  }
-
-  // ============================================================================
-  // Full Collection Sync Operations
-  // ============================================================================
-
-  async getAllFieldDefinitions(): Promise<FieldDefinition[]> {
-    return this.run(() => db.fieldDefinitions.toArray());
-  }
-
   // ============================================================================
   // Element Operations (unified primitive)
   // ============================================================================
@@ -183,7 +217,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async listRootElements(): Promise<StorageResult<Element[]>> {
     return this.run(async () => {
       const all = await db.elements.toArray();
-      const active = all.filter(e => e.parentId === null && e.deletedAt === null);
+      // Business-tree roots only — library Definitions are `parentId: null` too.
+      const active = all.filter(e => e.parentId === null && e.deletedAt === null && e.treeType === 'business');
       active.sort((a, b) => a.siblingOrder - b.siblingOrder);
       return createResult(active);
     });
@@ -217,7 +252,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>> {
     return this.run(async () => {
       const all = parentId === null
-        ? (await db.elements.toArray()).filter(e => e.parentId === null)
+        ? (await db.elements.toArray()).filter(e => e.parentId === null && e.treeType === 'business')
         : await db.elements.where('parentId').equals(parentId).toArray();
       if (all.length === 0) return createResult(0);
       return createResult(Math.max(...all.map(e => e.siblingOrder)) + 1);
@@ -230,8 +265,8 @@ export class IDBAdapter implements SyncableStorageAdapter {
         throw makeStorageError('validation', `fieldDefinitionId required for kind=${input.kind}`, { retryable: false });
       }
       if (input.fieldDefinitionId) {
-        const def = await db.fieldDefinitions.get(input.fieldDefinitionId);
-        if (!def) {
+        const def = await db.elements.get(input.fieldDefinitionId);
+        if (!def || def.treeType !== 'library' || def.parentId !== null) {
           throw makeStorageError('not-found', `FieldDefinition not found: ${input.fieldDefinitionId}`, { retryable: false });
         }
       }
@@ -249,6 +284,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
         parentId: input.parentId,
         siblingOrder: order,
         fieldDefinitionId: input.fieldDefinitionId ?? null,
+        // createElement only mints business-tree elements; library Definitions
+        // and their config sub-fields go through createFieldDefinition / the seed.
+        treeType: 'business',
         updatedBy: userId,
         updatedAt: timestamp,
         deletedAt: null,
@@ -459,6 +497,14 @@ export class IDBAdapter implements SyncableStorageAdapter {
         type: 'ELEMENT_WRITTEN',
         element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, deletedAt: element.deletedAt },
       });
+      // A library Definition arriving from a pull is a Library change — signal the
+      // Composer the same way local creation does.
+      if (element.treeType === 'library' && element.parentId === null) {
+        storageEventBus.emit({
+          type: 'FIELD_DEFINITION_WRITTEN',
+          definition: { id: element.id, deletedAt: element.deletedAt },
+        });
+      }
     });
   }
 

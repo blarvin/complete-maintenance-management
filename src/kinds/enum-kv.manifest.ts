@@ -2,6 +2,7 @@ import type { Component } from '@builder.io/qwik';
 import { EnumKvField } from '../components/DataField/EnumKvField';
 import { EnumKvConfigForm } from '../components/FieldComposer/configForms/EnumKvConfigForm';
 import type { DataFieldValue, FieldDefinitionConfig } from '../data/models';
+import { ENUM_KV_CONFIG_SCHEMA } from './configSchema';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const enumKvManifest: KindManifest = {
@@ -15,4 +16,5 @@ export const enumKvManifest: KindManifest = {
     displayPreview: (v: DataFieldValue | null) => (v === null || v === undefined ? null : String(v)),
     hideLabel: false,
     blockValueLayout: false,
+    configSchema: ENUM_KV_CONFIG_SCHEMA,
 };

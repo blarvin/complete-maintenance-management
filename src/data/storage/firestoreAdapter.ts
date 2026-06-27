@@ -18,7 +18,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import type { FieldDefinition, Element, ElementHistory } from "../models";
+import type { Element, ElementHistory } from "../models";
 import type { RemoteSyncAdapter } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
@@ -48,28 +48,13 @@ export class FirestoreAdapter implements RemoteSyncAdapter {
 
   /**
    * Apply a sync queue item to Firestore.
-   * Handles create/update/delete operations for elements and FieldDefinitions.
+   * Handles create/update/delete operations for elements (incl. `library`-tree
+   * Definitions, which ride the element lane — config-as-Elements).
    * Uses serverTimestamp() for authoritative timestamps (no clock skew).
    * Uses soft delete for delete operations (enables delta sync detection).
    */
   async applySyncItem(item: SyncQueueItem): Promise<void> {
     switch (item.operation) {
-      case 'create-fieldDefinition': {
-        const def = item.payload as FieldDefinition;
-        await setDoc(doc(db, COLLECTIONS.FIELD_DEFINITIONS, def.id), {
-          ...def,
-          updatedAt: serverTimestamp(),
-        });
-        break;
-      }
-      case 'update-fieldDefinition': {
-        const def = item.payload as FieldDefinition;
-        await setDoc(doc(db, COLLECTIONS.FIELD_DEFINITIONS, def.id), {
-          ...def,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        break;
-      }
       case 'create-element': {
         const element = item.payload as Element;
         await setDoc(doc(db, COLLECTIONS.ELEMENTS, element.id), {
@@ -127,14 +112,6 @@ export class FirestoreAdapter implements RemoteSyncAdapter {
   }
 
   /**
-   * Pull all FieldDefinitions from Firestore (full collection).
-   */
-  async pullAllFieldDefinitions(): Promise<FieldDefinition[]> {
-    const snap = await getDocs(collection(db, COLLECTIONS.FIELD_DEFINITIONS));
-    return snap.docs.map(d => coerceTimestamps<FieldDefinition>(d.data()));
-  }
-
-  /**
    * Pull elements updated since the given timestamp (delta sync).
    * Soft deletes surface as rows with deletedAt set and a bumped updatedAt.
    */
@@ -157,18 +134,5 @@ export class FirestoreAdapter implements RemoteSyncAdapter {
     );
     const snap = await getDocs(q);
     return snap.docs.map(d => coerceTimestamps<ElementHistory>(d.data()));
-  }
-
-  /**
-   * Pull FieldDefinitions updated since the given timestamp from Firestore.
-   * Used for delta sync to fetch only new/changed Library entries.
-   */
-  async pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]> {
-    const q = query(
-      collection(db, COLLECTIONS.FIELD_DEFINITIONS),
-      where('updatedAt', '>', since)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => coerceTimestamps<FieldDefinition>(d.data()));
   }
 }

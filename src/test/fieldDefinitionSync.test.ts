@@ -1,232 +1,87 @@
 /**
- * Narrow sync coverage for FieldDefinitions:
- *  - IDBAdapter filters soft-deleted on list, stamps authorId on create
- *  - IDBAdapter create-/update-/delete enqueue the right sync ops
- *  - ServerAuthorityResolver applies / skips per pending-queue state
- *  - DeltaSync and FullCollectionSync wire fieldDefinitions through
+ * FieldDefinitions are `library`-tree Elements (config-as-Elements): there is no
+ * separate table, no `create/update-fieldDefinition` sync lane, and no edit path
+ * (fork-not-mutate). This suite covers the surviving behaviour:
+ *  - createFieldDefinition writes a Definition Element + config sub-field children
+ *  - it rides the ELEMENT sync lane (no fieldDefinition ops)
+ *  - listFieldDefinitions assembles views, sorts by label, library-only, active-only
  *
- * Round-trip emulator coverage stays out of scope here — restoring the broader
- * adapter / sync suite is tracked in ISSUES.md.
+ * Remote pull of Definitions now flows through the element pull (covered by the
+ * element sync tests), so the old resolver/pull-strategy cases are retired.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
-import { ServerAuthorityResolver } from '../data/sync/ServerAuthorityResolver';
-import { FullCollectionSync } from '../data/sync/strategies/FullCollectionSync';
-import { DeltaSync } from '../data/sync/strategies/DeltaSync';
-import { IDBSyncQueueManager } from '../data/sync/SyncQueueManager';
-import type { RemoteSyncAdapter } from '../data/storage/storageAdapter';
-import type { FieldDefinition } from '../data/models';
+import { configChildId } from '../kinds/configElements';
 
-function mockRemote(overrides: Partial<RemoteSyncAdapter> = {}): RemoteSyncAdapter {
-    return {
-        applySyncItem: vi.fn(),
-        pullAllElements: vi.fn().mockResolvedValue([]),
-        pullAllElementHistory: vi.fn().mockResolvedValue([]),
-        pullAllFieldDefinitions: vi.fn().mockResolvedValue([]),
-        pullElementsSince: vi.fn().mockResolvedValue([]),
-        pullElementHistorySince: vi.fn().mockResolvedValue([]),
-        pullFieldDefinitionsSince: vi.fn().mockResolvedValue([]),
-        ...overrides,
-    };
-}
+describe('IDBAdapter — FieldDefinitions as library Elements', () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
 
-function makeDefinition(overrides: Partial<FieldDefinition> = {}): FieldDefinition {
-    return {
-        id: 'fd_test',
-        kind: 'text-kv',
-        label: 'Test',
-        config: {},
-        authorId: 'remoteUser',
-        updatedBy: 'remoteUser',
-        updatedAt: 1000,
-        deletedAt: null,
-        ...overrides,
-    };
-}
-
-describe('IDBAdapter - FieldDefinitions', () => {
-    beforeEach(async () => {
-        await Promise.all([
-            db.fieldDefinitions.clear(),
-            db.syncQueue.clear(),
-        ]);
+  it('createFieldDefinition writes a library Definition Element + config children', async () => {
+    const adapter = new IDBAdapter();
+    const res = await adapter.createFieldDefinition({
+      id: 'fd_x',
+      kind: 'number-kv',
+      label: 'X',
+      config: { unitsSymbol: 'kg', decimals: 2 },
     });
+    expect(res.data.id).toBe('fd_x');
+    expect(res.data.config).toMatchObject({ unitsSymbol: 'kg', decimals: 2 });
 
-    it('createFieldDefinition stamps authorId from current user and enqueues sync op', async () => {
-        const adapter = new IDBAdapter();
-        const res = await adapter.createFieldDefinition({
-            id: 'fd_x',
-            kind: 'text-kv',
-            label: 'X',
-            config: {},
-        });
-        expect(res.data.authorId).toBe('localUser');
-        expect(res.data.deletedAt).toBeNull();
+    const def = await db.elements.get('fd_x');
+    expect(def?.treeType).toBe('library');
+    expect(def?.parentId).toBeNull();
+    expect(def?.name).toBe('X');
 
-        const queue = await db.syncQueue.toArray();
-        expect(queue).toHaveLength(1);
-        expect(queue[0].operation).toBe('create-fieldDefinition');
-        expect(queue[0].entityType).toBe('fieldDefinition');
-    });
+    const units = await db.elements.get(configChildId('fd_x', 'unitsSymbol'));
+    expect(units?.value).toBe('kg');
+    expect(units?.parentId).toBe('fd_x');
+    expect(units?.treeType).toBe('library');
+  });
 
-    it('updateFieldDefinition enqueues update-fieldDefinition with refreshed payload', async () => {
-        const adapter = new IDBAdapter();
-        await adapter.createFieldDefinition({
-            id: 'fd_x',
-            kind: 'text-kv',
-            label: 'X',
-            config: {},
-        });
-        await db.syncQueue.clear();
+  it('enqueues create-element / create-element-history ops (rides the element lane)', async () => {
+    const adapter = new IDBAdapter();
+    // text-kv + { multiline } → 1 Definition + 1 config child.
+    await adapter.createFieldDefinition({ id: 'fd_x', kind: 'text-kv', label: 'X', config: { multiline: true } });
 
-        await adapter.updateFieldDefinition('fd_x', { label: 'X (renamed)' });
-        const queue = await db.syncQueue.toArray();
-        expect(queue).toHaveLength(1);
-        expect(queue[0].operation).toBe('update-fieldDefinition');
-        expect((queue[0].payload as FieldDefinition).label).toBe('X (renamed)');
-    });
+    const queue = await db.syncQueue.toArray();
+    const ops = queue.map((q) => q.operation);
+    expect(ops.filter((o) => o === 'create-element')).toHaveLength(2);
+    expect(ops.filter((o) => o === 'create-element-history')).toHaveLength(2);
+    expect(ops).not.toContain('create-fieldDefinition');
+    for (const item of queue) expect(item.entityType).not.toBe('fieldDefinition');
+  });
 
-    it('listFieldDefinitions filters out rows with deletedAt set (admin tombstone)', async () => {
-        await db.fieldDefinitions.bulkPut([
-            makeDefinition({ id: 'fd_a', label: 'A' }),
-            makeDefinition({ id: 'fd_b', label: 'B', deletedAt: 9000 }),
-            makeDefinition({ id: 'fd_c', label: 'C' }),
-        ]);
+  it('listFieldDefinitions returns assembled views sorted by label, library-only', async () => {
+    const adapter = new IDBAdapter();
+    await adapter.createFieldDefinition({ id: 'fd_b', kind: 'text-kv', label: 'Beta', config: {} });
+    await adapter.createFieldDefinition({ id: 'fd_a', kind: 'text-kv', label: 'Alpha', config: {} });
+    // A business element must never surface as a FieldDefinition.
+    await adapter.createElement({ id: 'n', kind: 'node', parentId: null, name: 'Node' });
 
-        const adapter = new IDBAdapter();
-        const res = await adapter.listFieldDefinitions();
-        const ids = res.data.map(d => d.id).sort();
-        expect(ids).toEqual(['fd_a', 'fd_c']);
-    });
-});
+    const defs = (await adapter.listFieldDefinitions()).data;
+    expect(defs.map((d) => d.label)).toEqual(['Alpha', 'Beta']);
+  });
 
-describe('ServerAuthorityResolver - FieldDefinitions', () => {
-    beforeEach(async () => {
-        await Promise.all([
-            db.fieldDefinitions.clear(),
-            db.syncQueue.clear(),
-        ]);
-    });
+  it('listFieldDefinitions excludes soft-deleted Definitions (admin tombstone)', async () => {
+    const adapter = new IDBAdapter();
+    await adapter.createFieldDefinition({ id: 'fd_live', kind: 'text-kv', label: 'Live', config: {} });
+    await adapter.createFieldDefinition({ id: 'fd_dead', kind: 'text-kv', label: 'Dead', config: {} });
+    await db.elements.update('fd_dead', { deletedAt: Date.now() });
 
-    it('applies remote definition when there is no pending local op for it', async () => {
-        const adapter = new IDBAdapter();
-        const resolver = new ServerAuthorityResolver(adapter, adapter.syncQueue);
+    const defs = (await adapter.listFieldDefinitions()).data;
+    expect(defs.map((d) => d.id)).toEqual(['fd_live']);
+  });
 
-        const remote = makeDefinition({ id: 'fd_remote', label: 'Remote' });
-        const result = await resolver.resolveFieldDefinition(remote);
-        expect(result).toBe('applied');
+  it('getFieldDefinition returns null for a config sub-field id (not a top-level Definition)', async () => {
+    const adapter = new IDBAdapter();
+    await adapter.createFieldDefinition({ id: 'fd_x', kind: 'number-kv', label: 'X', config: { decimals: 1 } });
 
-        const stored = await db.fieldDefinitions.get('fd_remote');
-        expect(stored?.label).toBe('Remote');
-    });
-
-    it('skips remote definition while a local op for the same id is pending push', async () => {
-        const adapter = new IDBAdapter();
-        const resolver = new ServerAuthorityResolver(adapter, adapter.syncQueue);
-
-        // Local create queues a pending op for fd_x.
-        await adapter.createFieldDefinition({
-            id: 'fd_x',
-            kind: 'text-kv',
-            label: 'Local',
-            config: {},
-        });
-
-        const remote = makeDefinition({ id: 'fd_x', label: 'Remote', updatedAt: 5000 });
-        const result = await resolver.resolveFieldDefinition(remote);
-        expect(result).toBe('skipped');
-
-        const stored = await db.fieldDefinitions.get('fd_x');
-        // Local value preserved — remote skipped.
-        expect(stored?.label).toBe('Local');
-    });
-});
-
-describe('FullCollectionSync - FieldDefinitions', () => {
-    beforeEach(async () => {
-        await Promise.all([
-            db.fieldDefinitions.clear(),
-            db.syncQueue.clear(),
-            db.elements.clear(),
-            db.elementHistory.clear(),
-        ]);
-    });
-
-    it('pulls and applies remote field definitions, counting applied', async () => {
-        const adapter = new IDBAdapter();
-        const queue = new IDBSyncQueueManager();
-        const resolver = new ServerAuthorityResolver(adapter, queue);
-
-        const remote = mockRemote({
-            pullAllFieldDefinitions: vi.fn().mockResolvedValue([
-                makeDefinition({ id: 'fd_a', label: 'A' }),
-                makeDefinition({ id: 'fd_b', label: 'B' }),
-            ]),
-        });
-
-        const sync = new FullCollectionSync(adapter, remote, resolver, queue);
-        const result = await sync.sync();
-
-        expect(result.fieldDefinitionsApplied).toBe(2);
-        const all = await db.fieldDefinitions.toArray();
-        expect(all.map(d => d.id).sort()).toEqual(['fd_a', 'fd_b']);
-    });
-
-    it('persists a remote soft-delete tombstone (deletedAt set) verbatim', async () => {
-        const adapter = new IDBAdapter();
-        const queue = new IDBSyncQueueManager();
-        const resolver = new ServerAuthorityResolver(adapter, queue);
-
-        await db.fieldDefinitions.put(makeDefinition({ id: 'fd_x', label: 'Live' }));
-
-        const remote = mockRemote({
-            pullAllFieldDefinitions: vi.fn().mockResolvedValue([
-                makeDefinition({ id: 'fd_x', label: 'Live', deletedAt: 8000, updatedAt: 8000 }),
-            ]),
-        });
-
-        const sync = new FullCollectionSync(adapter, remote, resolver, queue);
-        await sync.sync();
-
-        const stored = await db.fieldDefinitions.get('fd_x');
-        expect(stored?.deletedAt).toBe(8000);
-        // Soft-deleted rows must drop out of the normal listing.
-        const listed = await adapter.listFieldDefinitions();
-        expect(listed.data.find(d => d.id === 'fd_x')).toBeUndefined();
-    });
-});
-
-describe('DeltaSync - FieldDefinitions', () => {
-    beforeEach(async () => {
-        await Promise.all([
-            db.fieldDefinitions.clear(),
-            db.syncQueue.clear(),
-            db.elements.clear(),
-            db.elementHistory.clear(),
-            db.syncMetadata.clear(),
-        ]);
-    });
-
-    it('calls pullFieldDefinitionsSince with lastSync and applies returned rows', async () => {
-        const adapter = new IDBAdapter();
-        const queue = new IDBSyncQueueManager();
-        const resolver = new ServerAuthorityResolver(adapter, queue);
-
-        await adapter.setLastSyncTimestamp(4242);
-
-        const pullFieldDefinitionsSince = vi.fn().mockResolvedValue([
-            makeDefinition({ id: 'fd_new', label: 'NewlyAdded', updatedAt: 5000 }),
-        ]);
-        const remote = mockRemote({ pullFieldDefinitionsSince });
-
-        const sync = new DeltaSync(adapter, remote, resolver);
-        const result = await sync.sync();
-
-        expect(pullFieldDefinitionsSince).toHaveBeenCalledWith(4242);
-        expect(result.fieldDefinitionsApplied).toBe(1);
-        const stored = await db.fieldDefinitions.get('fd_new');
-        expect(stored?.label).toBe('NewlyAdded');
-    });
+    const got = await adapter.getFieldDefinition(configChildId('fd_x', 'decimals'));
+    expect(got.data).toBeNull();
+  });
 });

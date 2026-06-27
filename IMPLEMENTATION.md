@@ -54,6 +54,26 @@ The per-kind dispatch that used to be smeared across six `switch (componentType)
 
 ---
 
+## Config-as-Elements (done 2026-06-27, ISSUES Architecture Migration #1)
+
+The `FieldDefinition.config` blob is retired. A Definition is now a **`library`-tree Element** (`treeType: 'library'`, `parentId: null`, `kind` = the kind it defines, `name` = the label, `value: null`) and its config **is its child sub-field subtree**. The standalone `fieldDefinitions` Dexie table and its `config` JSON column are gone (Dexie **v10**, clear-on-upgrade).
+
+**`FieldDefinition` is now an assembled read-model view, not a stored row.** It keeps its `.config` field, but the adapter assembles it on read from the Definition's config sub-field children — there is **no persisted derived config object** (SPEC §599). The payoff: the value renderers (`TextKvField`/`EnumKvField`/`NumberKvField`) and the four `ConfigForm`s are **unchanged** — they still read/produce a plain config object through `getFieldDefinitionById(...).config`; only persistence and assembly moved. `authorId` folds into the Definition Element's `updatedBy` (`"appDeveloper"` for seeds).
+
+**`treeType` is a minimal `business | library` axis** on `Element` (the full four-value axis + `effectiveChildren` overlay is cluster 4). The only business-tree leak points were the `parentId: null` scans — `IDBAdapter.listRootElements` and `nextSiblingOrder(null)` now filter `treeType === 'business'` so library Definitions never surface as roots. `createElement` only mints `business` elements and validates `fieldDefinitionId` against the library Definition Element (not the dropped table); the `nodeIndex` already ignores non-`node` kinds, so Definitions never enter navigation.
+
+**(De)serialize is `configSchema`-driven with deterministic ids.** Each field kind declares a `configSchema: ConfigSubField[]` (`{key, label, kind, disposition, options?, validate?, pack?, unpack?}`). `serializeConfig`/`assembleConfig`/`configChildId` (`src/kinds/configElements.ts`) map a config object ⇄ child Elements at id `${defId}::cfg::${key}` — deterministic, so seeds are idempotent and the inverse needs no id parsing. Sparse config stays sparse (only present keys emit a child). `pack`/`unpack` default to `config[key]` ⇄ `{[key]: value}`; only the **thresholds compound** overrides them, bundling the four flat `{lowLow,low,high,highHigh}` fields into one atomic `compound`-kind child (SPEC §596). `validateNumberKvConfig`'s threshold-ordering portion was extracted to `validateThresholds` and attached to that sub-field's `validate`; the composite validator stays in `NumberKvConfigForm` as the cross-field override.
+
+**Three new config-only kinds — `flag` / `compound` / `string-list`.** Config decomposes into existing field kinds plus these (booleans; the thresholds object; enum `options` as one list value). They register like any kind but carry `mintVia: 'config-only'`, so `FIELD_KINDS` (now filtered by `mintVia === 'composer'`) excludes them from the authoring picker. In Phase 1 they only ever exist inside config subtrees, never as standalone Data Card rows, so their manifests use a shared stub `Renderer`/`ConfigForm` (`configFieldStub.tsx`) — full standalone-row UX is deferred (LATER.md).
+
+**The schemas live in a Qwik-free module (`src/kinds/configSchema.ts`), not behind the registry.** This is the one non-obvious seam: importing `registry.ts` pulls the `component$` renderers into whatever imports it, and the Qwik optimizer doesn't transform those under Vitest (`component$` throws "Optimizer should replace all usages of `$()`"). Because the storage layer (`configElements` → IDB adapter → seed) needs the schemas, they had to be component-free. `configSchema.ts` imports only types + the pure `numberKvState` helpers; the manifests re-expose the same arrays as `manifest.configSchema`, and `configElements` reads `CONFIG_SCHEMAS` directly. **Rule of thumb: never import `src/kinds/registry.ts` (or a `*.manifest.ts`) from the storage layer or a unit test.**
+
+**`disposition` is encoded, not honored.** Each sub-field carries `owned | delegated | pinned`, but nothing acts on it yet — all config lives on the Definition and is read live (delegated-like, = current behaviour). Copy-at-mint for `owned` and override-disable for `pinned` land with the cascade arbiter (cluster 7 / ISSUES #4).
+
+**Sync — the FieldDefinition lane is retired.** Definitions are Elements, so they ride the element sync lane (`create/update-element` ops, `applyRemoteElement`, the element pull). The `create/update-fieldDefinition` ops, `pull*FieldDefinitions*`, `applyRemoteFieldDefinition`/`getAllFieldDefinitions`/`resolveFieldDefinition`, and the strategies' `fieldDefinitionsApplied` lane are all gone. `FIELD_DEFINITION_WRITTEN` survives as the "Library changed" UI signal the Composer subscribes to: emitted by `createFieldDefinition` and re-emitted by `applyRemoteElement` when a `library`/`parentId: null` Element arrives. Seeds still write directly (no enqueue, deterministic ids → identical per client); user-authored Definitions enqueue element ops and sync across devices.
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry

@@ -11,7 +11,7 @@
  * whether the value is in nominal range.
  */
 
-import type { NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
+import type { CompoundValue, NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
 
 export type NumberKvState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
 
@@ -145,20 +145,31 @@ export function computeNumberKvState(
  * unit tests against seed data. The runtime renderer doesn't call this —
  * config is assumed valid by the time it reaches the field.
  */
-export function validateNumberKvConfig(config: NumberKvConfig): string | null {
-    if (config.decimals !== undefined && config.decimals < 0) {
-        return 'decimals must be ≥ 0';
-    }
-    if (config.expectedRefreshSeconds !== undefined && !(config.expectedRefreshSeconds > 0)) {
-        return 'expectedRefreshSeconds must be > 0';
-    }
-    if (config.displayFormat === 'currency') {
-        if (!config.currencyCode || config.currencyCode.trim() === '') {
-            return 'currencyCode is required when displayFormat is "currency"';
-        }
-    }
+/**
+ * Collect the flat threshold fields off a `NumberKvConfig` into the compound
+ * sub-field's value object, omitting absent keys. The inverse (unpack) is a
+ * plain spread back onto config, since the keys match the flat field names.
+ */
+export function packThresholds(config: NumberKvConfig): CompoundValue {
+    const t: CompoundValue = {};
+    if (config.lowLow !== undefined) t.lowLow = config.lowLow;
+    if (config.low !== undefined) t.low = config.low;
+    if (config.high !== undefined) t.high = config.high;
+    if (config.highHigh !== undefined) t.highHigh = config.highHigh;
+    return t;
+}
 
-    const { lowLow, low, high, highHigh } = config;
+/**
+ * Validate the internal ordering of the thresholds compound sub-field
+ * `{lowLow ≤ low ≤ high ≤ highHigh}` (provided subset). This is the `compound`
+ * sub-field's own coherence guard (config-as-Elements): it owns *only* the
+ * threshold-object invariants. Cross-field invariants against the nominal band
+ * stay in `validateNumberKvConfig` (the authoring-form override). Accepts the
+ * raw sub-field value (`DataFieldValue`-compatible); null → valid.
+ */
+export function validateThresholds(t: CompoundValue | null): string | null {
+    if (!t) return null;
+    const { lowLow, low, high, highHigh } = t as Record<string, number | undefined>;
     // L ≤ H pair (when both set, regardless of nominal mode).
     if (low !== undefined && high !== undefined && !(low <= high)) {
         return `low (${low}) must be ≤ high (${high})`;
@@ -175,6 +186,26 @@ export function validateNumberKvConfig(config: NumberKvConfig): string | null {
     if (lowLow !== undefined && highHigh !== undefined && !(lowLow <= highHigh)) {
         return `lowLow (${lowLow}) must be ≤ highHigh (${highHigh})`;
     }
+    return null;
+}
+
+export function validateNumberKvConfig(config: NumberKvConfig): string | null {
+    if (config.decimals !== undefined && config.decimals < 0) {
+        return 'decimals must be ≥ 0';
+    }
+    if (config.expectedRefreshSeconds !== undefined && !(config.expectedRefreshSeconds > 0)) {
+        return 'expectedRefreshSeconds must be > 0';
+    }
+    if (config.displayFormat === 'currency') {
+        if (!config.currencyCode || config.currencyCode.trim() === '') {
+            return 'currencyCode is required when displayFormat is "currency"';
+        }
+    }
+
+    const { lowLow, low, high, highHigh } = config;
+    // Threshold-internal ordering is owned by the compound sub-field's validate.
+    const thresholdError = validateThresholds(packThresholds(config));
+    if (thresholdError) return thresholdError;
 
     const mode = config.nominalMode ?? 'range';
     if (mode === 'range') {

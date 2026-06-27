@@ -10,6 +10,7 @@ import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { initializeCommandBus, getCommandBus, resetCommandBus } from '../data/commands';
 import { initializeQueries, resetQueries } from '../data/queries';
 import type { Kind, FieldDefinitionConfig } from '../data/models';
+import { seedLibraryDefinition } from './libraryFixtures';
 
 async function seedDefinition(
   id: string,
@@ -17,16 +18,7 @@ async function seedDefinition(
   label: string,
   config: FieldDefinitionConfig,
 ): Promise<void> {
-  await db.fieldDefinitions.put({
-    id,
-    kind,
-    label,
-    config,
-    authorId: 'test',
-    updatedBy: 'test',
-    updatedAt: Date.now(),
-    deletedAt: null,
-  });
+  await seedLibraryDefinition(id, kind, label, config);
 }
 
 async function createParentNode(id: string): Promise<void> {

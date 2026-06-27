@@ -33,13 +33,13 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md). Each item below is a widening, not a rewrite.
 
-1.) **Config-as-Elements** — retire `FieldDefinition.config`; Definition becomes a `library`-tree Element whose config is its sub-field subtree; `ConfigForm`s become authoring overrides; `validateNumberKvConfig` moves to the threshold compound sub-field; `seedFieldDefinitions` writes Definition subtrees with stable deterministic sub-field ids; give `FIELD_DEFINITION_IDS` a manifest/Definition home.
+1.) **Typed trees (`treeType`) — full axis** — the minimal `business | library` axis landed with Config-as-Elements (root/sibling queries scope to business; Definitions live in `library`). Remaining: the full four-value axis (`config`/`view-state`), routing sync/history/visibility by tree, and `effectiveChildren(node, viewer)` for per-viewer `config`/`view-state` overlays.
 
-2.) **Typed trees (`treeType`)** — introduce the axis; route sync/history/visibility by tree; `effectiveChildren(node, viewer)` for per-viewer `config`/`view-state` overlays.
+2.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
 
-3.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
+3.) **The lens, then the rest** — build once (`Derivation(children/transitive)` gather + upward `ProvisionSpec`, deterministic id); instantiate for `jobs`/`logbook`; then `job`/`log-entry`, `org`, `person`, `logical-container`, and the `Edges` family (`asset-doc`/`part-supplier-link`/`other-end`/`approval`). Implement the `SourceSpec` `{relation, reach}` traversal.
 
-4.) **The lens, then the rest** — build once (`Derivation(children/transitive)` gather + upward `ProvisionSpec`, deterministic id); instantiate for `jobs`/`logbook`; then `job`/`log-entry`, `org`, `person`, `logical-container`, and the `Edges` family (`asset-doc`/`part-supplier-link`/`other-end`/`approval`). Implement the `SourceSpec` `{relation, reach}` traversal.
+4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned copy-at-mint / delegated live-read / pinned), reading `ancestors/transitive`. The disposition vocabulary is already encoded on the schema (Config-as-Elements); this wires it.
 
 5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 

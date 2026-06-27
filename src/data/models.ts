@@ -105,6 +105,16 @@ export type SingleImageValue = {
   caption?: string;
 };
 
+// Config sub-field value shapes (config-as-Elements). These kinds back the
+// `library`-tree config subtree; in Phase 1 they only ever exist as config
+// sub-fields (see `flag` / `compound` / `string-list` manifests), never as
+// standalone Data Card rows.
+export type FlagValue = boolean;
+export type StringListValue = string[];
+/** A small atomic co-varying object — the one object-valued config residue
+ *  (e.g. number-kv thresholds `{lowLow, low, high, highHigh}`). */
+export type CompoundValue = { [k: string]: number };
+
 /**
  * Union of DataField value types, discriminated by Element.kind.
  */
@@ -112,15 +122,22 @@ export type DataFieldValue =
   | TextKvValue
   | EnumKvValue
   | NumberKvValue
-  | SingleImageValue;
+  | SingleImageValue
+  | FlagValue
+  | StringListValue
+  | CompoundValue;
 
 /**
  * FieldDefinition: a Library entry naming a fully-configured field kind.
- * Persisted form of "what kind of field this is."
  *
- * `authorId` carries the user (or `"appDeveloper"` for seeds) that created the
- * row; `deletedAt` is admin-only soft-delete (no end-user UI in Phase 1, but
- * the field exists for forward compatibility and admin tombstones).
+ * This is an **assembled read-model view**, no longer a stored row. A Definition
+ * lives as a `library`-tree `Element` (`kind` = the kind it defines, `name` = the
+ * label) whose config **is** its child sub-field Element subtree (see
+ * `src/kinds/configElements.ts` and SPEC → Config is Elements). `config` here is
+ * assembled on read from those children — there is no persisted config blob.
+ *
+ * `authorId` mirrors the Definition Element's `updatedBy` (`"appDeveloper"` for
+ * seeds); `deletedAt` is admin-only soft-delete (no end-user UI in Phase 1).
  */
 export type FieldDefinition = {
   id: ID;
@@ -166,12 +183,21 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 export type Kind = keyof typeof KIND_REGISTRY;
 
 /**
+ * Which tree an Element belongs to. Phase-1 minimal axis: `business` (the
+ * navigable asset tree) and `library` (FieldDefinitions + their config subtree).
+ * The full four-value axis (`config` / `view-state`) and the per-viewer
+ * `effectiveChildren` overlay are cluster 4 (see LATER.md).
+ */
+export type TreeType = 'business' | 'library';
+
+/**
  * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.
  * - `name` is required (max 100 chars), stays denormalized for header hot path.
  * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
  * - `value` is null for `kind === "node"`; typed by `kind` otherwise.
  * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
  * - `fieldDefinitionId` is null for nodes.
+ * - `treeType` partitions business vs library; root/sibling queries scope by it.
  */
 export type Element = {
   id: ID;
@@ -182,6 +208,7 @@ export type Element = {
   parentId: ID | null;
   siblingOrder: number;
   fieldDefinitionId: ID | null;
+  treeType: TreeType;
   updatedBy: UserId;
   updatedAt: number;
   deletedAt: number | null;

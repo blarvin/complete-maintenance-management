@@ -3,6 +3,7 @@ import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { initializeCommandBus, getCommandBus, resetCommandBus } from '../data/commands';
 import { initializeQueries, getElementQueries, resetQueries } from '../data/queries';
+import { seedLibraryDefinition } from './libraryFixtures';
 
 describe('Element commands + queries', () => {
   beforeEach(async () => {
@@ -34,16 +35,7 @@ describe('Element commands + queries', () => {
   });
 
   it('CREATE_ELEMENT_FROM_DEFINITION snapshots label as name and uses kind from definition', async () => {
-    await db.fieldDefinitions.put({
-      id: 'fd-vin',
-      kind: 'text-kv',
-      label: 'VIN',
-      config: {},
-      authorId: 'appDeveloper',
-      updatedBy: 'localUser',
-      updatedAt: Date.now(),
-      deletedAt: null,
-    });
+    await seedLibraryDefinition('fd-vin', 'text-kv', 'VIN');
     const bus = getCommandBus();
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'p', kind: 'node', parentId: null, name: 'P' } });
     const created = await bus.execute({
@@ -96,16 +88,7 @@ describe('Element commands + queries', () => {
   });
 
   it('getChildrenByKind separates node children from field children', async () => {
-    await db.fieldDefinitions.put({
-      id: 'fd-1',
-      kind: 'text-kv',
-      label: 'L',
-      config: {},
-      authorId: 'appDeveloper',
-      updatedBy: 'localUser',
-      updatedAt: Date.now(),
-      deletedAt: null,
-    });
+    await seedLibraryDefinition('fd-1', 'text-kv', 'L');
     const bus = getCommandBus();
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'p', kind: 'node', parentId: null, name: 'P' } });
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'n', kind: 'node', parentId: 'p', name: 'N' } });

@@ -16,6 +16,9 @@ import { textKvManifest } from './text-kv.manifest';
 import { enumKvManifest } from './enum-kv.manifest';
 import { numberKvManifest } from './number-kv.manifest';
 import { singleImageManifest } from './single-image.manifest';
+import { flagManifest } from './flag.manifest';
+import { compoundManifest } from './compound.manifest';
+import { stringListManifest } from './string-list.manifest';
 
 export const KIND_REGISTRY = {
     node: nodeManifest,
@@ -23,6 +26,11 @@ export const KIND_REGISTRY = {
     'enum-kv': enumKvManifest,
     'number-kv': numberKvManifest,
     'single-image': singleImageManifest,
+    // Config-only sub-field kinds (config-as-Elements). Registered for value
+    // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).
+    flag: flagManifest,
+    compound: compoundManifest,
+    'string-list': stringListManifest,
 } satisfies Record<string, KindManifest>;
 
 export function getKindManifest(kind: Kind): KindManifest {
@@ -44,9 +52,14 @@ export function getInlineManifest(kind: Kind): InlineManifest {
     return manifest;
 }
 
-/** Ordered kind list for the authoring-form segmented picker — the inline kinds. */
+/**
+ * Ordered kind list for the authoring-form segmented picker — the user-mintable
+ * field kinds. Filters on `mintVia === 'composer'` so the config-only sub-field
+ * kinds (`flag`/`compound`/`string-list`), though inline, never appear as a
+ * choice for a new Definition.
+ */
 export const FIELD_KINDS: Kind[] = Object.values(KIND_REGISTRY)
-    .filter((manifest) => manifest.placement === 'inline')
+    .filter((manifest) => manifest.mintVia === 'composer')
     .map((manifest) => manifest.kind);
 
 export type { KindManifest, FieldRendererProps, ConfigFormProps } from './types';

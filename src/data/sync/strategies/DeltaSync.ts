@@ -29,13 +29,13 @@ export class DeltaSync implements SyncStrategy {
     // Load pending IDs once — avoids N queue fetches across all entities.
     const pendingSet = await this.resolver.loadPendingSet();
 
-    // Pull FieldDefinitions first so newer elements can reference them.
-    const fieldDefinitionsApplied = await this.syncFieldDefinitions(since, pendingSet);
+    // Library Definitions are `library`-tree Elements — they arrive through the
+    // element lane, no separate FieldDefinition pull.
     const elementsApplied = await this.syncElements(since, pendingSet);
     const elementHistoryApplied = await this.syncElementHistory(since);
 
-    console.log('[DeltaSync] Complete:', { elementsApplied, elementHistoryApplied, fieldDefinitionsApplied });
-    return { elementsApplied, elementHistoryApplied, fieldDefinitionsApplied };
+    console.log('[DeltaSync] Complete:', { elementsApplied, elementHistoryApplied });
+    return { elementsApplied, elementHistoryApplied };
   }
 
   private async syncElements(since: number, pendingSet: Set<string>): Promise<number> {
@@ -60,17 +60,5 @@ export class DeltaSync implements SyncStrategy {
     }
 
     return history.length;
-  }
-
-  private async syncFieldDefinitions(since: number, pendingSet: Set<string>): Promise<number> {
-    const definitions = await this.remote.pullFieldDefinitionsSince(since);
-    console.log('[DeltaSync] Pulled', definitions.length, 'field definitions');
-
-    let applied = 0;
-    for (const def of definitions) {
-      const result = await this.resolver.resolveFieldDefinition(def, pendingSet);
-      if (result === 'applied') applied++;
-    }
-    return applied;
   }
 }

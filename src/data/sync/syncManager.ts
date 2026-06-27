@@ -125,7 +125,8 @@ export class SyncManager {
 
       console.log('[SyncManager] Delta sync cycle complete');
       // UI updates arrive via per-element storageEventBus emissions from
-      // IDBAdapter.applyRemoteElement / applyRemoteFieldDefinition.
+      // IDBAdapter.applyRemoteElement (which also re-signals the Composer for
+      // arriving `library`-tree Definitions).
     } catch (err) {
       console.error('[SyncManager] Delta sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app

@@ -2,6 +2,7 @@ import type { Component } from '@builder.io/qwik';
 import { SingleImageField } from '../components/DataField/SingleImageField';
 import { SingleImageConfigForm } from '../components/FieldComposer/configForms/SingleImageConfigForm';
 import type { DataFieldValue, FieldDefinitionConfig, SingleImageValue } from '../data/models';
+import { SINGLE_IMAGE_CONFIG_SCHEMA } from './configSchema';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const singleImageManifest: KindManifest = {
@@ -16,4 +17,5 @@ export const singleImageManifest: KindManifest = {
         v === null || v === undefined ? null : (v as SingleImageValue).caption ?? '[image]',
     hideLabel: true,
     blockValueLayout: true,
+    configSchema: SINGLE_IMAGE_CONFIG_SCHEMA,
 };

@@ -3,6 +3,7 @@ import { NumberKvField } from '../components/DataField/NumberKvField';
 import { formatNumberKvDisplay } from '../components/DataField/numberKvState';
 import { NumberKvConfigForm } from '../components/FieldComposer/configForms/NumberKvConfigForm';
 import type { DataFieldValue, FieldDefinitionConfig, NumberKvConfig } from '../data/models';
+import { NUMBER_KV_CONFIG_SCHEMA } from './configSchema';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const numberKvManifest: KindManifest = {
@@ -18,4 +19,5 @@ export const numberKvManifest: KindManifest = {
             : formatNumberKvDisplay(v as number, (config ?? {}) as NumberKvConfig),
     hideLabel: false,
     blockValueLayout: false,
+    configSchema: NUMBER_KV_CONFIG_SCHEMA,
 };

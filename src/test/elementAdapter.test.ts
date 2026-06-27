@@ -1,20 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
-import type { FieldDefinition } from '../data/models';
-
-function makeFieldDef(id: string, label = 'Test'): FieldDefinition {
-  return {
-    id,
-    kind: 'text-kv',
-    label,
-    config: {},
-    authorId: 'appDeveloper',
-    updatedBy: 'localUser',
-    updatedAt: Date.now(),
-    deletedAt: null,
-  };
-}
+import { seedLibraryDefinition } from './libraryFixtures';
 
 describe('IDBAdapter — element operations', () => {
   let adapter: IDBAdapter;
@@ -65,7 +52,7 @@ describe('IDBAdapter — element operations', () => {
   });
 
   it('creates a text-kv element when its FieldDefinition exists', async () => {
-    await db.fieldDefinitions.put(makeFieldDef('fd-1', 'VIN'));
+    await seedLibraryDefinition('fd-1', 'text-kv', 'VIN');
     const res = await adapter.createElement({
       id: 'e-vin',
       kind: 'text-kv',
@@ -95,7 +82,7 @@ describe('IDBAdapter — element operations', () => {
   it('logs subtitle, parentId, siblingOrder, and value changes independently', async () => {
     await adapter.createElement({ id: 'a', kind: 'node', parentId: null, name: 'A' });
     await adapter.createElement({ id: 'b', kind: 'node', parentId: null, name: 'B' });
-    await db.fieldDefinitions.put(makeFieldDef('fd-1'));
+    await seedLibraryDefinition('fd-1', 'text-kv');
     await adapter.createElement({
       id: 'e2',
       kind: 'text-kv',
@@ -130,7 +117,7 @@ describe('IDBAdapter — element operations', () => {
   });
 
   it('listChildElementsByKind filters by kind', async () => {
-    await db.fieldDefinitions.put(makeFieldDef('fd-1'));
+    await seedLibraryDefinition('fd-1', 'text-kv');
     await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
     await adapter.createElement({ id: 'n1', kind: 'node', parentId: 'p', name: 'N1' });
     await adapter.createElement({

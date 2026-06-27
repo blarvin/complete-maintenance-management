@@ -133,23 +133,18 @@ async function migrateFromFirestore(): Promise<void> {
   try {
     const firestoreAdapter = new FirestoreAdapter();
 
-    // Fetch all data via adapter methods
+    // Fetch all data via adapter methods. Library Definitions are `library`-tree
+    // Elements, so they come down with the elements pull — no separate fetch.
     const elements = await firestoreAdapter.pullAllElements();
     console.log('[Migration] Found', elements.length, 'elements');
-
-    const fieldDefinitions = await firestoreAdapter.pullAllFieldDefinitions();
-    console.log('[Migration] Found', fieldDefinitions.length, 'field definitions');
 
     const elementHistory = await firestoreAdapter.pullAllElementHistory();
     console.log('[Migration] Found', elementHistory.length, 'element history entries');
 
     // Bulk insert into IDB
-    await db.transaction('rw', [db.elements, db.fieldDefinitions, db.elementHistory, db.syncMetadata], async () => {
+    await db.transaction('rw', [db.elements, db.elementHistory, db.syncMetadata], async () => {
       if (elements.length > 0) {
         await db.elements.bulkPut(elements);
-      }
-      if (fieldDefinitions.length > 0) {
-        await db.fieldDefinitions.bulkPut(fieldDefinitions);
       }
       if (elementHistory.length > 0) {
         await db.elementHistory.bulkPut(elementHistory);

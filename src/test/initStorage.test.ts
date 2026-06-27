@@ -57,6 +57,7 @@ describe('initStorage - Initialization State', () => {
                 value: null,
                 siblingOrder: 0,
                 fieldDefinitionId: null,
+                treeType: 'business',
                 updatedBy: 'test',
                 updatedAt: Date.now(),
                 deletedAt: null,
@@ -102,6 +103,7 @@ describe('initStorage - Migration Fallback Paths', () => {
                 value: null,
                 siblingOrder: 0,
                 fieldDefinitionId: null,
+                treeType: 'business',
                 updatedBy: 'test',
                 updatedAt: Date.now(),
                 deletedAt: null,
@@ -225,6 +227,7 @@ describe('initStorage - Node Index Seeding', () => {
             value: null,
             siblingOrder: 0,
             fieldDefinitionId: null,
+            treeType: 'business' as const,
             updatedBy: 'test',
             updatedAt: Date.now(),
         };

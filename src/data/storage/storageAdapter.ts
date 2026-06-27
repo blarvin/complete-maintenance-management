@@ -23,11 +23,6 @@ export type StorageFieldDefinitionCreate = {
   config: FieldDefinitionConfig;
 };
 
-export type StorageFieldDefinitionUpdate = {
-  label?: string;
-  config?: FieldDefinitionConfig;
-};
-
 // ============================================================================
 // Unified Element inputs
 // ============================================================================
@@ -59,11 +54,12 @@ export type StorageElementUpdate = Partial<{
  * Does not mirror Firestore; focuses on current domain operations.
  */
 export interface StorageAdapter {
-  // FieldDefinition operations (the Library)
+  // FieldDefinition operations (the Library — `library`-tree Elements, assembled
+  // into FieldDefinition views; no separate table). Phase 1 has no edit path
+  // (fork-not-mutate), so there is no updateFieldDefinition.
   listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>>;
   getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>>;
   createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>>;
-  updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>>;
 
   // ============================================================================
   // Element operations (unified primitive — see plan: unified-element-data-model)
@@ -97,11 +93,7 @@ export interface SyncableStorageAdapter extends StorageAdapter {
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
 
-  // FieldDefinition remote apply (server-authority upsert from a pull).
-  applyRemoteFieldDefinition(entity: FieldDefinition): Promise<void>;
-  getAllFieldDefinitions(): Promise<FieldDefinition[]>;
-
-  // ---- Element sync ----
+  // ---- Element sync ---- (library Definitions ride this lane too)
   getAllElements(): Promise<Element[]>;
   getAllElementHistory(): Promise<ElementHistory[]>;
   applyRemoteElement(element: Element): Promise<void>;
@@ -120,10 +112,8 @@ export interface RemoteSyncAdapter {
   // Full collection pull methods
   pullAllElements(): Promise<Element[]>;
   pullAllElementHistory(): Promise<ElementHistory[]>;
-  pullAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
   // Delta sync methods (only rows updated since the given timestamp)
   pullElementsSince(since: number): Promise<Element[]>;
   pullElementHistorySince(since: number): Promise<ElementHistory[]>;
-  pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]>;
 }

@@ -1,23 +1,26 @@
 /**
- * Dev-seeded FieldDefinition rows.
+ * Dev-seeded FieldDefinitions, written as `library`-tree Elements
+ * (config-as-Elements): each seed is a Definition Element plus its config
+ * sub-field child Elements (deterministic `::cfg::` ids via `serializeConfig`).
  *
  * Phase-1 starter set covering each Component (text-kv, enum-kv, number-kv,
  * single-image) plus the three default fields used at new-node construction
- * (Type Of, Description, Tags). Writes directly to db.fieldDefinitions (no
- * sync enqueue) — seeds are identical per-client, propagating them as sync
- * ops would create N writes per N clients with no gain.
+ * (Type Of, Description, Tags). Writes directly to `db.elements` (no sync
+ * enqueue, no history) — seeds are identical per-client (deterministic ids), so
+ * propagating them as sync ops would create N writes per N clients with no gain.
  *
  * Idempotent via a syncMetadata version key. Bump SEED_VERSION to force a
  * reseed pass.
  */
 
 import { db } from '../storage/db';
-import type { FieldDefinition } from '../models';
+import type { Element, FieldDefinitionConfig, Kind } from '../models';
 import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
-import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
+import { serializeConfig } from '../../kinds/configElements';
 
-export const SEED_VERSION = 5;
+// Bumped for the config-as-Elements migration (seeds are now library Elements).
+export const SEED_VERSION = 6;
 export const SEED_KEY = 'fieldDefinitionsSeededVersion';
 
 /**
@@ -34,7 +37,7 @@ export const FIELD_DEFINITION_IDS = {
   mainImage: 'fd_main_image',
 } as const;
 
-type SeedRow = Omit<FieldDefinition, 'authorId' | 'updatedBy' | 'updatedAt' | 'deletedAt'>;
+type SeedRow = { id: string; kind: Kind; label: string; config: FieldDefinitionConfig };
 
 const SEEDS: SeedRow[] = [
   {
@@ -99,25 +102,41 @@ export async function seedFieldDefinitions(): Promise<void> {
   }
 
   const timestamp = now();
-  const userId = getCurrentUserId();
 
   // Upsert (not skip-if-exists): a SEED_VERSION bump is the signal that the
   // canonical seed config has changed and existing rows should be overwritten.
   // FieldDefinitions aren't user-edited yet, so this is safe; revisit when they
-  // become editable.
-  await db.transaction('rw', [db.fieldDefinitions, db.syncMetadata], async () => {
+  // become editable. `updatedBy` carries the app-developer provenance (the old
+  // separate `authorId` column folds into it).
+  await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
     for (const seed of SEEDS) {
-      const row: FieldDefinition = {
-        ...seed,
-        authorId: AUTHOR_ID_APP_DEVELOPER,
-        updatedBy: userId,
+      const defElement: Element = {
+        id: seed.id,
+        kind: seed.kind,
+        name: seed.label,
+        subtitle: null,
+        value: null,
+        parentId: null,
+        siblingOrder: 0,
+        fieldDefinitionId: null,
+        treeType: 'library',
+        updatedBy: AUTHOR_ID_APP_DEVELOPER,
         updatedAt: timestamp,
         deletedAt: null,
       };
-      await db.fieldDefinitions.put(row);
+      await db.elements.put(defElement);
+
+      for (const child of serializeConfig(seed.id, seed.kind, seed.config)) {
+        await db.elements.put({
+          ...child,
+          updatedBy: AUTHOR_ID_APP_DEVELOPER,
+          updatedAt: timestamp,
+          deletedAt: null,
+        });
+      }
     }
     await db.syncMetadata.put({ key: SEED_KEY, value: SEED_VERSION });
   });
 
-  console.log('[seedFieldDefinitions] Seeded version', SEED_VERSION);
+  console.log('[seedFieldDefinitions] Seeded version', SEED_VERSION, 'as library Elements');
 }
