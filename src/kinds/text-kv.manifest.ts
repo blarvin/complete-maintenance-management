@@ -7,6 +7,8 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const textKvManifest: KindManifest = {
     kind: 'text-kv',
     pickerLabel: 'Text',
+    mintVia: 'composer',
+    placement: 'inline',
     Renderer: TextKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: TextKvConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({}),

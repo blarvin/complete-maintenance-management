@@ -17,6 +17,8 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 1.) **Only-child node gets a non-zero `siblingOrder`** — a freshly created node that is its parent's sole child is minted with e.g. `siblingOrder: 5` instead of `0`. Mint should seed the first child from `max(existing child order) + 1` (−1 → 0 when there are none); something is over-counting the base order.
 
+2.) **`initStorage`/`SyncLifecycle` re-initialize repeatedly** — the `useInitStorage` `useVisibleTask$` (`src/hooks/useInitStorage.ts`) fires many times per session (observed 8+ init cycles, including 3 within one second), restarting sync each time. Suspected cause of the intermittent **"Field Failed to Sync"** toast: an in-flight push is interrupted by a re-init while a later cycle still lands the value in Firestore — so the data is correct and the warning is a false alarm. Also resets UI state mid-interaction (made browser smoke-testing flaky). Spotted during the `KIND_REGISTRY` widening; unrelated to it.
+
 
 ## Features
 
@@ -31,17 +33,15 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md). Each item below is a widening, not a rewrite.
 
-1.) **Widen `KIND_REGISTRY` to all kinds incl. `node`** — `node` registers like any other kind; manifest gains `placement` + the six capability descriptors + node descriptors (`provision`, `container`, `SourceSpec`); `FieldRendererProps` → placement-keyed `RendererProps`. (`Kind` is already registry-derived — drop the `"node" |` prefix and `getKindManifest`'s internal cast once `node` is a key.)
+1.) **Config-as-Elements** — retire `FieldDefinition.config`; Definition becomes a `library`-tree Element whose config is its sub-field subtree; `ConfigForm`s become authoring overrides; `validateNumberKvConfig` moves to the threshold compound sub-field; `seedFieldDefinitions` writes Definition subtrees with stable deterministic sub-field ids; give `FIELD_DEFINITION_IDS` a manifest/Definition home.
 
-2.) **Config-as-Elements** — retire `FieldDefinition.config`; Definition becomes a `library`-tree Element whose config is its sub-field subtree; `ConfigForm`s become authoring overrides; `validateNumberKvConfig` moves to the threshold compound sub-field; `seedFieldDefinitions` writes Definition subtrees with stable deterministic sub-field ids; give `FIELD_DEFINITION_IDS` a manifest/Definition home.
+2.) **Typed trees (`treeType`)** — introduce the axis; route sync/history/visibility by tree; `effectiveChildren(node, viewer)` for per-viewer `config`/`view-state` overlays.
 
-3.) **Typed trees (`treeType`)** — introduce the axis; route sync/history/visibility by tree; `effectiveChildren(node, viewer)` for per-viewer `config`/`view-state` overlays.
+3.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
 
-4.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
+4.) **The lens, then the rest** — build once (`Derivation(children/transitive)` gather + upward `ProvisionSpec`, deterministic id); instantiate for `jobs`/`logbook`; then `job`/`log-entry`, `org`, `person`, `logical-container`, and the `Edges` family (`asset-doc`/`part-supplier-link`/`other-end`/`approval`). Implement the `SourceSpec` `{relation, reach}` traversal.
 
-5.) **The lens, then the rest** — build once (`Derivation(children/transitive)` gather + upward `ProvisionSpec`, deterministic id); instantiate for `jobs`/`logbook`; then `job`/`log-entry`, `org`, `person`, `logical-container`, and the `Edges` family (`asset-doc`/`part-supplier-link`/`other-end`/`approval`). Implement the `SourceSpec` `{relation, reach}` traversal.
-
-6.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
+5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
 
 ## Tech Debt

@@ -1,11 +1,14 @@
 ﻿Here's the code work the docs now imply, grouped and roughly in dependency order. This is a map, not a plan — each cluster is probably its own plan later.
 
 ## 1. Collapse `componentType` → `kind` (the foundational rename)
+> **✅ Done** (commit 8fc15ed).
 - Flatten the two-tier `Kind = "node" | ComponentType` into a single registry-derived `Kind` union; rename `componentType` → `kind` across `registry.ts`, the four `*.manifest.ts`, the `KindManifest` type, `FieldDefinition`, and the `DataField` dispatcher.
 - Derive the `Kind` and `Value` unions **from** `KIND_REGISTRY` (so a missing/mistyped kind is a compile error).
 - Mostly mechanical 1:1 rename — nothing reuses a componentType across kinds; each manifest already owns its component code. Do this first; everything else sits on it.
 
 ## 2. Widen the registry to all kinds (incl. `node`)
+> **◐ Seam done** (2026-06-27, *structural seam only* scope): `node` registered (`node.manifest.ts`); `KindManifest` is now a `placement`-discriminated union (`InlineManifest | ReRootManifest`); `mintVia` + `placement` added; `Kind` collapsed to `keyof typeof KIND_REGISTRY`; `getKindManifest`'s cast dropped; `getInlineManifest` seam for the field-only consumers; `FIELD_KINDS` derived by placement.
+> The remaining bullets below — the **six capability descriptors**, `coherence(caps)`, node descriptors (`provision`/`container`/`SourceSpec`), and the `RendererProps` generalization — were **deliberately deferred** (no consumers yet): the descriptors land with the lens / node-like kinds (#6), the node `Renderer`/`RendererProps` work with chrome entailment (#5).
 - Widen `KIND_REGISTRY` to `Record<Kind, KindManifest>`; admit `node` and the node-like kinds. `node` stops being framework-rendered-outside-the-registry.
 - Add manifest fields: `placement: "inline" | "re-root"`, `mintVia`, the six capability descriptors (`ownValue`/`children`/`edges`/`derivation`/`action`/`reads`), and node descriptors (`provision`, `container`, `SourceSpec {relation, reach}`).
 - Generalize `FieldRendererProps` → placement-keyed `RendererProps`.

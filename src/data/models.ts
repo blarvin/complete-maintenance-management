@@ -158,13 +158,12 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // ============================================================================
 
 /**
- * Element kind. Derived from KIND_REGISTRY: `"node"` denotes a container (no
- * value); the rest are the value-bearing kinds the registry knows about, so a
- * kind can never drift from its manifest. Adding a manifest widens this union
- * automatically. (When `node` joins the registry — cluster #2 — the `"node" |`
- * prefix drops and this becomes `keyof typeof KIND_REGISTRY`.)
+ * Element kind. Derived from KIND_REGISTRY's keys, so a kind can never drift from
+ * its manifest and adding a manifest widens this union automatically. `"node"` is
+ * the container kind (no value, `placement: re-root`); the rest are value-bearing
+ * field kinds. There is no privileged kind — `node` registers like any other.
  */
-export type Kind = "node" | keyof typeof KIND_REGISTRY;
+export type Kind = keyof typeof KIND_REGISTRY;
 
 /**
  * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.

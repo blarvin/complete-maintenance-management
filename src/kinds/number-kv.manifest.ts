@@ -8,6 +8,8 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const numberKvManifest: KindManifest = {
     kind: 'number-kv',
     pickerLabel: 'Number',
+    mintVia: 'composer',
+    placement: 'inline',
     Renderer: NumberKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: NumberKvConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({ unitsSymbol: '' }),

@@ -7,6 +7,8 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const singleImageManifest: KindManifest = {
     kind: 'single-image',
     pickerLabel: 'Image',
+    mintVia: 'composer',
+    placement: 'inline',
     Renderer: SingleImageField as unknown as Component<FieldRendererProps>,
     ConfigForm: SingleImageConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({ maxSizeMB: 5 }),

@@ -12,7 +12,7 @@ import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
-import { getKindManifest } from '../../kinds/registry';
+import { getInlineManifest } from '../../kinds/registry';
 import type { Kind, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
 
@@ -52,7 +52,7 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const labelId = `field-label-${props.id}`;
 
-    const manifest = getKindManifest(props.kind);
+    const manifest = getInlineManifest(props.kind);
 
     // Used by DataFieldDetails for metadata and (future) history-value preview.
     const currentDisplayValue = manifest.displayPreview(props.value);
@@ -102,7 +102,7 @@ function renderBody(
     props: DataFieldProps,
     rootRef: Signal<HTMLElement | undefined>,
 ) {
-    const Renderer = getKindManifest(props.kind).Renderer;
+    const Renderer = getInlineManifest(props.kind).Renderer;
     return (
         <Renderer
             id={props.id}

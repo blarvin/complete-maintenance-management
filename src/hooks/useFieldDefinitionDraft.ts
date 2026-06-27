@@ -14,7 +14,7 @@
 import { useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
-import { getKindManifest } from '../kinds/registry';
+import { getInlineManifest } from '../kinds/registry';
 import type {
     Kind,
     FieldDefinition,
@@ -24,7 +24,7 @@ import type {
 export const DEFAULT_KIND: Kind = 'text-kv';
 
 export function defaultConfigFor(kind: Kind): FieldDefinitionConfig {
-    return getKindManifest(kind).defaultConfig();
+    return getInlineManifest(kind).defaultConfig();
 }
 
 const LABEL_MAX = 50;

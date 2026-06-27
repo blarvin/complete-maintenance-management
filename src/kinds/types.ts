@@ -1,14 +1,14 @@
 /**
  * Renderer-registry types — the seam that collapses the per-kind `switch`
  * statements (renderer selection, config-form selection, default config,
- * value preview) into one manifest per FieldComponent kind.
+ * value preview) into one manifest per kind.
  *
- * Phase 1: keyed by the four value-bearing field kinds only (KIND_REGISTRY's
- * keys; `Kind` is derived from them). The `"node"` kind is privileged — its
- * recursion/navigation lives in the framework (TreeNode), not here, so it has
- * no manifest yet. Phase-2 manifest fields (placement, nature, icon, lazy
- * renderers) are intentionally absent until a second non-field surface forces
- * them.
+ * `KindManifest` is a `placement`-discriminated union: `inline` (field-like)
+ * kinds carry the full renderer/authoring surface; `re-root` (node-like) kinds
+ * carry identity only — their rendering is framework-owned (TreeNode) until the
+ * chrome-entailment cluster routes it through a manifest Renderer. The capability
+ * descriptors the SPEC catalogues (ownValue/children/edges/…, SourceSpec,
+ * provision) are intentionally absent until the kinds that consume them land.
  */
 
 import type { Component, PropFunction, QRL, Signal } from '@builder.io/qwik';
@@ -46,13 +46,25 @@ export type ConfigFormProps = {
 };
 
 /**
- * Everything the framework needs to render and author one field kind. Replaces
- * the scattered switches; assembled into KIND_REGISTRY in registry.ts.
+ * Identity shared by every kind, node-like or field-like. `placement` is the
+ * discriminant that selects the rest of the manifest shape.
  */
-export type KindManifest = {
+type ManifestIdentity = {
     kind: Kind;
     /** Label for the authoring-form segmented picker. */
     pickerLabel: string;
+    /** Which create affordance offers this kind (SPEC §registry & manifest). */
+    mintVia: 'composer' | 'node-create';
+    /** Where this kind draws its surface — separates node-like from field-like. */
+    placement: 'inline' | 're-root';
+};
+
+/**
+ * Inline (field-like) kinds: drawn as a DataField row, authored via the composer.
+ * Carries everything the framework needs to render and author one field kind.
+ */
+export type InlineManifest = ManifestIdentity & {
+    placement: 'inline';
     /** Value renderer (display + composer pendingMode). */
     Renderer: Component<FieldRendererProps>;
     /** Authoring sub-form for a new FieldDefinition of this kind. */
@@ -68,3 +80,18 @@ export type KindManifest = {
     /** Value occupies a tall block rather than an inline run — pins the row chevron to the top. */
     blockValueLayout: boolean;
 };
+
+/**
+ * Re-root (node-like) kinds: drawn as a navigable view. Identity only for now —
+ * `node`'s recursion/navigation are framework-owned (TreeNode); routing them
+ * through a manifest Renderer is the chrome-entailment cluster.
+ */
+export type ReRootManifest = ManifestIdentity & {
+    placement: 're-root';
+};
+
+/**
+ * Everything the framework needs to render and author one kind. Replaces the
+ * scattered switches; assembled into KIND_REGISTRY in registry.ts.
+ */
+export type KindManifest = InlineManifest | ReRootManifest;

@@ -7,6 +7,8 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const enumKvManifest: KindManifest = {
     kind: 'enum-kv',
     pickerLabel: 'Enum',
+    mintVia: 'composer',
+    placement: 'inline',
     Renderer: EnumKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: EnumKvConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({ options: [] }),

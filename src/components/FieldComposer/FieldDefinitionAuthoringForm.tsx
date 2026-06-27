@@ -15,12 +15,12 @@
 import { component$, $, type PropFunction } from '@builder.io/qwik';
 import type { FieldDefinition, FieldDefinitionConfig } from '../../data/models';
 import { useFieldDefinitionDraft } from '../../hooks/useFieldDefinitionDraft';
-import { getKindManifest, FIELD_KINDS } from '../../kinds/registry';
+import { getInlineManifest, FIELD_KINDS } from '../../kinds/registry';
 import styles from './FieldDefinitionAuthoringForm.module.css';
 
 const COMPONENT_CHOICES = FIELD_KINDS.map((type) => ({
     type,
-    label: getKindManifest(type).pickerLabel,
+    label: getInlineManifest(type).pickerLabel,
 }));
 
 export type FieldDefinitionAuthoringFormProps = {
@@ -55,7 +55,7 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
         if (def) await props.onCreated$(def);
     });
 
-    const ConfigForm = getKindManifest(kind.value).ConfigForm;
+    const ConfigForm = getInlineManifest(kind.value).ConfigForm;
 
     return (
         <div class={styles.form}>

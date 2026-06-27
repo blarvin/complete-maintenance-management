@@ -14,7 +14,7 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, type QRL, type Signal } from '@builder.io/qwik';
-import { getKindManifest } from '../../kinds/registry';
+import { getInlineManifest } from '../../kinds/registry';
 import type { FieldDefinition, DataFieldValue } from '../../data/models';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import styles from './ComposerRow.module.css';
@@ -97,7 +97,7 @@ const RowBody = component$<RowBodyProps>((props) => {
         return props.onValueChange$(formId, value);
     });
 
-    const Renderer = getKindManifest(props.definition.kind).Renderer;
+    const Renderer = getInlineManifest(props.definition.kind).Renderer;
     return (
         <Renderer
             id={props.pendingForm.id}
