@@ -33,7 +33,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md). Each item below is a widening, not a rewrite.
 
-1.) **Typed trees (`treeType`) — full axis** — the minimal `business | library` axis landed with Config-as-Elements (root/sibling queries scope to business; Definitions live in `library`). Remaining: the full four-value axis (`config`/`view-state`), routing sync/history/visibility by tree, and `effectiveChildren(node, viewer)` for per-viewer `config`/`view-state` overlays.
+1.) **Typed trees (`treeType`) — per-viewer overlays** — the full four-value axis (`business`/`library`/`config`/`view-state`), per-tree sync/history routing (`treePolicy.ts`), and the `effectiveChildren` read chokepoint all landed as a seam (2026-06-28, IMPLEMENTATION.md). Remaining is the **per-viewer overlay merge** in `effectiveChildren` (config/view-state, incl. personal `siblingOrder`) — blocked on viewer/auth + the cascade arbiter (#4), so deferred to LATER.md.
 
 2.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
 

@@ -183,12 +183,19 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 export type Kind = keyof typeof KIND_REGISTRY;
 
 /**
- * Which tree an Element belongs to. Phase-1 minimal axis: `business` (the
- * navigable asset tree) and `library` (FieldDefinitions + their config subtree).
- * The full four-value axis (`config` / `view-state`) and the per-viewer
- * `effectiveChildren` overlay are cluster 4 (see LATER.md).
+ * Which tree an Element belongs to (SPEC → Populations are typed trees). The axis
+ * routes sync / history / visibility per tree via `src/data/treePolicy.ts`:
+ *  - `business`   — the navigable asset tree (shared sync, business history)
+ *  - `library`    — FieldDefinitions + their config subtree (shared sync, Library history)
+ *  - `config`     — org/role/user prefs (shared-or-per-user sync, overlay history)
+ *  - `view-state` — per-viewer expansion/ordering overlays (never synced, no history)
+ *
+ * `config` and `view-state` have no Phase-1 producers yet (view-state lives in
+ * `uiPrefs` localStorage; config needs the cascade arbiter), so the values exist
+ * to make the policy table and the `effectiveChildren` read chokepoint complete
+ * ahead of those consumers. Per-viewer overlay merge is deferred (see LATER.md).
  */
-export type TreeType = 'business' | 'library';
+export type TreeType = 'business' | 'library' | 'config' | 'view-state';
 
 /**
  * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.

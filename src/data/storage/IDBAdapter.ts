@@ -15,8 +15,9 @@ import type {
   StorageElementCreate,
   StorageElementUpdate,
 } from './storageAdapter';
-import type { FieldDefinition, Element, ElementHistory, Kind } from '../models';
+import type { FieldDefinition, Element, ElementHistory, Kind, TreeType } from '../models';
 import { filterActive } from '../models';
+import { shouldSyncTreeType, shouldLogHistory } from '../treePolicy';
 import { serializeConfig, assembleConfig } from '../../kinds/configElements';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
@@ -25,7 +26,7 @@ import { makeStorageError, toStorageError, isStorageError } from './storageError
 import type { StorageErrorCode } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
 import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
-import type { SyncQueueManager } from '../sync/SyncQueueManager';
+import type { SyncQueueManager, EnqueueParams } from '../sync/SyncQueueManager';
 
 import { createResult as _createResult } from './storageResult';
 
@@ -156,26 +157,19 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.transaction('rw', db.elements, db.elementHistory, db.syncQueue, async () => {
         for (const el of [defElement, ...children]) {
           await db.elements.put(el);
-          const hist = createElementHistoryEntry({
+          await this.enqueueIfSynced(el.treeType, {
+            operation: 'create-element',
+            entityType: 'element',
+            entityId: el.id,
+            payload: el,
+          });
+          await this.writeHistory(el.treeType, {
             elementId: el.id,
             rev: 0,
             action: 'create',
             property: 'value',
             prevValue: null,
             newValue: el.value,
-          });
-          await db.elementHistory.put(hist);
-          await this.syncQueue.enqueue({
-            operation: 'create-element',
-            entityType: 'element',
-            entityId: el.id,
-            payload: el,
-          });
-          await this.syncQueue.enqueue({
-            operation: 'create-element-history',
-            entityType: 'element-history',
-            entityId: hist.id,
-            payload: hist,
           });
         }
       });
@@ -295,28 +289,19 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.transaction('rw', db.elements, db.elementHistory, db.syncQueue, async () => {
         await db.elements.put(element);
 
-        const rev = 0; // brand-new element — no prior history, so the first entry is rev 0
-        const hist = createElementHistoryEntry({
-          elementId: element.id,
-          rev,
-          action: 'create',
-          property: 'value',
-          prevValue: null,
-          newValue: element.value,
-        });
-        await db.elementHistory.put(hist);
-
-        await this.syncQueue.enqueue({
+        await this.enqueueIfSynced(element.treeType, {
           operation: 'create-element',
           entityType: 'element',
           entityId: element.id,
           payload: element,
         });
-        await this.syncQueue.enqueue({
-          operation: 'create-element-history',
-          entityType: 'element-history',
-          entityId: hist.id,
-          payload: hist,
+        await this.writeHistory(element.treeType, {
+          elementId: element.id,
+          rev: 0, // brand-new element — no prior history, so the first entry is rev 0
+          action: 'create',
+          property: 'value',
+          prevValue: null,
+          newValue: element.value,
         });
       });
 
@@ -350,27 +335,23 @@ export class IDBAdapter implements SyncableStorageAdapter {
         });
         written = await db.elements.get(id);
 
-        let rev = await this.nextElementRev(id);
-        for (const c of changedProps) {
-          const hist = createElementHistoryEntry({
-            elementId: id,
-            rev: rev++,
-            action: 'update',
-            property: c.property,
-            prevValue: c.prev,
-            newValue: c.next,
-          });
-          await db.elementHistory.put(hist);
-          await this.syncQueue.enqueue({
-            operation: 'create-element-history',
-            entityType: 'element-history',
-            entityId: hist.id,
-            payload: hist,
-          });
+        // treeType is immutable, so the pre-update row routes history/sync.
+        if (shouldLogHistory(existing.treeType)) {
+          let rev = await this.nextElementRev(id);
+          for (const c of changedProps) {
+            await this.writeHistory(existing.treeType, {
+              elementId: id,
+              rev: rev++,
+              action: 'update',
+              property: c.property,
+              prevValue: c.prev,
+              newValue: c.next,
+            });
+          }
         }
 
         if (written) {
-          await this.syncQueue.enqueue({
+          await this.enqueueIfSynced(existing.treeType, {
             operation: 'update-element',
             entityType: 'element',
             entityId: id,
@@ -404,32 +385,27 @@ export class IDBAdapter implements SyncableStorageAdapter {
           updatedBy: userId,
         });
 
-        const rev = await this.nextElementRev(id);
-        const hist = createElementHistoryEntry({
-          elementId: id,
-          rev,
-          action: 'delete',
-          property: 'value',
-          prevValue: existing.value,
-          newValue: null,
-        });
-        await db.elementHistory.put(hist);
+        if (shouldLogHistory(existing.treeType)) {
+          const rev = await this.nextElementRev(id);
+          await this.writeHistory(existing.treeType, {
+            elementId: id,
+            rev,
+            action: 'delete',
+            property: 'value',
+            prevValue: existing.value,
+            newValue: null,
+          });
+        }
 
         const updated = await db.elements.get(id);
         if (updated) {
-          await this.syncQueue.enqueue({
+          await this.enqueueIfSynced(existing.treeType, {
             operation: 'update-element',
             entityType: 'element',
             entityId: id,
             payload: updated,
           });
         }
-        await this.syncQueue.enqueue({
-          operation: 'create-element-history',
-          entityType: 'element-history',
-          entityId: hist.id,
-          payload: hist,
-        });
       });
 
       storageEventBus.emit({
@@ -454,7 +430,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
         });
         restored = await db.elements.get(id);
         if (restored) {
-          await this.syncQueue.enqueue({
+          await this.enqueueIfSynced(restored.treeType, {
             operation: 'update-element',
             entityType: 'element',
             entityId: id,
@@ -538,6 +514,40 @@ export class IDBAdapter implements SyncableStorageAdapter {
       const { code, retryable } = mapDexieError(err);
       throw toStorageError(err, { code, retryable });
     }
+  }
+
+  /**
+   * Enqueue a sync op only when the element's tree syncs (treePolicy). A
+   * `view-state` element never enqueues; business/library/config do. Inert for
+   * Phase-1 content (business + library both sync) — the gate only diverges once
+   * a `view-state` element is written, which nothing produces yet.
+   */
+  private async enqueueIfSynced(treeType: TreeType, params: EnqueueParams): Promise<void> {
+    if (shouldSyncTreeType(treeType)) {
+      await this.syncQueue.enqueue(params);
+    }
+  }
+
+  /**
+   * Write a history entry and enqueue its sync, both routed by the element's
+   * tree: `shouldLogHistory` decides whether the audit row is written at all
+   * (`view-state` keeps none), and sync of that row follows the same policy as
+   * its element. No-op for the untracked trees; identical to before for
+   * business/library.
+   */
+  private async writeHistory(
+    treeType: TreeType,
+    entry: Parameters<typeof createElementHistoryEntry>[0],
+  ): Promise<void> {
+    if (!shouldLogHistory(treeType)) return;
+    const hist = createElementHistoryEntry(entry);
+    await db.elementHistory.put(hist);
+    await this.enqueueIfSynced(treeType, {
+      operation: 'create-element-history',
+      entityType: 'element-history',
+      entityId: hist.id,
+      payload: hist,
+    });
   }
 
   private async nextElementRev(elementId: string): Promise<number> {

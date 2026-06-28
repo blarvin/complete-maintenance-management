@@ -81,8 +81,13 @@ Today `Element.name` and `Element.subtitle` are columns. `name` is staying a col
 
 ### Tree Partitioning → typed trees (decided)
 
-Superseded by **typed trees** (SPECIFICATION.md → Data Model → Populations are typed trees): each tree is rooted at its own Element (`parentId: null`) and carries a `treeType` (`business` / `library` / `config` / `view-state`) that routes history/sync/visibility; per-viewer state layers at read time via `effectiveChildren(node, viewer)`, never written into the shared Element. The `treeType` introduction is a migration work item (ISSUES.md). Still deferred under this banner:
+Superseded by **typed trees** (SPECIFICATION.md → Data Model → Populations are typed trees): each tree is rooted at its own Element (`parentId: null`) and carries a `treeType` (`business` / `library` / `config` / `view-state`) that routes history/sync/visibility; per-viewer state layers at read time via `effectiveChildren(node, viewer)`, never written into the shared Element. **The seam landed** (2026-06-28, IMPLEMENTATION.md → *Typed trees (the seam)*): the full four-value axis, per-tree sync/history routing (`treePolicy.ts`), and the pass-through `effectiveChildren` chokepoint are in. Still deferred under this banner:
 
+- **Per-viewer overlay merge** — replace the pass-through `effectiveChildren` body so a viewer's `config`/`view-state` layers sparsely onto canonical children. Needs viewer/auth + the cascade arbiter (ISSUES #4).
+- **Personal `siblingOrder` overlay** — the canonical order is the column; a per-viewer reorder is a sparse overlay resolved in `effectiveChildren`.
+- **view-state as Elements** — migrate expansion/ordering out of `uiPrefs` localStorage into `view-state`-tree Elements (currently the only `view-state` "store").
+- **The `config` tree** — org/role/user prefs as `config`-tree Elements + the arbiter that reads them (app→org→role→user cascade).
+- **Viewer/auth plumbing** — replace the constant `localUser` (`getCurrentUserId()`) with real identity so `effectiveChildren`/`config` have a viewer to resolve against.
 - Cross-tree references and moves
 - Per-tree settings and field libraries
 - Multi-tree search and dashboards

@@ -17,6 +17,8 @@ import { getElementQueries } from '../data/queries';
 import { initializeStorage } from '../data/storage/initStorage';
 import { storageEventBus } from '../data/storageEventBus';
 import { affectsChildrenOf, affectsElement } from '../data/storageEventRelevance';
+import { effectiveChildren } from '../data/effectiveChildren';
+import { getCurrentUserId } from '../context/userContext';
 import { useAsyncOperation, runAsync } from './useAsyncOperation';
 import type { Element } from '../data/models';
 
@@ -41,7 +43,9 @@ export function useElementChildren(
             const pid = parentId.value;
             const els = pid === null ? await q.getRootElements() : await q.getChildren(pid);
             // Adapter already excludes deleted rows and sorts by siblingOrder.
-            children.value = els.filter(e => (filter === 'nodes') === (e.kind === 'node'));
+            // Route through the per-viewer chokepoint (pass-through in Phase 1).
+            const effective = effectiveChildren(els, getCurrentUserId());
+            children.value = effective.filter(e => (filter === 'nodes') === (e.kind === 'node'));
             console.log('[useElementChildren] Loaded', children.value.length, filter, 'under', pid ?? 'ROOT');
         });
     });
