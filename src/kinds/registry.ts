@@ -16,6 +16,10 @@ import { textKvManifest } from './text-kv.manifest';
 import { enumKvManifest } from './enum-kv.manifest';
 import { numberKvManifest } from './number-kv.manifest';
 import { singleImageManifest } from './single-image.manifest';
+import { orgManifest } from './org.manifest';
+import { jobManifest } from './job.manifest';
+import { jobsManifest } from './jobs.manifest';
+import { assetDocManifest } from './asset-doc.manifest';
 import { flagManifest } from './flag.manifest';
 import { compoundManifest } from './compound.manifest';
 import { stringListManifest } from './string-list.manifest';
@@ -26,6 +30,11 @@ export const KIND_REGISTRY = {
     'enum-kv': enumKvManifest,
     'number-kv': numberKvManifest,
     'single-image': singleImageManifest,
+    // Node-like kinds (#6b minimal set) — the seam's first re-root consumers.
+    org: orgManifest,
+    job: jobManifest,
+    jobs: jobsManifest,
+    'asset-doc': assetDocManifest,
     // Config-only sub-field kinds (config-as-Elements). Registered for value
     // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).
     flag: flagManifest,
@@ -60,6 +69,16 @@ export function getInlineManifest(kind: Kind): InlineManifest {
  */
 export const FIELD_KINDS: Kind[] = Object.values(KIND_REGISTRY)
     .filter((manifest) => manifest.mintVia === 'composer')
+    .map((manifest) => manifest.kind);
+
+/**
+ * Ordered re-root (node-like) kinds offered in the node-create picker — the
+ * counterpart to FIELD_KINDS for the construction surface. Filters on
+ * `mintVia === 'node-create'`, so `jobs` (provisioned, `mintVia: 'provision'`)
+ * is correctly excluded. `node` leads as the default.
+ */
+export const RE_ROOT_CREATE_KINDS: Kind[] = Object.values(KIND_REGISTRY)
+    .filter((manifest) => manifest.placement === 're-root' && manifest.mintVia === 'node-create')
     .map((manifest) => manifest.kind);
 
 export type { KindManifest, FieldRendererProps, ConfigFormProps } from './types';

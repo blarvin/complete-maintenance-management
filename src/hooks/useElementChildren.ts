@@ -18,11 +18,12 @@ import { initializeStorage } from '../data/storage/initStorage';
 import { storageEventBus } from '../data/storageEventBus';
 import { affectsChildrenOf, affectsElement } from '../data/storageEventRelevance';
 import { effectiveChildren } from '../data/effectiveChildren';
+import { isReRoot } from '../kinds/placement';
 import { getCurrentUserId } from '../context/userContext';
 import { useAsyncOperation, runAsync } from './useAsyncOperation';
 import type { Element } from '../data/models';
 
-export type ChildKindFilter = 'nodes' | 'fields'; // 'fields' = kind !== 'node'
+export type ChildKindFilter = 'nodes' | 'fields'; // 'nodes' = re-root kinds, 'fields' = inline kinds
 
 /** Trailing debounce so write bursts (composer commit, sync apply batch) coalesce into one reload. */
 const RELOAD_DEBOUNCE_MS = 30;
@@ -45,7 +46,7 @@ export function useElementChildren(
             // Adapter already excludes deleted rows and sorts by siblingOrder.
             // Route through the per-viewer chokepoint (pass-through in Phase 1).
             const effective = effectiveChildren(els, getCurrentUserId());
-            children.value = effective.filter(e => (filter === 'nodes') === (e.kind === 'node'));
+            children.value = effective.filter(e => (filter === 'nodes') === isReRoot(e.kind));
             console.log('[useElementChildren] Loaded', children.value.length, filter, 'under', pid ?? 'ROOT');
         });
     });

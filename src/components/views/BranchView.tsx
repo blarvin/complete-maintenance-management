@@ -9,6 +9,7 @@ import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren, useElementById } from '../../hooks/useElementChildren';
+import { isReRoot } from '../../kinds/placement';
 
 export type BranchViewProps = {
     parentId: string;
@@ -25,7 +26,7 @@ export const BranchView = component$((props: BranchViewProps) => {
     const { children, isLoading } = useElementChildren(parentIdSig, 'nodes');
 
     const parentNode = useComputed$(() =>
-        parentEl.value && parentEl.value.kind === 'node' ? parentEl.value : null);
+        parentEl.value && isReRoot(parentEl.value.kind) ? parentEl.value : null);
 
     // Navigating to a new branch cancels any in-flight construction.
     // (Previously buried in useBranchViewData.load$, where background sync

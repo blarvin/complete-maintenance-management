@@ -33,7 +33,7 @@ export type StorageElementCreate = {
   parentId: string | null;
   name: string;
   subtitle?: string | null;
-  /** Required when kind !== "node". */
+  /** Required for inline (field-like) kinds; null for re-root (node-like) kinds. */
   fieldDefinitionId?: string | null;
   /** Optional initial value (for value-bearing kinds). */
   value?: DataFieldValue | null;

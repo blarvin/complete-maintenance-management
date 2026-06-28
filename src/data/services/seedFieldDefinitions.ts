@@ -19,8 +19,8 @@ import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { now } from '../../utils/time';
 import { serializeConfig } from '../../kinds/configElements';
 
-// Bumped for the config-as-Elements migration (seeds are now library Elements).
-export const SEED_VERSION = 6;
+// Bumped for the asset-doc seed (#6b minimal kind set).
+export const SEED_VERSION = 7;
 export const SEED_KEY = 'fieldDefinitionsSeededVersion';
 
 /**
@@ -35,6 +35,7 @@ export const FIELD_DEFINITION_IDS = {
   weight: 'fd_weight',
   powerRating: 'fd_power_rating',
   mainImage: 'fd_main_image',
+  assetDoc: 'fd_asset_doc',
 } as const;
 
 type SeedRow = { id: string; kind: Kind; label: string; config: FieldDefinitionConfig };
@@ -91,6 +92,12 @@ const SEEDS: SeedRow[] = [
     kind: 'single-image',
     label: 'Main Image',
     config: { requireCaption: false },
+  },
+  {
+    id: FIELD_DEFINITION_IDS.assetDoc,
+    kind: 'asset-doc',
+    label: 'Linked Doc',
+    config: {},
   },
 ];
 

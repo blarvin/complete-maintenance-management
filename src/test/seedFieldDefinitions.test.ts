@@ -19,12 +19,13 @@ describe('seedFieldDefinitions (config-as-Elements)', () => {
     await db.open();
   });
 
-  it('writes 7 Definitions as library-tree Elements + version key on first call', async () => {
+  it('writes 8 Definitions as library-tree Elements + version key on first call', async () => {
     await seedFieldDefinitions();
     const defs = await libraryDefs();
-    expect(defs).toHaveLength(7);
+    expect(defs).toHaveLength(8);
     expect(defs.map((d) => d.name).sort()).toEqual([
       'Description',
+      'Linked Doc',
       'Main Image',
       'Power Rating',
       'Status',
@@ -80,7 +81,7 @@ describe('seedFieldDefinitions (config-as-Elements)', () => {
 
     await seedFieldDefinitions();
     const second = await libraryDefs();
-    expect(second).toHaveLength(7);
+    expect(second).toHaveLength(8);
     expect(second.find((d) => d.id === first[0].id)?.updatedAt).toBe(firstTs);
   });
 

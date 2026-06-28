@@ -15,6 +15,7 @@ import { useAppState, useAppTransitions } from '../state/appState';
 import { getCommandBus } from '../data/commands';
 import { commitPendingDraft, discardPendingDraft } from '../data/services/pendingDraft';
 import { generateId } from '../utils/id';
+import type { Kind } from '../data/models';
 
 /**
  * Payload for completing node creation.
@@ -56,15 +57,16 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
      * Node creation is deferred until user clicks "Create".
      * This eliminates orphan nodes if user cancels.
      */
-    const start$ = $(async () => {
+    const start$ = $(async (kind: Kind = 'node') => {
         const id = generateId();
-        
+
         // DON'T create node in DB - defer until CREATE
-        // Open UC UI (node won't appear in list until complete$)
+        // Open UC UI (node won't appear in list until complete$).
+        // `kind` comes from the create-surface picker (re-root kinds); defaults to node.
         await startConstruction$({
             id,
             parentId: options.parentId,
-            kind: 'node',
+            kind,
             name: '',
             subtitle: '',
         });
@@ -96,7 +98,7 @@ export function useNodeCreation(options: UseNodeCreationOptions) {
             type: 'CREATE_ELEMENT',
             payload: {
                 id: ucData.id,
-                kind: 'node',
+                kind: ucData.kind,
                 parentId: ucData.parentId,
                 name: payload.name || 'Untitled',
                 subtitle: payload.subtitle || null,

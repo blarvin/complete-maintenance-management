@@ -96,6 +96,8 @@ export type FieldDefinitionConfig =
 export type TextKvValue = string;
 export type EnumKvValue = string;
 export type NumberKvValue = number;
+/** asset-doc: an internal Edge — the value is the target Element's id (resolved live). */
+export type AssetDocValue = { targetId: string };
 export type SingleImageValue = {
   blobId: string;
   mimeType: string;
@@ -123,6 +125,7 @@ export type DataFieldValue =
   | EnumKvValue
   | NumberKvValue
   | SingleImageValue
+  | AssetDocValue
   | FlagValue
   | StringListValue
   | CompoundValue;
@@ -201,9 +204,9 @@ export type TreeType = 'business' | 'library' | 'config' | 'view-state';
  * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.
  * - `name` is required (max 100 chars), stays denormalized for header hot path.
  * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
- * - `value` is null for `kind === "node"`; typed by `kind` otherwise.
+ * - `value` is null for re-root (node-like) kinds; typed by `kind` otherwise.
  * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
- * - `fieldDefinitionId` is null for nodes.
+ * - `fieldDefinitionId` is null for re-root kinds; required for inline kinds.
  * - `treeType` partitions business vs library; root/sibling queries scope by it.
  */
 export type Element = {

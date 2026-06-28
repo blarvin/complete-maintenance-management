@@ -19,6 +19,7 @@ import { initializeDevTools } from '../sync/devTools';
 import { now } from '../../utils/time';
 import { initializeNodeIndex } from '../nodeIndex';
 import { subscribeNodeIndex } from '../nodeIndexSubscriber';
+import { isReRoot } from '../../kinds/placement';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
@@ -164,7 +165,7 @@ async function migrateFromFirestore(): Promise<void> {
 async function seedNodeIndexFromDb(): Promise<void> {
   const elements = await db.elements.toArray();
   const activeNodes = elements
-    .filter(el => el.kind === 'node' && el.deletedAt === null)
+    .filter(el => isReRoot(el.kind) && el.deletedAt === null)
     .map(el => ({ id: el.id, parentId: el.parentId, name: el.name }));
   initializeNodeIndex(activeNodes);
 }

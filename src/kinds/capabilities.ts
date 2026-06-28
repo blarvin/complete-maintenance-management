@@ -20,14 +20,13 @@ import type { Kind } from '../data/models';
 import type { CapabilitySet } from './types';
 
 export const KIND_CAPABILITIES = {
-    // Children(open) + physical container (ELEMENT-MODEL §node). `allowedKinds` is
-    // provisional — a literal list to avoid a `registry` import cycle; the real
-    // allow-policy firms up with the node-like kinds (#6).
+    // Children(open) + physical container (ELEMENT-MODEL §node). `jobs` is omitted
+    // from the allowlist deliberately — it is framework-provisioned, never picked.
     node: {
         children: {
             spec: {
                 mode: 'open',
-                allowedKinds: ['node', 'text-kv', 'enum-kv', 'number-kv', 'single-image'], // TODO(#6)
+                allowedKinds: ['node', 'org', 'job', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
             },
         },
         container: 'physical',
@@ -39,6 +38,48 @@ export const KIND_CAPABILITIES = {
     'enum-kv': { ownValue: {} },
     'number-kv': { ownValue: {} },
     'single-image': { ownValue: {} },
+
+    // ── Node-like kinds (#6b minimal set) — first consumers of the seam ──
+
+    // org: Children(open) + Derivation(children/transitive). The untyped rollup
+    // (no `targetKind`) — a descendant count, no Provision.
+    org: {
+        children: {
+            spec: {
+                mode: 'open',
+                allowedKinds: ['node', 'org', 'job', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+            },
+        },
+        container: 'physical',
+        derivation: { source: { relation: 'children', reach: 'transitive' } },
+    },
+
+    // job: Children(open). A layered task node — status/priority/owner/due-dates
+    // are ordinary Fields, not an OwnValue (so no Children+OwnValue flag). It earns
+    // its kind as the trigger the `jobs` lens provisions against (ELEMENT-MODEL §job).
+    job: {
+        children: {
+            spec: {
+                mode: 'open',
+                allowedKinds: ['node', 'job', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+            },
+        },
+        container: 'physical',
+    },
+
+    // jobs: the lens — Derivation(children/transitive → job) + Provision. Holds no
+    // content of its own; gathers every `job` below its parent.
+    jobs: {
+        derivation: { source: { relation: 'children', reach: 'transitive' }, targetKind: 'job' },
+        provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::jobs' },
+    },
+
+    // asset-doc: Edges(internal, live) + Reads.resolver — a live-resolved link to
+    // another Element (the value is the target id).
+    'asset-doc': {
+        edges: { target: { scope: 'internal', pin: 'live', allowedKinds: ['node', 'org', 'job'] } },
+        reads: { resolver: true },
+    },
 
     // Config-only sub-field kinds also bear an own value (inside config subtrees).
     flag: { ownValue: {} },

@@ -8,6 +8,7 @@
 import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
+import { KindAdornment } from '../TreeNode/KindAdornment';
 import { UpButton } from '../UpButton/UpButton';
 import { EllipsisButton } from '../EllipsisButton/EllipsisButton';
 import styles from '../TreeNode/TreeNode.module.css';
@@ -110,6 +111,8 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                         <>
                             <NodeTitle nodeName={props.name} id={props.titleId} />
                             <NodeSubtitle nodeSubtitle={props.subtitle} />
+                            {/* Manifest-driven meta in the subtitle slot: org count / jobs rollup (#6b). */}
+                            <KindAdornment id={props.id} isParent={!!props.isParent} />
                         </>
                     )}
                 </div>

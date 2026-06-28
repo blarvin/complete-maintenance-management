@@ -19,6 +19,7 @@ import type { FieldDefinition, Element, ElementHistory, Kind, TreeType } from '.
 import { filterActive } from '../models';
 import { shouldSyncTreeType, shouldLogHistory } from '../treePolicy';
 import { serializeConfig, assembleConfig } from '../../kinds/configElements';
+import { isInline } from '../../kinds/placement';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { createElementHistoryEntry, diffElementChanges } from './historyHelpers';
@@ -255,7 +256,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async createElement(input: StorageElementCreate): Promise<StorageResult<Element>> {
     return this.run(async () => {
-      if (input.kind !== 'node' && !input.fieldDefinitionId) {
+      if (isInline(input.kind) && !input.fieldDefinitionId) {
         throw makeStorageError('validation', `fieldDefinitionId required for kind=${input.kind}`, { retryable: false });
       }
       if (input.fieldDefinitionId) {

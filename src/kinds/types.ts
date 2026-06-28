@@ -169,7 +169,12 @@ export type CapabilitySet = {
     ownValue?: ValueSpec;
     children?: { spec: ChildrenSpec };
     edges?: { target: TargetSpec };
-    derivation?: { source: SourceSpec };
+    /**
+     * Derivation gather. `targetKind` filters the gathered set to one kind — the
+     * lens's "→ job" / "→ log-entry" axis (SourceSpec carries relation×reach only).
+     * Omitted = gather every descendant (e.g. `org`'s untyped rollup count).
+     */
+    derivation?: { source: SourceSpec; targetKind?: Kind };
     action?: { spec: ActionSpec };
     reads?: { resolver?: boolean; historyStream?: boolean };
     // node-oriented descriptors (ride on the six; not new capabilities)
@@ -193,8 +198,10 @@ type ManifestIdentity = {
      * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
      * renderable but exist solely inside config subtrees — never offered as a new
      * Definition in the composer picker (which lists `composer` kinds only).
+     * `provision` kinds (`jobs`) are materialized by the framework (the lens
+     * provisioned per node), never offered in any user create affordance.
      */
-    mintVia: 'composer' | 'node-create' | 'config-only';
+    mintVia: 'composer' | 'node-create' | 'config-only' | 'provision';
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';
     /**
