@@ -28,10 +28,9 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 | asset-gallery                 | `Derivation(children/transitive → image) + Reads.resolver`       | every photo below, one place   | inline           | describe |
 | value-chart                   | `OwnValue + Reads.historyStream`                                 | pressure, last 90 days         | inline           | describe |
 | inherit-unless-override       | `OwnValue + Derivation(ancestors/transitive) + arbiter`          | `Criticality ← parent`         | inline           | describe |
-| intrinsic node scalar         | `Children + OwnValue` (flagged)                                  | Tank (own value `84%`)         | re-root          | describe |
 | logbook                       | `Derivation(children/transitive → log-entry) + Provision` (lens) | all entries below here         | re-root          | describe |
 | log-entry                     | `Children(template: body + tag/flag tails)`                      | "replaced seal" `#done`        | inline           | describe |
-| job                           | `Children(open) + lifecycle`                                     | Replace bearing (Open→Done)    | re-root          | describe |
+| job                           | `Children(open)`                                                  | Replace bearing (Open→Done)    | re-root          | describe |
 | jobs                          | `Derivation(children/transitive → job) + Provision` (lens)       | all jobs below here            | re-root          | describe |
 | org                           | `Children(open) + Derivation(children/transitive)`               | Maintenance Dept (12)          | re-root          | describe |
 | person                        | `Children(open) + identity/overlay-anchor + target`              | Dave (assignee, account)       | re-root          | describe |
@@ -274,14 +273,6 @@ One canonical `parentId` with appearances layered on top, so **detach** (remove 
 
 **Status: describe.**
 
-## intrinsic node scalar
-
-**Purpose**: A node that *also* carries its own value — a tank holding child fields *and* a primary reading or a cheap rollup.
-
-**Composition**: `Children + OwnValue` (flagged). **Placement**: re-root. The answer to "can a node-like Element have a value?" — yes. Flagged because the two capabilities co-occur; allowed knowingly.
-
-**Status: describe.**
-
 ---
 
 # Node-like kinds (re-root; lean on `Children` / `Derivation` / `Edges` / `Provision`)
@@ -303,22 +294,24 @@ The canonical node behaviour. A **lens** is a node-like Element that holds no co
 **Composition**: `Derivation(children/transitive → <target>) + ProvisionSpec`. **Placement**: re-root.
 
 - **Gather (down)** — a `Derivation` reading `children/transitive`, matched to the target kind. Membership *is* this computation — current by construction, nothing stored. The target Elements live in their own physical home wherever created; the lens reads, never owns.
-- **Provision (up)** — a `ProvisionSpec`: when a target Element appears anywhere, a lens is reconciled into existence at each ancestor, keyed by a deterministic id (`jobs:<nodeId>`), so concurrent creates converge on one lens, never duplicates. Each lens still gathers over *its own* subtree.
+- **Provision (up)** — a `ProvisionSpec`: when a target Element appears anywhere, a lens is reconciled into existence at each ancestor, keyed by a deterministic id (`${nodeId}::jobs`), so concurrent creates converge on one lens, never duplicates. Each lens still gathers over *its own* subtree.
 
 The target kind is the only parameter — an org that works in "work orders," "tasks," or "tickets" is the same lens aimed at a different kind. Hand-picked membership is a different thing: the curated `logical-container`.
 
 - **jobs** — the lens aimed at `job`: every Jobs box shows all jobs beneath it; one appears at each ancestor when a job is added anywhere below.
 - **logbook** — the same lens aimed at `log-entry`: all entries beneath the point you're viewing.
 
-**Status: describe.**
+**v1 (#6b, 2026-06-28).** `jobs` is built as **a lens child on every node** (deterministic id `${nodeId}::jobs`), each gathering its *own* subtree — a **pure rollup**, reaching the same visible result as upward provisioning (a Jobs box at every ancestor level) without the write-time ancestor-walk. **Decision: pure rollup is right for `jobs` now.** `logbook` will be **both** lens *and* container (entries are authored *in* it); once job-subtypes (Task/Work Order/Project) arrive, `jobs` may need both too. Container behaviour — adding `job` rows in place, the **inline-yet-navigable placement** — rides on chrome entailment (#5). De-provision/GC, hiding empty lenses, and lazy-provisioning onto pre-existing nodes are deferred (LATER.md).
+
+**Status:** `jobs` **current** (v1 stub, #6b); `logbook` describe.
 
 ## job
 
-**Purpose**: A rich, asset-like node (open children for detail) plus its own status/lifecycle state machine.
+**Purpose**: A layered, asset-like task node — open children for its detail Fields, navigable like any asset.
 
-**Composition**: `Children(open) + lifecycle` (validated transitions; eventually `Action` with a transition guard). **Placement**: re-root. Its appearance is the trigger the `jobs` lens provisions against. Org variants — task, work-order, ticket — are soft labels on `job`, not new kinds.
+**Composition**: `Children(open)`. **Placement**: re-root. Status/priority/owner/due-dates are ordinary **Fields** (scoped by the `children` allowlist), *not* an OwnValue — so `Children + OwnValue` never arises (the parked `intrinsic-node-scalar` shape). `job` composes the same capability as `node`; it **earns its kind as the trigger the `jobs` lens provisions against** — the framework reacts to its existence, behaviour keyed on the kind, not a passive `typeOf` label (the SPEC §584-585 boundary, a deliberate call). Org variants — task, work-order, ticket — are soft labels on `job` for now; if any ever needs distinct behaviour it becomes its own kind (and `jobs` may then need container behaviour — see the lens note). First-class validated transitions wait on `Action` (built last).
 
-**Status: describe.**
+**Status: current** (v1 stub, #6b — node shell; status lives as a Field).
 
 ## log-entry
 

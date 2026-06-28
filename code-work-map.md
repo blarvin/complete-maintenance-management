@@ -29,8 +29,10 @@
 - This subsumes the old "Tree Partitioning / treeID" plan — each tree is just rooted at its own `parentId: null` Element.
 
 ## 5. Chrome entailment
+> **Now unblocked** — #6b built four distinct re-root shells to vary on; this is the next slice.
 - Factor the hardcoded shell drawing into a renderer that reads the manifest: `re-root` → Up button, `open` → Add surface, meta-field children → Details/Settings region, grouping-tag → section header.
 - Add the value-shape vocabulary (`scalar | block | stream | composite`) driving layout, so kinds pick a shape, never declare layout.
+- **Decouple placement's two axes.** Today `placement: inline | re-root` conflates *render-location* (Data-Card row vs re-rooted view) with *navigability*. The `jobs`-as-container ask — each `job` an inline Data-Card row that is *still* re-rootable — needs render-location driven by the **container's `childrenSpec`**, independent of whether the child is navigable. Also the home for restricting/hiding the create surface by `childrenSpec` (a content-free lens offers no "Add").
 
 ## 6. The capability engine + node-like kinds
 
@@ -43,13 +45,13 @@ The capability vocabulary now exists (cluster #2) but has **no consumers**. This
 - Surface node-kind choice in the "New Asset" / `usePendingForms` under-construction flow; keep `typeOf` → suggested-fields as one generic service.
 
 ### 6b. The minimal kind set (one per capability axis — already have OwnValue = fields, Children(open) = node)
-- **`intrinsic-node-scalar`** — `Children + OwnValue` (flagged). re-root. Lights the flagged co-occurrence (exercises `coherence`'s warning path) + a node that bears a value. Cheapest new kind: node shell + an inline value display.
-- **`org`** — `Children(open) + Derivation(children/transitive)`. re-root. First consumer of the `SourceSpec` traversal — the simplest aggregation (a descendant count), no Provision. Stub: node shell + a derived count badge.
-- **`job`** — `Children(open) + lifecycle` (validated transitions; eventually `Action` + guard). re-root. Lights a lifecycle state machine (Open→Done). Stub: node shell + a status control. It is the trigger the `jobs` lens provisions against.
-- **`jobs`** — `Derivation(children/transitive → job) + ProvisionSpec` (the lens). re-root. Lights the full lens (gather + upward provision). Stub: a flat derived list of every `job` below here.
-- **`asset-doc`** — `Edges(internal, live) + Reads.resolver`. inline. Lights the Edges family minimally — a live-resolved link to another Element. Stub: an inline row resolving + showing the target's name.
+> **✅ Built** (2026-06-28, stub-grade): the four kinds + the rudimentary §6a engine (`src/data/services/capabilityEngine.ts` — `gatherDescendants`/`gatherBySource`/`resolveEdge`, children-relation only) + `placement.ts` (component-free `isReRoot`/`isInline`, retiring the five hardcoded `kind === 'node'` checks). Re-root kinds reuse the node shell; `KindAdornment` (in the node-header subtitle slot) is the first consumer that *draws* from a capability.
+- **`org`** — `Children(open) + Derivation(children/transitive)`. re-root. First consumer of the descendant traversal — a descendant-node count, no Provision. ✅
+- **`job`** — `Children(open)`. re-root. A layered task node; status/priority/owner/due-dates are ordinary **Fields**, not an OwnValue (so no `Children+OwnValue` flag). It earns its kind as the **trigger** the `jobs` lens provisions against — behaviour keyed on the kind (the §584-585 boundary call). First-class lifecycle waits on `Action` (built last). ✅
+- **`jobs`** — `Derivation(children/transitive → job) + ProvisionSpec` (the lens). re-root. **v1 = a `jobs` lens child on every node** (deterministic `${id}::jobs`, each gathering its own subtree) — a **pure rollup**, not the canonical upward ancestor-walk. **Decision (2026-06-28): pure rollup for now**; `logbook` will be both lens+container, and job-subtypes (Task/Work Order/Project) may later need both — deferred (LATER.md). ✅
+- **`asset-doc`** — `Edges(internal, live) + Reads.resolver`. inline. A live-resolved link to another Element (value = target id, resolved to its name). ✅
 
-This set covers Children+OwnValue (flag), Derivation/transitive, Provision, lifecycle, Edges(internal/live), and Reads.resolver — leaving only `Action` (built last) untouched. It also hands #5 five distinct re-root shells (`node` / `intrinsic-node-scalar` / `org` / `job` / `jobs`).
+This set covers Derivation/transitive, Provision, Edges(internal/live), and Reads.resolver — leaving `Action`/lifecycle (built last), the flagged `Children+OwnValue` co-occurrence (`intrinsic-node-scalar`, parked), and the **inline-yet-navigable placement** (jobs/job as Data-Card rows you can still re-root into — see #5) untouched. It hands #5 four distinct re-root shells (`node` / `org` / `job` / `jobs`).
 
 ### 6c. The rest of the catalogue (after the minimal set proves the engine)
 - `logbook` + `log-entry` — the lens's second instance (`Derivation(children/transitive → log-entry) + Provision`), proving it generalizes by target kind.
@@ -66,6 +68,6 @@ This set covers Children+OwnValue (flag), Derivation/transitive, Provision, life
 
 ---
 
-**Sequencing instinct:** 1 → 2 → 3 are the spine and unlock everything (done; #2's capability seam landed 2026-06-28); 4's seam is in. **#5 is gated behind #6's minimal kind set** — a manifest-driven shell has nothing to vary on until several re-root kinds exist, so the build order is #6a/#6b → #5, not the map's numeric order. 6/7 are the big new-capability build and the natural place to slice into per-kind plans; 8 falls out of 3/6. Open design questions (ProvisionSpec triggers, aggregation materialization, person/org sub-specs, arbiter classification) are flagged in ELEMENT-MODEL.md and worth resolving before building 6/7.
+**Sequencing instinct:** 1 → 2 → 3 are the spine and unlock everything (done; #2's capability seam landed 2026-06-28); 4's seam is in. **#6a/#6b are built** (2026-06-28, stub-grade), so **#5 is now the next slice** — a manifest-driven shell finally has four re-root kinds to vary on (the build order was #6a/#6b → #5, not the map's numeric order). 6/7 are the big new-capability build and the natural place to slice into per-kind plans; 8 falls out of 3/6. Open design questions (ProvisionSpec triggers, aggregation materialization, person/org sub-specs, arbiter classification) are flagged in ELEMENT-MODEL.md and worth resolving before building 6/7.
 
 One caveat worth a sanity check before you plan: I'm describing the migration touch-points as the docs frame them — actual file names/seams (`src/kinds/`, the `ConfigForm`s, `usePendingForms`) should be confirmed against the current tree when you write the real plan, since I haven't re-read the code this session.

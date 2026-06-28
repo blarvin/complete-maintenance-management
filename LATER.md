@@ -57,6 +57,27 @@ The six-capability vocabulary + `coherence` landed as a component-free seam (202
 - **Per-kind `coherence` overrides** — the `coherence?(caps)` hook on `ManifestIdentity` is available but unused; global rules live in `checkCoherence`. Add per-kind rules only when a kind needs one beyond the global set.
 - **`ValueSpec` → value-shape vocabulary** — `ValueSpec` is a thin validation marker; the `scalar | block | stream | composite` shape enum that drives layout (retiring the `hideLabel`/`blockValueLayout` flags) is #5's, intentionally left out to keep the cluster boundary clean.
 
+### `intrinsic-node-scalar` kind — parked
+
+The node-like kind that *also* carries its own value — `Children + OwnValue` (flagged), re-root: a tank holding child fields *and* a primary reading or a cheap rollup. It was the cheapest entry in the minimal kind set (code-work-map §6b — node shell + an inline value display) and the only one that would have *exercised* the `Children + OwnValue` coherence warning path.
+
+**Parked because** its value/utility looks dubious (2026-06-28): a node that bears a scalar can already be modeled as a node with a single own-value field child, so the kind may not earn its registry slot. Pulled from the active minimal kind set — that set now builds `org` / `job` / `jobs` / `asset-doc` (ISSUES Architecture Migration #3) and hands four-not-five distinct re-root shells to chrome entailment (#5).
+
+**Framework left intact.** The `Children + OwnValue` = *valid-but-flagged* rule is framework-level (SPECIFICATION.md §589) and stays put: `checkCoherence` (`src/kinds/coherence.ts`) still warns on the co-occurrence and `kindCoherence.test.ts` still runs it over `KIND_CAPABILITIES`. No built or planned kind composes that subset, so the warning path is a **dormant guard** — already dormant before this park, and it greets the first `Children + OwnValue` kind that ever lands (this one revived, or another). Nothing to remove; the rule defends the invariant whether or not a kind exercises it.
+
+**If revived:** restore the ELEMENT-MODEL.md catalogue row + spec section (composition `Children + OwnValue` (flagged), re-root, status `describe`) and re-add the bullet to code-work-map §6b. The coherence warning is already in place to greet it.
+
+### §6b minimal kind set — deferred follow-ups
+
+The four kinds (`org`/`job`/`jobs`/`asset-doc`) + the rudimentary engine landed stub-grade (2026-06-28, IMPLEMENTATION.md → *#6b*). Deliberately out of scope:
+
+- **`jobs` as container + the inline-yet-navigable placement** — the decided shape (settled 2026-06-28): `jobs` is a **pure rollup (lens)** for now. Letting you author `job`s *in* the Jobs node as inline Data-Card rows that are *still* re-rootable needs `placement`'s two axes (render-location vs navigability) decoupled — that's **chrome entailment (#5)**. `logbook` will be **both** lens and container; job-subtypes (Task / Work Order / Project) may later push `jobs` to both too. All deferred to #5/#6c.
+- **Restrict/hide the create surface by `childrenSpec`** — a Jobs view currently still offers Node/Org in the picker. A content-free lens should offer no "Add"; a typed container should offer only its `allowedKinds`. Rides on #5 (the create surface reads the manifest).
+- **`jobs` lens lifecycle** — de-provision/GC when the last `job` below is removed; hide an empty lens; back-fill a lens onto nodes created *before* provisioning existed (today only new re-root creates get one). The canonical **upward ancestor-walk provisioning** (ELEMENT-MODEL §lens) is also superseded by the per-node v1 — revisit only if the per-node rollup proves insufficient.
+- **`capabilityEngine` `ancestors`/`edges` traversal** — only `children` (direct/transitive) is built; `ancestors` (inheritance, #7) and `edges` (curated membership, #6c) currently throw.
+- **Rich lens rows** — the Jobs rollup lists job *names* only; showing per-job props inline (priority colour, owner, status) is deferred.
+- **`asset-doc` real target picker + editing** — the target is a raw element-id paste with no config; a proper picker (constrained by an allowed-target-kind config) and editing a saved link are deferred.
+
 ### `subtitle` → optional `nodeSubtitle` child element
 
 Today `Element.name` and `Element.subtitle` are columns. `name` is staying a column permanently — it's required identity, uniform across every kind (node Title / field Label), on the header hot path, and keeps the `elements` table human-readable for hand inspection ("not displayed by a renderer" ≠ "not stored"). `subtitle` is the one demotion candidate: it's node-only, semantically soft, and is the last node-only column. The pure-recursive move is to make it an optional child Element (`kind: "nodeSubtitle"`), so a node's subtitle joins the model its *fields* already live in (fields are already child Elements distinguished by `kind`) — which natively serves variable/editable/deletable headers and removes the temptation to overload `subtitle` for captions/usage-notes.
