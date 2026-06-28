@@ -8,6 +8,7 @@
  * privileged status so `Kind` derives cleanly from KIND_REGISTRY's keys.
  */
 
+import { KIND_CAPABILITIES } from './capabilities';
 import type { KindManifest } from './types';
 
 export const nodeManifest: KindManifest = {
@@ -15,4 +16,5 @@ export const nodeManifest: KindManifest = {
     pickerLabel: 'Node',
     mintVia: 'node-create',
     placement: 're-root',
+    ...KIND_CAPABILITIES['node'], // capability subset — structural seam, not read yet
 };

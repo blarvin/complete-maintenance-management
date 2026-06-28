@@ -90,6 +90,22 @@ The `treeType` axis is widened from the minimal `business | library` to the full
 
 ---
 
+## Capability descriptors (the seam) — done 2026-06-28, ISSUES Architecture Migration #3
+
+The six-capability vocabulary (SPEC → *The six capabilities*) lands as TypeScript on the manifest. **Structural seam only**, like the registry-widening and typed-trees seams before it: the descriptors are carried per kind but **read by no consumer** — the lens / node-like kinds (code-work-map §6) are the first readers, the cascade arbiter (#7) the second. Same discipline: build the type-level seam, defer everything with no consumer.
+
+**Descriptors live on a shared `CapabilitySet`, intersected into `ManifestIdentity`.** `src/kinds/types.ts` gains the descriptor types and a `CapabilitySet` (`ownValue?`/`children?`/`edges?`/`derivation?`/`action?`/`reads?` + node-oriented `provision?`/`container?`/`arbiter?`), `&`-intersected into the shared `ManifestIdentity` base — so both arms of the `InlineManifest | ReRootManifest` union carry the capability fields (node-like and field-like are one composition space, SPEC §527). The union stays: the renderer/authoring surface still differs (inline carries `Renderer`/`ConfigForm`/…; re-root is identity-only until #5 gives `node` a Renderer). Collapsing to a single flat `KindManifest` is deferred to #5. `FieldRendererProps` is untouched — the placement-keyed `RendererProps` generalization is #5's, where a re-root Renderer finally consumes it.
+
+**Two descriptor tiers, by how soon a kind composes them.** Tier A — full SPEC shape for what #6 imminently needs: `ValueSpec`, `ChildrenSpec`, `TargetSpec`, `SourceSpec`, `ProvisionSpec`, `Container`. Tier B — minimal placeholders for capabilities no current kind composes: `ActionSpec` (built last, SPEC §565), `ArbiterSpec`/`ValiditySpec` (the cascade, #7). `ValueSpec` is deliberately a thin validation marker — the `scalar | block | stream | composite` value-shape vocabulary that drives *layout* is #5's bullet, kept out so the cluster boundary stays clean (the current `hideLabel`/`blockValueLayout` flags are the layout debt #5 retires).
+
+**Capability data is a component-free module the manifests spread (`src/kinds/capabilities.ts`).** The one non-obvious seam, and the *same* constraint already documented for `configSchema.ts`: importing `registry.ts` or any `*.manifest.ts` pulls the `component$` renderers into the importer, which the Qwik optimizer doesn't transform under Vitest. The coherence test must read every kind's capability subset, and the SPEC's "degeneration anti-pattern is CI-lintable" (§584) needs the same component-free read. So the subsets live as pure data in `KIND_CAPABILITIES` (`satisfies Record<Kind, CapabilitySet>` — an entry per kind, enforced), and each `*.manifest.ts` spreads `...KIND_CAPABILITIES['<kind>']`. Single source of truth; the manifest is still the assembled whole. Reaffirms the rule: never import `registry.ts`/`*.manifest.ts` from a unit test or the storage layer.
+
+**`node.allowedKinds` is provisional, hardcoded to dodge a cycle.** `node` composes `Children(open)` + `container: 'physical'` (ELEMENT-MODEL §node). `open` is allowlist-constrained (never `open(any)`, SPEC §564), but the honest allowlist is "child `node`s + the field kinds" — derivable from `FIELD_KINDS`, which lives in `registry.ts`, which imports `capabilities.ts` → a cycle. So the list is a literal `['node', 'text-kv', …]` with a `TODO(#6)`; the real allow-policy firms up with the node-like kinds.
+
+**`coherence` has teeth via a registry-wide test, not a runtime cost.** `src/kinds/coherence.ts`'s `checkCoherence(caps)` returns `{ errors, warnings }` — the two-tier SPEC §589 distinction (errors *reject*; warnings are *valid-but-flagged*). Three error rules (degeneration / capability-empty §584; `Derivation + reads.historyStream` stores nothing §589; `OwnValue + Derivation` contend → need an `arbiter` §589) and one warning (`Children + OwnValue` = the intrinsic node scalar, allowed knowingly §281). `kindCoherence.test.ts` runs it over `KIND_CAPABILITIES` so a future incoherent manifest fails CI before any consumer reads the capability. The per-manifest `coherence?` hook on `ManifestIdentity` is available for kind-specific rules (none yet). Pure type + test change — no Dexie bump, no behaviour move; the app renders identically.
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry

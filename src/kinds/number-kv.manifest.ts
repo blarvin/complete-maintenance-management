@@ -4,6 +4,7 @@ import { formatNumberKvDisplay } from '../components/DataField/numberKvState';
 import { NumberKvConfigForm } from '../components/FieldComposer/configForms/NumberKvConfigForm';
 import type { DataFieldValue, FieldDefinitionConfig, NumberKvConfig } from '../data/models';
 import { NUMBER_KV_CONFIG_SCHEMA } from './configSchema';
+import { KIND_CAPABILITIES } from './capabilities';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const numberKvManifest: KindManifest = {
@@ -11,6 +12,7 @@ export const numberKvManifest: KindManifest = {
     pickerLabel: 'Number',
     mintVia: 'composer',
     placement: 'inline',
+    ...KIND_CAPABILITIES['number-kv'], // capability subset — structural seam, not read yet
     Renderer: NumberKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: NumberKvConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({ unitsSymbol: '' }),

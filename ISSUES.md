@@ -37,7 +37,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 2.) **Chrome entailment** — factor hardcoded shell drawing into a renderer reading the manifest (`re-root`→Up, `open`→Add, meta-fields→Details/Settings, grouping-tag→section).
 
-3.) **The lens, then the rest** — build once (`Derivation(children/transitive)` gather + upward `ProvisionSpec`, deterministic id); instantiate for `jobs`/`logbook`; then `job`/`log-entry`, `org`, `person`, `logical-container`, and the `Edges` family (`asset-doc`/`part-supplier-link`/`other-end`/`approval`). Implement the `SourceSpec` `{relation, reach}` traversal.
+3.) **The lens + node-like kinds, on the capability seam** — the capability vocabulary (six descriptors + node descriptors + `coherence`) landed as a component-free seam (2026-06-28, IMPLEMENTATION.md → *Capability descriptors (the seam)*); this item builds its first consumers. Start with the **minimal kind set** (code-work-map §6b — `intrinsic-node-scalar`, `org`, `job`, `jobs`, `asset-doc`: one per capability axis, stub renderers) on the engine (the `SourceSpec {relation, reach}` traversal + the lens gather/`ProvisionSpec` + the `Edges` resolver); then the rest of the catalogue (`logbook`/`log-entry`, `other-end`/`approval`/`part-supplier-link`, `asset-gallery`, `person`, `logical-container`). #5 (chrome entailment) is gated behind this set having several re-root kinds to vary on.
 
 4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned copy-at-mint / delegated live-read / pinned), reading `ancestors/transitive`. The disposition vocabulary is already encoded on the schema (Config-as-Elements); this wires it.
 

@@ -6,9 +6,11 @@
  * `KindManifest` is a `placement`-discriminated union: `inline` (field-like)
  * kinds carry the full renderer/authoring surface; `re-root` (node-like) kinds
  * carry identity only — their rendering is framework-owned (TreeNode) until the
- * chrome-entailment cluster routes it through a manifest Renderer. The capability
- * descriptors the SPEC catalogues (ownValue/children/edges/…, SourceSpec,
- * provision) are intentionally absent until the kinds that consume them land.
+ * chrome-entailment cluster routes it through a manifest Renderer. Both arms share
+ * the capability descriptors the SPEC catalogues (ownValue/children/edges/…,
+ * SourceSpec, provision) via `CapabilitySet`; they are a **structural seam only**
+ * — carried per kind but read by no consumer yet (the lens / node-like kinds are
+ * the first readers, the cascade arbiter the second).
  */
 
 import type { Component, PropFunction, QRL, Signal } from '@builder.io/qwik';
@@ -84,9 +86,103 @@ export type ConfigFormProps = {
     onChange$: PropFunction<(cfg: FieldDefinitionConfig, error?: string | null) => void>;
 };
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Capability descriptors — the closed vocabulary every kind composes from
+ * (SPEC → "The six capabilities", §551-577). **Structural seam only**: these
+ * types and the per-manifest subsets that carry them are not yet read by any
+ * consumer. The lens / node-like kinds (#6 on the code-work-map) are the first
+ * readers; the cascade arbiter (#7) is the second. Until then a kind's capability
+ * set is documentation the type system enforces, plus the input to `coherence`.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+// ── Tier A: descriptors #6 imminently consumes — full SPEC shape ──
+
+/**
+ * OwnValue descriptor (field-like core). Minimal here — a value-validation hook.
+ * The `scalar | block | stream | composite` value-shape vocabulary that drives
+ * layout is the chrome-entailment cluster's (#5); it is deliberately NOT
+ * introduced here, so `ValueSpec` stays a thin marker for "this kind bears a value".
+ */
+export type ValueSpec = {
+    validate?: (value: DataFieldValue | null) => string | null;
+};
+
+/** `template` = fixed core; `open` = user-grown (always allowlist-constrained). */
+export type ChildrenMode = 'template' | 'open';
+
+/** Children descriptor — `open` is type-constrained (`open(allowlist)`, never `open(any)`). */
+export type ChildrenSpec = {
+    mode: ChildrenMode;
+    allowedKinds: Kind[];
+    cardinality?: 'one' | 'many';
+};
+
+/** Edges descriptor — `internal` (value is an Element id) vs `external` (`{ url }`). */
+export type TargetSpec = {
+    scope: 'internal' | 'external';
+    pin?: 'live' | 'revision';
+    appearance?: 'citation' | 'portal';
+    allowedKinds?: Kind[];
+};
+
+/**
+ * Derivation descriptor — a relation×reach matched to a target kind:
+ * `children/transitive` = subtree rollup (the lens gather); `ancestors/transitive`
+ * = inheritance (nearest-first); `edges/direct` = curated membership.
+ */
+export type SourceSpec = {
+    relation: 'children' | 'ancestors' | 'edges';
+    reach: 'direct' | 'transitive';
+};
+
+/**
+ * Provisioning descriptor (node-oriented; rides on the six) — declarative,
+ * framework-reconciled materialization: ensure exactly one node per target place,
+ * keyed by a deterministic id so concurrent creates converge. `trigger`/`idScheme`
+ * are placeholder string vocabularies, firmed up with the lens (#6).
+ */
+export type ProvisionSpec = {
+    trigger: string;
+    target: SourceSpec;
+    idScheme: string;
+};
+
+/** Membership mode (node-oriented) — physical (Children/`parentId`, cascade) | logical (Edges). */
+export type Container = 'physical' | 'logical';
+
+// ── Tier B: capabilities no current kind composes — minimal placeholders ──
+
+/** Action is built last and likely never user-authorable (SPEC §565). Placeholder. */
+export type ActionSpec = { idempotencyKey?: string; confirm?: boolean };
+/** Arbitration of a contending capability pair belongs to the cascade (#7). Placeholder. */
+export type ArbiterSpec = Record<string, never>;
+/** Whether a pinned edge still counts belongs to the cascade (#7). Placeholder. */
+export type ValiditySpec = Record<string, never>;
+
+/**
+ * The composed capability subset + node-oriented descriptors a kind draws from.
+ * Each capability is optional; absence = origin in that axis (SPEC §527). Shared
+ * by inline (field-like) and re-root (node-like) manifests alike — they are one
+ * composition space, not two systems. **Not yet read by any consumer.**
+ */
+export type CapabilitySet = {
+    ownValue?: ValueSpec;
+    children?: { spec: ChildrenSpec };
+    edges?: { target: TargetSpec };
+    derivation?: { source: SourceSpec };
+    action?: { spec: ActionSpec };
+    reads?: { resolver?: boolean; historyStream?: boolean };
+    // node-oriented descriptors (ride on the six; not new capabilities)
+    provision?: ProvisionSpec;
+    container?: Container;
+    // cross-capability + meta
+    arbiter?: ArbiterSpec;
+};
+
 /**
  * Identity shared by every kind, node-like or field-like. `placement` is the
- * discriminant that selects the rest of the manifest shape.
+ * discriminant that selects the rest of the manifest shape; the intersected
+ * `CapabilitySet` is the composed behaviour both arms carry.
  */
 type ManifestIdentity = {
     kind: Kind;
@@ -101,7 +197,13 @@ type ManifestIdentity = {
     mintVia: 'composer' | 'node-create' | 'config-only';
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';
-};
+    /**
+     * Reject incoherent capability subsets (SPEC §589). Optional per-kind override;
+     * the global cross-capability rules live in `checkCoherence` (coherence.ts) and
+     * run over every registry entry in the registry test. Empty array = coherent.
+     */
+    coherence?: (caps: CapabilitySet) => string[];
+} & CapabilitySet;
 
 /**
  * Inline (field-like) kinds: drawn as a DataField row, authored via the composer.

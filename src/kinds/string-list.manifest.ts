@@ -11,6 +11,7 @@
 import type { Component } from '@builder.io/qwik';
 import type { DataFieldValue, FieldDefinitionConfig, StringListValue } from '../data/models';
 import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
+import { KIND_CAPABILITIES } from './capabilities';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
 export const stringListManifest: KindManifest = {
@@ -18,6 +19,7 @@ export const stringListManifest: KindManifest = {
     pickerLabel: 'List',
     mintVia: 'config-only',
     placement: 'inline',
+    ...KIND_CAPABILITIES['string-list'], // capability subset — structural seam, not read yet
     Renderer: ConfigFieldStubRenderer as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): FieldDefinitionConfig => ({}),

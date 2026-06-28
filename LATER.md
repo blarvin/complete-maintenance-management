@@ -47,6 +47,16 @@ The blob is retired and config lives as a `library`-tree sub-field subtree (done
 - **enum-kv `options` as repeatable child Elements** — modeled as one `string-list` value for now. The SPEC's "repeatable data = many children" (ChildrenSpec cardinality `many`) is the eventual shape; deferred until cardinality machinery exists.
 - **Config-only kinds excluded from the picker via `mintVia`** — `FIELD_KINDS` filters `mintVia === 'composer'`. If a richer authoring surface ever needs to offer a config-only kind directly, revisit.
 
+### Capability descriptors — remaining items
+
+The six-capability vocabulary + `coherence` landed as a component-free seam (2026-06-28, IMPLEMENTATION.md → *Capability descriptors (the seam)*). Carried per kind, read by nothing yet. Deliberately out of scope that cluster:
+
+- **`RendererProps` generalization** — `FieldRendererProps` stays the inline contract; the placement-keyed `RendererProps` union (inline row | re-root view) lands with **chrome entailment (#5)**, where the node view Renderer first consumes it. Generalizing it now, with no re-root Renderer, is pure churn.
+- **`ActionSpec` / `ArbiterSpec` / `ValiditySpec` full shape** — minimal placeholders today (no kind composes `Action`; arbitration/validity are the cascade's). `ActionSpec` firms up when the first `Action` kind lands (#6, built last); `ArbiterSpec`/`ValiditySpec` with the cascade arbiter (#7).
+- **`node.allowedKinds` real allow-policy** — a provisional literal (`['node','text-kv',…]` + `TODO(#6)`) avoids a `registry`→`capabilities` import cycle; the derived "child nodes + field kinds" policy lands with the node-like kinds (#6).
+- **Per-kind `coherence` overrides** — the `coherence?(caps)` hook on `ManifestIdentity` is available but unused; global rules live in `checkCoherence`. Add per-kind rules only when a kind needs one beyond the global set.
+- **`ValueSpec` → value-shape vocabulary** — `ValueSpec` is a thin validation marker; the `scalar | block | stream | composite` shape enum that drives layout (retiring the `hideLabel`/`blockValueLayout` flags) is #5's, intentionally left out to keep the cluster boundary clean.
+
 ### `subtitle` → optional `nodeSubtitle` child element
 
 Today `Element.name` and `Element.subtitle` are columns. `name` is staying a column permanently — it's required identity, uniform across every kind (node Title / field Label), on the header hot path, and keeps the `elements` table human-readable for hand inspection ("not displayed by a renderer" ≠ "not stored"). `subtitle` is the one demotion candidate: it's node-only, semantically soft, and is the last node-only column. The pure-recursive move is to make it an optional child Element (`kind: "nodeSubtitle"`), so a node's subtitle joins the model its *fields* already live in (fields are already child Elements distinguished by `kind`) — which natively serves variable/editable/deletable headers and removes the temptation to overload `subtitle` for captions/usage-notes.
