@@ -9,6 +9,7 @@ import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren } from '../../hooks/useElementChildren';
+import { RE_ROOT_CREATE_KINDS } from '../../kinds/registry';
 
 export const RootView = component$(() => {
     const appState = useAppState();
@@ -45,6 +46,7 @@ export const RootView = component$(() => {
                     name={n.name}
                     subtitle={n.subtitle ?? ''}
                     nodeState={selectors.getDisplayNodeState(appState, n.id)}
+                    kind={n.kind}
                     onNodeClick$={() => navigateToNode$(n.id)}
                 />
             ))}
@@ -64,7 +66,7 @@ export const RootView = component$(() => {
                     onCreate$={complete$}
                 />
             ) : null}
-            <CreateNodeButton variant="root" onClick$={start$} />
+            <CreateNodeButton variant="root" availableKinds={RE_ROOT_CREATE_KINDS} onClick$={start$} />
         </main>
     );
 });

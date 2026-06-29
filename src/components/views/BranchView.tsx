@@ -10,6 +10,7 @@ import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren, useElementById } from '../../hooks/useElementChildren';
 import { isReRoot } from '../../kinds/placement';
+import { reRootCreateKindsFor } from '../../kinds/registry';
 
 export type BranchViewProps = {
     parentId: string;
@@ -58,6 +59,7 @@ export const BranchView = component$((props: BranchViewProps) => {
                         name={parentNode.value.name}
                         subtitle={parentNode.value.subtitle ?? ''}
                         nodeState="PARENT"
+                        kind={parentNode.value.kind}
                         parentId={parentNode.value.parentId}
                         onNavigateUp$={navigateUp$}
                     />
@@ -76,6 +78,7 @@ export const BranchView = component$((props: BranchViewProps) => {
                         name={child.name}
                         subtitle={child.subtitle ?? ''}
                         nodeState="CHILD"
+                        kind={child.kind}
                         onNodeClick$={() => navigateToNode$(child.id)}
                     />
                 ))}
@@ -97,7 +100,11 @@ export const BranchView = component$((props: BranchViewProps) => {
                     </div>
                 ) : null}
 
-                <CreateNodeButton variant="child" onClick$={start$} />
+                <CreateNodeButton
+                    variant="child"
+                    availableKinds={reRootCreateKindsFor(parentNode.value.kind)}
+                    onClick$={start$}
+                />
             </div>
         </main>
     );

@@ -11,6 +11,7 @@
 
 import type { Kind } from '../data/models';
 import type { InlineManifest, KindManifest } from './types';
+import { allowedChildKinds } from './childrenPolicy';
 import { nodeManifest } from './node.manifest';
 import { textKvManifest } from './text-kv.manifest';
 import { enumKvManifest } from './enum-kv.manifest';
@@ -80,5 +81,17 @@ export const FIELD_KINDS: Kind[] = Object.values(KIND_REGISTRY)
 export const RE_ROOT_CREATE_KINDS: Kind[] = Object.values(KIND_REGISTRY)
     .filter((manifest) => manifest.placement === 're-root' && manifest.mintVia === 'node-create')
     .map((manifest) => manifest.kind);
+
+/**
+ * The re-root, user-creatable kinds a given parent admits — `RE_ROOT_CREATE_KINDS`
+ * narrowed to the parent's `childrenSpec.allowedKinds` (chrome entailment #5, first
+ * consumer of the allowlist). Empty for a content-free lens (`jobs`), so the create
+ * surface offers nothing. The `mintVia`/`placement` filter stays here (registry);
+ * the allowlist read is delegated to the component-free `childrenPolicy`.
+ */
+export const reRootCreateKindsFor = (parentKind: Kind): Kind[] => {
+    const allowed = allowedChildKinds(parentKind);
+    return RE_ROOT_CREATE_KINDS.filter((k) => allowed.includes(k));
+};
 
 export type { KindManifest, FieldRendererProps, ConfigFormProps } from './types';

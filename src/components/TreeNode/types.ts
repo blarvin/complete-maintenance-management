@@ -9,6 +9,7 @@
  */
 
 import type { PropFunction } from '@builder.io/qwik';
+import type { Kind } from '../../data/models';
 
 /**
  * Display states for TreeNode (read-only modes)
@@ -53,6 +54,8 @@ type TreeNodeBaseProps = {
  */
 export type TreeNodeDisplayProps = TreeNodeBaseProps & {
     nodeState: DisplayNodeState;
+    /** The element's kind — drives the manifest-aware shell (DataCard/chevron, #5). */
+    kind: Kind;
     parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
     onNavigateUp$?: PropFunction<(parentId: string | null) => void>;

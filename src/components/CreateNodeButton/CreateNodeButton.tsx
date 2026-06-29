@@ -1,25 +1,35 @@
 import { component$, $, useSignal, type PropFunction } from '@builder.io/qwik';
-import { RE_ROOT_CREATE_KINDS, getKindManifest } from '../../kinds/registry';
+import { getKindManifest } from '../../kinds/registry';
 import type { Kind } from '../../data/models';
 import styles from './CreateNodeButton.module.css';
 
 export type CreateNodeButtonProps = {
     variant: 'root' | 'child';
-    /** Receives the kind chosen in the picker (re-root kinds; defaults to `node`). */
+    /**
+     * The re-root kinds this create surface may mint — the parent's admitted
+     * kinds (`reRootCreateKindsFor`) at a branch, the full universe at root.
+     * Empty → render nothing (a content-free lens offers no "Add").
+     */
+    availableKinds: Kind[];
+    /** Receives the kind chosen in the picker (re-root kinds; defaults to the first available). */
     onClick$?: PropFunction<(kind: Kind) => void>;
 };
 
 export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
-    const selectedKind = useSignal<Kind>('node');
+    // useSignal before any early return (Qwik hooks must run unconditionally).
+    const selectedKind = useSignal<Kind>(props.availableKinds[0] ?? 'node');
 
     const handleClick$ = $(async () => {
         if (props.onClick$) await props.onClick$(selectedKind.value);
     });
 
-    // Picker over the re-root, node-create kinds (reads the registry — itself a
-    // consumer of the manifest seam). Shown only when there's a real choice.
+    // A content-free lens admits nothing — offer no create surface at all.
+    if (props.availableKinds.length === 0) return null;
+
+    // Picker over the parent's admitted re-root kinds. Shown only when there's a
+    // real choice; otherwise the lone kind is implied by the button.
     const picker =
-        RE_ROOT_CREATE_KINDS.length > 1 ? (
+        props.availableKinds.length > 1 ? (
             <select
                 class={styles.kindPicker}
                 value={selectedKind.value}
@@ -28,7 +38,7 @@ export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
                 })}
                 aria-label="Kind of asset to create"
             >
-                {RE_ROOT_CREATE_KINDS.map((k) => (
+                {props.availableKinds.map((k) => (
                     <option key={k} value={k}>
                         {getKindManifest(k).pickerLabel}
                     </option>

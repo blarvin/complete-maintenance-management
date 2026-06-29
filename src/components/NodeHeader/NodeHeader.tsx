@@ -39,6 +39,9 @@ export type NodeHeaderProps = {
     onNameInput$?: PropFunction<(e: Event) => void>;
     /** For construction mode: disable chevron button */
     chevronDisabled?: boolean;
+    /** Whether to render the expand/collapse chevron. Default true; false for
+     *  content-free kinds (no children/DataCard — e.g. the `jobs` lens, #5). */
+    showChevron?: boolean;
 };
 
 export const NodeHeader = component$((props: NodeHeaderProps) => {
@@ -121,17 +124,19 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                         onDoubleTap$={props.onDetailsToggle$}
                         isExpanded={props.isDetailsExpanded}
                     />
-                    <button
-                        type="button"
-                        class={styles.nodeChevron}
-                        onClick$={props.onExpand$}
-                        onKeyDown$={handleExpandKeyDown$}
-                        aria-expanded={props.isExpanded}
-                        aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
-                        disabled={props.chevronDisabled}
-                    >
-                        {props.isExpanded ? '▾' : '◂'}
-                    </button>
+                    {props.showChevron !== false && (
+                        <button
+                            type="button"
+                            class={styles.nodeChevron}
+                            onClick$={props.onExpand$}
+                            onKeyDown$={handleExpandKeyDown$}
+                            aria-expanded={props.isExpanded}
+                            aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
+                            disabled={props.chevronDisabled}
+                        >
+                            {props.isExpanded ? '▾' : '◂'}
+                        </button>
+                    )}
                 </div>
             </div>
         </article>

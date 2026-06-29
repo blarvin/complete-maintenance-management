@@ -14,7 +14,9 @@ import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
+import { canHaveChildren } from '../../kinds/childrenPolicy';
 import type { DisplayNodeState } from './types';
+import type { Kind } from '../../data/models';
 import styles from './TreeNode.module.css';
 import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
 
@@ -23,6 +25,7 @@ export type TreeNodeDisplayProps = {
     name: string;
     subtitle: string;
     nodeState: DisplayNodeState;
+    kind: Kind;
     parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
     onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
@@ -68,6 +71,11 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const isChild = props.nodeState === 'CHILD';
     const indentVar = isChild ? '18px' : '50px';
 
+    // Manifest-aware shell (#5): a content-free kind (no `children` capability —
+    // e.g. the `jobs` lens) bears no DataCard, so it gets no expand chevron. Its
+    // rollup renders via KindAdornment in the header.
+    const showDataCard = canHaveChildren(props.kind);
+
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
             <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded}>
@@ -107,12 +115,15 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                 parentId={props.parentId}
                 onNodeClick$={props.onNodeClick$}
                 onNavigateUp$={props.onNavigateUp$}
-                onExpand$={toggleExpand$}
+                onExpand$={showDataCard ? toggleExpand$ : undefined}
                 onDetailsToggle$={toggleDetailsExpand$}
+                showChevron={showDataCard}
             />
-            <DataCard isOpen={isExpanded}>
-                <FieldList nodeId={props.id} isConstruction={false} />
-            </DataCard>
+            {showDataCard && (
+                <DataCard isOpen={isExpanded}>
+                    <FieldList nodeId={props.id} isConstruction={false} />
+                </DataCard>
+            )}
         </div>
     );
 });
