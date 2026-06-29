@@ -23,6 +23,7 @@ import { initializeStorage } from '../../data/storage/initStorage';
 import { storageEventBus } from '../../data/storageEventBus';
 import { gatherDescendants } from '../../data/services/capabilityEngine';
 import { useElementById } from '../../hooks/useElementChildren';
+import { NavigableRow } from '../NavigableRow/NavigableRow';
 import type { Element } from '../../data/models';
 
 export type KindAdornmentProps = { id: string; isParent: boolean };
@@ -91,11 +92,11 @@ export const KindAdornment = component$<KindAdornmentProps>((props) => {
                 {items.length === 0 ? (
                     <div>none yet</div>
                 ) : (
-                    <ul style="margin:var(--space-1) 0 0 0;padding-left:var(--space-4);">
+                    <div style="margin-top:var(--space-1);">
                         {items.map((j) => (
-                            <li key={j.id}>{j.name}</li>
+                            <NavigableRow key={j.id} id={j.id} name={j.name} />
                         ))}
-                    </ul>
+                    </div>
                 )}
             </div>
         );

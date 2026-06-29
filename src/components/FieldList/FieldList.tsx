@@ -28,6 +28,8 @@ export type FieldListProps = {
     isConstruction?: boolean;
     /** FieldDefinition IDs to pre-populate as locked-in composer rows (construction defaults). */
     initialFieldDefinitionIds?: readonly string[];
+    /** When true, suppress the add-field surfaces (composer/legacy) — a read-only peek of existing fields. */
+    hideAddSurfaces?: boolean;
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
@@ -58,7 +60,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                 />
             ))}
 
-            {(props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer')) && (
+            {!props.hideAddSurfaces && (props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer')) && (
                 <FieldComposerSlot
                     nodeId={props.nodeId}
                     mode={mode}
@@ -68,7 +70,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                 />
             )}
 
-            {ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction && (
+            {!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction && (
                 <CreateDataField
                     nodeId={props.nodeId}
                     currentMaxCardOrder={maxPersistedCardOrder.value}
