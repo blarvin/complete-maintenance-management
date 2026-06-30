@@ -67,9 +67,21 @@ export const KIND_CAPABILITIES = {
         container: 'physical',
     },
 
-    // jobs: the lens — Derivation(children/transitive → job) + Provision. Holds no
-    // content of its own; gathers every `job` below its parent.
+    // jobs: the hybrid Jobs container — Children(open, field-like) + Derivation
+    // (children/transitive → job) + Provision. It is NOT only a lens: it owns its
+    // own DataFields (Children, field kinds only — sub-assets don't belong directly
+    // in a Jobs container, and jobs arrive via Derivation) AND rolls up every `job`
+    // below its owning node. The "both-rollup-and-container" shape (code-work-map
+    // parked for #6c) — `checkCoherence` admits Children+Derivation+Provision. Jobs
+    // themselves stay derived/node-owned; a job created here parents to the node.
     jobs: {
+        children: {
+            spec: {
+                mode: 'open',
+                allowedKinds: ['text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+            },
+        },
+        container: 'physical',
         derivation: { source: { relation: 'children', reach: 'transitive' }, targetKind: 'job' },
         provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::jobs' },
     },

@@ -1,7 +1,8 @@
 /**
  * #6b node-like kinds: minting the new re-root kinds (org/job) through the
  * command bus, and the per-node `jobs`-lens provisioning (deterministic id,
- * idempotent, recursion-guarded, re-root only). Real IDBAdapter + fake-indexeddb.
+ * idempotent, recursion-guarded, container re-root kinds only — lens-surfaced
+ * kinds like `job` are excluded). Real IDBAdapter + fake-indexeddb.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -50,7 +51,7 @@ describe('#6b node-like kinds', () => {
     await expect(createElement({ id: 't1', kind: 'text-kv', parentId: null, name: 'x' })).rejects.toThrow();
   });
 
-  it('provisions a jobs lens child on every re-root node', async () => {
+  it('provisions a jobs lens child on every container re-root node (node/org)', async () => {
     await createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Pump' });
     const lens = await db.elements.get('n1::jobs');
     expect(lens?.kind).toBe('jobs');
@@ -64,6 +65,12 @@ describe('#6b node-like kinds', () => {
     await createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Pump' });
     await createElement({ id: 'L1', kind: 'jobs', parentId: 'n1', name: 'Jobs' });
     expect(await db.elements.get('L1::jobs')).toBeUndefined();
+  });
+
+  it('does not provision a jobs lens on a job (lens-surfaced — no Jobs-on-a-job)', async () => {
+    await createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Pump' });
+    await createElement({ id: 'j1', kind: 'job', parentId: 'n1', name: 'Replace relay' });
+    expect(await db.elements.get('j1::jobs')).toBeUndefined();
   });
 
   it('provisioning is idempotent (deterministic id)', async () => {

@@ -27,3 +27,22 @@ export const allowedChildKinds = (parentKind: Kind): Kind[] =>
 /** Whether a kind can hold children at all (has a `children` capability). */
 export const canHaveChildren = (parentKind: Kind): boolean =>
     !!capsOf(parentKind).children;
+
+/**
+ * The kinds that are *surfaced in a lens* — every `derivation.targetKind` declared
+ * by some kind's capabilities. Today this is `{'job'}` (the `jobs` lens targets
+ * `job`); `log-entry` joins automatically when `logbook` (#6c) lands. `org`'s
+ * untyped derivation has no `targetKind`, so it's correctly excluded.
+ *
+ * The single source for both halves of "this kind lives in a lens, not the tree":
+ * hide it from a parent's child list (display) AND drop it from the create picker
+ * (creation) — jobs are minted from inside the `Jobs` lens, never as loose siblings.
+ */
+const LENS_TARGET_KINDS: ReadonlySet<Kind> = new Set(
+    (Object.keys(KIND_CAPABILITIES) as Kind[])
+        .map((k) => capsOf(k).derivation?.targetKind)
+        .filter((k): k is Kind => !!k),
+);
+
+/** Whether a kind is surfaced in a lens (so hidden from the tree + trimmed from the picker). */
+export const isLensSurfaced = (kind: Kind): boolean => LENS_TARGET_KINDS.has(kind);

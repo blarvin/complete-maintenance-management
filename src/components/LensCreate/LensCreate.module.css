@@ -1,0 +1,59 @@
+/* LensCreate — the inline name-only create row. Borrows the field-row chevron skin
+   (per NavigableRow.module.css) + DataField's under-construction input look, rather
+   than importing another component's CSS. The collapsed button is LensCreateButton. */
+
+.createRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+    margin-top: var(--space-1);
+}
+
+.chevron {
+    flex: 0 0 var(--chevron-col-width);
+    align-self: baseline;
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border-default);
+    /* Land triangle-center on the adjacent text's cap-center. */
+    transform: translateY(0.15em);
+}
+
+.chevron::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+/* Right-pointing (collapsed) — decorative only; the row is mid-construction. */
+.chevronRight::before {
+    border-width: var(--field-chevron-size) 0 var(--field-chevron-size) calc(var(--field-chevron-size) * 1.4);
+    border-left-color: currentColor;
+}
+
+/* Bare name input — mirrors DataField's under-construction value input: no border,
+   transparent, inherits font, visible caret (overriding any .no-caret ancestor). */
+.nameInput {
+    flex: 1 1 auto;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    caret-color: auto;
+    touch-action: manipulation;
+}
+
+.nameInput:focus {
+    text-decoration: underline;
+}

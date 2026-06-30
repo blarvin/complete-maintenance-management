@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { allowedChildKinds, canHaveChildren } from '../kinds/childrenPolicy';
+import { allowedChildKinds, canHaveChildren, isLensSurfaced } from '../kinds/childrenPolicy';
 
 describe('allowedChildKinds', () => {
   it('admits node/org/job under the open containers (node, org)', () => {
@@ -27,21 +27,40 @@ describe('allowedChildKinds', () => {
     expect(allowed).not.toContain('org');
   });
 
-  it('admits nothing under a content-free lens (jobs)', () => {
-    expect(allowedChildKinds('jobs')).toEqual([]);
+  it('admits field kinds but no re-root kinds under the hybrid Jobs container (jobs)', () => {
+    // The Jobs container owns its own DataFields (field kinds); sub-assets don't
+    // belong directly in it and jobs arrive via Derivation, not as direct children.
+    const allowed = allowedChildKinds('jobs');
+    expect(allowed).toContain('text-kv');
+    expect(allowed).not.toContain('node');
+    expect(allowed).not.toContain('job');
   });
 });
 
 describe('canHaveChildren', () => {
-  it('is true for the open containers', () => {
-    for (const k of ['node', 'org', 'job'] as const) {
+  it('is true for the open containers, incl. the hybrid Jobs container (jobs)', () => {
+    for (const k of ['node', 'org', 'job', 'jobs'] as const) {
       expect(canHaveChildren(k)).toBe(true);
     }
   });
 
-  it('is false for the lens and for field-like kinds (no children capability)', () => {
-    for (const k of ['jobs', 'text-kv', 'asset-doc'] as const) {
+  it('is false for field-like kinds (no children capability)', () => {
+    for (const k of ['text-kv', 'asset-doc'] as const) {
       expect(canHaveChildren(k)).toBe(false);
+    }
+  });
+});
+
+describe('isLensSurfaced', () => {
+  it('is true for a kind targeted by a lens (job → jobs)', () => {
+    expect(isLensSurfaced('job')).toBe(true);
+  });
+
+  it('is false for the lens itself, the untyped rollup, and ordinary kinds', () => {
+    // `jobs` is the lens (a targetKind, not a target); `org`'s derivation is untyped
+    // (no targetKind); `node`/field kinds are not surfaced in any lens.
+    for (const k of ['jobs', 'org', 'node', 'text-kv'] as const) {
+      expect(isLensSurfaced(k)).toBe(false);
     }
   });
 });

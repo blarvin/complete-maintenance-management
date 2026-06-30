@@ -3,19 +3,22 @@ import type { StorageAdapter } from '../storage/storageAdapter';
 import type { Element } from '../models';
 import { generateId } from '../../utils/id';
 import { isReRoot } from '../../kinds/placement';
+import { isLensSurfaced } from '../../kinds/childrenPolicy';
 
 /**
- * Provision a `jobs` lens child on every re-root node (code-work-map §6b). The
- * deterministic id `${parentId}::jobs` makes it idempotent (re-provisioning is a
- * no-op); the `jobs` guard stops the lens spawning its own lens. Each lens
- * gathers its parent's `job` descendants at view time — no upward ancestor walk,
- * and de-provision/GC when the last job is removed is deferred (LATER.md).
+ * Provision a `jobs` lens child on every container re-root node (code-work-map
+ * §6b). The deterministic id `${parentId}::jobs` makes it idempotent
+ * (re-provisioning is a no-op). Skipped for the lens itself (no lens-on-lens) and
+ * for lens-surfaced kinds (a `job` is itself rolled up by a lens, so it must not
+ * nest its own Jobs container — generic, so `log-entry` is excluded too). Each
+ * lens gathers its owning node's `job` descendants at view time — no upward
+ * ancestor walk, and de-provision/GC when the last job is removed is deferred.
  *
  * Created via the adapter directly (not the command bus), so it does not
  * re-enter CREATE_ELEMENT.
  */
 async function ensureJobsLens(adapter: StorageAdapter, parent: Element): Promise<void> {
-  if (!isReRoot(parent.kind) || parent.kind === 'jobs') return;
+  if (!isReRoot(parent.kind) || parent.kind === 'jobs' || isLensSurfaced(parent.kind)) return;
   const lensId = `${parent.id}::jobs`;
   const existing = await adapter.getElement(lensId);
   if (existing.data) return;
