@@ -4,25 +4,32 @@ import type { Element } from '../models';
 import { generateId } from '../../utils/id';
 import { isReRoot } from '../../kinds/placement';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
+import { isProvisionedLens, PROVISIONED_LENSES } from '../../kinds/provisionPolicy';
 
 /**
- * Provision a `jobs` lens child on every container re-root node (code-work-map
- * §6b). The deterministic id `${parentId}::jobs` makes it idempotent
- * (re-provisioning is a no-op). Skipped for the lens itself (no lens-on-lens) and
- * for lens-surfaced kinds (a `job` is itself rolled up by a lens, so it must not
- * nest its own Jobs container — generic, so `log-entry` is excluded too). Each
- * lens gathers its owning node's `job` descendants at view time — no upward
- * ancestor walk, and de-provision/GC when the last job is removed is deferred.
+ * Provision each declared lens child on a container re-root node (code-work-map
+ * §6b/§6c). Spec-driven: loops `PROVISIONED_LENSES` (derived from every kind's
+ * `provision` capability), so a new lens kind (e.g. `logbook`) joins here with no
+ * edit. Each lens id is deterministic (`${parentId}::${suffix}`, e.g. `${id}::jobs`,
+ * `${id}::logbook`), making re-provisioning idempotent (a no-op).
  *
- * Created via the adapter directly (not the command bus), so it does not
- * re-enter CREATE_ELEMENT.
+ * Skipped for the lens kinds themselves (no lens-on-lens) and for lens-surfaced
+ * kinds (a `job`/`log-entry` is itself rolled up by a lens, so it must not nest its
+ * own containers). Each lens gathers its owning node's target-kind descendants at
+ * view time — no upward ancestor walk, and de-provision/GC when the last entry is
+ * removed is deferred (LATER.md).
+ *
+ * Created via the adapter directly (not the command bus), so it does not re-enter
+ * CREATE_ELEMENT.
  */
-async function ensureJobsLens(adapter: StorageAdapter, parent: Element): Promise<void> {
-  if (!isReRoot(parent.kind) || parent.kind === 'jobs' || isLensSurfaced(parent.kind)) return;
-  const lensId = `${parent.id}::jobs`;
-  const existing = await adapter.getElement(lensId);
-  if (existing.data) return;
-  await adapter.createElement({ id: lensId, kind: 'jobs', parentId: parent.id, name: 'Jobs' });
+async function ensureProvisionedLenses(adapter: StorageAdapter, parent: Element): Promise<void> {
+  if (!isReRoot(parent.kind) || isProvisionedLens(parent.kind) || isLensSurfaced(parent.kind)) return;
+  for (const lens of PROVISIONED_LENSES) {
+    const lensId = `${parent.id}::${lens.suffix}`;
+    const existing = await adapter.getElement(lensId);
+    if (existing.data) continue;
+    await adapter.createElement({ id: lensId, kind: lens.kind, parentId: parent.id, name: lens.name });
+  }
 }
 
 export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): void {
@@ -44,7 +51,7 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
       value: value ?? null,
       siblingOrder,
     });
-    await ensureJobsLens(adapter, result.data);
+    await ensureProvisionedLenses(adapter, result.data);
     return result.data;
   });
 

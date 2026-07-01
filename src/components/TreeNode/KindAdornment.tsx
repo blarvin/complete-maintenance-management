@@ -16,6 +16,7 @@
 import { component$, useComputed$, useSignal, useVisibleTask$ } from '@builder.io/qwik';
 import { getKindManifest } from '../../kinds/registry';
 import { isReRoot } from '../../kinds/placement';
+import { isProvisionedLens } from '../../kinds/provisionPolicy';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { storageEventBus } from '../../data/storageEventBus';
@@ -48,8 +49,9 @@ export const KindAdornment = component$<KindAdornmentProps>((props) => {
         const regather = async () => {
             await initializeStorage();
             const all = await gatherDescendants(el.id, getElementQueries());
-            // Count descendant nodes, excluding the auto-provisioned `jobs` lenses (noise).
-            gathered.value = all.filter((e) => isReRoot(e.kind) && e.kind !== 'jobs');
+            // Count descendant nodes, excluding the auto-provisioned lens containers
+            // (`jobs`/`logbook`, noise) — generic so new lens kinds drop out too.
+            gathered.value = all.filter((e) => isReRoot(e.kind) && !isProvisionedLens(e.kind));
         };
         const unsub = storageEventBus.subscribe(() => {
             if (timer !== null) clearTimeout(timer);

@@ -137,6 +137,18 @@ The six-capability vocabulary (SPEC → *The six capabilities*) lands as TypeScr
 
 ---
 
+## #6c — `logbook`/`log-entry`, the lens's second target (done 2026-07-01, ISSUES Architecture Migration #3)
+
+The lens (`Derivation(children/transitive) + Provision`) had exactly one consumer (`jobs → job`); this adds a second (`logbook → log-entry`) to prove it generalizes by target kind. **Minimal scope** — prove generalization + make the provisioner spec-driven; the authored-in policy Definition on `logbook` (which would force the `fieldDefinitionId → definitionId` binding seam, #7) is deferred (ISSUES #6). Non-obvious choices:
+
+- **The provisioner became spec-driven — the one real change.** Every lens surface was *already* generic (keyed off `derivation.targetKind`, not the string `'job'`): `LensRollup`/`LensCreate`/`useLensGather`, the lens branches in `BranchView`/`TreeNodeDisplay`, and `isLensSurfaced`/`LENS_TARGET_KINDS` all picked up the new kind for free (`log-entry` auto-joined `isLensSurfaced`). The *only* hardcoded-to-`jobs` code was the per-node provisioner. `ensureJobsLens` → `ensureProvisionedLenses` now loops `PROVISIONED_LENSES`, so creating a `node`/`org` provisions **both** a `::jobs` and a `::logbook` child; the old `parent.kind === 'jobs'` lens-on-lens special-case generalized to `isProvisionedLens(parent.kind)`.
+- **`provisionPolicy.ts` is a fourth component-free mirror** (paralleling `placement.ts`/`capabilities.ts`/`childrenPolicy.ts`, same Vitest/`component$` constraint). `PROVISIONED_LENSES` is *derived* from `KIND_CAPABILITIES`: for every kind with a `provision` spec, `{ kind, suffix }` where `suffix` is parsed from `provision.idScheme` (`'${parentId}::jobs'` → `'jobs'`). Only the display `name` is carried explicitly (a small mirror of each manifest's `pickerLabel` — the same accepted cross-boundary duplication as `KIND_PLACEMENT`'s values). `provisionPolicy.test.ts` gives it teeth: every `provision`-declaring kind must appear, and each `suffix` must agree with its `idScheme`.
+- **The last hardcode fell out too.** `KindAdornment`'s `org` descendant count excluded the `jobs` container via `e.kind !== 'jobs'`; now `!isProvisionedLens(e.kind)`, so `logbook` containers (and any future lens) drop out generically.
+- **`logbook`/`log-entry` mirror `jobs`/`job` exactly.** `logbook` is the same hybrid `Children(open, field kinds) + Derivation(→ log-entry) + Provision`; `log-entry` mirrors `job` (`Children(open)` + `container`, details are ordinary Fields). Both pass `checkCoherence` unchanged. `log-entry` was added to the `allowedKinds` wherever `job` appears (model coherence; `CREATE_ELEMENT` does no allowlist check).
+- **How it renders (no component code added).** Under a node, `Jobs` and `Logbook` are **child Node-like Element rows** — each a re-root container with its own header + chevron, *not* entries in the parent's DataCard. Expanding a row peeks its rollup (`LensRollup`); the row's name re-roots into the container. Both lenses ride the identical generic re-root shell.
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry

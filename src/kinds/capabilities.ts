@@ -26,7 +26,7 @@ export const KIND_CAPABILITIES = {
         children: {
             spec: {
                 mode: 'open',
-                allowedKinds: ['node', 'org', 'job', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+                allowedKinds: ['node', 'org', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
             },
         },
         container: 'physical',
@@ -47,7 +47,7 @@ export const KIND_CAPABILITIES = {
         children: {
             spec: {
                 mode: 'open',
-                allowedKinds: ['node', 'org', 'job', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+                allowedKinds: ['node', 'org', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
             },
         },
         container: 'physical',
@@ -61,7 +61,21 @@ export const KIND_CAPABILITIES = {
         children: {
             spec: {
                 mode: 'open',
-                allowedKinds: ['node', 'job', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+                allowedKinds: ['node', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+            },
+        },
+        container: 'physical',
+    },
+
+    // log-entry: the `job` twin (#6c) — Children(open). A layered record node
+    // whose timestamp/author/category are ordinary Fields, not an OwnValue. It is
+    // the trigger the `logbook` lens provisions against, so being a
+    // `derivation.targetKind` it auto-joins `isLensSurfaced` (ELEMENT-MODEL §job).
+    'log-entry': {
+        children: {
+            spec: {
+                mode: 'open',
+                allowedKinds: ['node', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
             },
         },
         container: 'physical',
@@ -84,6 +98,23 @@ export const KIND_CAPABILITIES = {
         container: 'physical',
         derivation: { source: { relation: 'children', reach: 'transitive' }, targetKind: 'job' },
         provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::jobs' },
+    },
+
+    // logbook: the `jobs` twin (#6c) — the lens's second instance, proving it
+    // generalizes by target kind. Same hybrid shape: Children(open, field-like) +
+    // Derivation(children/transitive → log-entry) + Provision. Materialized per node
+    // by the spec-driven provisioner (`provisionPolicy.ts`), which reads this
+    // ProvisionSpec instead of hardcoding the kind.
+    logbook: {
+        children: {
+            spec: {
+                mode: 'open',
+                allowedKinds: ['text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+            },
+        },
+        container: 'physical',
+        derivation: { source: { relation: 'children', reach: 'transitive' }, targetKind: 'log-entry' },
+        provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::logbook' },
     },
 
     // asset-doc: Edges(internal, live) + Reads.resolver — a live-resolved link to

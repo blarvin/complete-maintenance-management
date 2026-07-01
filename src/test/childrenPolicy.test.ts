@@ -52,14 +52,16 @@ describe('canHaveChildren', () => {
 });
 
 describe('isLensSurfaced', () => {
-  it('is true for a kind targeted by a lens (job → jobs)', () => {
+  it('is true for a kind targeted by a lens (job → jobs, log-entry → logbook)', () => {
     expect(isLensSurfaced('job')).toBe(true);
+    expect(isLensSurfaced('log-entry')).toBe(true);
   });
 
-  it('is false for the lens itself, the untyped rollup, and ordinary kinds', () => {
-    // `jobs` is the lens (a targetKind, not a target); `org`'s derivation is untyped
-    // (no targetKind); `node`/field kinds are not surfaced in any lens.
-    for (const k of ['jobs', 'org', 'node', 'text-kv'] as const) {
+  it('is false for the lens containers, the untyped rollup, and ordinary kinds', () => {
+    // `jobs`/`logbook` are the lens containers (they declare a targetKind, they are
+    // not one); `org`'s derivation is untyped (no targetKind); `node`/field kinds are
+    // not surfaced in any lens.
+    for (const k of ['jobs', 'logbook', 'org', 'node', 'text-kv'] as const) {
       expect(isLensSurfaced(k)).toBe(false);
     }
   });

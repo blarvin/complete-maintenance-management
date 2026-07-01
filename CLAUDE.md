@@ -11,9 +11,11 @@
 
 1. **SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
 2. **ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
-3. **LATER.md** - Deferred features, Phase 2+ roadmap, resolved items
+3. **LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
 4. **IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
-5. **ISSUES.md** - Intends to be a comprehensive listing of what needs doing.
+5. **ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
+
+**ISSUES vs LATER routing**: unfinished business, deferred parts of a feature already begun, and observed refactor needs (work-in-progress left for later) normally go in **ISSUES**, not LATER. **LATER** is for whole ideas/features not yet started and far-future-phase work. Consequence: a leftover directly caused by current-branch or Element-model work belongs in ISSUES — and much of what's currently parked in LATER under in-flight clusters (e.g. the §6b/§6c lens follow-ups) could migrate back.
 
 ---
 

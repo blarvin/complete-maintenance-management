@@ -32,6 +32,9 @@ export const KIND_PLACEMENT = {
     org: 're-root',
     job: 're-root',
     jobs: 're-root',
+    // Node-like kinds (#6c) — the lens's second target + its container
+    'log-entry': 're-root',
+    logbook: 're-root',
     'asset-doc': 'inline',
     // Config-only sub-field kinds
     flag: 'inline',

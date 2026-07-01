@@ -10,7 +10,7 @@ import { KIND_PLACEMENT, isReRoot, isInline } from '../kinds/placement';
 
 describe('placement', () => {
   it('classifies the node-like kinds as re-root', () => {
-    for (const k of ['node', 'org', 'job', 'jobs'] as const) {
+    for (const k of ['node', 'org', 'job', 'jobs', 'log-entry', 'logbook'] as const) {
       expect(isReRoot(k)).toBe(true);
       expect(isInline(k)).toBe(false);
     }

@@ -20,6 +20,8 @@ import { singleImageManifest } from './single-image.manifest';
 import { orgManifest } from './org.manifest';
 import { jobManifest } from './job.manifest';
 import { jobsManifest } from './jobs.manifest';
+import { logEntryManifest } from './log-entry.manifest';
+import { logbookManifest } from './logbook.manifest';
 import { assetDocManifest } from './asset-doc.manifest';
 import { flagManifest } from './flag.manifest';
 import { compoundManifest } from './compound.manifest';
@@ -35,6 +37,9 @@ export const KIND_REGISTRY = {
     org: orgManifest,
     job: jobManifest,
     jobs: jobsManifest,
+    // #6c — the lens's second target kind + its container
+    'log-entry': logEntryManifest,
+    logbook: logbookManifest,
     'asset-doc': assetDocManifest,
     // Config-only sub-field kinds (config-as-Elements). Registered for value
     // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).
