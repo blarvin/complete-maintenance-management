@@ -18,7 +18,7 @@ function makeElement(id: string, siblingOrder: number): Element {
     value: null,
     parentId: 'parent',
     siblingOrder,
-    fieldDefinitionId: null,
+    definitionId: null,
     treeType: 'business',
     updatedBy: 'localUser',
     updatedAt: 0,

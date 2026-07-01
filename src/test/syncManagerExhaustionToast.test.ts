@@ -43,7 +43,7 @@ describe('SyncManager — exhausted-retries toast', () => {
       applySyncItem: vi.fn().mockRejectedValue(new Error('Network error')),
       pullElementsSince: vi.fn().mockResolvedValue([]),
       pullElementHistorySince: vi.fn().mockResolvedValue([]),
-      pullFieldDefinitionsSince: vi.fn().mockResolvedValue([]),
+      pullDefinitionsSince: vi.fn().mockResolvedValue([]),
     } as unknown as RemoteSyncAdapter;
 
     mockQueue = {

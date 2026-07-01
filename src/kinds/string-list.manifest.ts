@@ -9,7 +9,7 @@
  */
 
 import type { Component } from '@builder.io/qwik';
-import type { DataFieldValue, FieldDefinitionConfig, StringListValue } from '../data/models';
+import type { DataFieldValue, DefinitionConfig, StringListValue } from '../data/models';
 import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
@@ -22,7 +22,7 @@ export const stringListManifest: KindManifest = {
     ...KIND_CAPABILITIES['string-list'], // capability subset — structural seam, not read yet
     Renderer: ConfigFieldStubRenderer as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm as unknown as Component<ConfigFormProps>,
-    defaultConfig: (): FieldDefinitionConfig => ({}),
+    defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : (v as StringListValue).join(', '),
     hideLabel: false,

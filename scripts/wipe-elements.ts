@@ -1,11 +1,14 @@
 /**
- * Wipe Elements and history from Firestore — leaves FieldDefinitions intact.
+ * Wipe Elements and history from Firestore.
  *
  * Run with: npx tsx scripts/wipe-elements.ts   (or: npm run wipe:elements)
  *
  * ⚠️  WARNING: This deletes ALL elements and element history from the
- * production Firestore database. FieldDefinitions are deliberately preserved.
- * To also clear FieldDefinitions, use scripts/wipe-field-definitions.ts.
+ * production Firestore database. Since config-as-Elements, Library Definitions
+ * are `treeType: 'library'` rows in the `elements` collection, so any synced
+ * Definitions are wiped too — the client reseeds its Library locally on next
+ * launch (seedDefinitions, version-gated). The legacy `fieldDefinitions`
+ * collection is not in the list; scripts/wipe-field-definitions.ts clears it.
  */
 
 import { initializeApp } from 'firebase/app';
@@ -26,9 +29,10 @@ const firebaseConfig = {
     appId: "1:1041054928276:web:f4804c9c7b35c66cd4d381",
 };
 
-// Element-model data only. fieldDefinitions is intentionally NOT in this list.
-// Legacy (pre-Element-model) element collections are included so leftover
-// pre-refactor data also gets wiped.
+// Element-model data (incl. Library Definitions, which live in `elements`
+// since config-as-Elements). The legacy `fieldDefinitions` collection has its
+// own wipe script. Legacy (pre-Element-model) element collections are included
+// so leftover pre-refactor data also gets wiped.
 const COLLECTIONS = [
     'elements',
     'elementHistory',
@@ -68,7 +72,7 @@ async function deleteCollection(db: ReturnType<typeof getFirestore>, collectionN
 }
 
 async function main() {
-    console.log('⚠️  WIPE ELEMENTS - This deletes all elements + history (FieldDefinitions preserved)!\n');
+    console.log('⚠️  WIPE ELEMENTS - This deletes all elements + history (incl. Library Definitions)!\n');
     console.log(`Project: ${firebaseConfig.projectId}`);
     console.log('');
 
@@ -83,7 +87,7 @@ async function main() {
     }
 
     console.log(`\n✅ Wipe complete! Deleted ${totalDeleted} documents total.`);
-    console.log('   FieldDefinitions were left untouched.');
+    console.log('   The client reseeds its Library locally on next launch.');
     process.exit(0);
 }
 

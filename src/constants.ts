@@ -10,7 +10,7 @@ import type { AddFieldSurfaceId } from "./components/FieldList/addFieldSurfaces"
 export const USER_ID = "localUser" as const;
 
 /**
- * Reserved author id for dev-seeded FieldDefinitions. End-user content always
+ * Reserved author id for dev-seeded Definitions. End-user content always
  * uses `getCurrentUserId()` (currently `USER_ID`).
  */
 export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
@@ -60,7 +60,7 @@ export const COLLECTIONS = {
  *   Power Rating, Current Reading, Note
  *
  * These were hardcoded strings used during early UI/UX development. The
- * Component/FieldDefinition/Instance refactor replaced them with a
+ * Component/Definition/Instance refactor replaced them with a
  * `fieldDefinitions` table populated by a follow-up plan. Kept here as a
  * reminder of the prototype set only.
  */

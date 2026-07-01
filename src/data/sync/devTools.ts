@@ -8,7 +8,7 @@
 
 import { getSyncManager } from './syncManager';
 import { db } from '../storage/db';
-import { SEED_KEY } from '../services/seedFieldDefinitions';
+import { SEED_KEY } from '../services/seedDefinitions';
 
 /**
  * Initialize dev tools helpers on window object
@@ -51,7 +51,7 @@ export function initializeDevTools(): void {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).__wipeFieldDefinitions = async () => {
+  (window as any).__wipeDefinitions = async () => {
     try {
       // The Library is now `library`-tree Elements (Definitions + their config
       // sub-field children), not a separate table — clear all of them.
@@ -59,18 +59,18 @@ export function initializeDevTools(): void {
       const defCount = libraryEls.filter(e => e.parentId === null).length;
       await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
         await db.elements.bulkDelete(libraryEls.map(e => e.id));
-        // Reset the seed-version key so seedFieldDefinitions() runs again on the
+        // Reset the seed-version key so seedDefinitions() runs again on the
         // next reload, restoring the dev seeds (factory-default reset). To keep
         // the set genuinely empty instead, pin it: put({ key: SEED_KEY, value: SEED_VERSION }).
         await db.syncMetadata.delete(SEED_KEY);
       });
-      console.log(`[DevTools] Cleared ${defCount} FieldDefinition(s) from IDB. Reload to re-seed the defaults.`);
-      return `Cleared ${defCount} FieldDefinition(s) from IDB — reload to re-seed defaults`;
+      console.log(`[DevTools] Cleared ${defCount} Definition(s) from IDB. Reload to re-seed the defaults.`);
+      return `Cleared ${defCount} Definition(s) from IDB — reload to re-seed defaults`;
     } catch (err) {
-      console.error('[DevTools] Wipe FieldDefinitions failed:', err);
+      console.error('[DevTools] Wipe Definitions failed:', err);
       throw err;
     }
   };
 
-  console.log('[DevTools] Sync helpers available: window.__sync(), window.__syncStatus(), window.__wipeFieldDefinitions()');
+  console.log('[DevTools] Sync helpers available: window.__sync(), window.__syncStatus(), window.__wipeDefinitions()');
 }

@@ -22,10 +22,10 @@ export type DisplayNodeState = 'ROOT' | 'PARENT' | 'CHILD';
 export type TreeNodeState = DisplayNodeState | 'UNDER_CONSTRUCTION';
 
 /**
- * Field data for construction mode — references a FieldDefinition to instantiate.
+ * Field data for construction mode — references a Definition to instantiate.
  */
 export type ConstructionField = {
-    fieldDefinitionId: string;
+    definitionId: string;
 };
 
 /**

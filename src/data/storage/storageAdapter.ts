@@ -1,4 +1,4 @@
-import type { FieldDefinition, DataFieldValue, FieldDefinitionConfig, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
+import type { Definition, DataFieldValue, DefinitionConfig, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -16,11 +16,11 @@ export type StorageResult<T> = {
   meta?: StorageMeta;
 };
 
-export type StorageFieldDefinitionCreate = {
+export type StorageDefinitionCreate = {
   id: string;
   kind: Kind;
   label: string;
-  config: FieldDefinitionConfig;
+  config: DefinitionConfig;
 };
 
 // ============================================================================
@@ -34,7 +34,7 @@ export type StorageElementCreate = {
   name: string;
   subtitle?: string | null;
   /** Required for inline (field-like) kinds; null for re-root (node-like) kinds. */
-  fieldDefinitionId?: string | null;
+  definitionId?: string | null;
   /** Optional initial value (for value-bearing kinds). */
   value?: DataFieldValue | null;
   /** Optional explicit sibling order; auto-minted via nextSiblingOrder when omitted. */
@@ -54,12 +54,12 @@ export type StorageElementUpdate = Partial<{
  * Does not mirror Firestore; focuses on current domain operations.
  */
 export interface StorageAdapter {
-  // FieldDefinition operations (the Library — `library`-tree Elements, assembled
-  // into FieldDefinition views; no separate table). Phase 1 has no edit path
-  // (fork-not-mutate), so there is no updateFieldDefinition.
-  listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>>;
-  getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>>;
-  createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>>;
+  // Definition operations (the Library — `library`-tree Elements, assembled
+  // into Definition views; no separate table). Phase 1 has no edit path
+  // (fork-not-mutate), so there is no updateDefinition.
+  listDefinitions(): Promise<StorageResult<Definition[]>>;
+  getDefinition(id: string): Promise<StorageResult<Definition | null>>;
+  createDefinition(input: StorageDefinitionCreate): Promise<StorageResult<Definition>>;
 
   // ============================================================================
   // Element operations (unified primitive — see plan: unified-element-data-model)

@@ -19,7 +19,7 @@ import styles from './DataField.module.css';
 export type DataFieldProps = {
     id: string;
     name: string;
-    fieldDefinitionId: string;
+    definitionId: string;
     kind: Kind;
     value: DataFieldValue | null;
     /** Epoch ms when this DataField was last written. Used by number-kv for
@@ -88,7 +88,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             {isDetailsExpanded && (
                 <DataFieldDetails
                     fieldId={props.id}
-                    fieldDefinitionId={props.fieldDefinitionId}
+                    definitionId={props.definitionId}
                     kind={props.kind}
                     currentValue={currentDisplayValue}
                     onDelete$={handleDelete$}
@@ -106,7 +106,7 @@ function renderBody(
     return (
         <Renderer
             id={props.id}
-            fieldDefinitionId={props.fieldDefinitionId}
+            definitionId={props.definitionId}
             value={props.value}
             updatedAt={props.updatedAt}
             rootRef={rootRef}

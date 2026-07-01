@@ -1,5 +1,5 @@
 /**
- * Dev-seeded FieldDefinitions, written as `library`-tree Elements
+ * Dev-seeded Definitions, written as `library`-tree Elements
  * (config-as-Elements): each seed is a Definition Element plus its config
  * sub-field child Elements (deterministic `::cfg::` ids via `serializeConfig`).
  *
@@ -14,20 +14,20 @@
  */
 
 import { db } from '../storage/db';
-import type { Element, FieldDefinitionConfig, Kind } from '../models';
+import type { Element, DefinitionConfig, Kind } from '../models';
 import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { now } from '../../utils/time';
 import { serializeConfig } from '../../kinds/configElements';
 
 // Bumped for the asset-doc seed (#6b minimal kind set).
 export const SEED_VERSION = 7;
-export const SEED_KEY = 'fieldDefinitionsSeededVersion';
+export const SEED_KEY = 'definitionsSeededVersion';
 
 /**
- * Stable FieldDefinition IDs. Use these constants wherever UI code references a
- * specific default FieldDefinition (e.g. the three fields auto-added on node creation).
+ * Stable Definition IDs. Use these constants wherever UI code references a
+ * specific default Definition (e.g. the three fields auto-added on node creation).
  */
-export const FIELD_DEFINITION_IDS = {
+export const DEFINITION_IDS = {
   description: 'fd_description',
   typeOf: 'fd_type_of',
   tags: 'fd_tags',
@@ -38,35 +38,35 @@ export const FIELD_DEFINITION_IDS = {
   assetDoc: 'fd_asset_doc',
 } as const;
 
-type SeedRow = { id: string; kind: Kind; label: string; config: FieldDefinitionConfig };
+type SeedRow = { id: string; kind: Kind; label: string; config: DefinitionConfig };
 
 const SEEDS: SeedRow[] = [
   {
-    id: FIELD_DEFINITION_IDS.description,
+    id: DEFINITION_IDS.description,
     kind: 'text-kv',
     label: 'Description',
     config: { multiline: true },
   },
   {
-    id: FIELD_DEFINITION_IDS.typeOf,
+    id: DEFINITION_IDS.typeOf,
     kind: 'text-kv',
     label: 'Type Of',
     config: { maxWords: 2 },
   },
   {
-    id: FIELD_DEFINITION_IDS.tags,
+    id: DEFINITION_IDS.tags,
     kind: 'text-kv',
     label: 'Tags',
     config: {},
   },
   {
-    id: FIELD_DEFINITION_IDS.status,
+    id: DEFINITION_IDS.status,
     kind: 'enum-kv',
     label: 'Status',
     config: { options: ['In Service', 'Maintenance', 'Retired'] },
   },
   {
-    id: FIELD_DEFINITION_IDS.weight,
+    id: DEFINITION_IDS.weight,
     kind: 'number-kv',
     label: 'Weight',
     config: {
@@ -77,7 +77,7 @@ const SEEDS: SeedRow[] = [
     },
   },
   {
-    id: FIELD_DEFINITION_IDS.powerRating,
+    id: DEFINITION_IDS.powerRating,
     kind: 'number-kv',
     label: 'Power Rating',
     config: {
@@ -88,20 +88,20 @@ const SEEDS: SeedRow[] = [
     },
   },
   {
-    id: FIELD_DEFINITION_IDS.mainImage,
+    id: DEFINITION_IDS.mainImage,
     kind: 'single-image',
     label: 'Main Image',
     config: { requireCaption: false },
   },
   {
-    id: FIELD_DEFINITION_IDS.assetDoc,
+    id: DEFINITION_IDS.assetDoc,
     kind: 'asset-doc',
     label: 'Linked Doc',
     config: {},
   },
 ];
 
-export async function seedFieldDefinitions(): Promise<void> {
+export async function seedDefinitions(): Promise<void> {
   const meta = await db.syncMetadata.get(SEED_KEY);
   const storedVersion = typeof meta?.value === 'number' ? meta.value : 0;
   if (storedVersion >= SEED_VERSION) {
@@ -112,7 +112,7 @@ export async function seedFieldDefinitions(): Promise<void> {
 
   // Upsert (not skip-if-exists): a SEED_VERSION bump is the signal that the
   // canonical seed config has changed and existing rows should be overwritten.
-  // FieldDefinitions aren't user-edited yet, so this is safe; revisit when they
+  // Definitions aren't user-edited yet, so this is safe; revisit when they
   // become editable. `updatedBy` carries the app-developer provenance (the old
   // separate `authorId` column folds into it).
   await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
@@ -125,7 +125,7 @@ export async function seedFieldDefinitions(): Promise<void> {
         value: null,
         parentId: null,
         siblingOrder: 0,
-        fieldDefinitionId: null,
+        definitionId: null,
         treeType: 'library',
         updatedBy: AUTHOR_ID_APP_DEVELOPER,
         updatedAt: timestamp,
@@ -145,5 +145,5 @@ export async function seedFieldDefinitions(): Promise<void> {
     await db.syncMetadata.put({ key: SEED_KEY, value: SEED_VERSION });
   });
 
-  console.log('[seedFieldDefinitions] Seeded version', SEED_VERSION, 'as library Elements');
+  console.log('[seedDefinitions] Seeded version', SEED_VERSION, 'as library Elements');
 }

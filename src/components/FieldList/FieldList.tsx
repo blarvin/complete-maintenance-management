@@ -26,8 +26,8 @@ export type FieldListProps = {
     nodeId: string;
     /** When true, operates in construction mode (composer open by default). */
     isConstruction?: boolean;
-    /** FieldDefinition IDs to pre-populate as locked-in composer rows (construction defaults). */
-    initialFieldDefinitionIds?: readonly string[];
+    /** Definition IDs to pre-populate as locked-in composer rows (construction defaults). */
+    initialDefinitionIds?: readonly string[];
     /** When true, suppress the add-field surfaces (composer/legacy) — a read-only peek of existing fields. */
     hideAddSurfaces?: boolean;
 };
@@ -53,7 +53,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                     key={field.id}
                     id={field.id}
                     name={field.name}
-                    fieldDefinitionId={field.fieldDefinitionId!}
+                    definitionId={field.definitionId!}
                     kind={field.kind}
                     value={field.value}
                     updatedAt={field.updatedAt}
@@ -65,7 +65,7 @@ export const FieldList = component$<FieldListProps>((props) => {
                     nodeId={props.nodeId}
                     mode={mode}
                     currentMaxCardOrder={maxPersistedCardOrder.value}
-                    initialFieldDefinitionIds={props.initialFieldDefinitionIds}
+                    initialDefinitionIds={props.initialDefinitionIds}
                     activeSurface={activeSurface}
                 />
             )}

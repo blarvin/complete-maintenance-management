@@ -11,7 +11,7 @@ import {
   configChildId,
 } from '../kinds/configElements';
 import { validateThresholds } from '../components/DataField/numberKvState';
-import type { FieldDefinitionConfig, Kind } from '../data/models';
+import type { DefinitionConfig, Kind } from '../data/models';
 
 // NB: this suite deliberately avoids importing the registry / manifests — they
 // pull in `component$` renderers that the optimizer doesn't transform under
@@ -19,7 +19,7 @@ import type { FieldDefinitionConfig, Kind } from '../data/models';
 // config-only kind registration is enforced by `satisfies` at compile time and
 // exercised by the app at runtime.
 
-function roundTrip(kind: Kind, config: FieldDefinitionConfig): FieldDefinitionConfig {
+function roundTrip(kind: Kind, config: DefinitionConfig): DefinitionConfig {
   const children = serializeConfig('fd', kind, config);
   const byId = new Map(children.map((c) => [c.id, { value: c.value }]));
   return assembleConfig('fd', kind, (id) => byId.get(id));

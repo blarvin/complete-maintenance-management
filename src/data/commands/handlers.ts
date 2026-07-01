@@ -33,21 +33,21 @@ async function ensureProvisionedLenses(adapter: StorageAdapter, parent: Element)
 }
 
 export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): void {
-  bus.register('CREATE_FIELD_DEFINITION', async (cmd) => {
+  bus.register('CREATE_DEFINITION', async (cmd) => {
     const { id, kind, label, config } = cmd.payload;
-    const result = await adapter.createFieldDefinition({ id, kind, label, config });
+    const result = await adapter.createDefinition({ id, kind, label, config });
     return result.data;
   });
 
   bus.register('CREATE_ELEMENT', async (cmd) => {
-    const { id, kind, parentId, name, subtitle, fieldDefinitionId, value, siblingOrder } = cmd.payload;
+    const { id, kind, parentId, name, subtitle, definitionId, value, siblingOrder } = cmd.payload;
     const result = await adapter.createElement({
       id: id ?? generateId(),
       kind,
       parentId,
       name,
       subtitle: subtitle ?? null,
-      fieldDefinitionId: fieldDefinitionId ?? null,
+      definitionId: definitionId ?? null,
       value: value ?? null,
       siblingOrder,
     });
@@ -56,18 +56,18 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
   });
 
   bus.register('CREATE_ELEMENT_FROM_DEFINITION', async (cmd) => {
-    const { id, parentId, fieldDefinitionId, initialValue, siblingOrder } = cmd.payload;
-    const defRes = await adapter.getFieldDefinition(fieldDefinitionId);
+    const { id, parentId, definitionId, initialValue, siblingOrder } = cmd.payload;
+    const defRes = await adapter.getDefinition(definitionId);
     const def = defRes.data;
     if (!def) {
-      throw new Error(`FieldDefinition not found: ${fieldDefinitionId}`);
+      throw new Error(`Definition not found: ${definitionId}`);
     }
     const result = await adapter.createElement({
       id: id ?? generateId(),
       kind: def.kind,
       parentId,
       name: def.label, // snapshot at creation
-      fieldDefinitionId: def.id,
+      definitionId: def.id,
       value: initialValue ?? null,
       siblingOrder,
     });

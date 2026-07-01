@@ -25,7 +25,7 @@ export type FieldComposerSlotProps = {
     /** Max cardOrder among already-persisted fields (for placement). */
     currentMaxCardOrder: number;
     /** Construction defaults, pre-checked and immutable. Ignored in display mode. */
-    initialFieldDefinitionIds?: readonly string[];
+    initialDefinitionIds?: readonly string[];
     /** Shared mutex with the legacy "+ Add Field" surface (display mode only).
      *  Ignored in construction mode. */
     activeSurface?: Signal<ActiveSurface>;
@@ -61,7 +61,7 @@ export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
                     nodeId={props.nodeId}
                     mode={props.mode}
                     currentMaxCardOrder={props.currentMaxCardOrder}
-                    lockedFieldDefinitionIds={props.initialFieldDefinitionIds}
+                    lockedDefinitionIds={props.initialDefinitionIds}
                     restoreSeed={restoreSeed.value}
                     onDismiss$={handleDismiss$}
                     onRequestRestore$={handleRequestRestore$}

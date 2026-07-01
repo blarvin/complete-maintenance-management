@@ -1,12 +1,12 @@
 /**
- * useFieldDefinitionDraft - in-progress FieldDefinition authoring state.
+ * useDefinitionDraft - in-progress Definition authoring state.
  *
- * Distinct from `usePendingForms`: a pending FieldDefinition draft has no
- * DataField anchor yet — the FieldDefinition has to commit (Save → IDB +
+ * Distinct from `usePendingForms`: a pending Definition draft has no
+ * DataField anchor yet — the Definition has to commit (Save → IDB +
  * sync queue) before a DataField draft can attach to it. No localStorage
  * persistence: dismissing the Composer drops the draft.
  *
- * Save returns the newly-created FieldDefinition so the caller can pre-check
+ * Save returns the newly-created Definition so the caller can pre-check
  * a Composer row for it (per SPEC: "immediately materialises a checked
  * Composer row at the same position").
  */
@@ -17,38 +17,38 @@ import { generateId } from '../utils/id';
 import { getInlineManifest } from '../kinds/registry';
 import type {
     Kind,
-    FieldDefinition,
-    FieldDefinitionConfig,
+    Definition,
+    DefinitionConfig,
 } from '../data/models';
 
 export const DEFAULT_KIND: Kind = 'text-kv';
 
-export function defaultConfigFor(kind: Kind): FieldDefinitionConfig {
+export function defaultConfigFor(kind: Kind): DefinitionConfig {
     return getInlineManifest(kind).defaultConfig();
 }
 
 const LABEL_MAX = 50;
 
-export type UseFieldDefinitionDraftResult = {
+export type UseDefinitionDraftResult = {
     kind: Signal<Kind>;
     label: Signal<string>;
-    config: Signal<FieldDefinitionConfig>;
+    config: Signal<DefinitionConfig>;
     /** Error from the kind-specific config sub-form (e.g. invariant violations). */
     configError: Signal<string | null>;
     pickKind$: QRL<(kind: Kind) => void>;
     setLabel$: QRL<(value: string) => void>;
-    setConfig$: QRL<(cfg: FieldDefinitionConfig) => void>;
+    setConfig$: QRL<(cfg: DefinitionConfig) => void>;
     /** Push a config-level error from the sub-form; null means valid. */
     setConfigError$: QRL<(error: string | null) => void>;
     cancel$: QRL<() => void>;
-    /** Returns the new FieldDefinition, or null if save is gated (label empty or config error). */
-    save$: QRL<() => Promise<FieldDefinition | null>>;
+    /** Returns the new Definition, or null if save is gated (label empty or config error). */
+    save$: QRL<() => Promise<Definition | null>>;
 };
 
-export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
+export function useDefinitionDraft(): UseDefinitionDraftResult {
     const kind = useSignal<Kind>(DEFAULT_KIND);
     const label = useSignal<string>('');
-    const config = useSignal<FieldDefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
+    const config = useSignal<DefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
     const configError = useSignal<string | null>(null);
 
     const pickKind$ = $((next: Kind) => {
@@ -61,7 +61,7 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
         label.value = value.slice(0, LABEL_MAX);
     });
 
-    const setConfig$ = $((cfg: FieldDefinitionConfig) => {
+    const setConfig$ = $((cfg: DefinitionConfig) => {
         config.value = cfg;
     });
 
@@ -76,13 +76,13 @@ export function useFieldDefinitionDraft(): UseFieldDefinitionDraftResult {
         configError.value = null;
     });
 
-    const save$ = $(async (): Promise<FieldDefinition | null> => {
+    const save$ = $(async (): Promise<Definition | null> => {
         const trimmed = label.value.trim();
         if (!trimmed || configError.value) return null;
 
         try {
             const result = await getCommandBus().execute({
-                type: 'CREATE_FIELD_DEFINITION',
+                type: 'CREATE_DEFINITION',
                 payload: {
                     id: `fd_user_${generateId()}`,
                     kind: kind.value,

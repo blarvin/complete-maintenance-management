@@ -1,5 +1,5 @@
 /**
- * SingleImageConfigForm - knobs for a new single-image FieldDefinition.
+ * SingleImageConfigForm - knobs for a new single-image Definition.
  *  - maxSizeMB (number, default 5)
  *  - requireCaption (checkbox)
  *  - aspectHint (free text, e.g. "4:3")

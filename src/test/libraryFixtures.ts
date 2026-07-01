@@ -2,18 +2,18 @@
  * Test fixtures for the `library` tree (config-as-Elements). Replaces the old
  * `db.fieldDefinitions.put(...)` setup: seeds a Definition as a `library`-tree
  * Element plus its config sub-field children, so adapter/command paths that
- * resolve a `fieldDefinitionId` find it.
+ * resolve a `definitionId` find it.
  */
 
 import { db } from '../data/storage/db';
-import type { Element, FieldDefinitionConfig, Kind } from '../data/models';
+import type { Element, DefinitionConfig, Kind } from '../data/models';
 import { serializeConfig } from '../kinds/configElements';
 
 export async function seedLibraryDefinition(
   id: string,
   kind: Kind,
   label = 'Test',
-  config: FieldDefinitionConfig = {},
+  config: DefinitionConfig = {},
 ): Promise<void> {
   const ts = Date.now();
   const def: Element = {
@@ -24,7 +24,7 @@ export async function seedLibraryDefinition(
     value: null,
     parentId: null,
     siblingOrder: 0,
-    fieldDefinitionId: null,
+    definitionId: null,
     treeType: 'library',
     updatedBy: 'appDeveloper',
     updatedAt: ts,

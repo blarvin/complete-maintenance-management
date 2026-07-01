@@ -1,9 +1,9 @@
 /**
  * pendingDraft — Plain (no-Qwik) draft store for the FieldComposer batch.
  *
- * A pending form is a FieldDefinition the user has checked in the composer plus
+ * A pending form is a Definition the user has checked in the composer plus
  * an in-flight (not yet persisted) value. The batch lives in localStorage keyed
- * by nodeId so picking a few FieldDefinitions, navigating away, and coming back
+ * by nodeId so picking a few Definitions, navigating away, and coming back
  * keeps the draft.
  *
  * Because the draft is fully external (localStorage), committing it needs nothing
@@ -14,22 +14,22 @@
  */
 
 import { getCommandBus } from '../commands';
-import type { FieldDefinition, DataFieldValue, Kind } from '../models';
+import type { Definition, DataFieldValue, Kind } from '../models';
 import { generateId } from '../../utils/id';
 
-/** A pending (un-persisted) FieldDefinition instance with its in-progress value. */
+/** A pending (un-persisted) Definition instance with its in-progress value. */
 export type PendingForm = {
     id: string;
-    fieldDefinitionId: string;
+    definitionId: string;
     kind: Kind;
     fieldName: string;
     value: DataFieldValue | null;
 };
 
-/** Build a fresh PendingForm from a FieldDefinition. Used by composer toggle and seed loaders. */
-export const pendingFormFromFieldDefinition = (definition: FieldDefinition): PendingForm => ({
+/** Build a fresh PendingForm from a Definition. Used by composer toggle and seed loaders. */
+export const pendingFormFromDefinition = (definition: Definition): PendingForm => ({
     id: generateId(),
-    fieldDefinitionId: definition.id,
+    definitionId: definition.id,
     kind: definition.kind,
     fieldName: definition.label,
     value: null,
@@ -47,7 +47,7 @@ export const loadPendingForms = (nodeId: string): PendingForm[] => {
             (f): f is PendingForm =>
                 f && typeof f === 'object' &&
                 typeof f.id === 'string' &&
-                typeof f.fieldDefinitionId === 'string' &&
+                typeof f.definitionId === 'string' &&
                 typeof f.kind === 'string' &&
                 typeof f.fieldName === 'string'
         );
@@ -83,9 +83,9 @@ export const clearPendingDraft = (nodeId: string): void => {
  */
 export const commitPendingDraft = async (nodeId: string, baseOrder: number): Promise<number> => {
     // Drop malformed entries (e.g. legacy localStorage drafts from the old
-    // pre-composer shape that lack fieldDefinitionId/fieldName).
+    // pre-composer shape that lack definitionId/fieldName).
     const batch = loadPendingForms(nodeId).filter(
-        f => f && f.fieldDefinitionId && typeof f.fieldName === 'string'
+        f => f && f.definitionId && typeof f.fieldName === 'string'
     );
     if (batch.length === 0) {
         clearPendingDraft(nodeId);
@@ -103,7 +103,7 @@ export const commitPendingDraft = async (nodeId: string, baseOrder: number): Pro
             type: 'CREATE_ELEMENT_FROM_DEFINITION',
             payload: {
                 parentId: nodeId,
-                fieldDefinitionId: row.fieldDefinitionId,
+                definitionId: row.definitionId,
                 siblingOrder: cardOrder,
                 initialValue: row.value ?? null,
             },

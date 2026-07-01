@@ -8,7 +8,7 @@
  */
 
 import type { Component } from '@builder.io/qwik';
-import type { CompoundValue, DataFieldValue, FieldDefinitionConfig } from '../data/models';
+import type { CompoundValue, DataFieldValue, DefinitionConfig } from '../data/models';
 import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
@@ -21,7 +21,7 @@ export const compoundManifest: KindManifest = {
     ...KIND_CAPABILITIES['compound'], // capability subset — structural seam, not read yet
     Renderer: ConfigFieldStubRenderer as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm as unknown as Component<ConfigFormProps>,
-    defaultConfig: (): FieldDefinitionConfig => ({}),
+    defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined
             ? null

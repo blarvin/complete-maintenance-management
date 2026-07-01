@@ -50,7 +50,7 @@ describe('IDBAdapter — error normalization (mapDexieError)', () => {
   }
 
   it('passes hand-thrown StorageErrors through without re-wrapping to internal', async () => {
-    // Non-node kind without a fieldDefinitionId throws makeStorageError('validation', ...)
+    // Non-node kind without a definitionId throws makeStorageError('validation', ...)
     // before any Dexie call — the catch must not re-map it to 'internal'.
     const err = await adapter
       .createElement({ id: 'x', kind: 'text-kv', parentId: 'p', name: 'F' })

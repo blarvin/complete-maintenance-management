@@ -19,7 +19,7 @@ const el = (id: string, parentId: string | null, kind: Kind = 'node'): Element =
   value: null,
   parentId,
   siblingOrder: 0,
-  fieldDefinitionId: null,
+  definitionId: null,
   treeType: 'business',
   updatedBy: 'localUser',
   updatedAt: 0,

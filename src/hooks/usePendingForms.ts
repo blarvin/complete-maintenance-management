@@ -9,10 +9,10 @@
  */
 
 import { useSignal, useVisibleTask$, $, type Signal } from '@builder.io/qwik';
-import type { FieldDefinition, DataFieldValue } from '../data/models';
+import type { Definition, DataFieldValue } from '../data/models';
 import {
     type PendingForm,
-    pendingFormFromFieldDefinition,
+    pendingFormFromDefinition,
     loadPendingForms,
     savePendingForms,
     commitPendingDraft,
@@ -21,7 +21,7 @@ import {
 import type { QRL } from '@builder.io/qwik';
 
 // Re-exported so FieldComposer/FieldComposerSlot keep importing from the hook.
-export { pendingFormFromFieldDefinition };
+export { pendingFormFromDefinition };
 export type { PendingForm };
 
 export type UsePendingFormsOptions = {
@@ -43,7 +43,7 @@ export type UsePendingFormsResult = {
      * locks, Undo restore) leave it null so nothing steals focus on open.
      */
     lastToggledId: Signal<string | null>;
-    togglePending$: ReturnType<typeof $<(definition: FieldDefinition) => void>>;
+    togglePending$: ReturnType<typeof $<(definition: Definition) => void>>;
     setPendingValue$: ReturnType<typeof $<(formId: string, value: DataFieldValue | null) => void>>;
     commitAll$: ReturnType<typeof $<(currentMaxCardOrder: number) => Promise<number>>>;
     discardAll$: ReturnType<typeof $<() => PendingForm[]>>;
@@ -71,13 +71,13 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
         initialized.value = true;
     });
 
-    const togglePending$ = $((definition: FieldDefinition) => {
-        const existing = forms.value.find(f => f.fieldDefinitionId === definition.id);
+    const togglePending$ = $((definition: Definition) => {
+        const existing = forms.value.find(f => f.definitionId === definition.id);
         if (existing) {
-            forms.value = forms.value.filter(f => f.fieldDefinitionId !== definition.id);
+            forms.value = forms.value.filter(f => f.definitionId !== definition.id);
             if (lastToggledId.value === existing.id) lastToggledId.value = null;
         } else {
-            const fresh = pendingFormFromFieldDefinition(definition);
+            const fresh = pendingFormFromDefinition(definition);
             forms.value = [...forms.value, fresh];
             lastToggledId.value = fresh.id;
         }

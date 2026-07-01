@@ -35,7 +35,7 @@ describe('CommandBus', () => {
         value: null,
         parentId: null,
         siblingOrder: 0,
-        fieldDefinitionId: null,
+        definitionId: null,
         treeType: 'business' as const,
         updatedBy: 'u',
         updatedAt: 0,

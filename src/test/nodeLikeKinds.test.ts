@@ -39,16 +39,16 @@ describe('#6b node-like kinds', () => {
     resetQueries();
   });
 
-  it('mints re-root kinds (org/job) without a fieldDefinitionId', async () => {
+  it('mints re-root kinds (org/job) without a definitionId', async () => {
     const org = await createElement({ id: 'o1', kind: 'org', parentId: null, name: 'Maintenance Dept' });
     expect(org.kind).toBe('org');
-    expect(org.fieldDefinitionId).toBeNull();
+    expect(org.definitionId).toBeNull();
 
     const job = await createElement({ id: 'j1', kind: 'job', parentId: 'o1', name: 'Replace relay' });
     expect(job.kind).toBe('job');
   });
 
-  it('still rejects an inline kind created without a fieldDefinitionId', async () => {
+  it('still rejects an inline kind created without a definitionId', async () => {
     await expect(createElement({ id: 't1', kind: 'text-kv', parentId: null, name: 'x' })).rejects.toThrow();
   });
 
@@ -99,7 +99,7 @@ describe('#6b node-like kinds', () => {
     await seedLibraryDefinition('fd_desc', 'text-kv', 'Description', {});
     const field = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { id: 'f1', parentId: 'host', fieldDefinitionId: 'fd_desc' },
+      payload: { id: 'f1', parentId: 'host', definitionId: 'fd_desc' },
     });
     expect(field.kind).toBe('text-kv');
     expect(await db.elements.get('f1::jobs')).toBeUndefined();

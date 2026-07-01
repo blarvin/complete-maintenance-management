@@ -14,7 +14,7 @@
  */
 
 import type { Component, PropFunction, QRL, Signal } from '@builder.io/qwik';
-import type { Kind, DataFieldValue, FieldDefinitionConfig } from '../data/models';
+import type { Kind, DataFieldValue, DefinitionConfig } from '../data/models';
 
 /**
  * Disposition of a config sub-field under inherit-unless-override (SPEC → Config
@@ -62,12 +62,12 @@ export type ConfigSubField = {
  * value is always correct because the registry is keyed by the same
  * discriminant (`kind`) that determines the value type.
  *
- * Some props are kind-specific (`single-image` ignores `fieldDefinitionId`,
+ * Some props are kind-specific (`single-image` ignores `definitionId`,
  * only `number-kv` reads `updatedAt`); unread props are harmlessly ignored.
  */
 export type FieldRendererProps = {
     id: string;
-    fieldDefinitionId: string;
+    definitionId: string;
     value: DataFieldValue | null;
     rootRef: Signal<HTMLElement | undefined>;
     updatedAt?: number;
@@ -82,8 +82,8 @@ export type FieldRendererProps = {
  * pass a validation error string.
  */
 export type ConfigFormProps = {
-    config: FieldDefinitionConfig;
-    onChange$: PropFunction<(cfg: FieldDefinitionConfig, error?: string | null) => void>;
+    config: DefinitionConfig;
+    onChange$: PropFunction<(cfg: DefinitionConfig, error?: string | null) => void>;
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -220,14 +220,14 @@ export type InlineManifest = ManifestIdentity & {
     placement: 'inline';
     /** Value renderer (display + composer pendingMode). */
     Renderer: Component<FieldRendererProps>;
-    /** Authoring sub-form for a new FieldDefinition of this kind. */
+    /** Authoring sub-form for a new Definition of this kind. */
     ConfigForm: Component<ConfigFormProps>;
     /** Fresh default config at mint time. */
-    defaultConfig: () => FieldDefinitionConfig;
+    defaultConfig: () => DefinitionConfig;
     /** Uniform string preview of a value (null → null). Config is consulted by
      *  kinds whose display formatting depends on it (e.g. number-kv decimals /
      *  affix); the other kinds ignore it and a 1-arg function stays assignable. */
-    displayPreview: (value: DataFieldValue | null, config?: FieldDefinitionConfig) => string | null;
+    displayPreview: (value: DataFieldValue | null, config?: DefinitionConfig) => string | null;
     /** Suppress the dispatcher-rendered field label (e.g. single-image owns its own heading). */
     hideLabel: boolean;
     /** Value occupies a tall block rather than an inline run — pins the row chevron to the top. */

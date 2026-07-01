@@ -23,7 +23,7 @@ import { isReRoot } from '../../kinds/placement';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
-import { seedFieldDefinitions } from '../services/seedFieldDefinitions';
+import { seedDefinitions } from '../services/seedDefinitions';
 
 /**
  * Memoized init state. All callers share the same promise so concurrent
@@ -102,8 +102,8 @@ async function doInitializeStorage(): Promise<void> {
     initializeCommandBus(idbAdapter);
     initializeQueries(idbAdapter);
 
-    // Seed dev FieldDefinitions (idempotent; no sync enqueue).
-    await seedFieldDefinitions();
+    // Seed dev Definitions (idempotent; no sync enqueue).
+    await seedDefinitions();
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);

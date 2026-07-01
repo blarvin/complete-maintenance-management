@@ -40,7 +40,7 @@ describe('Element commands + queries', () => {
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'p', kind: 'node', parentId: null, name: 'P' } });
     const created = await bus.execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { id: 'f1', parentId: 'p', fieldDefinitionId: 'fd-vin', initialValue: 'AAA' },
+      payload: { id: 'f1', parentId: 'p', definitionId: 'fd-vin', initialValue: 'AAA' },
     });
     expect(created.kind).toBe('text-kv');
     expect(created.name).toBe('VIN');
@@ -94,7 +94,7 @@ describe('Element commands + queries', () => {
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'n', kind: 'node', parentId: 'p', name: 'N' } });
     await bus.execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { id: 'f', parentId: 'p', fieldDefinitionId: 'fd-1' },
+      payload: { id: 'f', parentId: 'p', definitionId: 'fd-1' },
     });
 
     const q = getElementQueries();

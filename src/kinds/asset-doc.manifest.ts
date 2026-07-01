@@ -11,7 +11,7 @@
 import type { Component } from '@builder.io/qwik';
 import { AssetDocField } from '../components/DataField/AssetDocField';
 import { ConfigFieldStubConfigForm } from './configFieldStub';
-import type { DataFieldValue, FieldDefinitionConfig, AssetDocValue } from '../data/models';
+import type { DataFieldValue, DefinitionConfig, AssetDocValue } from '../data/models';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
 
@@ -23,7 +23,7 @@ export const assetDocManifest: KindManifest = {
     ...KIND_CAPABILITIES['asset-doc'],
     Renderer: AssetDocField as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm as unknown as Component<ConfigFormProps>,
-    defaultConfig: (): FieldDefinitionConfig => ({}),
+    defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : `→ ${(v as AssetDocValue).targetId}`,
     hideLabel: false,

@@ -18,7 +18,7 @@ export type SoftDeletable = {
 };
 
 // ============================================================================
-// DataField Component / FieldDefinition / Instance
+// DataField Component / Definition / Instance
 // ============================================================================
 
 // Per-Component config shapes
@@ -83,10 +83,10 @@ export type SingleImageConfig = {
 };
 
 /**
- * Union of FieldDefinition configs, discriminated externally by FieldDefinition.kind.
+ * Union of Definition configs, discriminated externally by Definition.kind.
  * Narrow on `definition.kind === "text-kv"` etc. before accessing config.
  */
-export type FieldDefinitionConfig =
+export type DefinitionConfig =
   | TextKvConfig
   | EnumKvConfig
   | NumberKvConfig
@@ -131,7 +131,7 @@ export type DataFieldValue =
   | CompoundValue;
 
 /**
- * FieldDefinition: a Library entry naming a fully-configured field kind.
+ * Definition: a Library entry naming a fully-configured field kind.
  *
  * This is an **assembled read-model view**, no longer a stored row. A Definition
  * lives as a `library`-tree `Element` (`kind` = the kind it defines, `name` = the
@@ -142,11 +142,11 @@ export type DataFieldValue =
  * `authorId` mirrors the Definition Element's `updatedBy` (`"appDeveloper"` for
  * seeds); `deletedAt` is admin-only soft-delete (no end-user UI in Phase 1).
  */
-export type FieldDefinition = {
+export type Definition = {
   id: ID;
   kind: Kind;
   label: string;
-  config: FieldDefinitionConfig;
+  config: DefinitionConfig;
   authorId: UserId;
   updatedBy: UserId;
   updatedAt: number;
@@ -189,7 +189,7 @@ export type Kind = keyof typeof KIND_REGISTRY;
  * Which tree an Element belongs to (SPEC → Populations are typed trees). The axis
  * routes sync / history / visibility per tree via `src/data/treePolicy.ts`:
  *  - `business`   — the navigable asset tree (shared sync, business history)
- *  - `library`    — FieldDefinitions + their config subtree (shared sync, Library history)
+ *  - `library`    — Definitions + their config subtree (shared sync, Library history)
  *  - `config`     — org/role/user prefs (shared-or-per-user sync, overlay history)
  *  - `view-state` — per-viewer expansion/ordering overlays (never synced, no history)
  *
@@ -206,7 +206,7 @@ export type TreeType = 'business' | 'library' | 'config' | 'view-state';
  * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
  * - `value` is null for re-root (node-like) kinds; typed by `kind` otherwise.
  * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
- * - `fieldDefinitionId` is null for re-root kinds; required for inline kinds.
+ * - `definitionId` is null for re-root kinds; required for inline kinds.
  * - `treeType` partitions business vs library; root/sibling queries scope by it.
  */
 export type Element = {
@@ -217,7 +217,7 @@ export type Element = {
   value: DataFieldValue | null;
   parentId: ID | null;
   siblingOrder: number;
-  fieldDefinitionId: ID | null;
+  definitionId: ID | null;
   treeType: TreeType;
   updatedBy: UserId;
   updatedAt: number;

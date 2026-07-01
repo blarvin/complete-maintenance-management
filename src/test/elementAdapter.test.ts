@@ -48,16 +48,16 @@ describe('IDBAdapter — element operations', () => {
   it('mints siblingOrder per placement section: fields do not inflate a child node order', async () => {
     await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
     await seedLibraryDefinition('fd-1', 'text-kv');
-    await adapter.createElement({ id: 'f1', kind: 'text-kv', parentId: 'p', name: 'F1', fieldDefinitionId: 'fd-1' });
-    await adapter.createElement({ id: 'f2', kind: 'text-kv', parentId: 'p', name: 'F2', fieldDefinitionId: 'fd-1' });
-    await adapter.createElement({ id: 'f3', kind: 'text-kv', parentId: 'p', name: 'F3', fieldDefinitionId: 'fd-1' });
+    await adapter.createElement({ id: 'f1', kind: 'text-kv', parentId: 'p', name: 'F1', definitionId: 'fd-1' });
+    await adapter.createElement({ id: 'f2', kind: 'text-kv', parentId: 'p', name: 'F2', definitionId: 'fd-1' });
+    await adapter.createElement({ id: 'f3', kind: 'text-kv', parentId: 'p', name: 'F3', definitionId: 'fd-1' });
 
     // The parent's sole child NODE starts its own section at 0, regardless of fields.
     const c1 = await adapter.createElement({ id: 'c1', kind: 'node', parentId: 'p', name: 'C1' });
     expect(c1.data.siblingOrder).toBe(0);
 
     // And the inverse: a new field counts only fields (f1..f3 → next is 3).
-    const f4 = await adapter.createElement({ id: 'f4', kind: 'text-kv', parentId: 'p', name: 'F4', fieldDefinitionId: 'fd-1' });
+    const f4 = await adapter.createElement({ id: 'f4', kind: 'text-kv', parentId: 'p', name: 'F4', definitionId: 'fd-1' });
     expect(f4.data.siblingOrder).toBe(3);
   });
 
@@ -76,24 +76,24 @@ describe('IDBAdapter — element operations', () => {
     expect(r2.data.siblingOrder).toBe(0);
   });
 
-  it('rejects creating a value-bearing element without fieldDefinitionId', async () => {
+  it('rejects creating a value-bearing element without definitionId', async () => {
     await expect(
       adapter.createElement({ id: 'bad', kind: 'text-kv', parentId: null, name: 'X' }),
     ).rejects.toMatchObject({ code: 'validation' });
   });
 
-  it('creates a text-kv element when its FieldDefinition exists', async () => {
+  it('creates a text-kv element when its Definition exists', async () => {
     await seedLibraryDefinition('fd-1', 'text-kv', 'VIN');
     const res = await adapter.createElement({
       id: 'e-vin',
       kind: 'text-kv',
       parentId: 'p',
       name: 'VIN',
-      fieldDefinitionId: 'fd-1',
+      definitionId: 'fd-1',
       value: 'ABC123',
     });
     expect(res.data.value).toBe('ABC123');
-    expect(res.data.fieldDefinitionId).toBe('fd-1');
+    expect(res.data.definitionId).toBe('fd-1');
 
     const hist = await adapter.getElementHistory('e-vin');
     expect(hist.data).toHaveLength(1);
@@ -119,7 +119,7 @@ describe('IDBAdapter — element operations', () => {
       kind: 'text-kv',
       parentId: 'a',
       name: 'Note',
-      fieldDefinitionId: 'fd-1',
+      definitionId: 'fd-1',
       value: 'hi',
     });
 
@@ -156,7 +156,7 @@ describe('IDBAdapter — element operations', () => {
       kind: 'text-kv',
       parentId: 'p',
       name: 'F1',
-      fieldDefinitionId: 'fd-1',
+      definitionId: 'fd-1',
       value: '',
     });
     const nodes = await adapter.listChildElementsByKind('p', 'node');

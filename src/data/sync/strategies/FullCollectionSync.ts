@@ -23,7 +23,7 @@ export class FullCollectionSync implements SyncStrategy {
 
   async sync(): Promise<SyncResult> {
     // Library Definitions are `library`-tree Elements — they arrive through the
-    // element lane below, no separate FieldDefinition pull.
+    // element lane below, no separate Definition pull.
     const elementsApplied = await this.syncElements();
     const elementHistoryApplied = await this.syncElementHistory();
 

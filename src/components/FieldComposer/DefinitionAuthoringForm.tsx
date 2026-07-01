@@ -1,5 +1,5 @@
 /**
- * FieldDefinitionAuthoringForm - inline form expanded in place of the
+ * DefinitionAuthoringForm - inline form expanded in place of the
  * "+ New Field Definition…" affordance.
  *
  * Three steps stacked vertically (no wizard navigation — all visible at once):
@@ -7,31 +7,31 @@
  *  2. Label (required, max 50 chars)
  *  3. Component-specific config sub-form
  *
- * Save commits via CREATE_FIELD_DEFINITION and reports the new FieldDefinition
+ * Save commits via CREATE_DEFINITION and reports the new Definition
  * back to the caller so the Composer can materialise a pre-checked row.
  * The `number-kv` sub-form is a stub here — full form lands in PR 6.
  */
 
 import { component$, $, type PropFunction } from '@builder.io/qwik';
-import type { FieldDefinition, FieldDefinitionConfig } from '../../data/models';
-import { useFieldDefinitionDraft } from '../../hooks/useFieldDefinitionDraft';
+import type { Definition, DefinitionConfig } from '../../data/models';
+import { useDefinitionDraft } from '../../hooks/useDefinitionDraft';
 import { getInlineManifest, FIELD_KINDS } from '../../kinds/registry';
-import styles from './FieldDefinitionAuthoringForm.module.css';
+import styles from './DefinitionAuthoringForm.module.css';
 
 const COMPONENT_CHOICES = FIELD_KINDS.map((type) => ({
     type,
     label: getInlineManifest(type).pickerLabel,
 }));
 
-export type FieldDefinitionAuthoringFormProps = {
-    /** Called with the freshly-created FieldDefinition so the parent Composer
+export type DefinitionAuthoringFormProps = {
+    /** Called with the freshly-created Definition so the parent Composer
      *  can pre-check a row for it. */
-    onCreated$: PropFunction<(def: FieldDefinition) => void>;
+    onCreated$: PropFunction<(def: Definition) => void>;
     /** Called when the user cancels — parent collapses back to affordance. */
     onCancel$: PropFunction<() => void>;
 };
 
-export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringFormProps>((props) => {
+export const DefinitionAuthoringForm = component$<DefinitionAuthoringFormProps>((props) => {
     const {
         kind,
         label,
@@ -43,7 +43,7 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
         setConfigError$,
         cancel$,
         save$,
-    } = useFieldDefinitionDraft();
+    } = useDefinitionDraft();
 
     const handleCancel$ = $(async () => {
         await cancel$();
@@ -98,7 +98,7 @@ export const FieldDefinitionAuthoringForm = component$<FieldDefinitionAuthoringF
                 <div class={styles.configHost}>
                     <ConfigForm
                         config={config.value}
-                        onChange$={$((cfg: FieldDefinitionConfig, error?: string | null) => {
+                        onChange$={$((cfg: DefinitionConfig, error?: string | null) => {
                             setConfig$(cfg);
                             setConfigError$(error ?? null);
                         })}

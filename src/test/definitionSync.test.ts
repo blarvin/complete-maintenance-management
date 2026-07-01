@@ -1,10 +1,10 @@
 /**
- * FieldDefinitions are `library`-tree Elements (config-as-Elements): there is no
+ * Definitions are `library`-tree Elements (config-as-Elements): there is no
  * separate table, no `create/update-fieldDefinition` sync lane, and no edit path
  * (fork-not-mutate). This suite covers the surviving behaviour:
- *  - createFieldDefinition writes a Definition Element + config sub-field children
+ *  - createDefinition writes a Definition Element + config sub-field children
  *  - it rides the ELEMENT sync lane (no fieldDefinition ops)
- *  - listFieldDefinitions assembles views, sorts by label, library-only, active-only
+ *  - listDefinitions assembles views, sorts by label, library-only, active-only
  *
  * Remote pull of Definitions now flows through the element pull (covered by the
  * element sync tests), so the old resolver/pull-strategy cases are retired.
@@ -15,15 +15,15 @@ import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { configChildId } from '../kinds/configElements';
 
-describe('IDBAdapter — FieldDefinitions as library Elements', () => {
+describe('IDBAdapter — Definitions as library Elements', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
   });
 
-  it('createFieldDefinition writes a library Definition Element + config children', async () => {
+  it('createDefinition writes a library Definition Element + config children', async () => {
     const adapter = new IDBAdapter();
-    const res = await adapter.createFieldDefinition({
+    const res = await adapter.createDefinition({
       id: 'fd_x',
       kind: 'number-kv',
       label: 'X',
@@ -46,7 +46,7 @@ describe('IDBAdapter — FieldDefinitions as library Elements', () => {
   it('enqueues create-element / create-element-history ops (rides the element lane)', async () => {
     const adapter = new IDBAdapter();
     // text-kv + { multiline } → 1 Definition + 1 config child.
-    await adapter.createFieldDefinition({ id: 'fd_x', kind: 'text-kv', label: 'X', config: { multiline: true } });
+    await adapter.createDefinition({ id: 'fd_x', kind: 'text-kv', label: 'X', config: { multiline: true } });
 
     const queue = await db.syncQueue.toArray();
     const ops = queue.map((q) => q.operation);
@@ -56,32 +56,32 @@ describe('IDBAdapter — FieldDefinitions as library Elements', () => {
     for (const item of queue) expect(item.entityType).not.toBe('fieldDefinition');
   });
 
-  it('listFieldDefinitions returns assembled views sorted by label, library-only', async () => {
+  it('listDefinitions returns assembled views sorted by label, library-only', async () => {
     const adapter = new IDBAdapter();
-    await adapter.createFieldDefinition({ id: 'fd_b', kind: 'text-kv', label: 'Beta', config: {} });
-    await adapter.createFieldDefinition({ id: 'fd_a', kind: 'text-kv', label: 'Alpha', config: {} });
-    // A business element must never surface as a FieldDefinition.
+    await adapter.createDefinition({ id: 'fd_b', kind: 'text-kv', label: 'Beta', config: {} });
+    await adapter.createDefinition({ id: 'fd_a', kind: 'text-kv', label: 'Alpha', config: {} });
+    // A business element must never surface as a Definition.
     await adapter.createElement({ id: 'n', kind: 'node', parentId: null, name: 'Node' });
 
-    const defs = (await adapter.listFieldDefinitions()).data;
+    const defs = (await adapter.listDefinitions()).data;
     expect(defs.map((d) => d.label)).toEqual(['Alpha', 'Beta']);
   });
 
-  it('listFieldDefinitions excludes soft-deleted Definitions (admin tombstone)', async () => {
+  it('listDefinitions excludes soft-deleted Definitions (admin tombstone)', async () => {
     const adapter = new IDBAdapter();
-    await adapter.createFieldDefinition({ id: 'fd_live', kind: 'text-kv', label: 'Live', config: {} });
-    await adapter.createFieldDefinition({ id: 'fd_dead', kind: 'text-kv', label: 'Dead', config: {} });
+    await adapter.createDefinition({ id: 'fd_live', kind: 'text-kv', label: 'Live', config: {} });
+    await adapter.createDefinition({ id: 'fd_dead', kind: 'text-kv', label: 'Dead', config: {} });
     await db.elements.update('fd_dead', { deletedAt: Date.now() });
 
-    const defs = (await adapter.listFieldDefinitions()).data;
+    const defs = (await adapter.listDefinitions()).data;
     expect(defs.map((d) => d.id)).toEqual(['fd_live']);
   });
 
-  it('getFieldDefinition returns null for a config sub-field id (not a top-level Definition)', async () => {
+  it('getDefinition returns null for a config sub-field id (not a top-level Definition)', async () => {
     const adapter = new IDBAdapter();
-    await adapter.createFieldDefinition({ id: 'fd_x', kind: 'number-kv', label: 'X', config: { decimals: 1 } });
+    await adapter.createDefinition({ id: 'fd_x', kind: 'number-kv', label: 'X', config: { decimals: 1 } });
 
-    const got = await adapter.getFieldDefinition(configChildId('fd_x', 'decimals'));
+    const got = await adapter.getDefinition(configChildId('fd_x', 'decimals'));
     expect(got.data).toBeNull();
   });
 });

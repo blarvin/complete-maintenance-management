@@ -141,7 +141,7 @@ export function computeNumberKvState(
  * Validate a NumberKvConfig. Returns null on valid; otherwise an error
  * message naming the first violated invariant.
  *
- * Used by the FieldDefinition authoring form (PR 6) to gate Save, and by
+ * Used by the Definition authoring form (PR 6) to gate Save, and by
  * unit tests against seed data. The runtime renderer doesn't call this —
  * config is assumed valid by the time it reaches the field.
  */

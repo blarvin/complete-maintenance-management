@@ -1,5 +1,5 @@
 /**
- * TextKvConfigForm - knobs for a new text-kv FieldDefinition.
+ * TextKvConfigForm - knobs for a new text-kv Definition.
  *  - maxLength (optional number)
  *  - multiline (checkbox)
  *  - placeholder (optional text)

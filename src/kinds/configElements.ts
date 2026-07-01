@@ -13,7 +13,7 @@
  * `{ [key]: value }`).
  */
 
-import type { DataFieldValue, Element, FieldDefinitionConfig, Kind } from '../data/models';
+import type { DataFieldValue, Element, DefinitionConfig, Kind } from '../data/models';
 import { CONFIG_SCHEMAS } from './configSchema';
 
 /** Deterministic id of a Definition's config sub-field Element. */
@@ -33,7 +33,7 @@ export type ConfigChildDraft = Omit<Element, 'updatedBy' | 'updatedAt' | 'delete
 export function serializeConfig(
     defId: string,
     kind: Kind,
-    config: FieldDefinitionConfig,
+    config: DefinitionConfig,
 ): ConfigChildDraft[] {
     const schema = CONFIG_SCHEMAS[kind] ?? [];
     const flat = config as Record<string, unknown>;
@@ -50,7 +50,7 @@ export function serializeConfig(
             value: value as DataFieldValue | null,
             parentId: defId,
             siblingOrder: order++,
-            fieldDefinitionId: null,
+            definitionId: null,
             treeType: 'library',
         });
     }
@@ -67,7 +67,7 @@ export function assembleConfig(
     defId: string,
     kind: Kind,
     getChild: (childId: string) => Pick<Element, 'value'> | null | undefined,
-): FieldDefinitionConfig {
+): DefinitionConfig {
     const schema = CONFIG_SCHEMAS[kind] ?? [];
     const config: Record<string, unknown> = {};
     for (const sub of schema) {
@@ -76,5 +76,5 @@ export function assembleConfig(
         if (sub.unpack) Object.assign(config, sub.unpack(child.value));
         else config[sub.key] = child.value;
     }
-    return config as FieldDefinitionConfig;
+    return config as DefinitionConfig;
 }

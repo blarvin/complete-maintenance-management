@@ -233,6 +233,24 @@ export class AppDatabase extends Dexie {
         tx.table('syncMetadata').clear(),
       ]);
     });
+
+    // Version 11: the binding column un-field-specifics — `fieldDefinitionId` →
+    // `definitionId` (the Definition-binding seam; re-root policy containers bind
+    // through the same column fields use). Index renamed to match the Element
+    // shape. Clear-on-upgrade — no migration path (prototype data, freely wiped).
+    this.version(11).stores({
+      elements: 'id, parentId, kind, definitionId, treeType, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
   }
 }
 

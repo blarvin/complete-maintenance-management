@@ -39,7 +39,7 @@
 }
 
 /* "+ New Field Definition…" affordance row — sits at the top of the picker
-   list. Clicking expands the FieldDefinitionAuthoringForm in place. */
+   list. Clicking expands the DefinitionAuthoringForm in place. */
 .affordance {
     grid-column: 1 / -1;
     justify-self: start;

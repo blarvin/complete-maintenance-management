@@ -1,22 +1,22 @@
 /**
- * FieldComposer - In-situ FieldDefinition picker that doubles as the field-
- * creation form. One row per FieldDefinition; checking a row materialises a
+ * FieldComposer - In-situ Definition picker that doubles as the field-
+ * creation form. One row per Definition; checking a row materialises a
  * live Component preview the user can fill in. Save commits the batch; Cancel
  * discards with a Snackbar Undo.
  *
  * Layout (top → bottom):
  *  1. "+ New Field Definition…" affordance — or, when expanded, the inline
- *     FieldDefinitionAuthoringForm.
- *  2. Just-created FieldDefinitions (this Composer session), pre-checked, in
+ *     DefinitionAuthoringForm.
+ *  2. Just-created Definitions (this Composer session), pre-checked, in
  *     creation order. On next open they fall into alphabetical place.
- *  3. Alphabetical list of all remaining active FieldDefinitions.
+ *  3. Alphabetical list of all remaining active Definitions.
  *
  * Modes:
  * - "display": batch-add path on existing nodes. Sticky Save and Cancel in the
  *   footer; locked rows not used.
  * - "construction": Composer is the body of the under-construction node's
  *   DataCard. Save button hidden — the parent node's "Save" button drives
- *   commitAll$ via the handle. Locked FieldDefinitions pre-seed and can't be
+ *   commitAll$ via the handle. Locked Definitions pre-seed and can't be
  *   unchecked.
  */
 
@@ -29,13 +29,13 @@ import {
     $,
     type PropFunction,
 } from '@builder.io/qwik';
-import { getFieldDefinitionQueries } from '../../data/queries';
+import { getDefinitionQueries } from '../../data/queries';
 import { storageEventBus } from '../../data/storageEventBus';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
-import { usePendingForms, pendingFormFromFieldDefinition, type PendingForm } from '../../hooks/usePendingForms';
-import type { FieldDefinition } from '../../data/models';
+import { usePendingForms, pendingFormFromDefinition, type PendingForm } from '../../hooks/usePendingForms';
+import type { Definition } from '../../data/models';
 import { ComposerRow } from './ComposerRow';
-import { FieldDefinitionAuthoringForm } from './FieldDefinitionAuthoringForm';
+import { DefinitionAuthoringForm } from './DefinitionAuthoringForm';
 import styles from './FieldComposer.module.css';
 
 export type FieldComposerMode = 'display' | 'construction';
@@ -47,9 +47,9 @@ export type FieldComposerProps = {
     mode: FieldComposerMode;
     /** Max cardOrder among already-persisted fields (used to size new fields after them). */
     currentMaxCardOrder: number;
-    /** FieldDefinitions that should be pre-checked and immutable (construction defaults).
+    /** Definitions that should be pre-checked and immutable (construction defaults).
      *  Ignored in display mode. */
-    lockedFieldDefinitionIds?: readonly string[];
+    lockedDefinitionIds?: readonly string[];
     /** Pre-seed the batch (e.g. Snackbar Undo restoring a cancelled draft). */
     restoreSeed?: PendingForm[];
     /** Called when the composer should close itself (after Save / Cancel). */
@@ -63,12 +63,12 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
         if (props.restoreSeed && props.restoreSeed.length > 0) {
             return props.restoreSeed;
         }
-        if (props.mode === 'construction' && props.lockedFieldDefinitionIds && props.lockedFieldDefinitionIds.length > 0) {
-            const fdq = getFieldDefinitionQueries();
+        if (props.mode === 'construction' && props.lockedDefinitionIds && props.lockedDefinitionIds.length > 0) {
+            const fdq = getDefinitionQueries();
             const seeded: PendingForm[] = [];
-            for (const fid of props.lockedFieldDefinitionIds) {
-                const def = await fdq.getFieldDefinitionById(fid);
-                if (def) seeded.push(pendingFormFromFieldDefinition(def));
+            for (const fid of props.lockedDefinitionIds) {
+                const def = await fdq.getDefinitionById(fid);
+                if (def) seeded.push(pendingFormFromDefinition(def));
             }
             return seeded;
         }
@@ -80,25 +80,25 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
         initialSeedLoader$,
     });
 
-    // FieldDefinitions created during this Composer session — pinned above the
+    // Definitions created during this Composer session — pinned above the
     // alphabetical pool, pre-checked. On next Composer open they fall into
     // alphabetical place (parent remounts the Composer fresh).
-    const justCreated = useSignal<FieldDefinition[]>([]);
+    const justCreated = useSignal<Definition[]>([]);
     const refreshKey = useSignal(0);
     const authoringOpen = useSignal(false);
 
     useVisibleTask$(({ cleanup }) => {
         const unsub = storageEventBus.subscribe((event) => {
-            if (event.type === 'FIELD_DEFINITION_WRITTEN') {
+            if (event.type === 'DEFINITION_WRITTEN') {
                 refreshKey.value++;
             }
         });
         cleanup(() => unsub());
     });
 
-    const definitionsResource = useResource$<FieldDefinition[]>(async ({ track }) => {
+    const definitionsResource = useResource$<Definition[]>(async ({ track }) => {
         track(() => refreshKey.value);
-        const list = await getFieldDefinitionQueries().listFieldDefinitions();
+        const list = await getDefinitionQueries().listDefinitions();
         return [...list].sort((a, b) => a.label.localeCompare(b.label));
     });
 
@@ -132,7 +132,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
         authoringOpen.value = false;
     });
 
-    const handleAuthored$ = $(async (def: FieldDefinition) => {
+    const handleAuthored$ = $(async (def: Definition) => {
         justCreated.value = [...justCreated.value, def];
         // Pre-check the new definition so the user can immediately enter a value.
         await togglePending$(def);
@@ -142,7 +142,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
     });
 
     const lockedSet = new Set(
-        props.mode === 'construction' ? (props.lockedFieldDefinitionIds ?? []) : []
+        props.mode === 'construction' ? (props.lockedDefinitionIds ?? []) : []
     );
 
     return (
@@ -157,7 +157,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
                         <div class={styles.rows}>
                             {/* Affordance / authoring form — top of the list. */}
                             {authoringOpen.value ? (
-                                <FieldDefinitionAuthoringForm
+                                <DefinitionAuthoringForm
                                     onCreated$={handleAuthored$}
                                     onCancel$={closeAuthoring$}
                                 />
@@ -173,7 +173,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
 
                             {/* Just-created definitions, pinned above alphabetical pool. */}
                             {justCreated.value.map((def) => {
-                                const pf = forms.value.find(f => f.fieldDefinitionId === def.id);
+                                const pf = forms.value.find(f => f.definitionId === def.id);
                                 return (
                                     <ComposerRow
                                         key={def.id}
@@ -192,7 +192,7 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
                                 <div class={styles.empty}>No field definitions available</div>
                             ) : (
                                 rest.map((def) => {
-                                    const pf = forms.value.find(f => f.fieldDefinitionId === def.id);
+                                    const pf = forms.value.find(f => f.definitionId === def.id);
                                     return (
                                         <ComposerRow
                                             key={def.id}

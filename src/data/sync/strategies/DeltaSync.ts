@@ -30,7 +30,7 @@ export class DeltaSync implements SyncStrategy {
     const pendingSet = await this.resolver.loadPendingSet();
 
     // Library Definitions are `library`-tree Elements — they arrive through the
-    // element lane, no separate FieldDefinition pull.
+    // element lane, no separate Definition pull.
     const elementsApplied = await this.syncElements(since, pendingSet);
     const elementHistoryApplied = await this.syncElementHistory(since);
 

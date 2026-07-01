@@ -19,7 +19,7 @@ function written(overrides: Partial<Extract<StorageEvent, { type: 'ELEMENT_WRITT
 
 const hardDeleted: StorageEvent = { type: 'ELEMENT_HARD_DELETED', elementId: 'el-1' };
 const fieldDefWritten: StorageEvent = {
-    type: 'FIELD_DEFINITION_WRITTEN',
+    type: 'DEFINITION_WRITTEN',
     definition: { id: 'fd-1', deletedAt: null },
 };
 
@@ -45,7 +45,7 @@ describe('affectsChildrenOf', () => {
         expect(affectsChildrenOf(hardDeleted, null)).toBe(true);
     });
 
-    it('never matches FIELD_DEFINITION_WRITTEN', () => {
+    it('never matches DEFINITION_WRITTEN', () => {
         expect(affectsChildrenOf(fieldDefWritten, 'parent-1')).toBe(false);
         expect(affectsChildrenOf(fieldDefWritten, null)).toBe(false);
     });
@@ -68,7 +68,7 @@ describe('affectsElement', () => {
         expect(affectsElement(hardDeleted, 'el-2')).toBe(false);
     });
 
-    it('never matches FIELD_DEFINITION_WRITTEN', () => {
+    it('never matches DEFINITION_WRITTEN', () => {
         expect(affectsElement(fieldDefWritten, 'fd-1')).toBe(false);
     });
 });

@@ -11,11 +11,11 @@ import { db } from './db';
 import type {
   SyncableStorageAdapter,
   StorageResult,
-  StorageFieldDefinitionCreate,
+  StorageDefinitionCreate,
   StorageElementCreate,
   StorageElementUpdate,
 } from './storageAdapter';
-import type { FieldDefinition, Element, ElementHistory, Kind, TreeType } from '../models';
+import type { Definition, Element, ElementHistory, Kind, TreeType } from '../models';
 import { filterActive } from '../models';
 import { shouldSyncTreeType, shouldLogHistory } from '../treePolicy';
 import { serializeConfig, assembleConfig } from '../../kinds/configElements';
@@ -70,10 +70,10 @@ export class IDBAdapter implements SyncableStorageAdapter {
   }
 
   // ============================================================================
-  // FieldDefinition Operations
+  // Definition Operations
   // ============================================================================
 
-  async listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>> {
+  async listDefinitions(): Promise<StorageResult<Definition[]>> {
     return this.run(async () => {
       const all = await db.elements.toArray();
       const defs = all.filter(
@@ -88,13 +88,13 @@ export class IDBAdapter implements SyncableStorageAdapter {
         }
       }
       const views = defs.map((def) =>
-        this.buildFieldDefinitionView(def, (cid) => childById.get(cid)),
+        this.buildDefinitionView(def, (cid) => childById.get(cid)),
       );
       return createResult(views);
     });
   }
 
-  async getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>> {
+  async getDefinition(id: string): Promise<StorageResult<Definition | null>> {
     return this.run(async () => {
       const def = await db.elements.get(id);
       if (!def || def.treeType !== 'library' || def.parentId !== null) {
@@ -102,20 +102,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
       }
       const children = filterActive(await db.elements.where('parentId').equals(id).toArray());
       const byId = new Map(children.map((c) => [c.id, c]));
-      return createResult(this.buildFieldDefinitionView(def, (cid) => byId.get(cid)));
+      return createResult(this.buildDefinitionView(def, (cid) => byId.get(cid)));
     });
   }
 
   /**
-   * Assemble the FieldDefinition read-model view from a `library`-tree Definition
+   * Assemble the Definition read-model view from a `library`-tree Definition
    * Element and its config sub-field children (config-as-Elements). `config` is
    * assembled on read — there is no stored blob. `authorId` mirrors the
    * Definition Element's `updatedBy` (the old separate column folds into it).
    */
-  private buildFieldDefinitionView(
+  private buildDefinitionView(
     def: Element,
     getChild: (childId: string) => Element | undefined,
-  ): FieldDefinition {
+  ): Definition {
     const config = assembleConfig(def.id, def.kind, getChild);
     return {
       id: def.id,
@@ -129,7 +129,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
     };
   }
 
-  async createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>> {
+  async createDefinition(input: StorageDefinitionCreate): Promise<StorageResult<Definition>> {
     return this.run(async () => {
       const timestamp = now();
       const userId = getCurrentUserId();
@@ -142,7 +142,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
         value: null,
         parentId: null,
         siblingOrder: 0,
-        fieldDefinitionId: null,
+        definitionId: null,
         treeType: 'library',
         updatedBy: userId,
         updatedAt: timestamp,
@@ -176,12 +176,12 @@ export class IDBAdapter implements SyncableStorageAdapter {
       });
 
       const byId = new Map(children.map((c) => [c.id, c]));
-      const view = this.buildFieldDefinitionView(defElement, (cid) => byId.get(cid));
-      console.log('[IDBAdapter] FieldDefinition (library Element) created:', view.id, view.label);
-      // Keep FIELD_DEFINITION_WRITTEN as the "Library changed" signal the Composer
+      const view = this.buildDefinitionView(defElement, (cid) => byId.get(cid));
+      console.log('[IDBAdapter] Definition (library Element) created:', view.id, view.label);
+      // Keep DEFINITION_WRITTEN as the "Library changed" signal the Composer
       // subscribes to — its payload is just { id, deletedAt }.
       storageEventBus.emit({
-        type: 'FIELD_DEFINITION_WRITTEN',
+        type: 'DEFINITION_WRITTEN',
         definition: { id: defElement.id, deletedAt: defElement.deletedAt },
       });
       return createResult(view);
@@ -263,13 +263,13 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
   async createElement(input: StorageElementCreate): Promise<StorageResult<Element>> {
     return this.run(async () => {
-      if (isInline(input.kind) && !input.fieldDefinitionId) {
-        throw makeStorageError('validation', `fieldDefinitionId required for kind=${input.kind}`, { retryable: false });
+      if (isInline(input.kind) && !input.definitionId) {
+        throw makeStorageError('validation', `definitionId required for kind=${input.kind}`, { retryable: false });
       }
-      if (input.fieldDefinitionId) {
-        const def = await db.elements.get(input.fieldDefinitionId);
+      if (input.definitionId) {
+        const def = await db.elements.get(input.definitionId);
         if (!def || def.treeType !== 'library' || def.parentId !== null) {
-          throw makeStorageError('not-found', `FieldDefinition not found: ${input.fieldDefinitionId}`, { retryable: false });
+          throw makeStorageError('not-found', `Definition not found: ${input.definitionId}`, { retryable: false });
         }
       }
 
@@ -285,9 +285,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
         value: input.value ?? null,
         parentId: input.parentId,
         siblingOrder: order,
-        fieldDefinitionId: input.fieldDefinitionId ?? null,
+        definitionId: input.definitionId ?? null,
         // createElement only mints business-tree elements; library Definitions
-        // and their config sub-fields go through createFieldDefinition / the seed.
+        // and their config sub-fields go through createDefinition / the seed.
         treeType: 'business',
         updatedBy: userId,
         updatedAt: timestamp,
@@ -485,7 +485,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // Composer the same way local creation does.
       if (element.treeType === 'library' && element.parentId === null) {
         storageEventBus.emit({
-          type: 'FIELD_DEFINITION_WRITTEN',
+          type: 'DEFINITION_WRITTEN',
           definition: { id: element.id, deletedAt: element.deletedAt },
         });
       }

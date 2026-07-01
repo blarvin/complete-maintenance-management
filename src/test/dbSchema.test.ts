@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 
-describe('AppDatabase schema (v10 — config-as-Elements: fieldDefinitions table dropped, elements gain treeType)', () => {
+describe('AppDatabase schema (v11 — the binding column renames: fieldDefinitionId → definitionId)', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
@@ -11,8 +11,8 @@ describe('AppDatabase schema (v10 — config-as-Elements: fieldDefinitions table
     await db.delete();
   });
 
-  it('opens at version 10', () => {
-    expect(db.verno).toBe(10);
+  it('opens at version 11', () => {
+    expect(db.verno).toBe(11);
   });
 
   it('no longer exposes the legacy nodes/fields/history or fieldDefinitions stores', () => {
@@ -32,7 +32,7 @@ describe('AppDatabase schema (v10 — config-as-Elements: fieldDefinitions table
     const indexNames = t.schema.indexes.map((i) => i.name);
     expect(t.schema.primKey.name).toBe('id');
     expect(indexNames).toEqual(
-      expect.arrayContaining(['parentId', 'kind', 'fieldDefinitionId', 'treeType', 'siblingOrder', 'updatedAt', 'deletedAt']),
+      expect.arrayContaining(['parentId', 'kind', 'definitionId', 'treeType', 'siblingOrder', 'updatedAt', 'deletedAt']),
     );
   });
 
@@ -52,7 +52,7 @@ describe('AppDatabase schema (v10 — config-as-Elements: fieldDefinitions table
       value: null,
       parentId: null,
       siblingOrder: 1,
-      fieldDefinitionId: null,
+      definitionId: null,
       treeType: 'business',
       updatedBy: 'localUser',
       updatedAt: Date.now(),
