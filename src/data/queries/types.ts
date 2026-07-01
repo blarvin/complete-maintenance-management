@@ -12,5 +12,5 @@ export interface IElementQueries {
   getChildren(parentId: string): Promise<Element[]>;
   getChildrenByKind(parentId: string, kind: Kind): Promise<Element[]>;
   getElementHistory(elementId: string): Promise<ElementHistory[]>;
-  nextSiblingOrder(parentId: string | null): Promise<number>;
+  nextSiblingOrder(parentId: string | null, kind?: Kind): Promise<number>;
 }

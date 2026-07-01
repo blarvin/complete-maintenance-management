@@ -45,6 +45,37 @@ describe('IDBAdapter — element operations', () => {
     expect(kids.data.map(e => e.id)).toEqual(['c1', 'c2', 'c3']);
   });
 
+  it('mints siblingOrder per placement section: fields do not inflate a child node order', async () => {
+    await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
+    await seedLibraryDefinition('fd-1', 'text-kv');
+    await adapter.createElement({ id: 'f1', kind: 'text-kv', parentId: 'p', name: 'F1', fieldDefinitionId: 'fd-1' });
+    await adapter.createElement({ id: 'f2', kind: 'text-kv', parentId: 'p', name: 'F2', fieldDefinitionId: 'fd-1' });
+    await adapter.createElement({ id: 'f3', kind: 'text-kv', parentId: 'p', name: 'F3', fieldDefinitionId: 'fd-1' });
+
+    // The parent's sole child NODE starts its own section at 0, regardless of fields.
+    const c1 = await adapter.createElement({ id: 'c1', kind: 'node', parentId: 'p', name: 'C1' });
+    expect(c1.data.siblingOrder).toBe(0);
+
+    // And the inverse: a new field counts only fields (f1..f3 → next is 3).
+    const f4 = await adapter.createElement({ id: 'f4', kind: 'text-kv', parentId: 'p', name: 'F4', fieldDefinitionId: 'fd-1' });
+    expect(f4.data.siblingOrder).toBe(3);
+  });
+
+  it('soft-deleted siblings release their siblingOrder slot', async () => {
+    await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
+    await adapter.createElement({ id: 'c1', kind: 'node', parentId: 'p', name: 'C1' });
+    await adapter.softDeleteElement('c1');
+    const c2 = await adapter.createElement({ id: 'c2', kind: 'node', parentId: 'p', name: 'C2' });
+    expect(c2.data.siblingOrder).toBe(0);
+  });
+
+  it('soft-deleted roots do not inflate root siblingOrder', async () => {
+    await adapter.createElement({ id: 'r1', kind: 'node', parentId: null, name: 'R1' });
+    await adapter.softDeleteElement('r1');
+    const r2 = await adapter.createElement({ id: 'r2', kind: 'node', parentId: null, name: 'R2' });
+    expect(r2.data.siblingOrder).toBe(0);
+  });
+
   it('rejects creating a value-bearing element without fieldDefinitionId', async () => {
     await expect(
       adapter.createElement({ id: 'bad', kind: 'text-kv', parentId: null, name: 'X' }),

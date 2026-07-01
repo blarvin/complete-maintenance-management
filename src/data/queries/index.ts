@@ -14,7 +14,7 @@ export function elementQueriesFromAdapter(adapter: StorageAdapter): IElementQuer
     getChildren: async (parentId) => unwrap(await adapter.listChildElements(parentId)),
     getChildrenByKind: async (parentId, kind) => unwrap(await adapter.listChildElementsByKind(parentId, kind)),
     getElementHistory: async (elementId) => unwrap(await adapter.getElementHistory(elementId)),
-    nextSiblingOrder: async (parentId) => unwrap(await adapter.nextSiblingOrder(parentId)),
+    nextSiblingOrder: async (parentId, kind) => unwrap(await adapter.nextSiblingOrder(parentId, kind)),
   };
 }
 

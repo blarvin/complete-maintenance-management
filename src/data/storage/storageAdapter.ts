@@ -68,7 +68,7 @@ export interface StorageAdapter {
   getElement(id: string): Promise<StorageResult<Element | null>>;
   listChildElements(parentId: string): Promise<StorageResult<Element[]>>;
   listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>>;
-  nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>>;
+  nextSiblingOrder(parentId: string | null, kind?: Kind): Promise<StorageResult<number>>;
   createElement(input: StorageElementCreate): Promise<StorageResult<Element>>;
   updateElement(id: string, updates: StorageElementUpdate): Promise<StorageResult<void>>;
   softDeleteElement(id: string): Promise<StorageResult<void>>;

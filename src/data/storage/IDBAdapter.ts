@@ -244,13 +244,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
   }
 
-  async nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>> {
+  async nextSiblingOrder(parentId: string | null, kind?: Kind): Promise<StorageResult<number>> {
     return this.run(async () => {
       const all = parentId === null
         ? (await db.elements.toArray()).filter(e => e.parentId === null && e.treeType === 'business')
         : await db.elements.where('parentId').equals(parentId).toArray();
-      if (all.length === 0) return createResult(0);
-      return createResult(Math.max(...all.map(e => e.siblingOrder)) + 1);
+      // Count only live siblings in the same placement section as the kind
+      // being minted: fields order among fields, node-like children among
+      // node-like children — matching how the two display lists read them.
+      // Soft-deleted rows release their slot.
+      const siblings = all.filter(e =>
+        e.deletedAt === null && (kind === undefined || isInline(e.kind) === isInline(kind))
+      );
+      if (siblings.length === 0) return createResult(0);
+      return createResult(Math.max(...siblings.map(e => e.siblingOrder)) + 1);
     });
   }
 
@@ -268,7 +275,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       const timestamp = now();
       const userId = getCurrentUserId();
-      const order = input.siblingOrder ?? (await this.nextSiblingOrder(input.parentId)).data;
+      const order = input.siblingOrder ?? (await this.nextSiblingOrder(input.parentId, input.kind)).data;
 
       const element: Element = {
         id: input.id,

@@ -25,13 +25,21 @@ import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
 import { seedFieldDefinitions } from '../services/seedFieldDefinitions';
 
-let initialized = false;
 /**
- * Memoized init promise. All callers share the same promise so concurrent
+ * Memoized init state. All callers share the same promise so concurrent
  * `await initializeStorage()` calls (e.g. one from useInitStorage and one from
  * useElementChildren) never re-enter the init body and do duplicate work.
+ *
+ * Pinned on globalThis so it survives dev-server (Vite) module re-evaluation:
+ * a re-instanced copy of this module would otherwise see `initPromise: null`
+ * and re-run the full init — new SyncManager, duplicate bus subscriptions,
+ * another startup syncFull — per edit-triggered reload (ISSUES Bugs #2).
+ * Client-only state; SSR never calls initializeStorage.
  */
-let initPromise: Promise<void> | null = null;
+type InitState = { initialized: boolean; initPromise: Promise<void> | null };
+const globalState = globalThis as typeof globalThis & { __cmmInitState?: InitState };
+const state: InitState =
+  globalState.__cmmInitState ?? (globalState.__cmmInitState = { initialized: false, initPromise: null });
 
 /**
  * Initialize storage and sync.
@@ -39,13 +47,13 @@ let initPromise: Promise<void> | null = null;
  * subsequent calls return the same promise.
  */
 export function initializeStorage(): Promise<void> {
-  if (initPromise) return initPromise;
-  initPromise = doInitializeStorage();
-  return initPromise;
+  if (state.initPromise) return state.initPromise;
+  state.initPromise = doInitializeStorage();
+  return state.initPromise;
 }
 
 async function doInitializeStorage(): Promise<void> {
-  if (initialized) {
+  if (state.initialized) {
     console.log('[Storage] Already initialized');
     return;
   }
@@ -112,14 +120,14 @@ async function doInitializeStorage(): Promise<void> {
       });
     }
 
-    initialized = true;
+    state.initialized = true;
     console.log('[Storage] Initialization complete');
     // No completion notification needed: data hooks await initializeStorage()
     // before their first query (and this promise resolves on failure too).
   } catch (err) {
     console.error('[Storage] Initialization failed:', err);
     // Don't throw - app should still work offline with empty IDB
-    initialized = true;
+    state.initialized = true;
   }
 }
 
@@ -174,7 +182,7 @@ async function seedNodeIndexFromDb(): Promise<void> {
  * Check if storage is initialized.
  */
 export function isStorageInitialized(): boolean {
-  return initialized;
+  return state.initialized;
 }
 
 /**
@@ -182,7 +190,7 @@ export function isStorageInitialized(): boolean {
  */
 export async function clearStorage(): Promise<void> {
   await db.delete();
-  initialized = false;
-  initPromise = null;
+  state.initialized = false;
+  state.initPromise = null;
   console.log('[Storage] Cleared all data');
 }

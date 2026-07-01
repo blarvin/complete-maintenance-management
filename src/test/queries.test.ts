@@ -61,9 +61,9 @@ describe('Query factories', () => {
     it('nextSiblingOrder unwraps StorageResult', async () => {
       const adapter = mockAdapter();
       const q = elementQueriesFromAdapter(adapter);
-      const result = await q.nextSiblingOrder('p1');
+      const result = await q.nextSiblingOrder('p1', 'node');
       expect(result).toBe(3);
-      expect(adapter.nextSiblingOrder).toHaveBeenCalledWith('p1');
+      expect(adapter.nextSiblingOrder).toHaveBeenCalledWith('p1', 'node');
     });
   });
 
