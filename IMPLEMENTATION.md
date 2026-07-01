@@ -149,6 +149,20 @@ The lens (`Derivation(children/transitive) + Provision`) had exactly one consume
 
 ---
 
+## Definition-binding seam — `definitionId` + logbook's policy Definition (done 2026-07-01, ISSUES Architecture Migration #6 / map #7a–c)
+
+The instance→Definition binding stopped being field-specific, forced by the concrete kind the docs said to decide it on: `logbook`, the first policy-container re-root that wants an authored-in config (entry label, staleness). Three commits, three moves:
+
+- **(a) Full type-family rename** (user call: no half-renamed vocabulary): `Element.fieldDefinitionId → definitionId` plus `FieldDefinition → Definition`, `CREATE_FIELD_DEFINITION → CREATE_DEFINITION`, `FIELD_DEFINITION_WRITTEN → DEFINITION_WRITTEN`, queries/adapter methods/seeds/hooks/UI props/pendingDraft. Dexie **v11** renames the `elements` index (clear-on-upgrade; the v4–v10 historical declarations are replayed by Dexie and must never be edited — excluded from the mechanical replace). Sync needed zero code change (whole-object spread); history never logs the column. Seeded `fd_*` id prefixes deliberately kept — ids are opaque.
+- **(b) The authoring contract lifted off `placement: 'inline'`.** `ConfigForm`/`defaultConfig`/`configSchema` moved to `ManifestIdentity` as optional (re-asserted required on the inline arm); `Renderer`/`displayPreview`/`hideLabel`/`blockValueLayout` stay inline-only (field-row-specific). New accessor `getDefinitionAuthoring(kind)` returns null for leaf re-roots (`node`, `job`) — the placement-agnostic counterpart to `getInlineManifest`. The create-time check was *already* placement-driven (`isInline && !definitionId` throws; re-root optional).
+- **(c) Logbook binds a seeded policy Definition through the same seam fields use.** `LOGBOOK_CONFIG_SCHEMA` (`entryLabel` text-kv + `staleness` number-kv seconds, both delegated) joins `CONFIG_SCHEMAS` — `serializeConfig`/`assembleConfig` were already placement-blind. Seed v8 writes `fd_logbook_policy`; ids live in the new import-free `src/data/definitionIds.ts` so `provisionPolicy.ts` (component-free) can name the default policy per lens kind without a back-edge into services.
+- **Stamp-if-resolvable, not unconditional.** `ensureProvisionedLenses` stamps the policy id onto a minted `::logbook` lens only after `getDefinition` confirms it exists — `createElement` validates non-null `definitionId` against the library and throws not-found, so unconditional stamping would break every unseeded create (tests, pre-seed). Unbound lenses fall back at render. `jobs` carries no policy — re-root binding is optional by design, and jobs-without-one proves it.
+- **Policy resolution is a pure module + thin hook.** `src/kinds/lensPolicy.ts` (`resolveLensPolicy` fallback matrix, `isLensStale` boundary logic — unit-tested) + `useLensPolicy` (resolves the lens Element's `definitionId` via `getDefinitionQueries`, falls back to `getKindManifest(targetKind).pickerLabel`). No `DEFINITION_WRITTEN` subscription: Definitions are fork-not-mutate, no edit path. Consumers: `LensRollup` header + stale badge, `LensCreate` (optional `entryLabel` prop), `BranchView`'s re-rooted lens (where `parentEl` *is* the lens). The container name ("Logbook") is a separate axis and stays. Known accepted limitation: the stale check reads `Date.now()` at render — reactive to writes/regathers, not to wall-clock passage.
+- **Three pollution guards were load-bearing** (first re-root row in the library tree): the composer + legacy add-field lists filter `isInline(def.kind)`; the node index scopes to `treeType === 'business'` at both seed time (`seedNodeIndexFromDb`) and live (`nodeIndexSubscriber` — a latent bug; `ELEMENT_WRITTEN` events now carry `treeType`).
+- **Seed-only authoring**: `LogbookConfigForm` exists and typechecks (the lifted contract's first re-root instance) but nothing mounts it — where re-root policy authoring lives in the UI is deferred (LATER.md).
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry

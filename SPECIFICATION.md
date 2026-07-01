@@ -42,7 +42,7 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 | **capability**      | One of the six composable behaviours (OwnValue, Children, Edges, Derivation, Action, Reads) a manifest draws from. A kind is the origin displaced by a capability subset.                |
 | **placement**       | A manifest field: where a kind draws its surface — `inline` (a Field-like row on a Data Card) or `re-root` (a Node-like navigable view). Placement, not a separate table, separates node-like from field-like. |
 | **Renderer**        | Code that draws an Element for a surface, selected by `placement`. **New surfaces ship as new manifests, not new tables.**                                                              |
-| **FieldDefinition** | A Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose config is its child sub-field Elements. Instances bind to it by `fieldDefinitionId`.                                                                                                            |
+| **FieldDefinition** | A Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose config is its child sub-field Elements. Instances bind to it by `definitionId`.                                                                                                            |
 
 
 **The bridge, in one sentence:** *every surface is one Element drawn by the renderer its `kind`'s manifest supplies — the user navigates surfaces; the system stores Elements and looks up behaviour by `kind`.*
@@ -342,12 +342,12 @@ Three layers — each is the precondition for the next:
 
 1. **kind manifest** — dev-authored code: a `Renderer` + capability subset + descriptors, keyed by `kind` (e.g. `"text-kv"`, `"number-kv"`) in the registry. The closed set is owned by the dev team; users cannot author kinds (see *Data Model → Earning a kind*).
 2. **FieldDefinition** — a Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose **config is its child sub-field Elements** (units, thresholds, flags — not a config blob). Definitions are what users pick from in the Field Composer. Both dev-seeded and user-authored entries are Library-tree Elements — there is no other species.
-3. **DataField** (instance) — an Element minted from a Definition, attached to a Node, holding one typed `value` and bound to its Definition by `fieldDefinitionId`. It **copies** its meaning-defining config (owned sub-fields: units, thresholds) at mint and **delegates** the rest (read live from the Definition); `name` is snapshotted at creation, so a forked Definition never rewrites user data.
+3. **DataField** (instance) — an Element minted from a Definition, attached to a Node, holding one typed `value` and bound to its Definition by `definitionId`. It **copies** its meaning-defining config (owned sub-fields: units, thresholds) at mint and **delegates** the rest (read live from the Definition); `name` is snapshotted at creation, so a forked Definition never rewrites user data.
 
 ```
 kind manifest (code: Renderer + capabilities + descriptors)
   └── FieldDefinition (library-tree Element; config = child sub-field Elements)
-       └── DataField instance (Element on a Node: + value + fieldDefinitionId binding)
+       └── DataField instance (Element on a Node: + value + definitionId binding)
 ```
 
 The word **Template** is reserved for a future feature: a *set* of Definitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the Library work, and nothing in Phase 1 uses the word "Template".
@@ -381,9 +381,9 @@ Privacy implication for the user: labels may carry proprietary information (e.g.
 
 #### Where the Library lives
 
-- **A typed tree, not a side table**: a Definition is an `Element` (with `treeType: library`) and its config is its child sub-field Elements; it syncs, history-tracks, and reverts like any other Element. (Current code still keeps a separate `fieldDefinitions` Dexie table with a `config` blob — that is a migration touch-point, see ISSUES.md, not the target.)
+- **A typed tree, not a side table**: a Definition is an `Element` (with `treeType: library`) and its config is its child sub-field Elements; it syncs, history-tracks, and reverts like any other Element. (Landed 2026-06-27 — config-as-Elements; the old separate `fieldDefinitions` Dexie table was dropped in schema v10.)
 - **Sync**: Library Elements ride the same bidirectional sync as the business tree (Push-then-Pull, LWW on `updatedAt`, queued through `SyncQueueManager`), routed by `treeType` for history/visibility.
-- **Seed entries** (the starter set): written client-side on first run, idempotent via a seed version. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable deterministic ids let the UI reference defaults by constant (`FIELD_DEFINITION_IDS`), not by label.
+- **Seed entries** (the starter set): written client-side on first run, idempotent via a seed version. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable deterministic ids let the UI reference defaults by constant (`DEFINITION_IDS`), not by label.
 - **User-authored entries**: enqueue through the sync queue like any other user write; appear on other clients on next pull.
 
 #### Listing in the Composer
@@ -404,7 +404,7 @@ Clicking the affordance expands an inline authoring form in-place:
 4. **Save** — commits the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`, currently `"localUser"`), collapses the authoring form, and **immediately materialises a checked Composer row** at the same position, so the user can fill in the value and proceed to the batch Save in one continuous motion.
 5. **Cancel** — discards the in-progress authoring form. No Definition is written. The Composer returns to its prior state.
 
-The authoring form has **its own pending-state shape**: it is *not* a `pendingForm` from `usePendingForms`, because no DataField exists yet — the FieldDefinition has to commit first before a DataField draft can attach to it. The hook surface for this state is a separate concern; naming TBD during implementation (working name: `useFieldDefinitionDraft`).
+The authoring form has **its own pending-state shape**: it is *not* a `pendingForm` from `usePendingForms`, because no DataField exists yet — the FieldDefinition has to commit first before a DataField draft can attach to it. The hook surface for this state is a separate concern; naming TBD during implementation (working name: `useDefinitionDraft`).
 
 ### Edit / Delete Semantics for FieldDefinitions
 
@@ -425,14 +425,14 @@ Three FieldDefinitions are pre-checked in the Composer when a node is in `isUnde
 
 These appear as **locked checked rows** — checkbox visibly checked but disabled — so the user can't uncheck them. They commit as DataFields on node Save regardless of whether a value was entered (empty fields are allowed). Other FieldDefinitions in the Composer are unchecked by default and behave normally.
 
-UI code references these three by stable ID via the `FIELD_DEFINITION_IDS` constant, never by label.
+UI code references these three by stable ID via the `DEFINITION_IDS` constant, never by label.
 
 ### What stays in LATER.md (Phase-2+)
 
 - **Templates** (composite sets of FieldDefinitions, e.g. "HPU with Accumulator") — distinct, larger feature.
 - **Composer discovery UX**: typeahead filter, category grouping, popularity ranking, "recently added" sort, dropdown-flip behaviour.
 - **Moderation / promotion to canonical** for crowdsourced entries.
-- **Versioning by identity, not a field** — `fieldDefinitionId` answers "which version"; a Definition is forked (new id), never mutated, so no `componentVersion` column is needed (value/config shapes are widen-only).
+- **Versioning by identity, not a field** — `definitionId` answers "which version"; a Definition is forked (new id), never mutated, so no `componentVersion` column is needed (value/config shapes are widen-only).
 - **User-facing edit/delete** of Definitions with real ownership rules.
 - **Label uniqueness / dedup / merge** flows.
 - **Dedicated Library view** (the "TreeNode stack under the app's main menu").
@@ -498,7 +498,7 @@ The data model is a single recursive primitive, the **Element**. A node is an El
 | value             | JSON          | null     | No                                                                                               | Typed value, shape discriminated by `kind`. `null` for pure container (`kind: "node"`) elements.                                      |
 | parentId          | string        | null     | Yes                                                                                              | Canonical ("home") parent element. `null` = tree root.                                                                                |
 | siblingOrder      | number        | Yes      | Order among siblings under the canonical parent, assigned incrementally at mint (every element). | Auto-assigned: next integer after the last sibling; inserting between siblings renumbers the affected run (see Sorting policy)        |
-| fieldDefinitionId | string (UUID) | null     | No                                                                                               | Set for field-like elements minted from a Library Definition; binds the instance to it (cascade source). `null` for hand-created nodes.|
+| definitionId | string (UUID) | null     | No                                                                                               | Set for field-like elements minted from a Library Definition; binds the instance to it (cascade source). `null` for hand-created nodes.|
 | updatedBy         | string        | Yes      | User ID of last editor                                                                           | Valid user ID                                                                                                                         |
 | updatedAt         | timestamp     | Yes      | Last modification time (epoch)                                                                   | Client-assigned; server-assigned [Phase 2+]                                                                                           |
 | deletedAt         | timestamp     | null     | Yes                                                                                              | Soft delete timestamp                                                                                                                 |
@@ -608,7 +608,7 @@ A field's secondary values — units, quantity-kind, decimals, ranges, alert poi
 2. **Definition specificity** — general → narrow → instance; a narrow Definition stores only overrides and delegates the rest (config-as-Elements + inherit-unless-override *is* the specificity spectrum).
 3. **App → org → role → user config** down the authority hierarchy, each layer's prefs being Fields on a Node.
 
-**Audit-safe by construction:** config and prefs file in **Library / overlay** history, not business history, so delegating them touches no business audit. A Definition is **forked, never mutated** (editing one mints a new id; existing instances stay bound to the one they were minted from); `fieldDefinitionId` *is* the version, so there is no `componentVersion` and no migration runner.
+**Audit-safe by construction:** config and prefs file in **Library / overlay** history, not business history, so delegating them touches no business audit. A Definition is **forked, never mutated** (editing one mints a new id; existing instances stay bound to the one they were minted from); `definitionId` *is* the version, so there is no `componentVersion` and no migration runner.
 
 ### Populations are typed trees
 
@@ -640,9 +640,9 @@ Chrome is always **derived**, **device-local view state**, or **the rendered exp
 
 #### FieldDefinition (a Library-tree Element)
 
-**Purpose:** A Library entry — a field-like Element of the kind it defines, living in the `library` tree (`treeType: library`), whose config is its child sub-field Elements. Instances bind to it by `fieldDefinitionId`. It is **not a separate entity**: its columns are the Element columns (`kind` = the kind it defines, `name` = the label), and it has no `config` column — config is its subtree.
+**Purpose:** A Library entry — a field-like Element of the kind it defines, living in the `library` tree (`treeType: library`), whose config is its child sub-field Elements. Instances bind to it by `definitionId`. It is **not a separate entity**: its columns are the Element columns (`kind` = the kind it defines, `name` = the label), and it has no `config` column — config is its subtree.
 
-> Migration note: current code still keeps a separate `fieldDefinitions` Dexie table carrying a `config` JSON blob and an `authorId`/`componentType` column. The target collapses that table into the `library` tree, the blob into a config subtree, and `authorId` into `updatedBy` + Library-tree history. Tracked in ISSUES.md.
+> Migration note: **landed** (2026-06-27, config-as-Elements). The old separate `fieldDefinitions` Dexie table, its `config` JSON blob, and the `authorId`/`componentType` columns are gone — the table collapsed into the `library` tree, the blob into a config subtree, and `authorId` into `updatedBy`. In code the assembled read-model view is the `Definition` type; instances bind by `definitionId` (renamed from `fieldDefinitionId` 2026-07-01 — the binding is kind-agnostic: re-root policy containers like `logbook` bind a Definition through the same column).
 
 #### ElementHistory Entity
 
@@ -686,7 +686,7 @@ Reversion and audit are central to the app, so the history record must preserve 
 
 **Indexes**:
 
-- elements: by parentId, by updatedAt, by kind, by fieldDefinitionId, by treeType — (`*virtualParents` multi-entry index [Phase 2+])
+- elements: by parentId, by updatedAt, by kind, by definitionId, by treeType — (`*virtualParents` multi-entry index [Phase 2+])
 - elementHistory: by elementId, by updatedAt, by parentId
 - imageBlobs: by blobId (primary)
 
@@ -694,7 +694,7 @@ Reversion and audit are central to the app, so the history record must preserve 
 
 - Element has 0..1 canonical parent Element (self-referential, via `parentId`)
 - Element has 0..n child Elements
-- A field-like instance Element references 0..1 Definition Element (via `fieldDefinitionId`); a Definition Element has 0..n instances; nodes typically reference none
+- A field-like instance Element references 0..1 Definition Element (via `definitionId`); a Definition Element has 0..n instances; nodes typically reference none
 - An `image` Element references exactly 1 `imageBlobs` row per non-null value
 - [Phase 2+] Element has 0..n virtual appearances (`virtualParents`) and 0..n `reference` edges to other elements
 
@@ -716,11 +716,11 @@ Every element carries a `siblingOrder`, assigned incrementally when it is minted
 **Data Persistence**:
 
 - **Storage Abstraction**: Storage operations are abstracted through a backend-agnostic interface, enabling the system to work with different storage backends (local browser storage for offline-first, cloud storage for sync) without requiring component changes. This abstraction allows swapping storage implementations as needed.
-- **Stores**: `elements` (all `treeType`s, including the `library` tree), `elementHistory`, `imageBlobs`. (Current code still has a separate `fieldDefinitions` store; collapsing it into `elements` is a migration touch-point — see ISSUES.md.)
+- **Stores**: `elements` (all `treeType`s, including the `library` tree), `elementHistory`, `imageBlobs`. (The old separate `fieldDefinitions` store was dropped in schema v10 — the Library lives in `elements`.)
 - **Primary Storage**: Local browser storage for offline-first capability. All operations persist locally first.
 - **Cloud Sync**: Bidirectional sync with cloud storage when online. The system orchestrates push (local→remote) and pull (remote→local) operations. Conflict resolution uses Last-Write-Wins (LWW) based on `updatedAt` timestamps.
 - **Sync Triggers**: Automatic sync on startup (if online), periodic timer (every 10 minutes), and on network 'online' event. Manual sync available via dev tools.
-- **Single-user environment**: Uses constant `updatedBy` "localUser". Changes to `value` / `name` / `subtitle` / `parentId` / `siblingOrder` are logged to history; `kind` / `fieldDefinitionId` changes are not. [Phase 2+]: real user identity.
+- **Single-user environment**: Uses constant `updatedBy` "localUser". Changes to `value` / `name` / `subtitle` / `parentId` / `siblingOrder` are logged to history; `kind` / `definitionId` changes are not. [Phase 2+]: real user identity.
 
 ### Future Architecture (Phase 2+)
 
@@ -771,7 +771,7 @@ Elements support soft deletion via `deletedAt` timestamps:
   "value": null,
   "parentId": null,
   "siblingOrder": 0,
-  "fieldDefinitionId": null,
+  "definitionId": null,
   "updatedBy": "user456",
   "updatedAt": 1709942400000,
   "deletedAt": null
@@ -790,7 +790,7 @@ Elements support soft deletion via `deletedAt` timestamps:
     "value": "HVAC-2024-001",
     "parentId": "550e8400-e29b-41d4-a716-446655440001",
     "siblingOrder": 0,
-    "fieldDefinitionId": "fd_serial_number",
+    "definitionId": "fd_serial_number",
     "updatedBy": "user123",
     "updatedAt": 1709856000000,
     "deletedAt": null
@@ -803,7 +803,7 @@ Elements support soft deletion via `deletedAt` timestamps:
     "value": "In Service",
     "parentId": "550e8400-e29b-41d4-a716-446655440001",
     "siblingOrder": 1,
-    "fieldDefinitionId": "fd_status",
+    "definitionId": "fd_status",
     "updatedBy": "user456",
     "updatedAt": 1709942400000,
     "deletedAt": null

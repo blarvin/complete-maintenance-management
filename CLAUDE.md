@@ -47,11 +47,11 @@
 ### 2. Adapter Pattern (Backend Abstraction)
 
 **Location**: `src/data/storage/`
-**Write model**: `IDBAdapter` is the sole `StorageAdapter`/`SyncableStorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus FieldDefinition CRUD, offline-first via Dexie
+**Write model**: `IDBAdapter` is the sole `StorageAdapter`/`SyncableStorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus Definition CRUD (`listDefinitions`/`getDefinition`/`createDefinition`), offline-first via Dexie
 **Sync mirror**: `FirestoreAdapter` implements `RemoteSyncAdapter` only (`applySyncItem` + pull methods) — Firestore is a dumb mirror, not a second CRUD backend; the swappable-backend story is served by `RemoteSyncAdapter`
 **Command/query registry**: `src/data/commands/` and `src/data/queries/`
 
-- Module-level getters: `getCommandBus()`, `getElementQueries()`, `getFieldDefinitionQueries()`
+- Module-level getters: `getCommandBus()`, `getElementQueries()`, `getDefinitionQueries()`
 - IMPORTANT: Call these at runtime inside `$()` handlers — never capture in closures or serialize
 - `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping
 - Qwik `useContextProvider` CANNOT hold services (methods aren't serializable, `Code(3)` error)
@@ -174,6 +174,6 @@ useStorageAdapter(new IDBAdapter());
 - `src/components/TreeNode/TreeNode.tsx` - Main component orchestrator
 - `src/components/DataField/DataField.tsx` - Field editing logic
 - `src/data/commands/handlers.ts` - Element command handlers
-- `src/data/queries/index.ts` - `getElementQueries()` / `getFieldDefinitionQueries()`
-- `src/data/models.ts` - `Element`, `ElementHistory`, `elementToTreeNode` / `elementToDataField` mappers
+- `src/data/queries/index.ts` - `getElementQueries()` / `getDefinitionQueries()`
+- `src/data/models.ts` - `Element`, `ElementHistory`, `Definition` (assembled view), the config/value unions
 - `src/constants.ts` - Hardcoded values (USER_ID, library)

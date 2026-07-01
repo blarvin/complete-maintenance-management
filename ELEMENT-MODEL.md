@@ -42,7 +42,7 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 
 # Field-like kinds (inline; lean on `OwnValue` / `Edges` / `Derivation`)
 
-A field-like kind draws an inline row on its Node's Data Card and is edited in place. A field-like kind minted from the Library binds to its Library Definition by `fieldDefinitionId`; its config lives as that Definition's child sub-field Elements (see `SPECIFICATION.md → Config is Elements`).
+A field-like kind draws an inline row on its Node's Data Card and is edited in place. A field-like kind minted from the Library binds to its Library Definition by `definitionId`; its config lives as that Definition's child sub-field Elements (see `SPECIFICATION.md → Config is Elements`). The binding is kind-agnostic: a re-root *policy container* (`logbook`) binds a Definition through the same column, while leaf re-roots (`node`, `job`) carry null.
 
 ## origin
 
@@ -303,7 +303,7 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 **v1 (#6b, 2026-06-28).** `jobs` is built as **a lens child on every node** (deterministic id `${nodeId}::jobs`), each gathering its *own* subtree — a **pure rollup**, reaching the same visible result as upward provisioning (a Jobs box at every ancestor level) without the write-time ancestor-walk. **Decision: pure rollup is right for `jobs` now.** `logbook` will be **both** lens *and* container (entries are authored *in* it); once job-subtypes (Task/Work Order/Project) arrive, `jobs` may need both too. Container behaviour — adding `job` rows in place, the **inline-yet-navigable placement** — rides on chrome entailment (#5). De-provision/GC, hiding empty lenses, and lazy-provisioning onto pre-existing nodes are deferred (LATER.md).
 
-**Status:** `jobs` **current** (v1 stub, #6b); `logbook` describe.
+**Status:** `jobs` **current** (v1 stub, #6b); `logbook` **current** (#6c + the Definition-binding seam, 2026-07-01: rollup-and-container with a bound policy Definition — entry label + staleness — stamped at mint from the seeded `fd_logbook_policy`).
 
 ## job
 
@@ -384,7 +384,7 @@ These are leaves, never new primitives.
 # What is *not* a kind
 
 - **Domain typology stays soft.** Pump, vessel, relay, road-bridge — and org variants like task or work-order — are user-grown `typeOf` tags on the relevant kind, never kinds and never a schema column. Identity and lens-matching key on `kind` (the one hard discriminant); the soft layer (tags, position, field-presence) feeds search / filter / sort / facet. The behaviour-free domain typology ships as **forkable seed `typeOf` data** (tag + default field bundle), read by one generic service that suggests fields from a node's `typeOf`.
-- **A field Definition is not its own kind.** It is a field-like Element of the very kind it defines, living in the `library` tree and bound to instances by `fieldDefinitionId`. The Library is a population, not a kind.
+- **A field Definition is not its own kind.** It is an Element of the very kind it defines, living in the `library` tree and bound to instances by `definitionId`. The Library is a population, not a kind. (This holds for re-root policy Definitions too: `fd_logbook_policy` is a `library`-tree Element of kind `logbook`.)
 
 ---
 
