@@ -9,8 +9,9 @@
  * is no longer privileged.
  */
 
-import type { Kind } from '../data/models';
-import type { InlineManifest, KindManifest } from './types';
+import type { Component } from '@builder.io/qwik';
+import type { Kind, DefinitionConfig } from '../data/models';
+import type { ConfigFormProps, ConfigSubField, InlineManifest, KindManifest } from './types';
 import { allowedChildKinds } from './childrenPolicy';
 import { nodeManifest } from './node.manifest';
 import { textKvManifest } from './text-kv.manifest';
@@ -65,6 +66,30 @@ export function getInlineManifest(kind: Kind): InlineManifest {
         throw new Error(`getInlineManifest called with non-inline kind: ${kind}`);
     }
     return manifest;
+}
+
+/** The Definition-authoring contract a kind carries (placement-agnostic). */
+export type DefinitionAuthoring = {
+    ConfigForm: Component<ConfigFormProps>;
+    defaultConfig: () => DefinitionConfig;
+    configSchema?: ConfigSubField[];
+};
+
+/**
+ * Definition-authoring surface for any kind that carries one — inline field
+ * kinds always do; re-root policy containers (`logbook`) may; leaf re-roots
+ * (`node`, `job`) return null. The placement-agnostic counterpart to
+ * `getInlineManifest` for the authoring hooks (map #7b: the contract is no
+ * longer welded to `placement: 'inline'`).
+ */
+export function getDefinitionAuthoring(kind: Kind): DefinitionAuthoring | null {
+    const manifest = getKindManifest(kind);
+    if (!manifest.ConfigForm || !manifest.defaultConfig) return null;
+    return {
+        ConfigForm: manifest.ConfigForm,
+        defaultConfig: manifest.defaultConfig,
+        configSchema: manifest.configSchema,
+    };
 }
 
 /**

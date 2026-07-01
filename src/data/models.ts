@@ -206,7 +206,9 @@ export type TreeType = 'business' | 'library' | 'config' | 'view-state';
  * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
  * - `value` is null for re-root (node-like) kinds; typed by `kind` otherwise.
  * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
- * - `definitionId` is null for re-root kinds; required for inline kinds.
+ * - `definitionId` binds the instance to its Definition. Inline kinds require
+ *   it; re-root kinds may carry one (policy containers, e.g. logbook) or null
+ *   (leaf re-roots: node, job) — "not yet", not "can't carry".
  * - `treeType` partitions business vs library; root/sibling queries scope by it.
  */
 export type Element = {

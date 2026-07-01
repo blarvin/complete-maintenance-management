@@ -33,7 +33,8 @@ export type StorageElementCreate = {
   parentId: string | null;
   name: string;
   subtitle?: string | null;
-  /** Required for inline (field-like) kinds; null for re-root (node-like) kinds. */
+  /** Required for inline (field-like) kinds; optional for re-root kinds —
+   *  policy containers (logbook) bind one, leaf re-roots (node, job) pass null. */
   definitionId?: string | null;
   /** Optional initial value (for value-bearing kinds). */
   value?: DataFieldValue | null;

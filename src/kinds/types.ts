@@ -210,19 +210,35 @@ type ManifestIdentity = {
      * run over every registry entry in the registry test. Empty array = coherent.
      */
     coherence?: (caps: CapabilitySet) => string[];
+    // ── Definition-authoring contract (placement-agnostic) ──────────────────
+    // A kind that can carry a bound Definition declares how one is authored.
+    // Required for inline kinds (re-asserted on InlineManifest); optional for
+    // re-root — policy containers (logbook) carry it, leaf re-roots (node, job)
+    // don't. Read through `getDefinitionAuthoring` (registry.ts).
+    /** Authoring sub-form for a new Definition of this kind. */
+    ConfigForm?: Component<ConfigFormProps>;
+    /** Fresh default config at mint time. */
+    defaultConfig?: () => DefinitionConfig;
+    /**
+     * How this kind's config decomposes into child sub-field Elements
+     * (config-as-Elements). Drives serialize/assemble in `configElements.ts`.
+     * Absent/empty for kinds with no config (incl. the `config-only` sub-field
+     * kinds themselves — their config would terminate the recursion, SPEC §601).
+     */
+    configSchema?: ConfigSubField[];
 } & CapabilitySet;
 
 /**
  * Inline (field-like) kinds: drawn as a DataField row, authored via the composer.
  * Carries everything the framework needs to render and author one field kind.
+ * The Definition-authoring contract lives on ManifestIdentity (placement-
+ * agnostic); it is re-asserted required here — every field kind is authorable.
  */
 export type InlineManifest = ManifestIdentity & {
     placement: 'inline';
     /** Value renderer (display + composer pendingMode). */
     Renderer: Component<FieldRendererProps>;
-    /** Authoring sub-form for a new Definition of this kind. */
     ConfigForm: Component<ConfigFormProps>;
-    /** Fresh default config at mint time. */
     defaultConfig: () => DefinitionConfig;
     /** Uniform string preview of a value (null → null). Config is consulted by
      *  kinds whose display formatting depends on it (e.g. number-kv decimals /
@@ -232,19 +248,14 @@ export type InlineManifest = ManifestIdentity & {
     hideLabel: boolean;
     /** Value occupies a tall block rather than an inline run — pins the row chevron to the top. */
     blockValueLayout: boolean;
-    /**
-     * How this kind's config decomposes into child sub-field Elements
-     * (config-as-Elements). Drives serialize/assemble in `configElements.ts`.
-     * Absent/empty for kinds with no config (incl. the `config-only` sub-field
-     * kinds themselves — their config would terminate the recursion, SPEC §601).
-     */
-    configSchema?: ConfigSubField[];
 };
 
 /**
  * Re-root (node-like) kinds: drawn as a navigable view. Identity only for now —
  * `node`'s recursion/navigation are framework-owned (TreeNode); routing them
- * through a manifest Renderer is the chrome-entailment cluster.
+ * through a manifest Renderer is the chrome-entailment cluster. A policy
+ * container (e.g. `logbook`) may declare the Definition-authoring contract it
+ * inherits from ManifestIdentity; leaf re-roots (`node`, `job`) leave it absent.
  */
 export type ReRootManifest = ManifestIdentity & {
     placement: 're-root';

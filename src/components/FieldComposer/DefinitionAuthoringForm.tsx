@@ -15,12 +15,12 @@
 import { component$, $, type PropFunction } from '@builder.io/qwik';
 import type { Definition, DefinitionConfig } from '../../data/models';
 import { useDefinitionDraft } from '../../hooks/useDefinitionDraft';
-import { getInlineManifest, FIELD_KINDS } from '../../kinds/registry';
+import { getKindManifest, getDefinitionAuthoring, FIELD_KINDS } from '../../kinds/registry';
 import styles from './DefinitionAuthoringForm.module.css';
 
 const COMPONENT_CHOICES = FIELD_KINDS.map((type) => ({
     type,
-    label: getInlineManifest(type).pickerLabel,
+    label: getKindManifest(type).pickerLabel,
 }));
 
 export type DefinitionAuthoringFormProps = {
@@ -55,7 +55,8 @@ export const DefinitionAuthoringForm = component$<DefinitionAuthoringFormProps>(
         if (def) await props.onCreated$(def);
     });
 
-    const ConfigForm = getInlineManifest(kind.value).ConfigForm;
+    // The picker only offers FIELD_KINDS, all of which carry the contract.
+    const ConfigForm = getDefinitionAuthoring(kind.value)!.ConfigForm;
 
     return (
         <div class={styles.form}>

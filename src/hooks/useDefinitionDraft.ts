@@ -14,7 +14,7 @@
 import { useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
-import { getInlineManifest } from '../kinds/registry';
+import { getDefinitionAuthoring } from '../kinds/registry';
 import type {
     Kind,
     Definition,
@@ -24,7 +24,9 @@ import type {
 export const DEFAULT_KIND: Kind = 'text-kv';
 
 export function defaultConfigFor(kind: Kind): DefinitionConfig {
-    return getInlineManifest(kind).defaultConfig();
+    const authoring = getDefinitionAuthoring(kind);
+    if (!authoring) throw new Error(`Kind carries no Definition-authoring contract: ${kind}`);
+    return authoring.defaultConfig();
 }
 
 const LABEL_MAX = 50;
