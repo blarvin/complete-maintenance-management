@@ -28,7 +28,16 @@ async function ensureProvisionedLenses(adapter: StorageAdapter, parent: Element)
     const lensId = `${parent.id}::${lens.suffix}`;
     const existing = await adapter.getElement(lensId);
     if (existing.data) continue;
-    await adapter.createElement({ id: lensId, kind: lens.kind, parentId: parent.id, name: lens.name });
+    // Stamp the lens's default policy Definition if-resolvable: createElement
+    // validates any non-null definitionId against the library and throws
+    // not-found, so an unseeded DB (tests, pre-seed creates) must mint with
+    // null and lean on the consumers' pickerLabel fallback.
+    let definitionId: string | null = null;
+    if (lens.definitionId) {
+      const def = await adapter.getDefinition(lens.definitionId);
+      definitionId = def.data ? lens.definitionId : null;
+    }
+    await adapter.createElement({ id: lensId, kind: lens.kind, parentId: parent.id, name: lens.name, definitionId });
   }
 }
 

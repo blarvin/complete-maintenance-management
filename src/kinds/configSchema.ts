@@ -58,10 +58,18 @@ export const SINGLE_IMAGE_CONFIG_SCHEMA: ConfigSubField[] = [
     { key: 'aspectHint', label: 'Aspect hint', kind: 'text-kv', disposition: 'delegated' },
 ];
 
+/** The first re-root policy schema (logbook, the binding seam's forcing kind).
+ *  Both knobs are lens-surface policy read live from the Definition (delegated). */
+export const LOGBOOK_CONFIG_SCHEMA: ConfigSubField[] = [
+    { key: 'entryLabel', label: 'Entry label', kind: 'text-kv', disposition: 'delegated' },
+    { key: 'staleness', label: 'Staleness (seconds)', kind: 'number-kv', disposition: 'delegated' },
+];
+
 /** Config schema by kind. Kinds with no config (node, config-only kinds) are absent. */
 export const CONFIG_SCHEMAS: Partial<Record<Kind, ConfigSubField[]>> = {
     'text-kv': TEXT_KV_CONFIG_SCHEMA,
     'enum-kv': ENUM_KV_CONFIG_SCHEMA,
     'number-kv': NUMBER_KV_CONFIG_SCHEMA,
     'single-image': SINGLE_IMAGE_CONFIG_SCHEMA,
+    logbook: LOGBOOK_CONFIG_SCHEMA,
 };

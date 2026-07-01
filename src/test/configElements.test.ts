@@ -41,6 +41,17 @@ describe('configElements — serialize ⇄ assemble round-trips', () => {
     expect(roundTrip('single-image', config)).toEqual(config);
   });
 
+  it('logbook (the first re-root policy schema)', () => {
+    const config = { entryLabel: 'Entry', staleness: 604800 };
+    expect(roundTrip('logbook', config)).toEqual(config);
+
+    const children = serializeConfig('fd', 'logbook', config);
+    expect(children.map((c) => c.id).sort()).toEqual([
+      configChildId('fd', 'entryLabel'),
+      configChildId('fd', 'staleness'),
+    ]);
+  });
+
   it('number-kv with thresholds (compound pack/unpack)', () => {
     const config = {
       unitsSymbol: 'kg',

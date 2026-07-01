@@ -18,3 +18,15 @@
     color: var(--text-muted);
     margin-bottom: var(--space-1);
 }
+
+.staleBadge {
+    /* Freshness axis — same dim + italic language as the number-kv stale state
+       (NumberKvField.module.css .state_stale), scoped to this module. */
+    margin-left: var(--space-1);
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: 400;
+    background: var(--bg-expanded, transparent);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}

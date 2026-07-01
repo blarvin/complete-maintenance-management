@@ -18,25 +18,15 @@ import type { Element, DefinitionConfig, Kind } from '../models';
 import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { now } from '../../utils/time';
 import { serializeConfig } from '../../kinds/configElements';
+import { DEFINITION_IDS } from '../definitionIds';
 
-// Bumped for the asset-doc seed (#6b minimal kind set).
-export const SEED_VERSION = 7;
+// Stable ids live in ../definitionIds (import-free, so kind policies can read
+// them); re-exported here for the existing consumers.
+export { DEFINITION_IDS } from '../definitionIds';
+
+// Bumped for the logbook policy Definition (the binding seam's forcing kind).
+export const SEED_VERSION = 8;
 export const SEED_KEY = 'definitionsSeededVersion';
-
-/**
- * Stable Definition IDs. Use these constants wherever UI code references a
- * specific default Definition (e.g. the three fields auto-added on node creation).
- */
-export const DEFINITION_IDS = {
-  description: 'fd_description',
-  typeOf: 'fd_type_of',
-  tags: 'fd_tags',
-  status: 'fd_status',
-  weight: 'fd_weight',
-  powerRating: 'fd_power_rating',
-  mainImage: 'fd_main_image',
-  assetDoc: 'fd_asset_doc',
-} as const;
 
 type SeedRow = { id: string; kind: Kind; label: string; config: DefinitionConfig };
 
@@ -98,6 +88,14 @@ const SEEDS: SeedRow[] = [
     kind: 'asset-doc',
     label: 'Linked Doc',
     config: {},
+  },
+  {
+    // The first re-root policy Definition — bound onto every provisioned
+    // `::logbook` lens at mint (stamp-if-resolvable, handlers.ts).
+    id: DEFINITION_IDS.logbookPolicy,
+    kind: 'logbook',
+    label: 'Logbook Policy',
+    config: { entryLabel: 'Entry', staleness: 7 * 24 * 60 * 60 },
   },
 ];
 

@@ -316,7 +316,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       console.log('[IDBAdapter] Element created in IDB:', element.id, element.kind, element.name);
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
-        element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, deletedAt: element.deletedAt },
+        element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, treeType: element.treeType, deletedAt: element.deletedAt },
       });
       return createResult(element);
     });
@@ -371,7 +371,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       if (written) {
         storageEventBus.emit({
           type: 'ELEMENT_WRITTEN',
-          element: { id: written.id, kind: written.kind, parentId: written.parentId, name: written.name, value: written.value, deletedAt: written.deletedAt },
+          element: { id: written.id, kind: written.kind, parentId: written.parentId, name: written.name, value: written.value, treeType: written.treeType, deletedAt: written.deletedAt },
         });
       }
       return createResult(undefined);
@@ -418,7 +418,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
-        element: { id, kind: existing.kind, parentId: existing.parentId, name: existing.name, value: existing.value, deletedAt: timestamp },
+        element: { id, kind: existing.kind, parentId: existing.parentId, name: existing.name, value: existing.value, treeType: existing.treeType, deletedAt: timestamp },
       });
       return createResult(undefined);
     });
@@ -449,7 +449,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       if (restored) {
         storageEventBus.emit({
           type: 'ELEMENT_WRITTEN',
-          element: { id: restored.id, kind: restored.kind, parentId: restored.parentId, name: restored.name, value: restored.value, deletedAt: restored.deletedAt },
+          element: { id: restored.id, kind: restored.kind, parentId: restored.parentId, name: restored.name, value: restored.value, treeType: restored.treeType, deletedAt: restored.deletedAt },
         });
       }
       return createResult(undefined);
@@ -479,7 +479,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       await db.elements.put(element);
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
-        element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, deletedAt: element.deletedAt },
+        element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, treeType: element.treeType, deletedAt: element.deletedAt },
       });
       // A library Definition arriving from a pull is a Library change — signal the
       // Composer the same way local creation does.

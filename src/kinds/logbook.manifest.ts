@@ -12,8 +12,12 @@
  * deferred (LATER.md), inherited from `jobs`.
  */
 
+import type { Component } from '@builder.io/qwik';
+import { LogbookConfigForm } from '../components/FieldComposer/configForms/LogbookConfigForm';
+import type { DefinitionConfig } from '../data/models';
+import { LOGBOOK_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { KindManifest } from './types';
+import type { ConfigFormProps, KindManifest } from './types';
 
 export const logbookManifest: KindManifest = {
     kind: 'logbook',
@@ -21,4 +25,10 @@ export const logbookManifest: KindManifest = {
     mintVia: 'provision',
     placement: 're-root',
     ...KIND_CAPABILITIES['logbook'],
+    // The Definition-authoring contract (placement-agnostic since #7b) — the
+    // first re-root kind to carry it. Its policy Definition (entry label,
+    // staleness) binds onto every provisioned `::logbook` lens at mint.
+    ConfigForm: LogbookConfigForm as unknown as Component<ConfigFormProps>,
+    defaultConfig: (): DefinitionConfig => ({ entryLabel: 'Entry' }),
+    configSchema: LOGBOOK_CONFIG_SCHEMA,
 };

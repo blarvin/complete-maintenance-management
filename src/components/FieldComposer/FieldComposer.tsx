@@ -30,6 +30,7 @@ import {
     type PropFunction,
 } from '@builder.io/qwik';
 import { getDefinitionQueries } from '../../data/queries';
+import { isInline } from '../../kinds/placement';
 import { storageEventBus } from '../../data/storageEventBus';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { usePendingForms, pendingFormFromDefinition, type PendingForm } from '../../hooks/usePendingForms';
@@ -99,7 +100,9 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
     const definitionsResource = useResource$<Definition[]>(async ({ track }) => {
         track(() => refreshKey.value);
         const list = await getDefinitionQueries().listDefinitions();
-        return [...list].sort((a, b) => a.label.localeCompare(b.label));
+        // Field kinds only: re-root policy Definitions (logbook) live in the
+        // same library tree but are not composer-instantiable rows.
+        return list.filter((d) => isInline(d.kind)).sort((a, b) => a.label.localeCompare(b.label));
     });
 
     const handleSave$ = $(async () => {

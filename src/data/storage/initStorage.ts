@@ -173,7 +173,9 @@ async function migrateFromFirestore(): Promise<void> {
 async function seedNodeIndexFromDb(): Promise<void> {
   const elements = await db.elements.toArray();
   const activeNodes = elements
-    .filter(el => isReRoot(el.kind) && el.deletedAt === null)
+    // Business tree only: a re-root policy Definition (logbook) is a library
+    // row of a re-root kind and must not enter the node index.
+    .filter(el => isReRoot(el.kind) && el.deletedAt === null && el.treeType === 'business')
     .map(el => ({ id: el.id, parentId: el.parentId, name: el.name }));
   initializeNodeIndex(activeNodes);
 }

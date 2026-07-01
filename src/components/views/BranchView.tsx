@@ -11,6 +11,7 @@ import { useAppState, useAppTransitions } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren, useElementById } from '../../hooks/useElementChildren';
 import { useLensGather } from '../../hooks/useLensGather';
+import { useLensPolicy } from '../../hooks/useLensPolicy';
 import { isReRoot } from '../../kinds/placement';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
 import { getKindManifest, reRootCreateKindsFor } from '../../kinds/registry';
@@ -46,6 +47,9 @@ export const BranchView = component$((props: BranchViewProps) => {
     });
     const ownerIdSig = useComputed$(() => parentEl.value?.parentId ?? '');
     const derivedJobs = useLensGather(ownerIdSig, lensTargetKind);
+    // Re-rooted into a lens, `parentEl` IS the lens Element (carries the bound
+    // policy Definition). No-ops to the pickerLabel fallback for plain nodes.
+    const lensPolicy = useLensPolicy(parentEl, lensTargetKind);
 
     // Navigating to a new branch cancels any in-flight construction.
     // (Previously buried in useBranchViewData.load$, where background sync
@@ -103,7 +107,11 @@ export const BranchView = component$((props: BranchViewProps) => {
                                 onNodeClick$={() => navigateToNode$(job.id)}
                             />
                         ))}
-                        <LensCreate ownerId={ownerIdSig.value} targetKind={lensTargetKind.value} />
+                        <LensCreate
+                            ownerId={ownerIdSig.value}
+                            targetKind={lensTargetKind.value}
+                            entryLabel={lensPolicy.value.entryLabel || undefined}
+                        />
                     </>
                 ) : (
                     <>

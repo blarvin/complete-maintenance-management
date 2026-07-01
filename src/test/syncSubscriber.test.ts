@@ -29,7 +29,7 @@ describe('syncSubscriber', () => {
 
   it('calls triggerSync on ELEMENT_WRITTEN (node)', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, treeType: 'business', deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
@@ -41,7 +41,7 @@ describe('syncSubscriber', () => {
 
   it('calls triggerSync on ELEMENT_WRITTEN (field)', () => {
     subscribeSyncTrigger();
-    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, treeType: 'business', deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
   });
 
@@ -54,9 +54,9 @@ describe('syncSubscriber', () => {
   it('calls triggerSync once per event for rapid emits', () => {
     subscribeSyncTrigger();
     const events: StorageEvent[] = [
-      { type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, deletedAt: null } },
-      { type: 'ELEMENT_WRITTEN', element: { id: 'f2', kind: 'text-kv', parentId: 'n1', name: 'F2', value: null, deletedAt: null } },
-      { type: 'ELEMENT_WRITTEN', element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, deletedAt: null } },
+      { type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, treeType: 'business', deletedAt: null } },
+      { type: 'ELEMENT_WRITTEN', element: { id: 'f2', kind: 'text-kv', parentId: 'n1', name: 'F2', value: null, treeType: 'business', deletedAt: null } },
+      { type: 'ELEMENT_WRITTEN', element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, treeType: 'business', deletedAt: null } },
     ];
     for (const e of events) bus.emit(e);
     // triggerSync is called per event; debounce is inside triggerSync itself
@@ -65,11 +65,11 @@ describe('syncSubscriber', () => {
 
   it('unsubscribe stops triggering sync', () => {
     const unsub = subscribeSyncTrigger();
-    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'F1', value: null, treeType: 'business', deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce();
 
     unsub();
-    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f2', kind: 'text-kv', parentId: 'n1', name: 'F2', value: null, deletedAt: null } });
+    bus.emit({ type: 'ELEMENT_WRITTEN', element: { id: 'f2', kind: 'text-kv', parentId: 'n1', name: 'F2', value: null, treeType: 'business', deletedAt: null } });
     expect(triggerSync).toHaveBeenCalledOnce(); // still 1, not 2
   });
 });

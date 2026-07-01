@@ -64,6 +64,25 @@ describe('#6b node-like kinds', () => {
     expect((await db.elements.get('o1::logbook'))?.kind).toBe('logbook');
   });
 
+  it('stamps the logbook policy Definition onto the provisioned lens when seeded; jobs stays unbound', async () => {
+    await seedLibraryDefinition('fd_logbook_policy', 'logbook', 'Logbook Policy', {
+      entryLabel: 'Entry',
+      staleness: 604800,
+    });
+    await createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Pump' });
+
+    // The logbook lens binds the policy through the same seam fields use…
+    expect((await db.elements.get('n1::logbook'))?.definitionId).toBe('fd_logbook_policy');
+    // …while jobs carries none (re-root binding is optional).
+    expect((await db.elements.get('n1::jobs'))?.definitionId).toBeNull();
+  });
+
+  it('stamps null when the policy Definition is not seeded (stamp-if-resolvable)', async () => {
+    await createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Pump' });
+    expect((await db.elements.get('n1::logbook'))?.definitionId).toBeNull();
+    expect((await db.elements.get('n1::jobs'))?.definitionId).toBeNull();
+  });
+
   it('does not give a lens container its own lenses (recursion guard)', async () => {
     await createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Pump' });
     await createElement({ id: 'L1', kind: 'jobs', parentId: 'n1', name: 'Jobs' });

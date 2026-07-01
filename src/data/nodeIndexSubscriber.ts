@@ -17,6 +17,9 @@ export function handleStorageEvent(event: StorageEvent): void {
   switch (event.type) {
     case 'ELEMENT_WRITTEN':
       if (!isReRoot(event.element.kind)) break; // only re-root (navigable) nodes are indexed
+      // Business tree only: a re-root policy Definition (logbook) is a library
+      // row of a re-root kind — e.g. arriving via sync pull — not a tree node.
+      if (event.element.treeType !== 'business') break;
       if (event.element.deletedAt === null) {
         upsertNodeSummary({
           id: event.element.id,

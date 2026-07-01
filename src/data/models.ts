@@ -83,6 +83,20 @@ export type SingleImageConfig = {
 };
 
 /**
+ * Policy config for the `logbook` container — the first re-root Definition
+ * (the binding seam's forcing kind). Both knobs are lens-surface policy, not
+ * field-value config.
+ */
+export type LogbookConfig = {
+  /** The word for one new entry (the LensCreate/LensRollup label), e.g. "Entry".
+   *  Replaces the targetKind pickerLabel reads when bound. */
+  entryLabel?: string;
+  /** Canonical seconds. If set (> 0), a rollup whose newest entry is older
+   *  than this renders a stale indicator. Absent/0 = never stale. */
+  staleness?: number;
+};
+
+/**
  * Union of Definition configs, discriminated externally by Definition.kind.
  * Narrow on `definition.kind === "text-kv"` etc. before accessing config.
  */
@@ -90,7 +104,8 @@ export type DefinitionConfig =
   | TextKvConfig
   | EnumKvConfig
   | NumberKvConfig
-  | SingleImageConfig;
+  | SingleImageConfig
+  | LogbookConfig;
 
 // Per-Component value shapes (a DataField's `value` is one of these, or null)
 export type TextKvValue = string;

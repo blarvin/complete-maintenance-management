@@ -16,6 +16,8 @@ import { component$, useComputed$ } from '@builder.io/qwik';
 import { getKindManifest } from '../../kinds/registry';
 import { useElementById } from '../../hooks/useElementChildren';
 import { useLensGather } from '../../hooks/useLensGather';
+import { useLensPolicy } from '../../hooks/useLensPolicy';
+import { isLensStale } from '../../kinds/lensPolicy';
 import { NavigableRow } from '../NavigableRow/NavigableRow';
 import { LensCreate } from '../LensCreate/LensCreate';
 import type { Kind } from '../../data/models';
@@ -31,12 +33,21 @@ export const LensRollup = component$<LensRollupProps>((props) => {
     const targetKindSig = useComputed$<Kind | null>(() => props.targetKind);
     const gathered = useLensGather(ownerIdSig, targetKindSig);
 
+    // The bound policy Definition (entry label, staleness); `|| pickerLabel`
+    // covers the first-paint tick before the policy task resolves.
+    const policy = useLensPolicy(lensEl, targetKindSig);
     const pickerLabel = getKindManifest(props.targetKind).pickerLabel;
+    const entryLabel = policy.value.entryLabel || pickerLabel;
+
+    const newestUpdatedAt = useComputed$(() =>
+        gathered.value.length ? Math.max(...gathered.value.map((e) => e.updatedAt)) : null);
+    const isStale = isLensStale(newestUpdatedAt.value, policy.value.staleness, Date.now());
 
     return (
         <div class={styles.rollup}>
             <div class={styles.sectionHeader}>
-                {pickerLabel} ({gathered.value.length})
+                {entryLabel} ({gathered.value.length})
+                {isStale && <span class={styles.staleBadge}>stale</span>}
             </div>
 
             {gathered.value.map((j) => (
@@ -44,7 +55,7 @@ export const LensRollup = component$<LensRollupProps>((props) => {
             ))}
             {gathered.value.length === 0 && <div class={styles.empty}>none yet</div>}
 
-            <LensCreate ownerId={ownerIdSig.value} targetKind={props.targetKind} />
+            <LensCreate ownerId={ownerIdSig.value} targetKind={props.targetKind} entryLabel={entryLabel} />
         </div>
     );
 });

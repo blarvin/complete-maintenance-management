@@ -13,7 +13,7 @@ import type { Definition, Element } from './models';
 
 export type StorageEvent =
   | { type: 'DEFINITION_WRITTEN'; definition: Pick<Definition, 'id' | 'deletedAt'> }
-  | { type: 'ELEMENT_WRITTEN'; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'deletedAt'> }
+  | { type: 'ELEMENT_WRITTEN'; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'treeType' | 'deletedAt'> }
   | { type: 'ELEMENT_HARD_DELETED'; elementId: string };
 
 // ---------------------------------------------------------------------------

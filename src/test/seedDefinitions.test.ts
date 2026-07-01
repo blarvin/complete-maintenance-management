@@ -19,13 +19,14 @@ describe('seedDefinitions (config-as-Elements)', () => {
     await db.open();
   });
 
-  it('writes 8 Definitions as library-tree Elements + version key on first call', async () => {
+  it('writes 9 Definitions as library-tree Elements + version key on first call', async () => {
     await seedDefinitions();
     const defs = await libraryDefs();
-    expect(defs).toHaveLength(8);
+    expect(defs).toHaveLength(9);
     expect(defs.map((d) => d.name).sort()).toEqual([
       'Description',
       'Linked Doc',
+      'Logbook Policy',
       'Main Image',
       'Power Rating',
       'Status',
@@ -81,7 +82,7 @@ describe('seedDefinitions (config-as-Elements)', () => {
 
     await seedDefinitions();
     const second = await libraryDefs();
-    expect(second).toHaveLength(8);
+    expect(second).toHaveLength(9);
     expect(second.find((d) => d.id === first[0].id)?.updatedAt).toBe(firstTs);
   });
 
@@ -93,5 +94,22 @@ describe('seedDefinitions (config-as-Elements)', () => {
     expect(byId.get(DEFINITION_IDS.weight)?.kind).toBe('number-kv');
     expect(byId.get(DEFINITION_IDS.powerRating)?.kind).toBe('number-kv');
     expect(byId.get(DEFINITION_IDS.mainImage)?.kind).toBe('single-image');
+    expect(byId.get(DEFINITION_IDS.logbookPolicy)?.kind).toBe('logbook');
+  });
+
+  it('seeds the logbook policy Definition (the first re-root Definition) with its config subtree', async () => {
+    await seedDefinitions();
+
+    const entryLabel = await db.elements.get(configChildId(DEFINITION_IDS.logbookPolicy, 'entryLabel'));
+    expect(entryLabel?.value).toBe('Entry');
+    expect(entryLabel?.parentId).toBe(DEFINITION_IDS.logbookPolicy);
+    expect(entryLabel?.treeType).toBe('library');
+
+    const staleness = await db.elements.get(configChildId(DEFINITION_IDS.logbookPolicy, 'staleness'));
+    expect(staleness?.value).toBe(7 * 24 * 60 * 60);
+
+    const view = (await new IDBAdapter().getDefinition(DEFINITION_IDS.logbookPolicy)).data;
+    expect(view?.kind).toBe('logbook');
+    expect(view?.config).toMatchObject({ entryLabel: 'Entry', staleness: 604800 });
   });
 });

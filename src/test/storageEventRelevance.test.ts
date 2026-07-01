@@ -11,6 +11,7 @@ function written(overrides: Partial<Extract<StorageEvent, { type: 'ELEMENT_WRITT
             parentId: 'parent-1',
             name: 'Name',
             value: null,
+            treeType: 'business',
             deletedAt: null,
             ...overrides,
         },

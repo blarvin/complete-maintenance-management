@@ -15,7 +15,7 @@ describe('StorageEventBus', () => {
 
         const event: StorageEvent = {
             type: 'ELEMENT_WRITTEN',
-            element: { id: 'n1', kind: 'node', parentId: null, name: 'Root', value: null, deletedAt: null },
+            element: { id: 'n1', kind: 'node', parentId: null, name: 'Root', value: null, treeType: 'business', deletedAt: null },
         };
         bus.emit(event);
 
@@ -48,7 +48,7 @@ describe('StorageEventBus', () => {
 
         const event: StorageEvent = {
             type: 'ELEMENT_WRITTEN',
-            element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, deletedAt: null },
+            element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, treeType: 'business', deletedAt: null },
         };
         bus.emit(event);
 

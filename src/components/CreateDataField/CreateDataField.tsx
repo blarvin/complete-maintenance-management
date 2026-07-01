@@ -17,6 +17,7 @@ import {
 } from '@builder.io/qwik';
 import { getDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
+import { isInline } from '../../kinds/placement';
 import type { Definition } from '../../data/models';
 import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
 import styles from './CreateDataField.module.css';
@@ -34,7 +35,9 @@ export const CreateDataField = component$<CreateDataFieldProps>((props) => {
 
     const definitionsResource = useResource$<Definition[]>(async () => {
         const list = await getDefinitionQueries().listDefinitions();
-        return [...list].sort((a, b) => a.label.localeCompare(b.label));
+        // Field kinds only: re-root policy Definitions (logbook) live in the
+        // same library tree but are not field-instantiable rows.
+        return list.filter((d) => isInline(d.kind)).sort((a, b) => a.label.localeCompare(b.label));
     });
 
     const toggle$ = $(() => {

@@ -19,7 +19,13 @@ import { LensCreateButton } from '../LensCreateButton/LensCreateButton';
 import type { Kind } from '../../data/models';
 import styles from './LensCreate.module.css';
 
-export type LensCreateProps = { ownerId: string; targetKind: Kind };
+export type LensCreateProps = {
+    ownerId: string;
+    targetKind: Kind;
+    /** The bound policy Definition's entry word (e.g. "Entry"); falls back to
+     *  the target kind's pickerLabel when the lens carries no policy. */
+    entryLabel?: string;
+};
 
 export const LensCreate = component$<LensCreateProps>((props) => {
     const ownerIdSig = useComputed$(() => props.ownerId);
@@ -62,7 +68,7 @@ export const LensCreate = component$<LensCreateProps>((props) => {
         }
     });
 
-    const pickerLabel = getKindManifest(props.targetKind).pickerLabel;
+    const entryLabel = props.entryLabel || getKindManifest(props.targetKind).pickerLabel;
 
     return creating.value ? (
         <div class={styles.createRow}>
@@ -71,15 +77,15 @@ export const LensCreate = component$<LensCreateProps>((props) => {
                 ref={inputRef}
                 class={styles.nameInput}
                 type="text"
-                placeholder={`${pickerLabel} name`}
+                placeholder={`${entryLabel} name`}
                 onKeyDown$={onKeyDown$}
                 onBlur$={commit$}
-                aria-label={`New ${pickerLabel} name`}
+                aria-label={`New ${entryLabel} name`}
             />
         </div>
     ) : (
         <LensCreateButton
-            label={`Create New ${pickerLabel} on ${ownerEl.value?.name ?? 'this asset'}`}
+            label={`Create New ${entryLabel} on ${ownerEl.value?.name ?? 'this asset'}`}
             onClick$={startCreate$}
         />
     );

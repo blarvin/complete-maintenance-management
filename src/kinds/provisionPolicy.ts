@@ -18,9 +18,11 @@
 import type { Kind } from '../data/models';
 import type { CapabilitySet } from './types';
 import { KIND_CAPABILITIES } from './capabilities';
+import { DEFINITION_IDS } from '../data/definitionIds';
 
-/** One provisioned lens: its kind, the deterministic id suffix, and container name. */
-export type ProvisionedLens = { kind: Kind; suffix: string; name: string };
+/** One provisioned lens: kind, deterministic id suffix, container name, and the
+ *  default policy Definition to bind at mint (null = no policy — jobs today). */
+export type ProvisionedLens = { kind: Kind; suffix: string; name: string; definitionId: string | null };
 
 /** Read an entry as a `CapabilitySet` (the indexed access is a union of literal shapes). */
 const capsOf = (kind: Kind): CapabilitySet => KIND_CAPABILITIES[kind];
@@ -29,6 +31,16 @@ const capsOf = (kind: Kind): CapabilitySet => KIND_CAPABILITIES[kind];
 const LENS_NAMES: Partial<Record<Kind, string>> = {
     jobs: 'Jobs',
     logbook: 'Logbook',
+};
+
+/**
+ * Default policy Definition per provisioned lens kind — stamped onto the lens
+ * Element's `definitionId` at mint (stamp-if-resolvable; handlers.ts skips the
+ * stamp when the seed isn't present). `jobs` carries none yet: re-root binding
+ * is optional, and jobs-without-a-policy proves it.
+ */
+const LENS_POLICY_DEFINITIONS: Partial<Record<Kind, string>> = {
+    logbook: DEFINITION_IDS.logbookPolicy,
 };
 
 /** Parse the id suffix out of a `provision.idScheme` (`'${parentId}::jobs'` → `'jobs'`). */
@@ -47,7 +59,12 @@ export const PROVISIONED_LENSES: readonly ProvisionedLens[] = (Object.keys(KIND_
     .map((kind): ProvisionedLens | null => {
         const provision = capsOf(kind).provision;
         if (!provision) return null;
-        return { kind, suffix: suffixOf(provision.idScheme), name: LENS_NAMES[kind] ?? kind };
+        return {
+            kind,
+            suffix: suffixOf(provision.idScheme),
+            name: LENS_NAMES[kind] ?? kind,
+            definitionId: LENS_POLICY_DEFINITIONS[kind] ?? null,
+        };
     })
     .filter((entry): entry is ProvisionedLens => entry !== null);
 
