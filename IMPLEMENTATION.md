@@ -163,6 +163,18 @@ The instance→Definition binding stopped being field-specific, forced by the co
 
 ---
 
+## #5 value-shape + registry consolidations (done 2026-07-05, ISSUES Architecture Migration #2 + riders #9/#16)
+
+The last §5 chrome-entailment vocabulary piece plus two ISSUES riders of the same seam shape — three pure consolidations, no behaviour change (pixel-identical), no Dexie bump. Non-obvious choices:
+
+- **A kind picks a shape, never declares layout.** `ValueShape = 'scalar' | 'block' | 'composite'` is *required* on `ValueSpec.shape` (`src/kinds/types.ts`), authored as pure data in `capabilities.ts` and flowing through the manifest spread. The arrangement laws live in exactly one place — the `DataField` dispatcher: `scalar` → label shown, inline run, centred chevron; `block` → label shown, tall block, top-pinned chevron; `composite` → label suppressed (the renderer owns its sub-structure), tall block, top-pinned chevron. The per-kind `hideLabel`/`blockValueLayout` flags are deleted from `InlineManifest` (the layout debt the capability-seam note flagged for #5).
+- **No `ownValue` → `scalar` default.** `asset-doc` bears no `ownValue` (its value is an Edge — the deliberate #6b call), so the dispatcher reads `manifest.ownValue?.shape ?? 'scalar'`: no own value renders as a scalar-shaped resolved read.
+- **Assignments are behaviour-preserving.** `single-image` → `composite`; every other field kind → `scalar` — pixel-identical to the two old flags. `compound`/`string-list` get reassigned by essence only when a real consumer wants their own sub-structure. `stream` is named in the SPEC vocabulary but has no arrangement law (and a shape must carry a distinct one) — it joins the union with its first consumer (ISSUES #17); `block` ships *with* its law but its first consumer is `image` (map #8).
+- **#9 — `renderMode.ts` is a fifth component-free selector** (same seam shape and rationale as `placement.ts`/`childrenPolicy.ts`/`provisionPolicy.ts`): `nodeRenderMode(kind)` returns a thin discriminated union — `{mode:'plain'} | {mode:'lens', targetKind} | {mode:'derivation-chip'}` — collapsing the triplicated provision/derivation pattern-match in `TreeNodeDisplay`/`BranchView`/`KindAdornment`. Faithful to all three prior sites: lens iff `provision && derivation?.targetKind`; chip iff `derivation && !provision`; a provisioned kind *without* a targetKind stays plain.
+- **#16 — `KindValueMap` derives the value union.** Hand-declared type-level in `models.ts` (deriving from the manifests is circular — they import `DataFieldValue`), covering **every** kind with re-roots → `never`, so `DataFieldValue = KindValueMap[Kind]` collapses to exactly the old hand list (no downstream ripple); compile-time assertions make a missing or stray kind key an error, so a future kind can't land without declaring its value type.
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry
