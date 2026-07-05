@@ -32,12 +32,15 @@ export const KIND_CAPABILITIES = {
         container: 'physical',
     },
 
-    // Field-like kinds compose OwnValue. Minimal — the validation/threshold logic
-    // stays config-level for now (the value-shape vocabulary is #5's).
-    'text-kv': { ownValue: {} },
-    'enum-kv': { ownValue: {} },
-    'number-kv': { ownValue: {} },
-    'single-image': { ownValue: {} },
+    // Field-like kinds compose OwnValue; `shape` is the value-shape vocabulary
+    // (#5) the DataField dispatcher's arrangement law reads. Validation/threshold
+    // logic stays config-level for now.
+    'text-kv': { ownValue: { shape: 'scalar' } },
+    'enum-kv': { ownValue: { shape: 'scalar' } },
+    'number-kv': { ownValue: { shape: 'scalar' } },
+    // composite: the renderer owns its sub-structure (image + caption) — the
+    // generic label is suppressed and the chevron pins to the row top.
+    'single-image': { ownValue: { shape: 'composite' } },
 
     // ── Node-like kinds (#6b minimal set) — first consumers of the seam ──
 
@@ -125,7 +128,9 @@ export const KIND_CAPABILITIES = {
     },
 
     // Config-only sub-field kinds also bear an own value (inside config subtrees).
-    flag: { ownValue: {} },
-    compound: { ownValue: {} },
-    'string-list': { ownValue: {} },
+    // Scalar for now (behavior-preserving); reassign compound/string-list by
+    // essence only when a consumer wants their own sub-structure.
+    flag: { ownValue: { shape: 'scalar' } },
+    compound: { ownValue: { shape: 'scalar' } },
+    'string-list': { ownValue: { shape: 'scalar' } },
 } satisfies Record<Kind, CapabilitySet>;

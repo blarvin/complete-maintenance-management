@@ -17,7 +17,5 @@ export const singleImageManifest: KindManifest = {
     defaultConfig: (): DefinitionConfig => ({ maxSizeMB: 5 }),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : (v as SingleImageValue).caption ?? '[image]',
-    hideLabel: true,
-    blockValueLayout: true,
     configSchema: SINGLE_IMAGE_CONFIG_SCHEMA,
 };

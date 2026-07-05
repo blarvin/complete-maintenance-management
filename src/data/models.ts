@@ -133,17 +133,36 @@ export type StringListValue = string[];
 export type CompoundValue = { [k: string]: number };
 
 /**
- * Union of DataField value types, discriminated by Element.kind.
+ * Type-level kind → value map over every registry kind. Re-root (node-like)
+ * kinds bear no own value → `never`, so they vanish from the derived union.
+ * Hand-declared rather than derived from the manifests (they import
+ * DataFieldValue — circular); the indexed access at `DataFieldValue` is the
+ * enforcement: a kind added to KIND_REGISTRY without an entry here is a
+ * compile error.
  */
-export type DataFieldValue =
-  | TextKvValue
-  | EnumKvValue
-  | NumberKvValue
-  | SingleImageValue
-  | AssetDocValue
-  | FlagValue
-  | StringListValue
-  | CompoundValue;
+export type KindValueMap = {
+  'text-kv': TextKvValue;
+  'enum-kv': EnumKvValue;
+  'number-kv': NumberKvValue;
+  'single-image': SingleImageValue;
+  'asset-doc': AssetDocValue;
+  flag: FlagValue;
+  compound: CompoundValue;
+  'string-list': StringListValue;
+  // re-root kinds: no own value
+  node: never;
+  org: never;
+  job: never;
+  jobs: never;
+  'log-entry': never;
+  logbook: never;
+};
+
+/**
+ * Union of DataField value types, discriminated by Element.kind — derived from
+ * the registry via KindValueMap (never-valued re-root kinds drop out).
+ */
+export type DataFieldValue = KindValueMap[Kind];
 
 /**
  * Definition: a Library entry naming a fully-configured field kind.

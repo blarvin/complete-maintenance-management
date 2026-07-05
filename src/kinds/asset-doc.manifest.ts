@@ -26,6 +26,4 @@ export const assetDocManifest: KindManifest = {
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : `→ ${(v as AssetDocValue).targetId}`,
-    hideLabel: false,
-    blockValueLayout: false,
 };

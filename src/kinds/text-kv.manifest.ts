@@ -16,7 +16,5 @@ export const textKvManifest: KindManifest = {
     ConfigForm: TextKvConfigForm as unknown as Component<ConfigFormProps>,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) => (v === null || v === undefined ? null : String(v)),
-    hideLabel: false,
-    blockValueLayout: false,
     configSchema: TEXT_KV_CONFIG_SCHEMA,
 };

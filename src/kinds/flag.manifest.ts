@@ -24,6 +24,4 @@ export const flagManifest: KindManifest = {
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : v ? 'Yes' : 'No',
-    hideLabel: false,
-    blockValueLayout: false,
 };

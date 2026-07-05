@@ -54,6 +54,13 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const manifest = getInlineManifest(props.kind);
 
+    // The arrangement law, entailed by the kind's value shape (SPEC → chrome
+    // entailment): scalar = label + inline run + centred chevron; block = label +
+    // tall block + top chevron; composite = renderer-owned sub-structure, label
+    // suppressed, tall block + top chevron. No ownValue (asset-doc — the value is
+    // an Edge) → a scalar-shaped resolved read.
+    const shape = manifest.ownValue?.shape ?? 'scalar';
+
     // Used by DataFieldDetails for metadata and (future) history-value preview.
     const currentDisplayValue = manifest.displayPreview(props.value);
 
@@ -62,7 +69,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             class={[
                 styles.datafieldWrapper,
                 isDetailsExpanded && styles.datafieldWrapperExpanded,
-                manifest.blockValueLayout && styles.datafieldWrapperImage,
+                shape !== 'scalar' && styles.datafieldWrapperBlock,
                 'no-caret',
             ]}
             ref={rootRef}
@@ -79,7 +86,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             />
 
 
-            {!manifest.hideLabel && (
+            {shape !== 'composite' && (
                 <label class={styles.datafieldLabel} id={labelId}>{props.name}:</label>
             )}
 

@@ -84,10 +84,11 @@
     border-radius: var(--radius-sm);
 }
 
-/* Single-image variant: row 1 is dominated by the 120px image block, which
-   pushes the row baseline to the bottom of the image. Pin the chevron to
-   the top of the row instead so it sits flush with the imageBox top edge. */
-.datafieldWrapperImage > .datafieldChevron {
+/* block/composite value shapes: row 1 is dominated by a tall value block
+   (e.g. the 120px image), which pushes the row baseline to the bottom of the
+   block. Pin the chevron to the top of the row instead so it sits flush with
+   the block's top edge. */
+.datafieldWrapperBlock > .datafieldChevron {
     align-self: start;
     transform: none;
     margin-top: 0.25em;

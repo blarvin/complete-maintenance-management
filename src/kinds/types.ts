@@ -98,12 +98,25 @@ export type ConfigFormProps = {
 // ── Tier A: descriptors #6 imminently consumes — full SPEC shape ──
 
 /**
- * OwnValue descriptor (field-like core). Minimal here — a value-validation hook.
- * The `scalar | block | stream | composite` value-shape vocabulary that drives
- * layout is the chrome-entailment cluster's (#5); it is deliberately NOT
- * introduced here, so `ValueSpec` stays a thin marker for "this kind bears a value".
+ * The closed value-shape vocabulary (SPEC → chrome entailment): a kind picks a
+ * shape, never declares layout. The arrangement laws live in one place — the
+ * DataField dispatcher: `scalar` = label + inline run + centred chevron;
+ * `block` = label + tall block + top-pinned chevron (no consumer until `image`,
+ * #8); `composite` = renderer owns its sub-structure, generic label suppressed,
+ * tall block + top chevron. `stream` joins the union with its first consumer —
+ * per the SPEC's own rule a shape must carry a distinct arrangement law, and
+ * stream has none yet.
+ */
+export type ValueShape = 'scalar' | 'block' | 'composite';
+
+/**
+ * OwnValue descriptor (field-like core) — the value shape + a value-validation
+ * hook. A kind with no OwnValue at all (asset-doc — its value is an Edge)
+ * defaults to `scalar` at the dispatcher: no own value → a scalar-shaped
+ * resolved read.
  */
 export type ValueSpec = {
+    shape: ValueShape;
     validate?: (value: DataFieldValue | null) => string | null;
 };
 
@@ -244,10 +257,6 @@ export type InlineManifest = ManifestIdentity & {
      *  kinds whose display formatting depends on it (e.g. number-kv decimals /
      *  affix); the other kinds ignore it and a 1-arg function stays assignable. */
     displayPreview: (value: DataFieldValue | null, config?: DefinitionConfig) => string | null;
-    /** Suppress the dispatcher-rendered field label (e.g. single-image owns its own heading). */
-    hideLabel: boolean;
-    /** Value occupies a tall block rather than an inline run — pins the row chevron to the top. */
-    blockValueLayout: boolean;
 };
 
 /**

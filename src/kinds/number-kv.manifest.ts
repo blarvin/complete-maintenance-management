@@ -19,7 +19,5 @@ export const numberKvManifest: KindManifest = {
     displayPreview: (v: DataFieldValue | null, config?: DefinitionConfig) =>
         v === null || v === undefined ? null
             : formatNumberKvDisplay(v as number, (config ?? {}) as NumberKvConfig),
-    hideLabel: false,
-    blockValueLayout: false,
     configSchema: NUMBER_KV_CONFIG_SCHEMA,
 };

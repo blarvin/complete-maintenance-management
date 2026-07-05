@@ -14,7 +14,7 @@
  */
 
 import { component$, useComputed$, useSignal, useVisibleTask$ } from '@builder.io/qwik';
-import { getKindManifest } from '../../kinds/registry';
+import { nodeRenderMode } from '../../kinds/renderMode';
 import { isReRoot } from '../../kinds/placement';
 import { isProvisionedLens } from '../../kinds/provisionPolicy';
 import { getElementQueries } from '../../data/queries';
@@ -37,10 +37,9 @@ export const KindAdornment = component$<KindAdornmentProps>((props) => {
             gathered.value = null;
             return;
         }
-        const manifest = getKindManifest(el.kind);
         // Only the untyped rollup (`org`) draws a header chip. A lens (Provision)
         // renders its rollup in its DataCard (LensRollup), so it gathers nothing here.
-        if (!manifest.derivation || manifest.provision) {
+        if (nodeRenderMode(el.kind).mode !== 'derivation-chip') {
             gathered.value = null;
             return;
         }
@@ -66,8 +65,7 @@ export const KindAdornment = component$<KindAdornmentProps>((props) => {
 
     const el = element.value;
     if (!el) return null;
-    const manifest = getKindManifest(el.kind);
-    if (!manifest.derivation || manifest.provision) return null;
+    if (nodeRenderMode(el.kind).mode !== 'derivation-chip') return null;
 
     const items = gathered.value ?? [];
     const chipStyle =

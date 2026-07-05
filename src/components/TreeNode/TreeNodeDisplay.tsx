@@ -16,7 +16,7 @@ import { useAppState, useAppTransitions, selectors } from '../../state/appState'
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
-import { getKindManifest } from '../../kinds/registry';
+import { nodeRenderMode } from '../../kinds/renderMode';
 import type { DisplayNodeState } from './types';
 import type { Kind } from '../../data/models';
 import styles from './TreeNode.module.css';
@@ -77,9 +77,9 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     // physical ownership. It renders for a kind that owns children (Children →
     // FieldList) OR that derives a typed rollup (a lens → LensRollup). The `jobs`
     // container is both: its own DataFields plus the "Jobs (N)" rollup.
-    const manifest = getKindManifest(props.kind);
-    const lensTargetKind = manifest.provision ? manifest.derivation?.targetKind : undefined;
-    const isLens = !!lensTargetKind;
+    const renderMode = nodeRenderMode(props.kind);
+    const lensTargetKind = renderMode.mode === 'lens' ? renderMode.targetKind : undefined;
+    const isLens = renderMode.mode === 'lens';
     const ownsChildren = canHaveChildren(props.kind);
     const showDataCard = ownsChildren || isLens;
 

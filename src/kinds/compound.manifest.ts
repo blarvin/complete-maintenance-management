@@ -26,6 +26,4 @@ export const compoundManifest: KindManifest = {
         v === null || v === undefined
             ? null
             : Object.entries(v as CompoundValue).map(([k, val]) => `${k}=${val}`).join(', '),
-    hideLabel: false,
-    blockValueLayout: false,
 };

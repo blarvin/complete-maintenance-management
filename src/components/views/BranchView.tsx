@@ -14,7 +14,8 @@ import { useLensGather } from '../../hooks/useLensGather';
 import { useLensPolicy } from '../../hooks/useLensPolicy';
 import { isReRoot } from '../../kinds/placement';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
-import { getKindManifest, reRootCreateKindsFor } from '../../kinds/registry';
+import { reRootCreateKindsFor } from '../../kinds/registry';
+import { nodeRenderMode } from '../../kinds/renderMode';
 import type { Kind } from '../../data/models';
 
 export type BranchViewProps = {
@@ -42,8 +43,8 @@ export const BranchView = component$((props: BranchViewProps) => {
     const lensTargetKind = useComputed$<Kind | null>(() => {
         const el = parentEl.value;
         if (!el) return null;
-        const m = getKindManifest(el.kind);
-        return m.provision ? (m.derivation?.targetKind ?? null) : null;
+        const mode = nodeRenderMode(el.kind);
+        return mode.mode === 'lens' ? mode.targetKind : null;
     });
     const ownerIdSig = useComputed$(() => parentEl.value?.parentId ?? '');
     const derivedJobs = useLensGather(ownerIdSig, lensTargetKind);

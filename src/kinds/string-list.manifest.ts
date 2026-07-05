@@ -25,6 +25,4 @@ export const stringListManifest: KindManifest = {
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : (v as StringListValue).join(', '),
-    hideLabel: false,
-    blockValueLayout: false,
 };
