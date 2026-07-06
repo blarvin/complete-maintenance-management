@@ -1,21 +1,25 @@
 /**
  * Wires the in-memory node index to the StorageEventBus.
  *
- * After calling `subscribeNodeIndex()`, every ELEMENT_WRITTEN (kind "node") /
+ * After calling `subscribeNodeIndex()`, every ELEMENT_WRITTEN (re-root kind) /
  * ELEMENT_HARD_DELETED event keeps the index current — no caller needs to touch
- * the index directly. Non-node elements (DataFields) are ignored: the index
+ * the index directly. Inline elements (DataFields) are ignored: the index
  * only tracks the navigable node tree for breadcrumb/ancestry computation.
  */
 
 import type { StorageEvent } from './storageEventBus';
 import { storageEventBus } from './storageEventBus';
 import { upsertNodeSummary, removeNodeSummary } from './nodeIndex';
+import { isReRoot } from '../kinds/placement';
 
 /** Process a single storage event and update the node index. */
 export function handleStorageEvent(event: StorageEvent): void {
   switch (event.type) {
     case 'ELEMENT_WRITTEN':
-      if (event.element.kind !== 'node') break; // only container nodes are indexed
+      if (!isReRoot(event.element.kind)) break; // only re-root (navigable) nodes are indexed
+      // Business tree only: a re-root policy Definition (logbook) is a library
+      // row of a re-root kind — e.g. arriving via sync pull — not a tree node.
+      if (event.element.treeType !== 'business') break;
       if (event.element.deletedAt === null) {
         upsertNodeSummary({
           id: event.element.id,

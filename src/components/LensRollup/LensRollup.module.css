@@ -1,0 +1,32 @@
+/* LensRollup — the compact in-card rollup summary: a section label, the navigable
+   rows (NavigableRow owns its own skin), and the LensCreate affordance (which owns
+   its own create-row CSS). */
+
+.rollup {
+    margin-top: var(--space-2);
+}
+
+.sectionHeader {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-1);
+}
+
+.empty {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    margin-bottom: var(--space-1);
+}
+
+.staleBadge {
+    /* Freshness axis — same dim + italic language as the number-kv stale state
+       (NumberKvField.module.css .state_stale), scoped to this module. */
+    margin-left: var(--space-1);
+    color: var(--text-secondary);
+    font-style: italic;
+    font-weight: 400;
+    background: var(--bg-expanded, transparent);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+}

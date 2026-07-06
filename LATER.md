@@ -27,13 +27,60 @@ Scope exclusions that keep the Phase 1 MVP small:
 
 The storage stack is fully unified end-to-end, including the Dexie v8 store-drop (`REFACTOR-single-unified-data-model`). Follow-ups intentionally deferred:
 
-- **Element-vocabulary leaf-prop polish (minor)** — The view-prop retirement (audit §2.4, done 2026-06-13) renamed the boundary props but left a few legacy-flavored *internal* names untouched, as deliberately out of scope: the presentational leaf components `NodeTitle` / `NodeSubtitle` still take `nodeName` / `nodeSubtitle`, and the composer-ordering param `currentMaxCardOrder` (threaded through `CreateDataField` / `FieldComposer` / `FieldComposerSlot` / `usePendingForms`) derives from `siblingOrder` but keeps the `cardOrder` name. Pure renames; do only if they bother someone.
-- **Renderer registry — now decided, build tracked in ISSUES.md** — The registry/manifest model is settled (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md): generalizing the key to full `Kind` incl. `node`, the `placement` field, `treeType` (the old `nature: data | reference`), deriving the `Kind`/`Value` unions from the registry, and a manifest home for default-field-set knowledge are migration work items, not deferrals. Still genuinely deferred: the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split, and lazy renderer loading for heavy kinds (canvas/video/iframe) — both wait on a second non-field surface forcing them.
-- **Dead `currentValue` prop on `DataFieldDetails`** — `DataField.tsx` computes `currentDisplayValue` via `displayPreview` and passes it as `<DataFieldDetails currentValue=…>`, but `DataFieldDetails` never reads it (pre-existing; surfaced during audit §4.5). Drop the prop and the computation, or wire it into the metadata display if a use emerges.
+- **Element-model leftovers → moved to ISSUES.** Leaf-prop name polish (`NodeTitle`/`NodeSubtitle`, `currentMaxCardOrder`), deriving the `Value` union from the registry, enforcing manifest key === `kind`, and the dead `currentValue` prop on `DataFieldDetails` now live in ISSUES (Architecture Migration / Tech Debt).
+- **Renderer registry — now decided, build tracked in ISSUES.md** — The registry/manifest model is settled (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md): generalizing the key to full `Kind` incl. `node`, the `placement` field, `treeType` (the old `nature: data | reference`), and a manifest home for default-field-set knowledge are migration work items, not deferrals. (`Kind` itself is now registry-derived — done 2026-06-26.) Still genuinely deferred: the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split, and lazy renderer loading for heavy kinds (canvas/video/iframe) — both wait on a second non-field surface forcing them.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
 - **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
 - **Composer discard → real command** — `FieldComposer` cancel rides `commitWithUndo` via a no-throw `execute$` (discard) + restore-callback undo, so its error branch is inert. When draft discard becomes a real command (e.g. `DISCARD_DRAFT`), it slots into the standard command/inverse path and the dead branch goes live.
 - **Drop the `usePendingForms` auto-save backstop** — Persistence is now write-through in `setPendingValue$`/`togglePending$` (audit §2.5). The old reactive `useTask$` auto-save was removed; if write-through proves fully sufficient in practice, no action — this note just records that the backstop is gone intentionally.
+
+### Config-as-Elements — remaining items
+
+The blob is retired and config lives as a `library`-tree sub-field subtree (done 2026-06-27, IMPLEMENTATION.md). Deliberately out of scope that cluster:
+
+- **Standalone-row UX for the config-only kinds** — `flag` / `compound` / `string-list` register with a shared **stub** `Renderer`/`ConfigForm` (`src/kinds/configFieldStub.tsx`) because in Phase 1 they only ever exist inside config subtrees, never as Data Card rows. Real renderers (a toggle, a 4-field threshold editor, a chips list) + editing/history land if/when config sub-fields are ever surfaced as editable rows.
+- **Disposition honoring (cascade arbiter)** — `owned`/`delegated`/`pinned` is **encoded** on each `ConfigSubField` but nothing acts on it; everything reads live from the Definition. Copy-at-mint for `owned` and override-disable for `pinned` are the cascade arbiter's job (ISSUES Architecture Migration #4). Until then, edit-is-fork (new `definitionId`) already prevents a Definition change from rewriting existing instances.
+- **Per-sub-field reactive signals** — renderers assemble the whole config object on read via `getDefinitionById` (a `useResource$` keyed on `definitionId`). Live propagation of an individual Definition sub-field edit into mounted instances is unneeded in Phase 1 (no Definition-edit UI; fork-not-mutate). Revisit if/when Definitions become live-editable.
+- **enum-kv `options` as repeatable child Elements** — modeled as one `string-list` value for now. The SPEC's "repeatable data = many children" (ChildrenSpec cardinality `many`) is the eventual shape; deferred until cardinality machinery exists.
+- **Config-only kinds excluded from the picker via `mintVia`** — `FIELD_KINDS` filters `mintVia === 'composer'`. If a richer authoring surface ever needs to offer a config-only kind directly, revisit.
+
+### Definition-binding seam — remaining items
+
+The seam landed 2026-07-01 (full `fieldDefinitionId → definitionId` type-family rename, placement-agnostic authoring contract, logbook's seeded policy Definition stamped at mint — IMPLEMENTATION.md → *Definition-binding seam*). Deliberately out of scope that cluster:
+
+- **Re-root Definition authoring UI** — `LogbookConfigForm` exists (the lifted contract's first re-root instance) but nothing mounts it; the only logbook policy is the seed. The composer's authoring form is a *field* surface — where policy-container authoring lives (node details? a Library view? per-lens settings?) is an open UX decision; decide it when a second policy Definition (org staleness, jobs priority scheme) makes the shape visible.
+- **`definitionId` → internal revision-pinned Edge (the #7 end-state)** — the column stays the binding + version pointer for now; the principled retirement models the instance→Definition link with the `asset-doc` Edge machinery (internal scope, revision pin) once the Edges family (#6c) and the arbiter (#7) exist.
+- **A `jobs` policy Definition** — jobs deliberately ships unbound (proving re-root binding is optional). When jobs wants config (child label, priority scheme, job-subtype vocabulary), it binds through the identical seam: a `JOBS_CONFIG_SCHEMA`, a seed row, one `LENS_POLICY_DEFINITIONS` entry.
+- **Per-node policy variation + the config tree** — every `::logbook` lens binds the same seeded Definition today. Per-org/per-node policy (a different staleness on one subtree) is the cascade arbiter's job (#4), resolved through the `config` tree; the stamp-at-mint seam already supports pointing different lenses at different Definitions.
+- **Wall-clock-reactive staleness** — the rollup's stale badge evaluates `Date.now()` at render, so it updates on writes/regathers, not by timer. Add a slow tick (or visibility-change check) only if the lag ever matters.
+- **Legacy `fieldDefinitions` Firestore collection cleanup** — `COLLECTIONS.FIELD_DEFINITIONS`, `scripts/wipe-field-definitions.ts`, `npm run wipe:fielddefs`, and the test-cleanup sweep still name the pre-config-as-Elements collection. Retire them once remote data is confirmed clean.
+
+### Capability descriptors — remaining items
+
+The six-capability vocabulary + `coherence` landed as a component-free seam (2026-06-28, IMPLEMENTATION.md → *Capability descriptors (the seam)*). Carried per kind, read by nothing yet. Deliberately out of scope that cluster:
+
+- **`RendererProps` generalization** — `FieldRendererProps` stays the inline contract; the placement-keyed `RendererProps` union (inline row | re-root view) lands with **chrome entailment (#5)**, where the node view Renderer first consumes it. Generalizing it now, with no re-root Renderer, is pure churn.
+- **`ActionSpec` / `ArbiterSpec` / `ValiditySpec` full shape** — minimal placeholders today (no kind composes `Action`; arbitration/validity are the cascade's). `ActionSpec` firms up when the first `Action` kind lands (#6, built last); `ArbiterSpec`/`ValiditySpec` with the cascade arbiter (#7).
+- **Descriptor leftovers → moved to ISSUES.** `node.allowedKinds` real allow-policy and per-kind `coherence` overrides now live in ISSUES (Architecture Migration); the `ValueSpec` → value-shape vocabulary is tracked in ISSUES #2 (chrome entailment remaining).
+
+### `intrinsic-node-scalar` kind — parked
+
+The node-like kind that *also* carries its own value — `Children + OwnValue` (flagged), re-root: a tank holding child fields *and* a primary reading or a cheap rollup. It was the cheapest entry in the minimal kind set (code-work-map §6b — node shell + an inline value display) and the only one that would have *exercised* the `Children + OwnValue` coherence warning path.
+
+**Parked because** its value/utility looks dubious (2026-06-28): a node that bears a scalar can already be modeled as a node with a single own-value field child, so the kind may not earn its registry slot. Pulled from the active minimal kind set — that set now builds `org` / `job` / `jobs` / `asset-doc` (ISSUES Architecture Migration #3) and hands four-not-five distinct re-root shells to chrome entailment (#5).
+
+**Framework left intact.** The `Children + OwnValue` = *valid-but-flagged* rule is framework-level (SPECIFICATION.md §589) and stays put: `checkCoherence` (`src/kinds/coherence.ts`) still warns on the co-occurrence and `kindCoherence.test.ts` still runs it over `KIND_CAPABILITIES`. No built or planned kind composes that subset, so the warning path is a **dormant guard** — already dormant before this park, and it greets the first `Children + OwnValue` kind that ever lands (this one revived, or another). Nothing to remove; the rule defends the invariant whether or not a kind exercises it.
+
+**If revived:** restore the ELEMENT-MODEL.md catalogue row + spec section (composition `Children + OwnValue` (flagged), re-root, status `describe`) and re-add the bullet to code-work-map §6b. The coherence warning is already in place to greet it.
+
+### §6b minimal kind set — deferred follow-ups
+
+The four kinds (`org`/`job`/`jobs`/`asset-doc`) + the rudimentary engine landed stub-grade (2026-06-28, IMPLEMENTATION.md → *#6b*). Deliberately out of scope:
+
+- **`jobs` as container + the inline-yet-navigable placement** — ✅ **done (#5 container half, 2026-06-30):** `jobs` is now a **hybrid** — it owns its own DataFields *and* rolls up jobs. Each `job` is authored inside the container (parented to the owning node) and renders field-like (compact `NavigableRow` under a node; Node-like CHILD card when re-rooted into). The both-rollup-and-container shape (once parked for `logbook`) is proven here, so `logbook` (#6c) inherits it (IMPLEMENTATION.md → *#5 container half*). **Remaining sub-item:** *pick which descendant a job lands under* — Phase-1 parents every job created in a node's container to that node (the lens owner N); a UI to target a specific descendant is deferred.
+- **Restrict/hide the create surface by `childrenSpec`** — ✅ **done (2026-06-29, #5 slice 1).** The node-create picker now reads `reRootCreateKindsFor(parent.kind)` (`job`→node/job, not org) and a content-free lens (`jobs`) offers no "Add"; the lens-aware shell drops the DataCard/chevron for content-free kinds (IMPLEMENTATION.md → *#5 slice 1*).
+- **`jobs`/`logbook` lens lifecycle → moved to ISSUES.** Backfill onto pre-existing nodes, de-provision/GC when the last entry is removed, and hide-empty-lens are leftovers of in-flight lens work, so they now live in ISSUES (Architecture Migration #11), generic across all `PROVISIONED_LENSES`. The canonical **upward ancestor-walk provisioning** (ELEMENT-MODEL §lens) stays superseded by the per-node v1. Still genuinely deferred *here* (a not-yet-begun UI idea): a **collapsed lens-row count badge** — the rollup count lives inside the expanded card, and `KindAdornment` no longer chips the lens (it keeps only `org`'s descendant count).
+- **Remaining §6b/§6c lens follow-ups → moved to ISSUES.** `capabilityEngine` ancestors/edges traversal, `asset-doc` target picker + editing, field-composer restriction by `childrenSpec`, and the `job`-admits-`job` (sub-tasks vs subtypes) decision now live in ISSUES (Architecture Migration). Rich lens rows / the "primary line" are already tracked in ISSUES #2 (chrome entailment remaining).
 
 ### `subtitle` → optional `nodeSubtitle` child element
 
@@ -69,8 +116,13 @@ Today `Element.name` and `Element.subtitle` are columns. `name` is staying a col
 
 ### Tree Partitioning → typed trees (decided)
 
-Superseded by **typed trees** (SPECIFICATION.md → Data Model → Populations are typed trees): each tree is rooted at its own Element (`parentId: null`) and carries a `treeType` (`business` / `library` / `config` / `view-state`) that routes history/sync/visibility; per-viewer state layers at read time via `effectiveChildren(node, viewer)`, never written into the shared Element. The `treeType` introduction is a migration work item (ISSUES.md). Still deferred under this banner:
+Superseded by **typed trees** (SPECIFICATION.md → Data Model → Populations are typed trees): each tree is rooted at its own Element (`parentId: null`) and carries a `treeType` (`business` / `library` / `config` / `view-state`) that routes history/sync/visibility; per-viewer state layers at read time via `effectiveChildren(node, viewer)`, never written into the shared Element. **The seam landed** (2026-06-28, IMPLEMENTATION.md → *Typed trees (the seam)*): the full four-value axis, per-tree sync/history routing (`treePolicy.ts`), and the pass-through `effectiveChildren` chokepoint are in. Still deferred under this banner:
 
+- **Per-viewer overlay merge** — replace the pass-through `effectiveChildren` body so a viewer's `config`/`view-state` layers sparsely onto canonical children. Needs viewer/auth + the cascade arbiter (ISSUES #4).
+- **Personal `siblingOrder` overlay** — the canonical order is the column; a per-viewer reorder is a sparse overlay resolved in `effectiveChildren`.
+- **view-state as Elements** — migrate expansion/ordering out of `uiPrefs` localStorage into `view-state`-tree Elements (currently the only `view-state` "store").
+- **The `config` tree** — org/role/user prefs as `config`-tree Elements + the arbiter that reads them (app→org→role→user cascade).
+- **Viewer/auth plumbing** — replace the constant `localUser` (`getCurrentUserId()`) with real identity so `effectiveChildren`/`config` have a viewer to resolve against.
 - Cross-tree references and moves
 - Per-tree settings and field libraries
 - Multi-tree search and dashboards

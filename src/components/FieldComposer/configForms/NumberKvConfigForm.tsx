@@ -1,5 +1,5 @@
 /**
- * NumberKvConfigForm - knobs for a new number-kv FieldDefinition.
+ * NumberKvConfigForm - knobs for a new number-kv Definition.
  *
  * Progressive disclosure (three tiers):
  *   1. Required (always visible): unitsSymbol.

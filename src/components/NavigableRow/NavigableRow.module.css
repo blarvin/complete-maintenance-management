@@ -1,0 +1,91 @@
+/* NavigableRow styles — a self-contained borrow of the field-row skin.
+   Not imported from DataField.module.css on purpose: that module is welded to
+   value-editing. We replicate only the disclosure-triangle chevron + a compact
+   clickable name, laid out with flex (no subgrid — these rows stand alone). */
+
+.rowWrapper {
+    font-size: var(--text-sm);
+}
+
+.row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1);
+}
+
+/* Disclosure chevron — CSS triangle (border-trick), mirrored from
+   .datafieldChevron but flex-placed instead of grid-column-placed. */
+.chevron {
+    flex: 0 0 var(--chevron-col-width);
+    align-self: baseline;
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--border-default);
+    cursor: pointer;
+    /* Land triangle-center on the adjacent text's cap-center. */
+    transform: translateY(0.15em);
+}
+
+.chevron::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+/* Right-pointing (collapsed) */
+.chevronRight::before {
+    border-width: var(--field-chevron-size) 0 var(--field-chevron-size) calc(var(--field-chevron-size) * 1.4);
+    border-left-color: currentColor;
+}
+
+/* Down-pointing (expanded) */
+.chevronDown::before {
+    border-width: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0 var(--field-chevron-size);
+    border-top-color: currentColor;
+}
+
+.chevron:hover {
+    color: var(--text-secondary);
+}
+
+.chevron:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+}
+
+/* Clickable name — re-roots into the child. Underline only on hover/focus,
+   matching the app's no-at-rest-affordance convention. */
+.name {
+    color: var(--text-primary);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.name:hover,
+.name:focus-visible {
+    text-decoration: underline;
+}
+
+.name:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+}
+
+/* Inline peek: the child's own fields, indented to align under the name. */
+.expanded {
+    padding-left: calc(var(--chevron-col-width) + var(--space-1));
+    margin-top: var(--space-1);
+    margin-bottom: var(--space-2);
+}

@@ -125,7 +125,8 @@ export class SyncManager {
 
       console.log('[SyncManager] Delta sync cycle complete');
       // UI updates arrive via per-element storageEventBus emissions from
-      // IDBAdapter.applyRemoteElement / applyRemoteFieldDefinition.
+      // IDBAdapter.applyRemoteElement (which also re-signals the Composer for
+      // arriving `library`-tree Definitions).
     } catch (err) {
       console.error('[SyncManager] Delta sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
@@ -243,7 +244,13 @@ export class SyncManager {
 // Singleton Instance
 // ============================================================================
 
-let syncManagerInstance: SyncManager | null = null;
+/**
+ * Pinned on globalThis so it survives dev-server (Vite) module re-evaluation:
+ * initializeSyncManager must stop the *live* manager, not a fresh module
+ * copy's null — a leaked previous instance keeps its sync timer and online
+ * listener running forever, giving concurrent sync loops (ISSUES Bugs #2).
+ */
+const holder = globalThis as typeof globalThis & { __cmmSyncManager?: SyncManager | null };
 
 /**
  * Get the global SyncManager instance.
@@ -254,13 +261,13 @@ export function getSyncManager(
   remote?: RemoteSyncAdapter,
   syncQueue?: SyncQueueManager
 ): SyncManager {
-  if (!syncManagerInstance && local && remote && syncQueue) {
-    syncManagerInstance = new SyncManager(local, remote, syncQueue);
+  if (!holder.__cmmSyncManager && local && remote && syncQueue) {
+    holder.__cmmSyncManager = new SyncManager(local, remote, syncQueue);
   }
-  if (!syncManagerInstance) {
+  if (!holder.__cmmSyncManager) {
     throw new Error('SyncManager not initialized. Call getSyncManager with adapters first.');
   }
-  return syncManagerInstance;
+  return holder.__cmmSyncManager;
 }
 
 /**
@@ -272,20 +279,21 @@ export function initializeSyncManager(
   remote: RemoteSyncAdapter,
   syncQueue: SyncQueueManager
 ): SyncManager {
-  if (syncManagerInstance) {
-    syncManagerInstance.stop();
+  if (holder.__cmmSyncManager) {
+    holder.__cmmSyncManager.stop();
   }
-  syncManagerInstance = new SyncManager(local, remote, syncQueue);
-  syncManagerInstance.start();
-  return syncManagerInstance;
+  const instance = new SyncManager(local, remote, syncQueue);
+  holder.__cmmSyncManager = instance;
+  instance.start();
+  return instance;
 }
 
 /**
  * Reset the singleton for testing purposes.
  */
 export function resetSyncManager(): void {
-  if (syncManagerInstance) {
-    syncManagerInstance.stop();
+  if (holder.__cmmSyncManager) {
+    holder.__cmmSyncManager.stop();
   }
-  syncManagerInstance = null;
+  holder.__cmmSyncManager = null;
 }

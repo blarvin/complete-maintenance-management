@@ -18,7 +18,6 @@ import { DataField } from '../DataField/DataField';
 import { FieldComposerSlot } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
 import { useElementChildren } from '../../hooks/useElementChildren';
-import type { ComponentType } from '../../data/models';
 import { ENABLED_ADD_FIELD_SURFACES } from '../../constants';
 import type { ActiveSurface } from './addFieldSurfaces';
 import styles from './FieldList.module.css';
@@ -27,8 +26,10 @@ export type FieldListProps = {
     nodeId: string;
     /** When true, operates in construction mode (composer open by default). */
     isConstruction?: boolean;
-    /** FieldDefinition IDs to pre-populate as locked-in composer rows (construction defaults). */
-    initialFieldDefinitionIds?: readonly string[];
+    /** Definition IDs to pre-populate as locked-in composer rows (construction defaults). */
+    initialDefinitionIds?: readonly string[];
+    /** When true, suppress the add-field surfaces (composer/legacy) — a read-only peek of existing fields. */
+    hideAddSurfaces?: boolean;
 };
 
 export const FieldList = component$<FieldListProps>((props) => {
@@ -52,24 +53,24 @@ export const FieldList = component$<FieldListProps>((props) => {
                     key={field.id}
                     id={field.id}
                     name={field.name}
-                    fieldDefinitionId={field.fieldDefinitionId!}
-                    kind={field.kind as ComponentType}
+                    definitionId={field.definitionId!}
+                    kind={field.kind}
                     value={field.value}
                     updatedAt={field.updatedAt}
                 />
             ))}
 
-            {(props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer')) && (
+            {!props.hideAddSurfaces && (props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer')) && (
                 <FieldComposerSlot
                     nodeId={props.nodeId}
                     mode={mode}
                     currentMaxCardOrder={maxPersistedCardOrder.value}
-                    initialFieldDefinitionIds={props.initialFieldDefinitionIds}
+                    initialDefinitionIds={props.initialDefinitionIds}
                     activeSurface={activeSurface}
                 />
             )}
 
-            {ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction && (
+            {!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction && (
                 <CreateDataField
                     nodeId={props.nodeId}
                     currentMaxCardOrder={maxPersistedCardOrder.value}

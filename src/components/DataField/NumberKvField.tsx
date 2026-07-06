@@ -8,13 +8,13 @@
  * value's `updatedAt` is older than `expectedRefreshSeconds`.
  *
  * Authoring of these configs is the next PR (PR 6 — number-kv authoring form);
- * here we just render and validate against whatever the FieldDefinition holds.
+ * here we just render and validate against whatever the Definition holds.
  */
 
 import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { getFieldDefinitionQueries } from '../../data/queries';
+import { getDefinitionQueries } from '../../data/queries';
 import type { NumberKvConfig } from '../../data/models';
 import { computeNumberKvState, formatNumberKvDisplay, type NumberKvState } from './numberKvState';
 import styles from './DataField.module.css';
@@ -22,10 +22,10 @@ import numberStyles from './NumberKvField.module.css';
 
 export type NumberKvFieldProps = {
     id: string;
-    fieldDefinitionId: string;
+    definitionId: string;
     value: number | null;
     /** Epoch ms when the value was last written. Drives stale state when the
-     *  FieldDefinition sets `expectedRefreshSeconds`. Pass 0 to disable stale
+     *  Definition sets `expectedRefreshSeconds`. Pass 0 to disable stale
      *  (composer pendingMode does this — pending values are about to be
      *  written, never stale). */
     updatedAt?: number;
@@ -84,9 +84,9 @@ function buildHelperText(config: NumberKvConfig): string {
 
 export const NumberKvField = component$<NumberKvFieldProps>((props) => {
     const configResource = useResource$(async ({ track }) => {
-        track(() => props.fieldDefinitionId);
-        const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'number-kv') return null;
+        track(() => props.definitionId);
+        const def = await getDefinitionQueries().getDefinitionById(props.definitionId);
+        if (!def || def.kind !== 'number-kv') return null;
         return def.config as NumberKvConfig;
     });
 

@@ -1,5 +1,36 @@
 /* CreateNodeButton component styles */
 
+/* Row wrapping the kind picker + the create button (#6b node-create picker).
+   Picker sits inline on the left; the button fills the rest of the row. */
+.createRow {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: var(--space-2);
+    width: 100%;
+    max-width: var(--container-max);
+    min-width: var(--container-min);
+    margin-inline: auto;
+}
+
+.kindPicker {
+    flex: 0 0 auto;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    padding: 2px 6px;
+    border: var(--border-width) solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-muted);
+}
+
+/* In the row, the button flexes to fill rather than holding its standalone width. */
+.createRow .createNode {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
 .createNode {
     width: 100%;
     max-width: var(--container-max);

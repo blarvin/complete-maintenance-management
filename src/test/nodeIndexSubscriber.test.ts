@@ -6,7 +6,7 @@ import { clearNodeIndex, getAncestorPath, initializeNodeIndex } from '../data/no
 function nodeWritten(id: string, parentId: string | null, name: string, deletedAt: number | null = null) {
     return {
         type: 'ELEMENT_WRITTEN' as const,
-        element: { id, kind: 'node' as const, parentId, name, value: null, deletedAt },
+        element: { id, kind: 'node' as const, parentId, name, value: null, treeType: 'business' as const, deletedAt },
     };
 }
 
@@ -43,11 +43,21 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     it('ELEMENT_WRITTEN for a non-node kind is ignored', () => {
         handleStorageEvent({
             type: 'ELEMENT_WRITTEN',
-            element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'VIN', value: 'X', deletedAt: null },
+            element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'VIN', value: 'X', treeType: 'business', deletedAt: null },
         });
 
         // Field elements never enter the node index.
         expect(getAncestorPath('f1')).toEqual([]);
+    });
+
+    it('ELEMENT_WRITTEN for a non-business tree is ignored (re-root policy Definition)', () => {
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            element: { id: 'fd_logbook_policy', kind: 'logbook', parentId: null, name: 'Logbook Policy', value: null, treeType: 'library', deletedAt: null },
+        });
+
+        // A library row of a re-root kind is not a tree node.
+        expect(getAncestorPath('fd_logbook_policy')).toEqual([]);
     });
 
     it('ELEMENT_HARD_DELETED removes from the index', () => {

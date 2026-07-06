@@ -18,16 +18,16 @@
 import { component$, useSignal, $ } from '@builder.io/qwik';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
-import { getKindManifest } from '../../kinds/registry';
+import { getInlineManifest } from '../../kinds/registry';
 import { formatTimestampShort } from '../../utils/time';
-import type { ComponentType, ElementHistory, DataFieldValue, FieldDefinitionConfig } from '../../data/models';
+import type { Kind, ElementHistory, DataFieldValue, DefinitionConfig } from '../../data/models';
 import styles from './DataFieldHistory.module.css';
 
 export type DataFieldHistoryProps = {
     fieldId: string;
     history: ElementHistory[];
-    kind: ComponentType;
-    config?: FieldDefinitionConfig;
+    kind: Kind;
+    config?: DefinitionConfig;
     isOpen: boolean;
 };
 
@@ -73,7 +73,7 @@ export const DataFieldHistory = component$<DataFieldHistoryProps>((props) => {
             {props.isOpen && hasHistory && (
                 <div class={[styles.historyList, 'no-caret']} role="list" aria-label="Field value history">
                     {allEntries.map((entry) => {
-                        const formatted = getKindManifest(props.kind).displayPreview(entry.newValue as DataFieldValue | null, props.config) ?? '';
+                        const formatted = getInlineManifest(props.kind).displayPreview(entry.newValue as DataFieldValue | null, props.config) ?? '';
                         const isSelected = selectedId.value === entry.id;
                         return (
                             <div

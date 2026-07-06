@@ -1,9 +1,9 @@
-import type { FieldDefinition, Element, ElementHistory, Kind } from '../models';
+import type { Definition, Element, ElementHistory, Kind } from '../models';
 
-export interface IFieldDefinitionQueries {
-  listFieldDefinitions(): Promise<FieldDefinition[]>;
-  getFieldDefinitionById(id: string): Promise<FieldDefinition | null>;
-  getFieldDefinitionByLabel(label: string): Promise<FieldDefinition | null>;
+export interface IDefinitionQueries {
+  listDefinitions(): Promise<Definition[]>;
+  getDefinitionById(id: string): Promise<Definition | null>;
+  getDefinitionByLabel(label: string): Promise<Definition | null>;
 }
 
 export interface IElementQueries {
@@ -12,5 +12,5 @@ export interface IElementQueries {
   getChildren(parentId: string): Promise<Element[]>;
   getChildrenByKind(parentId: string, kind: Kind): Promise<Element[]>;
   getElementHistory(elementId: string): Promise<ElementHistory[]>;
-  nextSiblingOrder(parentId: string | null): Promise<number>;
+  nextSiblingOrder(parentId: string | null, kind?: Kind): Promise<number>;
 }

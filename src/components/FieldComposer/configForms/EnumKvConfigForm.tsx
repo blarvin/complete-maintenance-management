@@ -1,5 +1,5 @@
 /**
- * EnumKvConfigForm - knobs for a new enum-kv FieldDefinition.
+ * EnumKvConfigForm - knobs for a new enum-kv Definition.
  *  - options (string list; required non-empty)
  *  - allowOther (checkbox)
  *  - default (select among options)

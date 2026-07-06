@@ -56,7 +56,8 @@ describe('initStorage - Initialization State', () => {
                 subtitle: null,
                 value: null,
                 siblingOrder: 0,
-                fieldDefinitionId: null,
+                definitionId: null,
+                treeType: 'business',
                 updatedBy: 'test',
                 updatedAt: Date.now(),
                 deletedAt: null,
@@ -101,7 +102,8 @@ describe('initStorage - Migration Fallback Paths', () => {
                 subtitle: null,
                 value: null,
                 siblingOrder: 0,
-                fieldDefinitionId: null,
+                definitionId: null,
+                treeType: 'business',
                 updatedBy: 'test',
                 updatedAt: Date.now(),
                 deletedAt: null,
@@ -224,7 +226,8 @@ describe('initStorage - Node Index Seeding', () => {
             subtitle: null,
             value: null,
             siblingOrder: 0,
-            fieldDefinitionId: null,
+            definitionId: null,
+            treeType: 'business' as const,
             updatedBy: 'test',
             updatedAt: Date.now(),
         };
@@ -233,7 +236,7 @@ describe('initStorage - Node Index Seeding', () => {
             { ...baseEl, id: 'child', parentId: 'root', name: 'Child', deletedAt: null },
             { ...baseEl, id: 'deleted-node', parentId: null, name: 'Should Not Load', deletedAt: Date.now() },
             // A non-node element must never enter the node index.
-            { ...baseEl, id: 'field', kind: 'text-kv', parentId: 'root', name: 'VIN', fieldDefinitionId: 'fd', value: 'X', deletedAt: null },
+            { ...baseEl, id: 'field', kind: 'text-kv', parentId: 'root', name: 'VIN', definitionId: 'fd', value: 'X', deletedAt: null },
         ]);
 
         const { initializeStorage } = await import('../data/storage/initStorage');

@@ -1,5 +1,5 @@
 /**
- * ComposerRow - One FieldDefinition within the FieldComposer.
+ * ComposerRow - One Definition within the FieldComposer.
  *
  * Unchecked: checkbox + label, whole row toggles. Checked: checkbox + label +
  * the Component renderer in pendingMode so the user can fill in a value before
@@ -14,13 +14,13 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, type QRL, type Signal } from '@builder.io/qwik';
-import { getKindManifest } from '../../kinds/registry';
-import type { FieldDefinition, DataFieldValue } from '../../data/models';
+import { getInlineManifest } from '../../kinds/registry';
+import type { Definition, DataFieldValue } from '../../data/models';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import styles from './ComposerRow.module.css';
 
 export type ComposerRowProps = {
-    definition: FieldDefinition;
+    definition: Definition;
     checked: boolean;
     locked?: boolean;
     pendingForm?: PendingForm;
@@ -28,7 +28,7 @@ export type ComposerRowProps = {
      *  open. Seeded rows (construction defaults, restored Undo) are false so the
      *  composer opens with no field stealing focus. */
     autoFocus?: boolean;
-    onToggle$: QRL<(definition: FieldDefinition) => void>;
+    onToggle$: QRL<(definition: Definition) => void>;
     onValueChange$: QRL<(formId: string, value: DataFieldValue | null) => void>;
 };
 
@@ -84,7 +84,7 @@ export const ComposerRow = component$<ComposerRowProps>((props) => {
 });
 
 type RowBodyProps = {
-    definition: FieldDefinition;
+    definition: Definition;
     pendingForm: PendingForm;
     autoFocus: boolean;
     rootRef: Signal<HTMLElement | undefined>;
@@ -97,11 +97,11 @@ const RowBody = component$<RowBodyProps>((props) => {
         return props.onValueChange$(formId, value);
     });
 
-    const Renderer = getKindManifest(props.definition.componentType).Renderer;
+    const Renderer = getInlineManifest(props.definition.kind).Renderer;
     return (
         <Renderer
             id={props.pendingForm.id}
-            fieldDefinitionId={props.definition.id}
+            definitionId={props.definition.id}
             value={props.pendingForm.value ?? null}
             rootRef={props.rootRef}
             pendingMode={{ onChange$, autoFocus: props.autoFocus }}

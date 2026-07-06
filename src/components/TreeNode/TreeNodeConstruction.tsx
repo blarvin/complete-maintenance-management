@@ -12,13 +12,13 @@ import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
-import { FIELD_DEFINITION_IDS } from '../../data/services/seedFieldDefinitions';
+import { DEFINITION_IDS } from '../../data/services/seedDefinitions';
 import styles from './TreeNode.module.css';
 
-const DEFAULT_FIELD_DEFINITION_IDS = [
-    FIELD_DEFINITION_IDS.typeOf,
-    FIELD_DEFINITION_IDS.description,
-    FIELD_DEFINITION_IDS.tags,
+const DEFAULT_DEFINITION_IDS = [
+    DEFINITION_IDS.typeOf,
+    DEFINITION_IDS.description,
+    DEFINITION_IDS.tags,
 ] as const;
 
 // Re-export for backwards compatibility
@@ -96,7 +96,7 @@ export const TreeNodeConstruction = component$((props: TreeNodeConstructionProps
                 <FieldList
                     nodeId={props.id}
                     isConstruction={true}
-                    initialFieldDefinitionIds={DEFAULT_FIELD_DEFINITION_IDS}
+                    initialDefinitionIds={DEFAULT_DEFINITION_IDS}
                 />
 
                 <div q:slot="actions" class={styles.constructionActions}>

@@ -10,7 +10,6 @@
 export type SyncResult = {
   elementsApplied: number;
   elementHistoryApplied: number;
-  fieldDefinitionsApplied: number;
 };
 
 export interface SyncStrategy {

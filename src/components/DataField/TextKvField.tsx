@@ -1,7 +1,7 @@
 /**
  * TextKvField - Renderer for text-kv DataFields.
  *
- * Free-form text. Reads the FieldDefinition config to decide single-line
+ * Free-form text. Reads the Definition config to decide single-line
  * `<input>` vs multi-line `<textarea>` (`config.multiline`) and to apply
  * per-definition save validation (`config.maxWords`). The textarea variant
  * matters on mobile: a
@@ -13,13 +13,13 @@
 import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { getFieldDefinitionQueries } from '../../data/queries';
+import { getDefinitionQueries } from '../../data/queries';
 import type { TextKvConfig } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type TextKvFieldProps = {
     id: string;
-    fieldDefinitionId: string;
+    definitionId: string;
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
@@ -53,9 +53,9 @@ const makeValidate = (config: TextKvConfig) => {
 
 export const TextKvField = component$<TextKvFieldProps>((props) => {
     const configResource = useResource$(async ({ track }) => {
-        track(() => props.fieldDefinitionId);
-        const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'text-kv') return {} as TextKvConfig;
+        track(() => props.definitionId);
+        const def = await getDefinitionQueries().getDefinitionById(props.definitionId);
+        if (!def || def.kind !== 'text-kv') return {} as TextKvConfig;
         return def.config as TextKvConfig;
     });
 

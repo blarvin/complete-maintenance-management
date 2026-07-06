@@ -1,8 +1,8 @@
 /**
  * CreateDataField — Legacy "+ Add Field" surface.
  *
- * Single-pick FieldDefinition dropdown: user clicks "+ Add Field", picks one
- * FieldDefinition, a DataField is created immediately via the command bus, the
+ * Single-pick Definition dropdown: user clicks "+ Add Field", picks one
+ * Definition, a DataField is created immediately via the command bus, the
  * dropdown closes. Click "+ Add Field" again to add another. Open state is
  * shared with FieldComposerSlot via the parent-owned `activeSurface` signal so
  * opening this dropdown automatically closes the Composer (and vice versa).
@@ -15,9 +15,10 @@ import {
     $,
     type Signal,
 } from '@builder.io/qwik';
-import { getFieldDefinitionQueries } from '../../data/queries';
+import { getDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
-import type { FieldDefinition } from '../../data/models';
+import { isInline } from '../../kinds/placement';
+import type { Definition } from '../../data/models';
 import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
 import styles from './CreateDataField.module.css';
 
@@ -32,22 +33,24 @@ export type CreateDataFieldProps = {
 export const CreateDataField = component$<CreateDataFieldProps>((props) => {
     const isOpen = props.activeSurface.value === 'legacy';
 
-    const definitionsResource = useResource$<FieldDefinition[]>(async () => {
-        const list = await getFieldDefinitionQueries().listFieldDefinitions();
-        return [...list].sort((a, b) => a.label.localeCompare(b.label));
+    const definitionsResource = useResource$<Definition[]>(async () => {
+        const list = await getDefinitionQueries().listDefinitions();
+        // Field kinds only: re-root policy Definitions (logbook) live in the
+        // same library tree but are not field-instantiable rows.
+        return list.filter((d) => isInline(d.kind)).sort((a, b) => a.label.localeCompare(b.label));
     });
 
     const toggle$ = $(() => {
         props.activeSurface.value = props.activeSurface.value === 'legacy' ? 'none' : 'legacy';
     });
 
-    const pick$ = $(async (def: FieldDefinition) => {
+    const pick$ = $(async (def: Definition) => {
         props.activeSurface.value = 'none';
         await getCommandBus().execute({
             type: 'CREATE_ELEMENT_FROM_DEFINITION',
             payload: {
                 parentId: props.nodeId,
-                fieldDefinitionId: def.id,
+                definitionId: def.id,
                 siblingOrder: props.currentMaxCardOrder + 1,
             },
         });

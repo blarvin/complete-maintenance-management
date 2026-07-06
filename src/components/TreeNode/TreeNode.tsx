@@ -42,6 +42,7 @@ export const TreeNode = component$((props: TreeNodeProps) => {
             name={props.name}
             subtitle={props.subtitle}
             nodeState={props.nodeState}
+            kind={props.kind}
             parentId={props.parentId}
             onNodeClick$={props.onNodeClick$}
             onNavigateUp$={props.onNavigateUp$}

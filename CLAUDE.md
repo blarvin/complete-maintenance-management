@@ -11,9 +11,11 @@
 
 1. **SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
 2. **ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
-3. **LATER.md** - Deferred features, Phase 2+ roadmap, resolved items
+3. **LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
 4. **IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
-5. **ISSUES.md** - Intends to be a comprehensive listing of what needs doing.
+5. **ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
+
+**ISSUES vs LATER routing**: unfinished business, deferred parts of a feature already begun, and observed refactor needs (work-in-progress left for later) normally go in **ISSUES**, not LATER. **LATER** is for whole ideas/features not yet started and far-future-phase work. Consequence: a leftover directly caused by current-branch or Element-model work belongs in ISSUES — and much of what's currently parked in LATER under in-flight clusters (e.g. the §6b/§6c lens follow-ups) could migrate back.
 
 ---
 
@@ -45,11 +47,11 @@
 ### 2. Adapter Pattern (Backend Abstraction)
 
 **Location**: `src/data/storage/`
-**Write model**: `IDBAdapter` is the sole `StorageAdapter`/`SyncableStorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus FieldDefinition CRUD, offline-first via Dexie
+**Write model**: `IDBAdapter` is the sole `StorageAdapter`/`SyncableStorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus Definition CRUD (`listDefinitions`/`getDefinition`/`createDefinition`), offline-first via Dexie
 **Sync mirror**: `FirestoreAdapter` implements `RemoteSyncAdapter` only (`applySyncItem` + pull methods) — Firestore is a dumb mirror, not a second CRUD backend; the swappable-backend story is served by `RemoteSyncAdapter`
 **Command/query registry**: `src/data/commands/` and `src/data/queries/`
 
-- Module-level getters: `getCommandBus()`, `getElementQueries()`, `getFieldDefinitionQueries()`
+- Module-level getters: `getCommandBus()`, `getElementQueries()`, `getDefinitionQueries()`
 - IMPORTANT: Call these at runtime inside `$()` handlers — never capture in closures or serialize
 - `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping
 - Qwik `useContextProvider` CANNOT hold services (methods aren't serializable, `Code(3)` error)
@@ -172,6 +174,6 @@ useStorageAdapter(new IDBAdapter());
 - `src/components/TreeNode/TreeNode.tsx` - Main component orchestrator
 - `src/components/DataField/DataField.tsx` - Field editing logic
 - `src/data/commands/handlers.ts` - Element command handlers
-- `src/data/queries/index.ts` - `getElementQueries()` / `getFieldDefinitionQueries()`
-- `src/data/models.ts` - `Element`, `ElementHistory`, `elementToTreeNode` / `elementToDataField` mappers
+- `src/data/queries/index.ts` - `getElementQueries()` / `getDefinitionQueries()`
+- `src/data/models.ts` - `Element`, `ElementHistory`, `Definition` (assembled view), the config/value unions
 - `src/constants.ts` - Hardcoded values (USER_ID, library)

@@ -3,11 +3,9 @@
  */
 
 import Dexie, { Table } from 'dexie';
-import type { FieldDefinition, Element, ElementHistory } from '../models';
+import type { Element, ElementHistory } from '../models';
 
 export type SyncOperation =
-  | 'create-fieldDefinition'
-  | 'update-fieldDefinition'
   | 'create-element'
   | 'update-element'
   | 'delete-element'
@@ -16,7 +14,7 @@ export type SyncOperation =
 export type SyncQueueItem = {
   id: string;
   operation: SyncOperation;
-  entityType: 'fieldDefinition' | 'element' | 'element-history';
+  entityType: 'element' | 'element-history';
   entityId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any; // Dynamic payload for different entity types
@@ -33,7 +31,6 @@ export type SyncMetadata = {
 };
 
 export class AppDatabase extends Dexie {
-  fieldDefinitions!: Table<FieldDefinition, string>;
   elements!: Table<Element, string>;
   elementHistory!: Table<ElementHistory, string>;
   syncQueue!: Table<SyncQueueItem, string>;
@@ -189,6 +186,65 @@ export class AppDatabase extends Dexie {
     }).upgrade(async (tx) => {
       await Promise.all([
         tx.table('fieldDefinitions').clear(),
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
+
+    // Version 9: FieldDefinition `componentType` field/index → `kind`, aligning
+    // the Library discriminant with Element.kind ahead of the registry widening.
+    // The index is renamed; the rename also lives in row payloads. `elements`
+    // already indexes `kind` — unchanged. Clear-on-upgrade — no migration path.
+    this.version(9).stores({
+      fieldDefinitions: 'id, kind, authorId, updatedAt, deletedAt',
+      elements: 'id, parentId, kind, fieldDefinitionId, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('fieldDefinitions').clear(),
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
+
+    // Version 10: Config-as-Elements. FieldDefinitions collapse into the
+    // `elements` store as `treeType: 'library'` Elements whose config is their
+    // child sub-field subtree — the standalone `fieldDefinitions` table (and its
+    // `config` blob) is dropped. `elements` gains a `treeType` index so business
+    // root/sibling queries can scope to the business tree. Clear-on-upgrade — no
+    // migration path (prototype data, freely wiped).
+    this.version(10).stores({
+      fieldDefinitions: null, // drop the table — Library now lives in `elements`
+      elements: 'id, parentId, kind, fieldDefinitionId, treeType, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
+
+    // Version 11: the binding column un-field-specifics — `fieldDefinitionId` →
+    // `definitionId` (the Definition-binding seam; re-root policy containers bind
+    // through the same column fields use). Index renamed to match the Element
+    // shape. Clear-on-upgrade — no migration path (prototype data, freely wiped).
+    this.version(11).stores({
+      elements: 'id, parentId, kind, definitionId, treeType, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
         tx.table('elements').clear(),
         tx.table('elementHistory').clear(),
         tx.table('syncQueue').clear(),

@@ -1,0 +1,27 @@
+/* LensCreateButton — a self-contained borrow of the "+ Add Fields" trigger skin
+   (FieldComposerSlot.module.css `.addButton`). Same quiet affordance: small,
+   semibold, secondary text, no border/background, underline on hover. The
+   `grid-column: 1 / -1` from the original is dropped on purpose — that button sits
+   in FieldList's subgrid; this one sits in the plain children area of a lens view. */
+
+.addButton {
+    justify-self: start;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.addButton:hover:not(:disabled) {
+    text-decoration: underline;
+}
+
+.addButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

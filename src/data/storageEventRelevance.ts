@@ -15,7 +15,7 @@ export function affectsChildrenOf(event: StorageEvent, parentId: string | null):
             return event.element.parentId === parentId;
         case 'ELEMENT_HARD_DELETED':
             return true; // payload has no parentId — reload conservatively
-        case 'FIELD_DEFINITION_WRITTEN':
+        case 'DEFINITION_WRITTEN':
             return false;
     }
 }
@@ -27,7 +27,7 @@ export function affectsElement(event: StorageEvent, elementId: string): boolean 
             return event.element.id === elementId;
         case 'ELEMENT_HARD_DELETED':
             return event.elementId === elementId;
-        case 'FIELD_DEFINITION_WRITTEN':
+        case 'DEFINITION_WRITTEN':
             return false;
     }
 }

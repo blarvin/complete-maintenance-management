@@ -7,7 +7,7 @@
  */
 
 import type { SyncableStorageAdapter } from '../storage/storageAdapter';
-import type { Element, FieldDefinition } from '../models';
+import type { Element } from '../models';
 import type { SyncQueueManager } from './SyncQueueManager';
 
 export type ResolveResult = 'applied' | 'skipped';
@@ -32,17 +32,6 @@ export class ServerAuthorityResolver {
     }
     await this.local.applyRemoteElement(remote);
     console.log('[Resolver] Applied server element', remote.id);
-    return 'applied';
-  }
-
-  async resolveFieldDefinition(remote: FieldDefinition, pendingSet?: Set<string>): Promise<ResolveResult> {
-    const set = pendingSet ?? await this.loadPendingSet();
-    if (set.has(remote.id)) {
-      console.log('[Resolver] Skipped (pending local)', remote.id);
-      return 'skipped';
-    }
-    await this.local.applyRemoteFieldDefinition(remote);
-    console.log('[Resolver] Applied server fieldDefinition', remote.id);
     return 'applied';
   }
 }

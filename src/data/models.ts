@@ -1,3 +1,7 @@
+// Type-only import: erased at runtime, so no `models → registry` cycle. Used
+// solely to derive the kind vocabulary from KIND_REGISTRY's keys below.
+import type { KIND_REGISTRY } from '../kinds/registry';
+
 export type ID = string;
 
 /**
@@ -14,13 +18,8 @@ export type SoftDeletable = {
 };
 
 // ============================================================================
-// DataField Component / FieldDefinition / Instance
+// DataField Component / Definition / Instance
 // ============================================================================
-
-/**
- * Component type discriminator. Phase 1 Components per SPEC.
- */
-export type ComponentType = "text-kv" | "enum-kv" | "number-kv" | "single-image";
 
 // Per-Component config shapes
 export type TextKvConfig = {
@@ -84,19 +83,36 @@ export type SingleImageConfig = {
 };
 
 /**
- * Union of FieldDefinition configs, discriminated externally by FieldDefinition.componentType.
- * Narrow on `definition.componentType === "text-kv"` etc. before accessing config.
+ * Policy config for the `logbook` container — the first re-root Definition
+ * (the binding seam's forcing kind). Both knobs are lens-surface policy, not
+ * field-value config.
  */
-export type FieldDefinitionConfig =
+export type LogbookConfig = {
+  /** The word for one new entry (the LensCreate/LensRollup label), e.g. "Entry".
+   *  Replaces the targetKind pickerLabel reads when bound. */
+  entryLabel?: string;
+  /** Canonical seconds. If set (> 0), a rollup whose newest entry is older
+   *  than this renders a stale indicator. Absent/0 = never stale. */
+  staleness?: number;
+};
+
+/**
+ * Union of Definition configs, discriminated externally by Definition.kind.
+ * Narrow on `definition.kind === "text-kv"` etc. before accessing config.
+ */
+export type DefinitionConfig =
   | TextKvConfig
   | EnumKvConfig
   | NumberKvConfig
-  | SingleImageConfig;
+  | SingleImageConfig
+  | LogbookConfig;
 
 // Per-Component value shapes (a DataField's `value` is one of these, or null)
 export type TextKvValue = string;
 export type EnumKvValue = string;
 export type NumberKvValue = number;
+/** asset-doc: an internal Edge — the value is the target Element's id (resolved live). */
+export type AssetDocValue = { targetId: string };
 export type SingleImageValue = {
   blobId: string;
   mimeType: string;
@@ -106,28 +122,65 @@ export type SingleImageValue = {
   caption?: string;
 };
 
-/**
- * Union of DataField value types, discriminated by DataField.componentType.
- */
-export type DataFieldValue =
-  | TextKvValue
-  | EnumKvValue
-  | NumberKvValue
-  | SingleImageValue;
+// Config sub-field value shapes (config-as-Elements). These kinds back the
+// `library`-tree config subtree; in Phase 1 they only ever exist as config
+// sub-fields (see `flag` / `compound` / `string-list` manifests), never as
+// standalone Data Card rows.
+export type FlagValue = boolean;
+export type StringListValue = string[];
+/** A small atomic co-varying object — the one object-valued config residue
+ *  (e.g. number-kv thresholds `{lowLow, low, high, highHigh}`). */
+export type CompoundValue = { [k: string]: number };
 
 /**
- * FieldDefinition: a Library entry naming a fully-configured field kind.
- * Persisted form of "what kind of field this is."
- *
- * `authorId` carries the user (or `"appDeveloper"` for seeds) that created the
- * row; `deletedAt` is admin-only soft-delete (no end-user UI in Phase 1, but
- * the field exists for forward compatibility and admin tombstones).
+ * Type-level kind → value map over every registry kind. Re-root (node-like)
+ * kinds bear no own value → `never`, so they vanish from the derived union.
+ * Hand-declared rather than derived from the manifests (they import
+ * DataFieldValue — circular); the indexed access at `DataFieldValue` is the
+ * enforcement: a kind added to KIND_REGISTRY without an entry here is a
+ * compile error.
  */
-export type FieldDefinition = {
+export type KindValueMap = {
+  'text-kv': TextKvValue;
+  'enum-kv': EnumKvValue;
+  'number-kv': NumberKvValue;
+  'single-image': SingleImageValue;
+  'asset-doc': AssetDocValue;
+  flag: FlagValue;
+  compound: CompoundValue;
+  'string-list': StringListValue;
+  // re-root kinds: no own value
+  node: never;
+  org: never;
+  job: never;
+  jobs: never;
+  'log-entry': never;
+  logbook: never;
+};
+
+/**
+ * Union of DataField value types, discriminated by Element.kind — derived from
+ * the registry via KindValueMap (never-valued re-root kinds drop out).
+ */
+export type DataFieldValue = KindValueMap[Kind];
+
+/**
+ * Definition: a Library entry naming a fully-configured field kind.
+ *
+ * This is an **assembled read-model view**, no longer a stored row. A Definition
+ * lives as a `library`-tree `Element` (`kind` = the kind it defines, `name` = the
+ * label) whose config **is** its child sub-field Element subtree (see
+ * `src/kinds/configElements.ts` and SPEC → Config is Elements). `config` here is
+ * assembled on read from those children — there is no persisted config blob.
+ *
+ * `authorId` mirrors the Definition Element's `updatedBy` (`"appDeveloper"` for
+ * seeds); `deletedAt` is admin-only soft-delete (no end-user UI in Phase 1).
+ */
+export type Definition = {
   id: ID;
-  componentType: ComponentType;
+  kind: Kind;
   label: string;
-  config: FieldDefinitionConfig;
+  config: DefinitionConfig;
   authorId: UserId;
   updatedBy: UserId;
   updatedAt: number;
@@ -159,18 +212,38 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 // ============================================================================
 
 /**
- * Element kind. `"node"` denotes a container (no value); the rest are
- * value-bearing kinds matching FieldDefinition componentTypes.
+ * Element kind. Derived from KIND_REGISTRY's keys, so a kind can never drift from
+ * its manifest and adding a manifest widens this union automatically. `"node"` is
+ * the container kind (no value, `placement: re-root`); the rest are value-bearing
+ * field kinds. There is no privileged kind — `node` registers like any other.
  */
-export type Kind = "node" | ComponentType;
+export type Kind = keyof typeof KIND_REGISTRY;
+
+/**
+ * Which tree an Element belongs to (SPEC → Populations are typed trees). The axis
+ * routes sync / history / visibility per tree via `src/data/treePolicy.ts`:
+ *  - `business`   — the navigable asset tree (shared sync, business history)
+ *  - `library`    — Definitions + their config subtree (shared sync, Library history)
+ *  - `config`     — org/role/user prefs (shared-or-per-user sync, overlay history)
+ *  - `view-state` — per-viewer expansion/ordering overlays (never synced, no history)
+ *
+ * `config` and `view-state` have no Phase-1 producers yet (view-state lives in
+ * `uiPrefs` localStorage; config needs the cascade arbiter), so the values exist
+ * to make the policy table and the `effectiveChildren` read chokepoint complete
+ * ahead of those consumers. Per-viewer overlay merge is deferred (see LATER.md).
+ */
+export type TreeType = 'business' | 'library' | 'config' | 'view-state';
 
 /**
  * Unified primitive replacing TreeNode + DataField. Phase 1 columns only.
  * - `name` is required (max 100 chars), stays denormalized for header hot path.
  * - `subtitle` is node-scoped Phase 1 (demotion to child element deferred).
- * - `value` is null for `kind === "node"`; typed by `kind` otherwise.
+ * - `value` is null for re-root (node-like) kinds; typed by `kind` otherwise.
  * - `siblingOrder` is uniform across all children; renumber-the-run on insert.
- * - `fieldDefinitionId` is null for nodes.
+ * - `definitionId` binds the instance to its Definition. Inline kinds require
+ *   it; re-root kinds may carry one (policy containers, e.g. logbook) or null
+ *   (leaf re-roots: node, job) — "not yet", not "can't carry".
+ * - `treeType` partitions business vs library; root/sibling queries scope by it.
  */
 export type Element = {
   id: ID;
@@ -180,7 +253,8 @@ export type Element = {
   value: DataFieldValue | null;
   parentId: ID | null;
   siblingOrder: number;
-  fieldDefinitionId: ID | null;
+  definitionId: ID | null;
+  treeType: TreeType;
   updatedBy: UserId;
   updatedAt: number;
   deletedAt: number | null;

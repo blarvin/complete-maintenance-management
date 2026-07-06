@@ -19,18 +19,27 @@ import { initializeDevTools } from '../sync/devTools';
 import { now } from '../../utils/time';
 import { initializeNodeIndex } from '../nodeIndex';
 import { subscribeNodeIndex } from '../nodeIndexSubscriber';
+import { isReRoot } from '../../kinds/placement';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
-import { seedFieldDefinitions } from '../services/seedFieldDefinitions';
+import { seedDefinitions } from '../services/seedDefinitions';
 
-let initialized = false;
 /**
- * Memoized init promise. All callers share the same promise so concurrent
+ * Memoized init state. All callers share the same promise so concurrent
  * `await initializeStorage()` calls (e.g. one from useInitStorage and one from
  * useElementChildren) never re-enter the init body and do duplicate work.
+ *
+ * Pinned on globalThis so it survives dev-server (Vite) module re-evaluation:
+ * a re-instanced copy of this module would otherwise see `initPromise: null`
+ * and re-run the full init — new SyncManager, duplicate bus subscriptions,
+ * another startup syncFull — per edit-triggered reload (ISSUES Bugs #2).
+ * Client-only state; SSR never calls initializeStorage.
  */
-let initPromise: Promise<void> | null = null;
+type InitState = { initialized: boolean; initPromise: Promise<void> | null };
+const globalState = globalThis as typeof globalThis & { __cmmInitState?: InitState };
+const state: InitState =
+  globalState.__cmmInitState ?? (globalState.__cmmInitState = { initialized: false, initPromise: null });
 
 /**
  * Initialize storage and sync.
@@ -38,13 +47,13 @@ let initPromise: Promise<void> | null = null;
  * subsequent calls return the same promise.
  */
 export function initializeStorage(): Promise<void> {
-  if (initPromise) return initPromise;
-  initPromise = doInitializeStorage();
-  return initPromise;
+  if (state.initPromise) return state.initPromise;
+  state.initPromise = doInitializeStorage();
+  return state.initPromise;
 }
 
 async function doInitializeStorage(): Promise<void> {
-  if (initialized) {
+  if (state.initialized) {
     console.log('[Storage] Already initialized');
     return;
   }
@@ -93,8 +102,8 @@ async function doInitializeStorage(): Promise<void> {
     initializeCommandBus(idbAdapter);
     initializeQueries(idbAdapter);
 
-    // Seed dev FieldDefinitions (idempotent; no sync enqueue).
-    await seedFieldDefinitions();
+    // Seed dev Definitions (idempotent; no sync enqueue).
+    await seedDefinitions();
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);
@@ -111,14 +120,14 @@ async function doInitializeStorage(): Promise<void> {
       });
     }
 
-    initialized = true;
+    state.initialized = true;
     console.log('[Storage] Initialization complete');
     // No completion notification needed: data hooks await initializeStorage()
     // before their first query (and this promise resolves on failure too).
   } catch (err) {
     console.error('[Storage] Initialization failed:', err);
     // Don't throw - app should still work offline with empty IDB
-    initialized = true;
+    state.initialized = true;
   }
 }
 
@@ -133,23 +142,18 @@ async function migrateFromFirestore(): Promise<void> {
   try {
     const firestoreAdapter = new FirestoreAdapter();
 
-    // Fetch all data via adapter methods
+    // Fetch all data via adapter methods. Library Definitions are `library`-tree
+    // Elements, so they come down with the elements pull — no separate fetch.
     const elements = await firestoreAdapter.pullAllElements();
     console.log('[Migration] Found', elements.length, 'elements');
-
-    const fieldDefinitions = await firestoreAdapter.pullAllFieldDefinitions();
-    console.log('[Migration] Found', fieldDefinitions.length, 'field definitions');
 
     const elementHistory = await firestoreAdapter.pullAllElementHistory();
     console.log('[Migration] Found', elementHistory.length, 'element history entries');
 
     // Bulk insert into IDB
-    await db.transaction('rw', [db.elements, db.fieldDefinitions, db.elementHistory, db.syncMetadata], async () => {
+    await db.transaction('rw', [db.elements, db.elementHistory, db.syncMetadata], async () => {
       if (elements.length > 0) {
         await db.elements.bulkPut(elements);
-      }
-      if (fieldDefinitions.length > 0) {
-        await db.fieldDefinitions.bulkPut(fieldDefinitions);
       }
       if (elementHistory.length > 0) {
         await db.elementHistory.bulkPut(elementHistory);
@@ -169,7 +173,9 @@ async function migrateFromFirestore(): Promise<void> {
 async function seedNodeIndexFromDb(): Promise<void> {
   const elements = await db.elements.toArray();
   const activeNodes = elements
-    .filter(el => el.kind === 'node' && el.deletedAt === null)
+    // Business tree only: a re-root policy Definition (logbook) is a library
+    // row of a re-root kind and must not enter the node index.
+    .filter(el => isReRoot(el.kind) && el.deletedAt === null && el.treeType === 'business')
     .map(el => ({ id: el.id, parentId: el.parentId, name: el.name }));
   initializeNodeIndex(activeNodes);
 }
@@ -178,7 +184,7 @@ async function seedNodeIndexFromDb(): Promise<void> {
  * Check if storage is initialized.
  */
 export function isStorageInitialized(): boolean {
-  return initialized;
+  return state.initialized;
 }
 
 /**
@@ -186,7 +192,7 @@ export function isStorageInitialized(): boolean {
  */
 export async function clearStorage(): Promise<void> {
   await db.delete();
-  initialized = false;
-  initPromise = null;
+  state.initialized = false;
+  state.initPromise = null;
   console.log('[Storage] Cleared all data');
 }

@@ -8,24 +8,24 @@
  */
 
 import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@builder.io/qwik';
-import { getElementQueries, getFieldDefinitionQueries } from '../../data/queries';
+import { getElementQueries, getDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
-import type { ComponentType, FieldDefinition, ElementHistory } from '../../data/models';
+import type { Kind, Definition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
 
 export type DataFieldDetailsProps = {
     fieldId: string;
-    fieldDefinitionId: string;
-    kind: ComponentType;
+    definitionId: string;
+    kind: Kind;
     currentValue: string | null;
     onDelete$: PropFunction<() => void>;
 };
 
 export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
     const history = useSignal<ElementHistory[]>([]);
-    const definition = useSignal<FieldDefinition | null>(null);
+    const definition = useSignal<Definition | null>(null);
     const isLoaded = useSignal(false);
     const isHistoryOpen = useSignal(false);
 
@@ -41,7 +41,7 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
         try {
             const [h, def] = await Promise.all([
                 fetchHistory$(),
-                getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId),
+                getDefinitionQueries().getDefinitionById(props.definitionId),
             ]);
             history.value = h;
             definition.value = def;

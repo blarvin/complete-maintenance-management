@@ -8,6 +8,7 @@
 import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeTitle } from '../NodeTitle/NodeTitle';
 import { NodeSubtitle } from '../NodeSubtitle/NodeSubtitle';
+import { KindAdornment } from '../TreeNode/KindAdornment';
 import { UpButton } from '../UpButton/UpButton';
 import { EllipsisButton } from '../EllipsisButton/EllipsisButton';
 import styles from '../TreeNode/TreeNode.module.css';
@@ -38,6 +39,9 @@ export type NodeHeaderProps = {
     onNameInput$?: PropFunction<(e: Event) => void>;
     /** For construction mode: disable chevron button */
     chevronDisabled?: boolean;
+    /** Whether to render the expand/collapse chevron. Default true; false for
+     *  content-free kinds (no children/DataCard — e.g. the `jobs` lens, #5). */
+    showChevron?: boolean;
 };
 
 export const NodeHeader = component$((props: NodeHeaderProps) => {
@@ -110,6 +114,8 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                         <>
                             <NodeTitle nodeName={props.name} id={props.titleId} />
                             <NodeSubtitle nodeSubtitle={props.subtitle} />
+                            {/* Manifest-driven meta in the subtitle slot: org count / jobs rollup (#6b). */}
+                            <KindAdornment id={props.id} isParent={!!props.isParent} />
                         </>
                     )}
                 </div>
@@ -118,17 +124,19 @@ export const NodeHeader = component$((props: NodeHeaderProps) => {
                         onDoubleTap$={props.onDetailsToggle$}
                         isExpanded={props.isDetailsExpanded}
                     />
-                    <button
-                        type="button"
-                        class={styles.nodeChevron}
-                        onClick$={props.onExpand$}
-                        onKeyDown$={handleExpandKeyDown$}
-                        aria-expanded={props.isExpanded}
-                        aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
-                        disabled={props.chevronDisabled}
-                    >
-                        {props.isExpanded ? '▾' : '◂'}
-                    </button>
+                    {props.showChevron !== false && (
+                        <button
+                            type="button"
+                            class={styles.nodeChevron}
+                            onClick$={props.onExpand$}
+                            onKeyDown$={handleExpandKeyDown$}
+                            aria-expanded={props.isExpanded}
+                            aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
+                            disabled={props.chevronDisabled}
+                        >
+                            {props.isExpanded ? '▾' : '◂'}
+                        </button>
+                    )}
                 </div>
             </div>
         </article>

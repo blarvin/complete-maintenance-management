@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { elementQueriesFromAdapter, fieldDefinitionQueriesFromAdapter } from '../data/queries';
+import { elementQueriesFromAdapter, definitionQueriesFromAdapter } from '../data/queries';
 import type { StorageAdapter } from '../data/storage/storageAdapter';
 
 function mockAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
@@ -10,8 +10,8 @@ function mockAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
     listChildElementsByKind: vi.fn().mockResolvedValue({ data: [{ id: 'k1' }] }),
     getElementHistory: vi.fn().mockResolvedValue({ data: [{ id: 'h1' }] }),
     nextSiblingOrder: vi.fn().mockResolvedValue({ data: 3 }),
-    listFieldDefinitions: vi.fn().mockResolvedValue({ data: [{ id: 'fd1', label: 'A' }] }),
-    getFieldDefinition: vi.fn().mockResolvedValue({ data: { id: 'fd1' } }),
+    listDefinitions: vi.fn().mockResolvedValue({ data: [{ id: 'fd1', label: 'A' }] }),
+    getDefinition: vi.fn().mockResolvedValue({ data: { id: 'fd1' } }),
     ...overrides,
   } as unknown as StorageAdapter;
 }
@@ -61,24 +61,24 @@ describe('Query factories', () => {
     it('nextSiblingOrder unwraps StorageResult', async () => {
       const adapter = mockAdapter();
       const q = elementQueriesFromAdapter(adapter);
-      const result = await q.nextSiblingOrder('p1');
+      const result = await q.nextSiblingOrder('p1', 'node');
       expect(result).toBe(3);
-      expect(adapter.nextSiblingOrder).toHaveBeenCalledWith('p1');
+      expect(adapter.nextSiblingOrder).toHaveBeenCalledWith('p1', 'node');
     });
   });
 
-  describe('fieldDefinitionQueriesFromAdapter', () => {
-    it('listFieldDefinitions unwraps StorageResult', async () => {
+  describe('definitionQueriesFromAdapter', () => {
+    it('listDefinitions unwraps StorageResult', async () => {
       const adapter = mockAdapter();
-      const q = fieldDefinitionQueriesFromAdapter(adapter);
-      const result = await q.listFieldDefinitions();
+      const q = definitionQueriesFromAdapter(adapter);
+      const result = await q.listDefinitions();
       expect(result).toEqual([{ id: 'fd1', label: 'A' }]);
     });
 
-    it('getFieldDefinitionByLabel finds the matching definition', async () => {
+    it('getDefinitionByLabel finds the matching definition', async () => {
       const adapter = mockAdapter();
-      const q = fieldDefinitionQueriesFromAdapter(adapter);
-      const result = await q.getFieldDefinitionByLabel('A');
+      const q = definitionQueriesFromAdapter(adapter);
+      const result = await q.getDefinitionByLabel('A');
       expect(result).toEqual({ id: 'fd1', label: 'A' });
     });
   });

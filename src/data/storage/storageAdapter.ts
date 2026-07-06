@@ -1,4 +1,4 @@
-import type { FieldDefinition, DataFieldValue, FieldDefinitionConfig, ComponentType, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
+import type { Definition, DataFieldValue, DefinitionConfig, Element, ElementHistory, ElementHistoryProperty, Kind } from "../models";
 import type { SyncQueueItem } from "./db";
 
 /**
@@ -16,16 +16,11 @@ export type StorageResult<T> = {
   meta?: StorageMeta;
 };
 
-export type StorageFieldDefinitionCreate = {
+export type StorageDefinitionCreate = {
   id: string;
-  componentType: ComponentType;
+  kind: Kind;
   label: string;
-  config: FieldDefinitionConfig;
-};
-
-export type StorageFieldDefinitionUpdate = {
-  label?: string;
-  config?: FieldDefinitionConfig;
+  config: DefinitionConfig;
 };
 
 // ============================================================================
@@ -38,8 +33,9 @@ export type StorageElementCreate = {
   parentId: string | null;
   name: string;
   subtitle?: string | null;
-  /** Required when kind !== "node". */
-  fieldDefinitionId?: string | null;
+  /** Required for inline (field-like) kinds; optional for re-root kinds —
+   *  policy containers (logbook) bind one, leaf re-roots (node, job) pass null. */
+  definitionId?: string | null;
   /** Optional initial value (for value-bearing kinds). */
   value?: DataFieldValue | null;
   /** Optional explicit sibling order; auto-minted via nextSiblingOrder when omitted. */
@@ -59,11 +55,12 @@ export type StorageElementUpdate = Partial<{
  * Does not mirror Firestore; focuses on current domain operations.
  */
 export interface StorageAdapter {
-  // FieldDefinition operations (the Library)
-  listFieldDefinitions(): Promise<StorageResult<FieldDefinition[]>>;
-  getFieldDefinition(id: string): Promise<StorageResult<FieldDefinition | null>>;
-  createFieldDefinition(input: StorageFieldDefinitionCreate): Promise<StorageResult<FieldDefinition>>;
-  updateFieldDefinition(id: string, updates: StorageFieldDefinitionUpdate): Promise<StorageResult<void>>;
+  // Definition operations (the Library — `library`-tree Elements, assembled
+  // into Definition views; no separate table). Phase 1 has no edit path
+  // (fork-not-mutate), so there is no updateDefinition.
+  listDefinitions(): Promise<StorageResult<Definition[]>>;
+  getDefinition(id: string): Promise<StorageResult<Definition | null>>;
+  createDefinition(input: StorageDefinitionCreate): Promise<StorageResult<Definition>>;
 
   // ============================================================================
   // Element operations (unified primitive — see plan: unified-element-data-model)
@@ -72,7 +69,7 @@ export interface StorageAdapter {
   getElement(id: string): Promise<StorageResult<Element | null>>;
   listChildElements(parentId: string): Promise<StorageResult<Element[]>>;
   listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>>;
-  nextSiblingOrder(parentId: string | null): Promise<StorageResult<number>>;
+  nextSiblingOrder(parentId: string | null, kind?: Kind): Promise<StorageResult<number>>;
   createElement(input: StorageElementCreate): Promise<StorageResult<Element>>;
   updateElement(id: string, updates: StorageElementUpdate): Promise<StorageResult<void>>;
   softDeleteElement(id: string): Promise<StorageResult<void>>;
@@ -97,11 +94,7 @@ export interface SyncableStorageAdapter extends StorageAdapter {
   getLastSyncTimestamp(): Promise<number>;
   setLastSyncTimestamp(timestamp: number): Promise<void>;
 
-  // FieldDefinition remote apply (server-authority upsert from a pull).
-  applyRemoteFieldDefinition(entity: FieldDefinition): Promise<void>;
-  getAllFieldDefinitions(): Promise<FieldDefinition[]>;
-
-  // ---- Element sync ----
+  // ---- Element sync ---- (library Definitions ride this lane too)
   getAllElements(): Promise<Element[]>;
   getAllElementHistory(): Promise<ElementHistory[]>;
   applyRemoteElement(element: Element): Promise<void>;
@@ -120,10 +113,8 @@ export interface RemoteSyncAdapter {
   // Full collection pull methods
   pullAllElements(): Promise<Element[]>;
   pullAllElementHistory(): Promise<ElementHistory[]>;
-  pullAllFieldDefinitions(): Promise<FieldDefinition[]>;
 
   // Delta sync methods (only rows updated since the given timestamp)
   pullElementsSince(since: number): Promise<Element[]>;
   pullElementHistorySince(since: number): Promise<ElementHistory[]>;
-  pullFieldDefinitionsSince(since: number): Promise<FieldDefinition[]>;
 }

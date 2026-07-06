@@ -1,6 +1,6 @@
 /**
  * Coverage for CREATE_ELEMENT_FROM_DEFINITION across all 4 Phase-1 kinds.
- * Asserts the snapshot of FieldDefinition.label → element.name and that
+ * Asserts the snapshot of Definition.label → element.name and that
  * initial-value creates write a single history row carrying the value.
  */
 
@@ -9,24 +9,16 @@ import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { initializeCommandBus, getCommandBus, resetCommandBus } from '../data/commands';
 import { initializeQueries, resetQueries } from '../data/queries';
-import type { ComponentType, FieldDefinitionConfig } from '../data/models';
+import type { Kind, DefinitionConfig } from '../data/models';
+import { seedLibraryDefinition } from './libraryFixtures';
 
 async function seedDefinition(
   id: string,
-  componentType: ComponentType,
+  kind: Kind,
   label: string,
-  config: FieldDefinitionConfig,
+  config: DefinitionConfig,
 ): Promise<void> {
-  await db.fieldDefinitions.put({
-    id,
-    componentType,
-    label,
-    config,
-    authorId: 'test',
-    updatedBy: 'test',
-    updatedAt: Date.now(),
-    deletedAt: null,
-  });
+  await seedLibraryDefinition(id, kind, label, config);
 }
 
 async function createParentNode(id: string): Promise<void> {
@@ -53,18 +45,18 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
     resetQueries();
   });
 
-  it('creates a text-kv element from a text-kv FieldDefinition', async () => {
+  it('creates a text-kv element from a text-kv Definition', async () => {
     await createParentNode('n1');
     await seedDefinition('fd_desc', 'text-kv', 'Description', { multiline: true });
 
     const result = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { parentId: 'n1', fieldDefinitionId: 'fd_desc' },
+      payload: { parentId: 'n1', definitionId: 'fd_desc' },
     });
 
     expect(result.name).toBe('Description');
     expect(result.kind).toBe('text-kv');
-    expect(result.fieldDefinitionId).toBe('fd_desc');
+    expect(result.definitionId).toBe('fd_desc');
     expect(result.value).toBeNull();
   });
 
@@ -76,7 +68,7 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
 
     const result = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { parentId: 'n1', fieldDefinitionId: 'fd_status' },
+      payload: { parentId: 'n1', definitionId: 'fd_status' },
     });
 
     expect(result.kind).toBe('enum-kv');
@@ -93,7 +85,7 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
 
     const result = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { parentId: 'n1', fieldDefinitionId: 'fd_weight' },
+      payload: { parentId: 'n1', definitionId: 'fd_weight' },
     });
 
     expect(result.kind).toBe('number-kv');
@@ -109,7 +101,7 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
 
     const result = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { parentId: 'n1', fieldDefinitionId: 'fd_image' },
+      payload: { parentId: 'n1', definitionId: 'fd_image' },
     });
 
     expect(result.kind).toBe('single-image');
@@ -123,7 +115,7 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
 
     const element = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { parentId: 'n1', fieldDefinitionId: 'fd_weight' },
+      payload: { parentId: 'n1', definitionId: 'fd_weight' },
     });
 
     const history = await db.elementHistory.where('elementId').equals(element.id).toArray();
@@ -139,7 +131,7 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
 
     const element = await getCommandBus().execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { parentId: 'n1', fieldDefinitionId: 'fd_weight', initialValue: 42 },
+      payload: { parentId: 'n1', definitionId: 'fd_weight', initialValue: 42 },
     });
 
     expect(element.value).toBe(42);

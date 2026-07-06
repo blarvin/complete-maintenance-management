@@ -9,12 +9,16 @@ import { component$, $, PropFunction } from '@builder.io/qwik';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
+import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
+import { canHaveChildren } from '../../kinds/childrenPolicy';
+import { nodeRenderMode } from '../../kinds/renderMode';
 import type { DisplayNodeState } from './types';
+import type { Kind } from '../../data/models';
 import styles from './TreeNode.module.css';
 import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
 
@@ -23,6 +27,7 @@ export type TreeNodeDisplayProps = {
     name: string;
     subtitle: string;
     nodeState: DisplayNodeState;
+    kind: Kind;
     parentId?: string | null;
     onNodeClick$?: PropFunction<() => void>;
     onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
@@ -68,6 +73,16 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
     const isChild = props.nodeState === 'CHILD';
     const indentVar = isChild ? '18px' : '50px';
 
+    // Manifest-aware shell (#5): the DataCard is *display chrome*, orthogonal to
+    // physical ownership. It renders for a kind that owns children (Children →
+    // FieldList) OR that derives a typed rollup (a lens → LensRollup). The `jobs`
+    // container is both: its own DataFields plus the "Jobs (N)" rollup.
+    const renderMode = nodeRenderMode(props.kind);
+    const lensTargetKind = renderMode.mode === 'lens' ? renderMode.targetKind : undefined;
+    const isLens = renderMode.mode === 'lens';
+    const ownsChildren = canHaveChildren(props.kind);
+    const showDataCard = ownsChildren || isLens;
+
     return (
         <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
             <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded}>
@@ -107,12 +122,20 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                 parentId={props.parentId}
                 onNodeClick$={props.onNodeClick$}
                 onNavigateUp$={props.onNavigateUp$}
-                onExpand$={toggleExpand$}
+                onExpand$={showDataCard ? toggleExpand$ : undefined}
                 onDetailsToggle$={toggleDetailsExpand$}
+                showChevron={showDataCard}
             />
-            <DataCard isOpen={isExpanded}>
-                <FieldList nodeId={props.id} isConstruction={false} />
-            </DataCard>
+            {showDataCard && (
+                <DataCard isOpen={isExpanded}>
+                    {ownsChildren && <FieldList nodeId={props.id} isConstruction={false} />}
+                    {/* The compact in-card rollup is the lens's CHILD (under-a-node)
+                        summary only. Re-rooted (PARENT), the jobs render as Node-like
+                        CHILD cards via BranchView, so the lens's own card stays its
+                        own DataFields (field details / history). */}
+                    {isLens && !isParent && <LensRollup lensId={props.id} targetKind={lensTargetKind!} />}
+                </DataCard>
+            )}
         </div>
     );
 });

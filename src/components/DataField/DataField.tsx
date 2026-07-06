@@ -1,6 +1,6 @@
 /**
  * DataField - Thin dispatcher: renders the chevron + label + Component-specific
- * body (via componentType switch) + optional DataFieldDetails.
+ * body (via kind-keyed manifest lookup) + optional DataFieldDetails.
  *
  * The owning rootRef is created here so outside-click detection inside each
  * renderer covers the entire row (chevron, label, value), not just the value
@@ -12,15 +12,15 @@ import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
-import { getKindManifest } from '../../kinds/registry';
-import type { ComponentType, DataFieldValue } from '../../data/models';
+import { getInlineManifest } from '../../kinds/registry';
+import type { Kind, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
     name: string;
-    fieldDefinitionId: string;
-    kind: ComponentType;
+    definitionId: string;
+    kind: Kind;
     value: DataFieldValue | null;
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
@@ -52,7 +52,14 @@ export const DataField = component$<DataFieldProps>((props) => {
 
     const labelId = `field-label-${props.id}`;
 
-    const manifest = getKindManifest(props.kind);
+    const manifest = getInlineManifest(props.kind);
+
+    // The arrangement law, entailed by the kind's value shape (SPEC → chrome
+    // entailment): scalar = label + inline run + centred chevron; block = label +
+    // tall block + top chevron; composite = renderer-owned sub-structure, label
+    // suppressed, tall block + top chevron. No ownValue (asset-doc — the value is
+    // an Edge) → a scalar-shaped resolved read.
+    const shape = manifest.ownValue?.shape ?? 'scalar';
 
     // Used by DataFieldDetails for metadata and (future) history-value preview.
     const currentDisplayValue = manifest.displayPreview(props.value);
@@ -62,7 +69,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             class={[
                 styles.datafieldWrapper,
                 isDetailsExpanded && styles.datafieldWrapperExpanded,
-                manifest.blockValueLayout && styles.datafieldWrapperImage,
+                shape !== 'scalar' && styles.datafieldWrapperBlock,
                 'no-caret',
             ]}
             ref={rootRef}
@@ -79,7 +86,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             />
 
 
-            {!manifest.hideLabel && (
+            {shape !== 'composite' && (
                 <label class={styles.datafieldLabel} id={labelId}>{props.name}:</label>
             )}
 
@@ -88,7 +95,7 @@ export const DataField = component$<DataFieldProps>((props) => {
             {isDetailsExpanded && (
                 <DataFieldDetails
                     fieldId={props.id}
-                    fieldDefinitionId={props.fieldDefinitionId}
+                    definitionId={props.definitionId}
                     kind={props.kind}
                     currentValue={currentDisplayValue}
                     onDelete$={handleDelete$}
@@ -102,11 +109,11 @@ function renderBody(
     props: DataFieldProps,
     rootRef: Signal<HTMLElement | undefined>,
 ) {
-    const Renderer = getKindManifest(props.kind).Renderer;
+    const Renderer = getInlineManifest(props.kind).Renderer;
     return (
         <Renderer
             id={props.id}
-            fieldDefinitionId={props.fieldDefinitionId}
+            definitionId={props.definitionId}
             value={props.value}
             updatedAt={props.updatedAt}
             rootRef={rootRef}

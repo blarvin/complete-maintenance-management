@@ -1,14 +1,14 @@
 /**
  * EnumKvField - Renderer for enum-kv DataFields.
  *
- * Click/double-tap to open a dropdown of FieldDefinition.config.options. Pick
+ * Click/double-tap to open a dropdown of Definition.config.options. Pick
  * an option to save; Escape / outside-click cancels. `allowOther` is deferred —
  * Phase 1 MVP only shows the fixed options list.
  */
 
 import { component$, useSignal, useResource$, Resource, useVisibleTask$, $, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
 import { useOnDocument, useOnWindow } from '@builder.io/qwik';
-import { getFieldDefinitionQueries } from '../../data/queries';
+import { getDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
@@ -21,7 +21,7 @@ import enumStyles from './EnumKvField.module.css';
 
 export type EnumKvFieldProps = {
     id: string;
-    fieldDefinitionId: string;
+    definitionId: string;
     value: string | null;
     rootRef: Signal<HTMLElement | undefined>;
     onUpdated$?: PropFunction<() => void>;
@@ -73,9 +73,9 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
     });
 
     const optionsResource = useResource$<{ options: string[]; allowOther: boolean }>(async ({ track }) => {
-        track(() => props.fieldDefinitionId);
-        const def = await getFieldDefinitionQueries().getFieldDefinitionById(props.fieldDefinitionId);
-        if (!def || def.componentType !== 'enum-kv') return { options: [], allowOther: false };
+        track(() => props.definitionId);
+        const def = await getDefinitionQueries().getDefinitionById(props.definitionId);
+        if (!def || def.kind !== 'enum-kv') return { options: [], allowOther: false };
         const config = def.config as EnumKvConfig;
         return { options: config.options, allowOther: config.allowOther ?? false };
     });

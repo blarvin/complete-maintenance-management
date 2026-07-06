@@ -44,7 +44,8 @@
       "PowerShell(Get-ChildItem -Recurse src -File | Select-Object FullName, Length | ForEach-Object { $_.FullName.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) + \"`t\" + $_.Length })",
       "PowerShell(npx vitest run src/test/initStorage.test.ts --silent 2>$null | Select-Object -Last 80)",
       "mcp__jcodemunch__get_symbol_source",
-      "mcp__jcodemunch__search_text"
+      "mcp__jcodemunch__search_text",
+      "PowerShell(npx vitest run src/test/nodeLikeKinds.test.ts src/test/capabilityEngine.test.ts 2>$null; if \\($?\\) { \"OK\" })"
     ],
     "deny": [
       "Read(.env*)",

@@ -3,6 +3,7 @@ import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { initializeCommandBus, getCommandBus, resetCommandBus } from '../data/commands';
 import { initializeQueries, getElementQueries, resetQueries } from '../data/queries';
+import { seedLibraryDefinition } from './libraryFixtures';
 
 describe('Element commands + queries', () => {
   beforeEach(async () => {
@@ -34,21 +35,12 @@ describe('Element commands + queries', () => {
   });
 
   it('CREATE_ELEMENT_FROM_DEFINITION snapshots label as name and uses kind from definition', async () => {
-    await db.fieldDefinitions.put({
-      id: 'fd-vin',
-      componentType: 'text-kv',
-      label: 'VIN',
-      config: {},
-      authorId: 'appDeveloper',
-      updatedBy: 'localUser',
-      updatedAt: Date.now(),
-      deletedAt: null,
-    });
+    await seedLibraryDefinition('fd-vin', 'text-kv', 'VIN');
     const bus = getCommandBus();
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'p', kind: 'node', parentId: null, name: 'P' } });
     const created = await bus.execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { id: 'f1', parentId: 'p', fieldDefinitionId: 'fd-vin', initialValue: 'AAA' },
+      payload: { id: 'f1', parentId: 'p', definitionId: 'fd-vin', initialValue: 'AAA' },
     });
     expect(created.kind).toBe('text-kv');
     expect(created.name).toBe('VIN');
@@ -96,22 +88,13 @@ describe('Element commands + queries', () => {
   });
 
   it('getChildrenByKind separates node children from field children', async () => {
-    await db.fieldDefinitions.put({
-      id: 'fd-1',
-      componentType: 'text-kv',
-      label: 'L',
-      config: {},
-      authorId: 'appDeveloper',
-      updatedBy: 'localUser',
-      updatedAt: Date.now(),
-      deletedAt: null,
-    });
+    await seedLibraryDefinition('fd-1', 'text-kv', 'L');
     const bus = getCommandBus();
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'p', kind: 'node', parentId: null, name: 'P' } });
     await bus.execute({ type: 'CREATE_ELEMENT', payload: { id: 'n', kind: 'node', parentId: 'p', name: 'N' } });
     await bus.execute({
       type: 'CREATE_ELEMENT_FROM_DEFINITION',
-      payload: { id: 'f', parentId: 'p', fieldDefinitionId: 'fd-1' },
+      payload: { id: 'f', parentId: 'p', definitionId: 'fd-1' },
     });
 
     const q = getElementQueries();

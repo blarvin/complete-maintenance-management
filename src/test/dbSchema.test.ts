@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 
-describe('AppDatabase schema (v8 — unified Element model, legacy stores dropped)', () => {
+describe('AppDatabase schema (v11 — the binding column renames: fieldDefinitionId → definitionId)', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
@@ -11,26 +11,28 @@ describe('AppDatabase schema (v8 — unified Element model, legacy stores droppe
     await db.delete();
   });
 
-  it('opens at version 8', () => {
-    expect(db.verno).toBe(8);
+  it('opens at version 11', () => {
+    expect(db.verno).toBe(11);
   });
 
-  it('no longer exposes the legacy nodes/fields/history stores', () => {
+  it('no longer exposes the legacy nodes/fields/history or fieldDefinitions stores', () => {
     const tableNames = db.tables.map((t) => t.name);
     expect(tableNames).not.toContain('nodes');
     expect(tableNames).not.toContain('fields');
     expect(tableNames).not.toContain('history');
+    // The Library now lives in `elements` (treeType: 'library') — no separate table.
+    expect(tableNames).not.toContain('fieldDefinitions');
     expect(tableNames).toEqual(
-      expect.arrayContaining(['elements', 'elementHistory', 'fieldDefinitions', 'syncQueue', 'syncMetadata']),
+      expect.arrayContaining(['elements', 'elementHistory', 'syncQueue', 'syncMetadata']),
     );
   });
 
-  it('has elements store with expected indexes', () => {
+  it('has elements store with expected indexes (incl. treeType)', () => {
     const t = db.table('elements');
     const indexNames = t.schema.indexes.map((i) => i.name);
     expect(t.schema.primKey.name).toBe('id');
     expect(indexNames).toEqual(
-      expect.arrayContaining(['parentId', 'kind', 'fieldDefinitionId', 'siblingOrder', 'updatedAt', 'deletedAt']),
+      expect.arrayContaining(['parentId', 'kind', 'definitionId', 'treeType', 'siblingOrder', 'updatedAt', 'deletedAt']),
     );
   });
 
@@ -50,7 +52,8 @@ describe('AppDatabase schema (v8 — unified Element model, legacy stores droppe
       value: null,
       parentId: null,
       siblingOrder: 1,
-      fieldDefinitionId: null,
+      definitionId: null,
+      treeType: 'business',
       updatedBy: 'localUser',
       updatedAt: Date.now(),
       deletedAt: null,

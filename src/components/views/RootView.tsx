@@ -9,6 +9,8 @@ import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren } from '../../hooks/useElementChildren';
+import { isLensSurfaced } from '../../kinds/childrenPolicy';
+import { RE_ROOT_CREATE_KINDS } from '../../kinds/registry';
 
 export const RootView = component$(() => {
     const appState = useAppState();
@@ -24,10 +26,12 @@ export const RootView = component$(() => {
     });
 
     // Filter out the UC node from the list to prevent dual rendering
-    // (UC node is rendered separately below with UNDER_CONSTRUCTION state)
-    const displayNodes = ucNode
+    // (UC node is rendered separately below with UNDER_CONSTRUCTION state), plus any
+    // lens-surfaced kinds — jobs live in a lens, never as stray roots.
+    const displayNodes = (ucNode
         ? nodes.value.filter(n => n.id !== ucNode.id)
-        : nodes.value;
+        : nodes.value
+    ).filter(n => !isLensSurfaced(n.kind));
 
     // Mirror BranchView's loading guard so the root list doesn't flash empty
     // before data resolves. Guard on empty nodes so background reloads don't
@@ -45,6 +49,7 @@ export const RootView = component$(() => {
                     name={n.name}
                     subtitle={n.subtitle ?? ''}
                     nodeState={selectors.getDisplayNodeState(appState, n.id)}
+                    kind={n.kind}
                     onNodeClick$={() => navigateToNode$(n.id)}
                 />
             ))}
@@ -64,7 +69,7 @@ export const RootView = component$(() => {
                     onCreate$={complete$}
                 />
             ) : null}
-            <CreateNodeButton variant="root" onClick$={start$} />
+            <CreateNodeButton variant="root" availableKinds={RE_ROOT_CREATE_KINDS.filter((k) => !isLensSurfaced(k))} onClick$={start$} />
         </main>
     );
 });

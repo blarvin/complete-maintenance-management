@@ -5,15 +5,15 @@
  * in-memory node index) react without the adapter knowing about them.
  */
 
-import type { FieldDefinition, Element } from './models';
+import type { Definition, Element } from './models';
 
 // ---------------------------------------------------------------------------
 // Event types
 // ---------------------------------------------------------------------------
 
 export type StorageEvent =
-  | { type: 'FIELD_DEFINITION_WRITTEN'; definition: Pick<FieldDefinition, 'id' | 'deletedAt'> }
-  | { type: 'ELEMENT_WRITTEN'; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'deletedAt'> }
+  | { type: 'DEFINITION_WRITTEN'; definition: Pick<Definition, 'id' | 'deletedAt'> }
+  | { type: 'ELEMENT_WRITTEN'; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'treeType' | 'deletedAt'> }
   | { type: 'ELEMENT_HARD_DELETED'; elementId: string };
 
 // ---------------------------------------------------------------------------
