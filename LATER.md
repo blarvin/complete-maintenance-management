@@ -65,13 +65,13 @@ The six-capability vocabulary + `coherence` landed as a component-free seam (202
 
 ### `intrinsic-node-scalar` kind — parked
 
-The node-like kind that *also* carries its own value — `Children + OwnValue` (flagged), re-root: a tank holding child fields *and* a primary reading or a cheap rollup. It was the cheapest entry in the minimal kind set (code-work-map §6b — node shell + an inline value display) and the only one that would have *exercised* the `Children + OwnValue` coherence warning path.
+The node-like kind that *also* carries its own value — `Children + OwnValue` (flagged), re-root: a tank holding child fields *and* a primary reading or a cheap rollup. It was the cheapest entry in the minimal kind set (§6b — node shell + an inline value display) and the only one that would have *exercised* the `Children + OwnValue` coherence warning path.
 
 **Parked because** its value/utility looks dubious (2026-06-28): a node that bears a scalar can already be modeled as a node with a single own-value field child, so the kind may not earn its registry slot. Pulled from the active minimal kind set — that set now builds `org` / `job` / `jobs` / `asset-doc` (ISSUES Architecture Migration #3) and hands four-not-five distinct re-root shells to chrome entailment (#5).
 
 **Framework left intact.** The `Children + OwnValue` = *valid-but-flagged* rule is framework-level (SPECIFICATION.md §589) and stays put: `checkCoherence` (`src/kinds/coherence.ts`) still warns on the co-occurrence and `kindCoherence.test.ts` still runs it over `KIND_CAPABILITIES`. No built or planned kind composes that subset, so the warning path is a **dormant guard** — already dormant before this park, and it greets the first `Children + OwnValue` kind that ever lands (this one revived, or another). Nothing to remove; the rule defends the invariant whether or not a kind exercises it.
 
-**If revived:** restore the ELEMENT-MODEL.md catalogue row + spec section (composition `Children + OwnValue` (flagged), re-root, status `describe`) and re-add the bullet to code-work-map §6b. The coherence warning is already in place to greet it.
+**If revived:** restore the ELEMENT-MODEL.md catalogue row + spec section (composition `Children + OwnValue` (flagged), re-root, status `describe`). The coherence warning is already in place to greet it.
 
 ### §6b minimal kind set — deferred follow-ups
 
@@ -199,6 +199,8 @@ Currently deleting a field leaves a gap in `cardOrder`. Display sorts ascending 
 **Rich Construction UI** (per spec): multiple default rows, five dropdowns for user-selected fields, Add button in row 10, Save/Cancel in row 11, empty rows skipped on save.
 
 Phase 1 creation is minimal (Name + Subtitle); fields added post-creation from the DataCard.
+
+**`typeOf` → suggested-fields service** — the behaviour-free domain typology (SPECIFICATION.md §584; ELEMENT-MODEL.md → What is *not* a kind) ships as forkable seed `typeOf` data (tag + default field bundle), read by **one generic service** that suggests fields from a node's `typeOf` during construction. The tag half exists (seeded `fd_type_of`, added at node mint); unbuilt are the seed bundles and the suggestion service itself. This is the mechanism that would populate the Rich Construction UI's default rows. (Node-*kind* choice in the create surface is separate and already shipped — the picker reads `reRootCreateKindsFor`.)
 
 ### Add-Field Surface A/B
 

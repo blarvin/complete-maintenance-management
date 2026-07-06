@@ -21,18 +21,18 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 | node                          | `Children(open)`                                                 | `Pump P-101`                   | re-root          | current  |
 | image                         | `OwnValue(blob)`                                                 | a nameplate photo              | inline           | describe |
 | image-with-caption            | `Children(template: image + text-kv)`                            | photo + "south face"           | inline           | describe |
-| asset-doc                     | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | describe |
+| asset-doc                     | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | current  |
 | part-supplier-link            | `Edges(external)`                                                | → supplier's web page          | inline           | describe |
 | other-end                     | `Edges(internal, virtual) + Reads.resolver`                      | "also lives under Pump House"  | inline / re-root | describe |
 | approval                      | `Edges(internal, revision) + Reads.resolver`                     | "approved @ rev 4 (now rev 7)" | inline           | describe |
 | asset-gallery                 | `Derivation(children/transitive → image) + Reads.resolver`       | every photo below, one place   | inline           | describe |
 | value-chart                   | `OwnValue + Reads.historyStream`                                 | pressure, last 90 days         | inline           | describe |
 | inherit-unless-override       | `OwnValue + Derivation(ancestors/transitive) + arbiter`          | `Criticality ← parent`         | inline           | describe |
-| logbook                       | `Derivation(children/transitive → log-entry) + Provision` (lens) | all entries below here         | re-root          | describe |
-| log-entry                     | `Children(template: body + tag/flag tails)`                      | "replaced seal" `#done`        | inline           | describe |
-| job                           | `Children(open)`                                                  | Replace bearing (Open→Done)    | re-root          | describe |
-| jobs                          | `Derivation(children/transitive → job) + Provision` (lens)       | all jobs below here            | re-root          | describe |
-| org                           | `Children(open) + Derivation(children/transitive)`               | Maintenance Dept (12)          | re-root          | describe |
+| logbook                       | `Derivation(children/transitive → log-entry) + Provision` (lens) | all entries below here         | re-root          | current  |
+| log-entry                     | `Children(template: body + tag/flag tails)`                      | "replaced seal" `#done`        | inline           | current  |
+| job                           | `Children(open)`                                                  | Replace bearing (Open→Done)    | re-root          | current  |
+| jobs                          | `Derivation(children/transitive → job) + Provision` (lens)       | all jobs below here            | re-root          | current  |
+| org                           | `Children(open) + Derivation(children/transitive)`               | Maintenance Dept (12)          | re-root          | current  |
 | person                        | `Children(open) + identity/overlay-anchor + target`              | Dave (assignee, account)       | re-root          | describe |
 | logical-container             | `Edges(members, multi) + Reads.resolver`                         | Spare Parts (hand-picked)      | re-root          | describe |
 | cross-tree action             | `Action(cross-tree)`                                             | "close all child jobs"         | inline           | open     |
@@ -214,7 +214,7 @@ Subtle background colour in Phase 1; no icons.
 
 **Value shape**: an Element `id` (the target). `pin: 'live'` — always resolves the target's current state.
 
-**UX**: an inline reference row rendered from the resolved target. **Status: describe.**
+**UX**: an inline reference row rendered from the resolved target. **Status: current** (v1 stub, #6b 2026-06-28 — the value is a raw element-id resolved live to the target's name; a real target picker, an allowed-target-kind config, and editing a saved link are tracked in ISSUES).
 
 ## part-supplier-link
 
@@ -301,9 +301,11 @@ The target kind is the only parameter — an org that works in "work orders," "t
 - **jobs** — the lens aimed at `job`: every Jobs box shows all jobs beneath it; one appears at each ancestor when a job is added anywhere below.
 - **logbook** — the same lens aimed at `log-entry`: all entries beneath the point you're viewing.
 
-**v1 (#6b, 2026-06-28).** `jobs` is built as **a lens child on every node** (deterministic id `${nodeId}::jobs`), each gathering its *own* subtree — a **pure rollup**, reaching the same visible result as upward provisioning (a Jobs box at every ancestor level) without the write-time ancestor-walk. **Decision: pure rollup is right for `jobs` now.** `logbook` will be **both** lens *and* container (entries are authored *in* it); once job-subtypes (Task/Work Order/Project) arrive, `jobs` may need both too. Container behaviour — adding `job` rows in place, the **inline-yet-navigable placement** — rides on chrome entailment (#5). De-provision/GC, hiding empty lenses, and lazy-provisioning onto pre-existing nodes are deferred (LATER.md).
+**v1 (#6b, 2026-06-28).** `jobs` is built as **a lens child on every node** (deterministic id `${nodeId}::jobs`), each gathering its *own* subtree — a **pure rollup**, reaching the same visible result as upward provisioning (a Jobs box at every ancestor level) without the write-time ancestor-walk. **Decision: pure rollup is right for `jobs` now.** Container behaviour landed with the #5 container half (2026-06-30): `jobs` is a **hybrid** — it owns its own DataFields *and* rolls up jobs; each `job` is authored inside the container (parented to the owning node) and renders field-like yet re-rootable — a compact `NavigableRow` under a node, a Node-like CHILD card when re-rooted into — the **inline-yet-navigable placement** made concrete. `logbook` inherits the same rollup-and-container shape; once job-subtypes (Task/Work Order/Project) arrive, a subtype may force its own kind.
 
-**Status:** `jobs` **current** (v1 stub, #6b); `logbook` **current** (#6c + the Definition-binding seam, 2026-07-01: rollup-and-container with a bound policy Definition — entry label + staleness — stamped at mint from the seeded `fd_logbook_policy`).
+**Deferred:** **rich gathered rows** — a row's status/lifecycle "primary line" — wait on `Action` (ISSUES → chrome entailment); picking which *descendant* a new job lands under — Phase-1 parents every job to the lens owner (LATER); backfill onto pre-existing nodes, de-provision/GC, and hiding empty lenses (ISSUES → provisioned-lens lifecycle).
+
+**Status:** `jobs` **current** (v1 rollup #6b + the hybrid-container half of #5, 2026-06-30); `logbook` **current** (#6c + the Definition-binding seam, 2026-07-01: rollup-and-container with a bound policy Definition — entry label + staleness — stamped at mint from the seeded `fd_logbook_policy`).
 
 ## job
 
@@ -319,7 +321,7 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 **Composition**: `Children(template: body + tag/flag tails)`. **Placement**: inline.
 
-**Status: describe.**
+**Status: current** (v1 stub, #6c 2026-07-01 — plain entries authored in the `logbook` lens, labeled per the bound policy Definition; the template body + tag/flag tails still to build).
 
 ## org
 
@@ -327,7 +329,7 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 **Composition**: `Children(open) + Derivation(children/transitive)`. **Placement**: re-root. (Concrete sub-specs design-pending — see Open Questions.)
 
-**Status: describe.**
+**Status: current** (v1 stub, #6b 2026-06-28 — node shell + a descendant-node count, the first consumer of the `children/transitive` traversal; the real people/role sub-specs remain design-pending — see Open Questions).
 
 ## person
 
