@@ -18,9 +18,11 @@
 ## 2. Non-Goals / Scope Guards
 
 - No SolidStart, no SSR/SSG, no URL router — the FSM stays the navigation model.
-- No feature work, no data-model or schema changes, no touches to the Dexie/Firestore/sync stack.
+- **Feature freeze on this branch**: no ISSUES work, no mixed feature + migration commits. No feature work, no data-model or schema changes, no touches to the Dexie/Firestore/sync stack.
 - 1:1 component port: same DOM structure, same CSS modules, same aria surface; redesign is out of scope.
 - No new test frameworks; no component-render unit tests introduced during the migration.
+- Keep DOM structure, aria-labels, and visible text stable through the port so those specs and the CSS modules carry unchanged.
+- **P**ort the single-image stub as-is; do not couple the image / image-with-caption decomposition (ELEMENT-MODEL) to this migration.
 
 
 
@@ -54,24 +56,20 @@
 ## 4. Prep / Groundwork (before touching the framework)
 
 - **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests. Today there is exactly one spec.
-- Keep DOM structure, aria-labels, and visible text stable through the port so those specs and the CSS modules carry unchanged.
 - Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site.
 - Nothing else — no component refactors; the rewrite subsumes them.
 
 
 
-## 5. Blockers (decide before starting)
+## 5. Locked-in Decisions Relevent to Migration
 
-- **Accept CSR**: dropping the SSG prerender means first paint waits on JS. For a local-first PWA (all data is client-side anyway) this is the natural trade — decide and record it.
-- **Feature freeze on this branch**: in-flight ISSUES work (#6c catalogue, the arbiter) waits or lands first; no mixed feature + migration commits.
-- **single-image**: port the stub as-is; do not couple the image / image-with-caption decomposition (ELEMENT-MODEL) to this migration.
-- Nothing else found — no server functions, no router state, no serialization-dependent data structures.
+- **Accept CSR**: drop the SSG prerender.
 
 
 
 ## 6. Resources (tooling swap)
 
-- **Add**: `solid-js`, `vite-plugin-solid`; optional `eslint-plugin-solid`.
+- **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`.
 - **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it).
 - **Change**: tsconfig JSX settings to Solid's; scripts collapse to plain `vite` / `vite build` / `vite preview`; service-worker registration becomes one explicit line.
 - **Keep**: Vite, Vitest (config untouched), Cypress, Dexie, Firebase, fake-indexeddb, the precache plugin (re-pointed at the moved SW source), the web manifest, CSS modules + tokens.
@@ -83,7 +81,7 @@
 
 A cutover on this branch, not a strangler — two JSX runtimes in one Vite build isn't worth it. Invariant at every phase boundary: **typecheck clean, all 38 unit tests green**; the UI regains surfaces phase by phase.
 
-- **I — Boot & spine**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell.
+- **I — Boot & spine**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time.
 - **II — Read path**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything.
 - **III — Edit path**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo.
 - **IV — Create & author path**: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation.
@@ -109,10 +107,63 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 
 
 
-## 10. Risks & Open Decisions *(added)*
+## 10. Risks and Potential Snags
 
 - **Reactivity model shift**: Qwik signals port mechanically, but Solid punishes destructured props and untracked reads — pervasive small changes rather than hard ones; the three big files carry most of the risk.
 - **Mid-branch broken app**: phases II–IV run with a partially restored UI; the unit suite + phase discipline are the safety net, and master stays releasable throughout.
-- **Timing-sensitive UI code**: the bus-driven refresh loops, debounces, focus management, and double-tap windows will surface any latent re-render-timing assumptions in phase III; budget verification time there.
+- **Timing-sensitive UI code**: the bus-driven refresh loops, debounces, focus management, and double-tap windows will surface any latent re-render-timing assumptions in phase III; budget verification time there. Site-by-site inventory and the hand-test checklist: §11.
 - **First-paint change** (CSR): revisit only if it visibly hurts; a static splash in `index.html` is the cheap fix.
 
+
+
+## 11. Timing-Sensitive Code: Inventory & Phase-III Checklist
+
+Every timeout in the codebase is one of two kinds. **Human/UI constants** (gesture windows, debounces, animation waits) port unchanged. **Qwik-render workarounds** (`setTimeout(0)` / small delays that wait for Qwik's *asynchronous* DOM update before touching a just-mounted element) must be **deleted**, not ported — Solid updates the DOM synchronously, so after a signal set the element already exists. Porting them mechanically is cargo cult at best, broken focus at worst.
+
+### Site inventory (survey 2026-07-07)
+
+
+| Site                                                             | Delay            | What it is                                            | Verdict                                       |
+| ---------------------------------------------------------------- | ---------------- | ----------------------------------------------------- | --------------------------------------------- |
+| `useDoubleTap.ts`                                                | 280ms / 6px slop | Gesture window (pure fn, tested)                      | Keep as-is                                    |
+| `useFocusManager.ts` `FOCUS_DELAY_MS`                            | 10ms             | Wait for Qwik async render before focusing            | **Delete** — focus in an effect; ref is ready |
+| `useFocusManager.ts` `BLUR_SUPPRESS_WINDOW_MS`                   | 220ms            | Native pointerdown/blur race padding                  | Keep; re-verify width in phase III            |
+| `useFieldEdit.ts` autoFocus task                                 | `setTimeout(0)`  | Wait for input to mount (composer autoFocus)          | **Delete**                                    |
+| `EnumKvField.tsx` ×3 (`startOther$`, auto-open, open-transition) | `setTimeout(0)`  | Wait for popover to mount before position+focus       | **Delete**                                    |
+| `useElementChildren.ts` `RELOAD_DEBOUNCE_MS`                     | 30ms             | Coalesce write bursts into one reload                 | Keep; preserve *subscribe-before-first-load*  |
+| `useLensGather.ts` / `KindAdornment.tsx`                         | 50ms             | Same debounce pattern for rollups                     | Keep                                          |
+| `useSyncTrigger.ts`                                              | 500ms            | Batch edits before server push (module-level, tested) | Keep, untouched                               |
+| `ComposerRow.tsx` scroll anchor                                  | 220ms            | Wait out CSS animation before `scrollIntoView`        | Keep (animation constant, not Qwik)           |
+| `SingleImageField.tsx` flash                                     | 180ms            | Cosmetic flash                                        | Keep                                          |
+
+
+
+
+### Known ordering hazards (phase III)
+
+- **Synchronous updates cut both ways**: Qwik handlers are async QRLs, so state lands a beat after the event; in Solid an outside-click handler closes the edit field *mid-event*, before the trailing blur/click are delivered. The outside-click cancel + `inputBlur$` + blur-suppress interplay is where latent ordering assumptions will surface.
+- **Event delegation ordering**: Solid delegates `pointerdown` through one document listener; the manual `document.addEventListener` outside-click cancel may order differently than under Qwik. Escape hatch if it bites: `on:pointerdown` (native, non-delegated).
+- Free win, not a hazard: double-tap timestamps move from async-QRL execution time to synchronous event time — detection gets slightly *more* reliable.
+
+
+
+### Phase-III hand-test checklist
+
+The unit suite renders no components, so this checklist **is** the coverage for the timing risk. Walk it on the dev build at the end of phase III (composer rows again in phase IV):
+
+- [ ] Double-tap a field value → enters edit, input focused, cursor at end
+- [ ] Double-tap *while editing* → cancels back to display
+- [ ] Single tap on a field value → does nothing (no accidental edit)
+- [ ] Enter/Space on a focused field value → enters edit
+- [ ] Enter while editing → saves; Escape → cancels and restores display value
+- [ ] Click away while editing → cancels (normal mode)
+- [ ] Click away on a composer pending row → **commits** the typed value (pendingMode inverts click-away)
+- [ ] Pointerdown inside an already-focused input → does not close the editor (blur suppression)
+- [ ] Save/cancel → focus lands somewhere sane; no focus loops or double-focus flicker
+- [ ] Enum: double-tap trigger → popover opens positioned at trigger, first option focused
+- [ ] Enum: composer tick → auto-open + focus first option; seeded rows steal no focus
+- [ ] Enum: scroll/resize while open → popover tracks trigger; outside click closes; Escape returns focus to trigger
+- [ ] Composer: tick a tall-preview row → checkbox stays anchored on screen after the animation
+- [ ] Rapid edits to several fields → one sync push after the 500ms window (watch network/emulator)
+- [ ] Composer commit (multi-field write burst) → one reload per view, no flicker storm
+- [ ] Edit a field visible in a lens rollup → rollup and KindAdornment counts update within ~a beat
