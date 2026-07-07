@@ -12,6 +12,7 @@
 - The kind registry keeps its shape; only the per-kind Renderer/ConfigForm entries and the renderer prop contract change framework type. The capability/policy layer is untouched.
 - Deployment shape unchanged: static `dist/` + the existing hand-written service worker + precache manifest, served statically (`preview:pwa` still works).
 - Qwik workarounds become *optional* simplifications, not obligations: the module-getter service registry (born as a Qwik-serialization workaround) is plain TS and stays as-is through the migration.
+- **Accept CSR**: drop the SSG prerender. (Locked-in decision relevent to migration.)
 
 
 
@@ -61,13 +62,7 @@
 
 
 
-## 5. Locked-in Decisions Relevent to Migration
-
-- **Accept CSR**: drop the SSG prerender.
-
-
-
-## 6. Resources (tooling swap)
+## 5. Resources (tooling swap)
 
 - **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`.
 - **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it).
@@ -77,7 +72,7 @@
 
 
 
-## 7. Work Phases (each becomes its own plan)
+## 6. Work Phases (each becomes its own plan)
 
 A cutover on this branch, not a strangler — two JSX runtimes in one Vite build isn't worth it. Invariant at every phase boundary: **typecheck clean, all 38 unit tests green**; the UI regains surfaces phase by phase.
 
@@ -89,7 +84,7 @@ A cutover on this branch, not a strangler — two JSX runtimes in one Vite build
 
 Phases III–IV hold the heavy rewrites; budget accordingly.
 
-## 8. Verification
+## 7. Verification
 
 - Continuous: unit suite green (it never touches the UI, so a regression here means domain breakage), typecheck, lint.
 - Against the **Analysis feature list**: walk every behavior-contract bullet on the dev build; run the prep-phase Cypress specs against the Solid app.
@@ -98,7 +93,7 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 
 
 
-## 9. Mop-up
+## 8. Mop-up
 
 - Delete Qwik deps, configs, and the workaround archaeology: the runtime-qrl construction in the sync retry path, handler-type aliases, "Qwik-free so Vitest can transform" comments.
 - Docs sweep: CLAUDE.md (stack, Qwik idioms, serialization warnings), IMPLEMENTATION.md notes that explain Qwik workarounds, ISSUES/LATER items that reference Qwik mechanics, README.
@@ -107,7 +102,7 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 
 
 
-## 10. Risks and Potential Snags
+## 9. Risks and Potential Snags
 
 - **Reactivity model shift**: Qwik signals port mechanically, but Solid punishes destructured props and untracked reads — pervasive small changes rather than hard ones; the three big files carry most of the risk.
 - **Mid-branch broken app**: phases II–IV run with a partially restored UI; the unit suite + phase discipline are the safety net, and master stays releasable throughout.
@@ -116,7 +111,7 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 
 
 
-## 11. Timing-Sensitive Code: Inventory & Phase-III Checklist
+## 10. Timing-Sensitive Code: Inventory & Phase-III Checklist
 
 Every timeout in the codebase is one of two kinds. **Human/UI constants** (gesture windows, debounces, animation waits) port unchanged. **Qwik-render workarounds** (`setTimeout(0)` / small delays that wait for Qwik's *asynchronous* DOM update before touching a just-mounted element) must be **deleted**, not ported — Solid updates the DOM synchronously, so after a signal set the element already exists. Porting them mechanically is cargo cult at best, broken focus at worst.
 
