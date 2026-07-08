@@ -13,7 +13,7 @@
  * the first readers, the cascade arbiter the second).
  */
 
-import type { Component, PropFunction, QRL, Signal } from '@builder.io/qwik';
+import type { Component } from 'solid-js';
 import type { Kind, DataFieldValue, DefinitionConfig } from '../data/models';
 
 /**
@@ -69,21 +69,22 @@ export type FieldRendererProps = {
     id: string;
     definitionId: string;
     value: DataFieldValue | null;
-    rootRef: Signal<HTMLElement | undefined>;
+    /** Callback ref (Solid convention; parent picks reactivity) — provisional until Phase III. */
+    rootRef: (el: HTMLElement) => void;
     updatedAt?: number;
-    onUpdated$?: PropFunction<() => void>;
-    pendingMode?: { onChange$: QRL<(value: DataFieldValue | null) => void>; autoFocus?: boolean };
+    onUpdated?: () => void;
+    pendingMode?: { onChange: (value: DataFieldValue | null) => void; autoFocus?: boolean };
 };
 
 /**
  * Uniform prop contract for a kind's authoring sub-form. The two-arg
- * `onChange$` covers both shapes in the wild: text/single-image forms call it
+ * `onChange` covers both shapes in the wild: text/single-image forms call it
  * with one arg (error stays undefined → treated as null); enum/number forms
  * pass a validation error string.
  */
 export type ConfigFormProps = {
     config: DefinitionConfig;
-    onChange$: PropFunction<(cfg: DefinitionConfig, error?: string | null) => void>;
+    onChange: (cfg: DefinitionConfig, error?: string | null) => void;
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────

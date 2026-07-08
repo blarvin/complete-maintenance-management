@@ -9,7 +9,7 @@
  * is no longer privileged.
  */
 
-import type { Component } from '@builder.io/qwik';
+import type { Component } from 'solid-js';
 import type { Kind, DefinitionConfig } from '../data/models';
 import type { ConfigFormProps, ConfigSubField, InlineManifest, KindManifest } from './types';
 import { allowedChildKinds } from './childrenPolicy';

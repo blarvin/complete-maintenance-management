@@ -1,11 +1,9 @@
-import type { Component } from '@builder.io/qwik';
-import { NumberKvField } from '../components/DataField/NumberKvField';
+import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
 import { formatNumberKvDisplay } from '../components/DataField/numberKvState';
-import { NumberKvConfigForm } from '../components/FieldComposer/configForms/NumberKvConfigForm';
 import type { DataFieldValue, DefinitionConfig, NumberKvConfig } from '../data/models';
 import { NUMBER_KV_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
+import type { KindManifest } from './types';
 
 export const numberKvManifest: KindManifest = {
     kind: 'number-kv',
@@ -13,8 +11,8 @@ export const numberKvManifest: KindManifest = {
     mintVia: 'composer',
     placement: 'inline',
     ...KIND_CAPABILITIES['number-kv'], // capability subset — structural seam, not read yet
-    Renderer: NumberKvField as unknown as Component<FieldRendererProps>,
-    ConfigForm: NumberKvConfigForm as unknown as Component<ConfigFormProps>,
+    Renderer: ConfigFieldStubRenderer, // TODO(Phase III): restore NumberKvField
+    ConfigForm: ConfigFieldStubConfigForm, // TODO(Phase IV): restore NumberKvConfigForm
     defaultConfig: (): DefinitionConfig => ({ unitsSymbol: '' }),
     displayPreview: (v: DataFieldValue | null, config?: DefinitionConfig) =>
         v === null || v === undefined ? null

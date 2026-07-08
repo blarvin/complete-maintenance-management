@@ -45,7 +45,15 @@
       "PowerShell(npx vitest run src/test/initStorage.test.ts --silent 2>$null | Select-Object -Last 80)",
       "mcp__jcodemunch__get_symbol_source",
       "mcp__jcodemunch__search_text",
-      "PowerShell(npx vitest run src/test/nodeLikeKinds.test.ts src/test/capabilityEngine.test.ts 2>$null; if \\($?\\) { \"OK\" })"
+      "PowerShell(npx vitest run src/test/nodeLikeKinds.test.ts src/test/capabilityEngine.test.ts 2>$null; if \\($?\\) { \"OK\" })",
+      "PowerShell(npm i *)",
+      "PowerShell(npm ls *)",
+      "PowerShell(Set-Content *)",
+      "PowerShell(npx vitest run src/test/snackbarService.test.ts src/test/syncManagerExhaustionToast.test.ts)",
+      "PowerShell(git *)",
+      "PowerShell(Get-ChildItem src\\\\kinds -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) })",
+      "PowerShell(Select-String *)",
+      "PowerShell($sw = Get-Content dist\\\\service-worker.js -Raw; $sw.Substring\\(0, 300\\); Get-ChildItem dist -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\dist\\\\', ''\\) })"
     ],
     "deny": [
       "Read(.env*)",

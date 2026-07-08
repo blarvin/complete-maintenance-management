@@ -1,85 +1,74 @@
 /**
  * SnackbarHost - renders the single global snackbar toast.
  *
- * Owns the reactive store (via useStore) and registers it with the module-level
- * snackbar service on mount. Service `show/dismiss` calls mutate the store,
- * which re-renders this host.
+ * Owns the reactive state (a signal) and registers a signal-backed accessor
+ * object with the module-level snackbar service on mount — the service's plain
+ * `registeredStore.current = active` assignments stay reactive with zero
+ * service changes. `<Show keyed>` remounts the toast element per fresh toast
+ * object (the service builds a new one per `show()`), reproducing the old
+ * `key={toast.id}` semantics.
  */
 
-import { component$, useStore, useVisibleTask$, $, useOnWindow } from '@builder.io/qwik';
+import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import {
     registerSnackbarStore,
     getSnackbarService,
     invokeActionAndDismiss,
 } from '../../services/snackbar';
-import type { SnackbarStore } from '../../services/snackbar';
+import type { ActiveToast } from '../../services/snackbar';
 import styles from './SnackbarHost.module.css';
 
-export const SnackbarHost = component$(() => {
-    const store = useStore<SnackbarStore>({ current: null });
+export const SnackbarHost = () => {
+    const [current, setCurrent] = createSignal<ActiveToast | null>(null);
 
-    useVisibleTask$(() => {
-        registerSnackbarStore(store);
-    });
+    onMount(() => {
+        registerSnackbarStore({
+            get current() {
+                return current();
+            },
+            set current(v: ActiveToast | null) {
+                setCurrent(v);
+            },
+        });
 
-    useOnWindow(
-        'keydown',
-        $((ev) => {
-            const e = ev as KeyboardEvent;
-            if (e.key === 'Escape' && store.current) {
+        const onKeydown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && current()) {
                 getSnackbarService().dismiss();
             }
-        }),
-    );
-
-    const onActionClick$ = $(async () => {
-        await invokeActionAndDismiss();
+        };
+        window.addEventListener('keydown', onKeydown);
+        onCleanup(() => window.removeEventListener('keydown', onKeydown));
     });
-
-    const onPointerEnter$ = $(() => {
-        getSnackbarService().pauseTimer();
-    });
-
-    const onPointerLeave$ = $(() => {
-        getSnackbarService().resumeTimer();
-    });
-
-    const onFocusIn$ = $(() => {
-        getSnackbarService().pauseTimer();
-    });
-
-    const onFocusOut$ = $(() => {
-        getSnackbarService().resumeTimer();
-    });
-
-    const toast = store.current;
-    if (!toast) return null;
-
-    const isError = toast.variant === 'error';
-    const hostClass = [styles.host, isError && styles.error].filter(Boolean).join(' ');
 
     return (
-        <div
-            key={toast.id}
-            class={hostClass}
-            role={isError ? 'alert' : 'status'}
-            aria-live={isError ? 'assertive' : 'polite'}
-            aria-atomic="true"
-            onPointerEnter$={onPointerEnter$}
-            onPointerLeave$={onPointerLeave$}
-            onFocusIn$={onFocusIn$}
-            onFocusOut$={onFocusOut$}
-        >
-            <span class={styles.message}>{toast.message}</span>
-            {toast.action && (
-                <button
-                    type="button"
-                    class={styles.action}
-                    onClick$={onActionClick$}
-                >
-                    {toast.action.label}
-                </button>
-            )}
-        </div>
+        <Show when={current()} keyed>
+            {(toast) => {
+                const isError = toast.variant === 'error';
+                const hostClass = [styles.host, isError && styles.error].filter(Boolean).join(' ');
+                return (
+                    <div
+                        class={hostClass}
+                        role={isError ? 'alert' : 'status'}
+                        aria-live={isError ? 'assertive' : 'polite'}
+                        aria-atomic="true"
+                        onPointerEnter={() => getSnackbarService().pauseTimer()}
+                        onPointerLeave={() => getSnackbarService().resumeTimer()}
+                        onFocusIn={() => getSnackbarService().pauseTimer()}
+                        onFocusOut={() => getSnackbarService().resumeTimer()}
+                    >
+                        <span class={styles.message}>{toast.message}</span>
+                        {toast.action && (
+                            <button
+                                type="button"
+                                class={styles.action}
+                                onClick={() => void invokeActionAndDismiss()}
+                            >
+                                {toast.action.label}
+                            </button>
+                        )}
+                    </div>
+                );
+            }}
+        </Show>
     );
-});
+};

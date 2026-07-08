@@ -4,9 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM", "WebWorker"],
-    "types": ["node", "vitest/globals"],
-    "jsx": "react-jsx",
-    "jsxImportSource": "@builder.io/qwik",
+    "types": ["node", "vitest/globals", "vite/client"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,5 +15,5 @@
     "outDir": "dist"
   },
   "include": ["src", "scripts", "vitest.config.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/components", "src/hooks"]
 }
