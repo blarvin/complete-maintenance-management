@@ -10,6 +10,7 @@ import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/st
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
 import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
 import type { SyncQueueManager } from '../SyncQueueManager';
+import { AUTHOR_ID_APP_DEVELOPER } from '../../../constants';
 
 export class FullCollectionSync implements SyncStrategy {
   readonly name = 'full-collection';
@@ -42,12 +43,16 @@ export class FullCollectionSync implements SyncStrategy {
         .map(item => item.entityId)
     );
 
-    // Delete local elements not in remote (unless pending push)
+    // Delete local elements not in remote (unless pending push). Seeded
+    // Library rows are exempt: seedDefinitions deliberately never enqueues
+    // them, so they never reach the server and server absence is not deletion
+    // evidence — without this, any sparse/empty remote (fresh emulator, wiped
+    // server) wipes every seeded Definition on first full sync (ISSUES Bug #1).
     for (const localElement of localElements) {
-      if (!remoteIds.has(localElement.id) && !pendingIds.has(localElement.id)) {
-        await this.local.deleteElementLocal(localElement.id);
-        console.log('[FullCollectionSync] Deleted local element (removed remotely):', localElement.id);
-      }
+      if (remoteIds.has(localElement.id) || pendingIds.has(localElement.id)) continue;
+      if (localElement.treeType === 'library' && localElement.updatedBy === AUTHOR_ID_APP_DEVELOPER) continue;
+      await this.local.deleteElementLocal(localElement.id);
+      console.log('[FullCollectionSync] Deleted local element (removed remotely):', localElement.id);
     }
 
     // Apply remote elements (server authority)
