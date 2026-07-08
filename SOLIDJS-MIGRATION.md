@@ -50,14 +50,14 @@
 
 ## 4. Prep / Groundwork (before touching the framework)
 
-- **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests. Today there is exactly one spec.
-- Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site. *(Not done separately — subsumed into Phase I, which flipped the QRL sites straight to plain function types.)*
+- **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests.  ✅
+- Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site. *(Not done separately — subsumed into Phase I, which flipped the QRL sites straight to plain function types.)* ✅
 - Nothing else — no component refactors; the rewrite subsumes them.
 
 ## 5. Resources (tooling swap)
 
 - **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`. ✅
-- **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it). ✅
+- **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it).  [  ]
 - **Change**: tsconfig JSX settings to Solid's; scripts collapse to plain `vite` / `vite build` / `vite preview`; service-worker registration becomes one explicit line. ✅
 - **Keep**: Vite, Vitest (config untouched), Cypress, Dexie, Firebase, fake-indexeddb, the precache plugin (re-pointed at the moved SW source), the web manifest, CSS modules + tokens. ✅
 - Use context7 for current solid-js documentation during the work.
