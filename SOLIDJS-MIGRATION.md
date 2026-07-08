@@ -14,8 +14,6 @@
 - Qwik workarounds become *optional* simplifications, not obligations: the module-getter service registry (born as a Qwik-serialization workaround) is plain TS and stays as-is through the migration.
 - **Accept CSR**: drop the SSG prerender. (Locked-in decision relevent to migration.)
 
-
-
 ## 2. Non-Goals / Scope Guards
 
 - No SolidStart, no SSR/SSG, no URL router — the FSM stays the navigation model.
@@ -24,8 +22,6 @@
 - No new test frameworks; no component-render unit tests introduced during the migration.
 - Keep DOM structure, aria-labels, and visible text stable through the port so those specs and the CSS modules carry unchanged.
 - **P**ort the single-image stub as-is; do not couple the image / image-with-caption decomposition (ELEMENT-MODEL) to this migration.
-
-
 
 ## 3. Analysis (what the app is)
 
@@ -52,31 +48,25 @@
 - **All 38 Vitest files are framework-independent** (none render a component); exactly one Cypress spec drives the DOM.
 - PWA: hand-written service worker (framework-free logic) + custom precache Vite plugin; Qwik's only role is registering it.
 
-
-
 ## 4. Prep / Groundwork (before touching the framework)
 
 - **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests. Today there is exactly one spec.
 - Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site. *(Not done separately — subsumed into Phase I, which flipped the QRL sites straight to plain function types.)*
 - Nothing else — no component refactors; the rewrite subsumes them.
 
-
-
 ## 5. Resources (tooling swap)
 
-- **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`.
-- **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it).
-- **Change**: tsconfig JSX settings to Solid's; scripts collapse to plain `vite` / `vite build` / `vite preview`; service-worker registration becomes one explicit line.
-- **Keep**: Vite, Vitest (config untouched), Cypress, Dexie, Firebase, fake-indexeddb, the precache plugin (re-pointed at the moved SW source), the web manifest, CSS modules + tokens.
+- **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`. ✅
+- **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it). ✅
+- **Change**: tsconfig JSX settings to Solid's; scripts collapse to plain `vite` / `vite build` / `vite preview`; service-worker registration becomes one explicit line. ✅
+- **Keep**: Vite, Vitest (config untouched), Cypress, Dexie, Firebase, fake-indexeddb, the precache plugin (re-pointed at the moved SW source), the web manifest, CSS modules + tokens. ✅
 - Use context7 for current solid-js documentation during the work.
-
-
 
 ## 6. Work Phases (each becomes its own plan)
 
 A cutover on this branch, not a strangler — two JSX runtimes in one Vite build isn't worth it. Invariant at every phase boundary: **typecheck clean, all 38 unit tests green**; the UI regains surfaces phase by phase.
 
-- **I — Boot & spine** ✅ **(done 2026-07-08, plan `.claude/plans/SOLIDJS-WORKPHASE-I.md`)**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time. *(All gates passed: typecheck, 39 test files, lint 0 errors, build + SW precache, dev-boot with 9 seeded Definitions. The §4 QRL-funnel prep was subsumed here. Rode along: ISSUES Bug #1 fix — seeded-Library exemption in full-sync deletion detection — after it blocked dev-boot verification.)*
+- **I — Boot & spine** ✅ **(done 2026-07-08, plan** `.claude/plans/SOLIDJS-WORKPHASE-I.md`**)**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time. *(All gates passed: typecheck, 39 test files, lint 0 errors, build + SW precache, dev-boot with 9 seeded Definitions. The §4 QRL-funnel prep was subsumed here. Rode along: ISSUES Bug #1 fix — seeded-Library exemption in full-sync deletion detection — after it blocked dev-boot verification.)*
 - **II — Read path**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything.
 - **III — Edit path**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo.
 - **IV — Create & author path**: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation.
@@ -91,8 +81,6 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 - Sync round-trip against the Firestore emulator; airplane-mode pass on the built PWA; a real device install.
 - Against **Architecture & Intentions**: grep proves zero Qwik imports remain; the deployment shape matches (static dist + SW + precache manifest).
 
-
-
 ## 8. Mop-up
 
 - Delete Qwik deps, configs, and the workaround archaeology: the runtime-qrl construction in the sync retry path, handler-type aliases, "Qwik-free so Vitest can transform" comments.
@@ -100,16 +88,12 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 - Optional simplifications, each its own decision, none required: module-getter registry → plain imports or context (keep the test seams); drop the dangling firestore-test script.
 - Re-index the code-lookup MCP.
 
-
-
 ## 9. Risks and Potential Snags
 
 - **Reactivity model shift**: Qwik signals port mechanically, but Solid punishes destructured props and untracked reads — pervasive small changes rather than hard ones; the three big files carry most of the risk.
 - **Mid-branch broken app**: phases II–IV run with a partially restored UI; the unit suite + phase discipline are the safety net, and master stays releasable throughout.
 - **Timing-sensitive UI code**: the bus-driven refresh loops, debounces, focus management, and double-tap windows will surface any latent re-render-timing assumptions in phase III; budget verification time there. Site-by-site inventory and the hand-test checklist: §10. *Observed instance (2026-07-07, writing the contract specs):* the controlled value editors drop keystrokes under fast typing — the per-keystroke `onInput$` QRL updates `editValue` asynchronously, and a key landing mid-cycle is lost to the `value={editValue.value}` re-render (Cypress at full speed typed "First value"; the field saved "Frst value"; the specs work around it with a 60 ms type delay + a value assertion before commit). Re-test by hand in phase III — Solid's synchronous signal writes should eliminate it; if it persists, the bug is in the edit-lifecycle port, not the framework.
 - **First-paint change** (CSR): revisit only if it visibly hurts; a static splash in `index.html` is the cheap fix.
-
-
 
 ## 10. Timing-Sensitive Code: Inventory & Phase-III Checklist
 
@@ -132,15 +116,11 @@ Every timeout in the codebase is one of two kinds. **Human/UI constants** (gestu
 | `SingleImageField.tsx` flash                                     | 180ms            | Cosmetic flash                                        | Keep                                          |
 
 
-
-
 ### Known ordering hazards (phase III)
 
 - **Synchronous updates cut both ways**: Qwik handlers are async QRLs, so state lands a beat after the event; in Solid an outside-click handler closes the edit field *mid-event*, before the trailing blur/click are delivered. The outside-click cancel + `inputBlur$` + blur-suppress interplay is where latent ordering assumptions will surface.
 - **Event delegation ordering**: Solid delegates `pointerdown` through one document listener; the manual `document.addEventListener` outside-click cancel may order differently than under Qwik. Escape hatch if it bites: `on:pointerdown` (native, non-delegated).
 - Free win, not a hazard: double-tap timestamps move from async-QRL execution time to synchronous event time — detection gets slightly *more* reliable.
-
-
 
 ### Phase-III hand-test checklist
 

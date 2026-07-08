@@ -53,7 +53,10 @@
       "PowerShell(git *)",
       "PowerShell(Get-ChildItem src\\\\kinds -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) })",
       "PowerShell(Select-String *)",
-      "PowerShell($sw = Get-Content dist\\\\service-worker.js -Raw; $sw.Substring\\(0, 300\\); Get-ChildItem dist -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\dist\\\\', ''\\) })"
+      "PowerShell($sw = Get-Content dist\\\\service-worker.js -Raw; $sw.Substring\\(0, 300\\); Get-ChildItem dist -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\dist\\\\', ''\\) })",
+      "PowerShell(npx vitest run src/test/fullCollectionSync.test.ts)",
+      "PowerShell(Select-String -Path SOLIDJS-MIGRATION.md -Pattern 'Phase I|§4|prep|## ' | Select-Object -First 40 | ForEach-Object { \"$\\($_.LineNumber\\): $\\($_.Line\\)\" })",
+      "PowerShell(Select-String -Path LATER.md -Pattern 'esolved' | Select-Object -First 5 | ForEach-Object { \"$\\($_.LineNumber\\): $\\($_.Line\\)\" }; \\(Get-Content IMPLEMENTATION.md | Measure-Object -Line\\).Lines; Select-String -Path IMPLEMENTATION.md -Pattern '^## ' | Select-Object -Last 8 | ForEach-Object { \"$\\($_.LineNumber\\): $\\($_.Line\\)\" })"
     ],
     "deny": [
       "Read(.env*)",
