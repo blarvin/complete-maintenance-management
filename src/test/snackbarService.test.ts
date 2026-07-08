@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Snackbar service tests - timer, replacement, dismiss, action/expire semantics.
  */
 
@@ -10,10 +10,6 @@ import {
     resetSnackbarService,
     type SnackbarStore,
 } from '../services/snackbar';
-
-// QRL shim: in unit tests `$(fn)` isn't wrapping anything, so a plain function is
-// a valid QRL at call time. We cast to any at the callsite.
-const q = <T extends (...args: any[]) => any>(fn: T) => fn as any;
 
 describe('SnackbarService', () => {
     let store: SnackbarStore;
@@ -45,7 +41,7 @@ describe('SnackbarService', () => {
 
     it('auto-dismisses and runs onExpire after duration', async () => {
         const onExpire = vi.fn();
-        getSnackbarService().show({ message: 'A', onExpire: q(onExpire) });
+        getSnackbarService().show({ message: 'A', onExpire });
         expect(store.current).not.toBeNull();
         await vi.advanceTimersByTimeAsync(5000);
         expect(store.current).toBeNull();
@@ -57,8 +53,8 @@ describe('SnackbarService', () => {
         const onExpire = vi.fn();
         getSnackbarService().show({
             message: 'A',
-            action: { label: 'Undo', handler: q(handler) },
-            onExpire: q(onExpire),
+            action: { label: 'Undo', handler },
+            onExpire,
         });
         await invokeActionAndDismiss();
         expect(store.current).toBeNull();
@@ -69,7 +65,7 @@ describe('SnackbarService', () => {
 
     it('dismiss() clears toast and skips onExpire', async () => {
         const onExpire = vi.fn();
-        getSnackbarService().show({ message: 'A', onExpire: q(onExpire) });
+        getSnackbarService().show({ message: 'A', onExpire });
         getSnackbarService().dismiss();
         expect(store.current).toBeNull();
         await vi.advanceTimersByTimeAsync(10000);
@@ -79,9 +75,9 @@ describe('SnackbarService', () => {
     it('replacement drops prior toast without running its onExpire', async () => {
         const firstExpire = vi.fn();
         const secondExpire = vi.fn();
-        getSnackbarService().show({ message: 'First', onExpire: q(firstExpire) });
+        getSnackbarService().show({ message: 'First', onExpire: firstExpire });
         const firstId = store.current!.id;
-        getSnackbarService().show({ message: 'Second', onExpire: q(secondExpire) });
+        getSnackbarService().show({ message: 'Second', onExpire: secondExpire });
         expect(store.current!.message).toBe('Second');
         expect(store.current!.id).not.toBe(firstId);
         expect(firstExpire).not.toHaveBeenCalled();
