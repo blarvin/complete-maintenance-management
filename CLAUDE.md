@@ -6,6 +6,7 @@
 **This is prototyping**: Do the simplest thing that works.
 **Context7 MCP**: When working with third-party libraries (Qwik, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
 **jCodeMunch MCP**: Use jcodemunch-mcp for all code lookups. Never read full files when MCP is available. Call `list_repos` first — if the project is not indexed, call `index_folder` with the current working directory. Use `search_symbols` / `get_symbol` to find and retrieve code by symbol name. Use `get_repo_outline` or `get_file_outline` to explore structure. Fall back to direct file reads only when editing or when MCP is unavailable.
+**Plan location**: Always save plan files (`.plan.md`, phase plans, etc.) to `.claude/plans/` in this project's local directory — never to a global or home-directory location.
 
 **Documentation Hierarchy**:
 
