@@ -175,6 +175,21 @@ The last §5 chrome-entailment vocabulary piece plus two ISSUES riders of the sa
 
 ---
 
+## SolidJS migration Phase I — boot & spine (done 2026-07-08, SOLIDJS-MIGRATION.md §6-I, plan `.claude/plans/SOLIDJS-WORKPHASE-I.md`)
+
+Cutover of the build graph, entry, state spine, and manifest types to solid-js; the Qwik UI tree stays in place unported until Phases II–IV. Non-obvious choices:
+
+- **tsconfig-exclude + import-following.** `exclude: ["node_modules", "src/components", "src/hooks"]` removes the unported Qwik tree only as tsc *roots*; anything the ported graph actually imports (ported `SnackbarHost`, Qwik-free `numberKvState.ts`, type-only `TreeNode/types.ts`) is still typechecked by import-following. No quarantine moves, so Phase II+ ports are `git mv`-free.
+- **Qwik npm deps stay installed until mop-up** (SOLIDJS-MIGRATION.md §8): unported files must stay resolvable for Vitest (`doubleTap.test.ts` value-imports a Qwik hook) and for tsc.
+- **ESLint Qwik-import ratchet**: `no-restricted-imports` errors on `@builder.io/qwik*` plus the `eslint-plugin-solid` flat/typescript preset with every enabled rule forced to `'error'` (it ships `solid/reactivity` at warn), scoped to `src/**` minus `src/components/**`/`src/hooks/**`, with an identical second block re-including `src/components/Snackbar/**` (negated patterns in flat-config global ignores are a trap). Ignores shrink each phase; deleted at mop-up.
+- **JSX-free spine discipline**: Vitest has no Solid transform (`vitest.config.ts` untouched), so nothing test-reachable may contain JSX. `appState.context.ts` stays `.ts` (provider JSX lives in `App.tsx`); the kinds stub became `configFieldStub.ts` — its Renderer returns a reactive thunk, cast locally because solid-js's published JSX types omit `FunctionElement` from the `Element` union (runtime accepts thunks).
+- **appState**: `createStore` + each action wrapping its unchanged transition in `setState(produce(...))` — multi-field FSM writes stay atomic, writes stay funneled through actions. `transitions/selectors/guards/types/uiPrefs` shipped byte-identical (the Set-bearing toggles already reassign fresh `Set` instances, which suits Solid's property-level tracking; Sets are never proxied).
+- **Snackbar service unchanged**: `SnackbarHost` registers a signal-backed accessor object (`get/set current`) via `registerSnackbarStore`, so the service's plain property assignments stay reactive; `<Show keyed>` reproduces the old `key={toast.id}` remount semantics.
+- **Renderer prop contract flipped now**: `$` suffixes dropped (`onUpdated`, `onChange`); `rootRef` is a callback ref `(el: HTMLElement) => void` — **provisional until Phase III**, where `useFieldEdit` becomes the real consumer.
+- **Bug #1 fix rode along** (blocked dev-boot verification): `FullCollectionSync.syncElements` exempts seeded Library rows (`treeType: 'library'` ∧ `updatedBy: AUTHOR_ID_APP_DEVELOPER`) from delete-local-not-on-remote — seeds never sync by design, so server absence is not deletion evidence. User-authored library Definitions and business rows keep full server-authority semantics (`fullCollectionSync.test.ts`).
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry

@@ -57,7 +57,7 @@
 ## 4. Prep / Groundwork (before touching the framework)
 
 - **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests. Today there is exactly one spec.
-- Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site.
+- Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site. *(Not done separately — subsumed into Phase I, which flipped the QRL sites straight to plain function types.)*
 - Nothing else — no component refactors; the rewrite subsumes them.
 
 
@@ -76,7 +76,7 @@
 
 A cutover on this branch, not a strangler — two JSX runtimes in one Vite build isn't worth it. Invariant at every phase boundary: **typecheck clean, all 38 unit tests green**; the UI regains surfaces phase by phase.
 
-- **I — Boot & spine**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time.
+- **I — Boot & spine** ✅ **(done 2026-07-08, plan `.claude/plans/SOLIDJS-WORKPHASE-I.md`)**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time. *(All gates passed: typecheck, 39 test files, lint 0 errors, build + SW precache, dev-boot with 9 seeded Definitions. The §4 QRL-funnel prep was subsumed here. Rode along: ISSUES Bug #1 fix — seeded-Library exemption in full-sync deletion detection — after it blocked dev-boot verification.)*
 - **II — Read path**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything.
 - **III — Edit path**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo.
 - **IV — Create & author path**: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation.

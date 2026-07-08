@@ -15,7 +15,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-1.) **Startup `syncFull` against an empty Firestore wipes the seeded Library** — `FullCollectionSync.syncElements` deletes local elements absent from remote unless queued, and `seedDefinitions` deliberately never enqueues its seeds, so a fresh emulator (or a wiped server) deletes every seeded Definition on first sync — construction defaults and the logbook policy vanish. Found writing the migration contract specs (2026-07-07; specs 1–2 dodge it by running offline). Fix candidate: skip deletion detection for `treeType: 'library'` rows authored by `AUTHOR_ID_APP_DEVELOPER`.
+*(none currently)*
 
 ## Features
 
