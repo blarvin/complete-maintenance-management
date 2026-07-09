@@ -69,6 +69,7 @@ export default [
   {
     files: [
       'src/components/Snackbar/**/*.{ts,tsx}',
+      'src/components/views/**/*.{ts,tsx}',
       'src/components/{UpButton,EllipsisButton,NodeTitle,NodeSubtitle,DataCard,TreeNodeDetails,Breadcrumbs}/**/*.{ts,tsx}',
       'src/components/{FieldList,NavigableRow}/**/*.{ts,tsx}',
       'src/components/DataField/DataField.tsx',

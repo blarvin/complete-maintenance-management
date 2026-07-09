@@ -3,14 +3,17 @@
  *
  * Provides the appState store/actions via context, initializes IDB storage and
  * the SyncManager on mount (the old useInitStorage body), and hosts the global
- * snackbar. The view shell is a Phase I placeholder proving the store spine —
- * RootView/BranchView land in Phase II.
+ * snackbar. Renders RootView/BranchView off the FSM view state (Phase II).
  */
 
 import { onMount, Show } from 'solid-js';
 import { createAppState, AppStateContext, selectors } from './state/appState';
 import { initializeStorage } from './data/storage/initStorage';
+import { getCommandBus, type Command } from './data/commands';
+import { getElementQueries } from './data/queries';
 import { SnackbarHost } from './components/Snackbar/SnackbarHost';
+import { RootView } from './components/views/RootView';
+import { BranchView } from './components/views/BranchView';
 
 export const App = () => {
     const appState = createAppState();
@@ -18,6 +21,15 @@ export const App = () => {
     onMount(async () => {
         // Initialize storage
         await initializeStorage();
+
+        if (import.meta.env.DEV) {
+            // Phase II migration-verification tooling: creation surfaces land in Phase IV,
+            // so expose the command bus for console seeding. TODO(mop-up): remove.
+            (window as unknown as Record<string, unknown>).__cmm = {
+                execute: (cmd: Command) => getCommandBus().execute(cmd),
+                queries: () => getElementQueries(),
+            };
+        }
 
         // Log service worker registration status. Not awaited: `ready` only
         // resolves once a SW activates, and dev never registers one (the old
@@ -49,9 +61,9 @@ export const App = () => {
         <AppStateContext.Provider value={appState}>
             <Show
                 when={selectors.isRootView(appState.state)}
-                fallback={<p>BRANCH view placeholder — {selectors.getCurrentNodeId(appState.state)} (Phase II)</p>}
+                fallback={<BranchView parentId={selectors.getCurrentNodeId(appState.state)!} />}
             >
-                <p>ROOT view placeholder (Phase II)</p>
+                <RootView />
             </Show>
             <SnackbarHost />
         </AppStateContext.Provider>
