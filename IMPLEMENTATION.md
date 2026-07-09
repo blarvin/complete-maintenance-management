@@ -190,6 +190,20 @@ Cutover of the build graph, entry, state spine, and manifest types to solid-js; 
 
 ---
 
+## SolidJS migration Phase II — read path (done 2026-07-09, SOLIDJS-MIGRATION.md §6-II, plan `.claude/plans/SOLIDJS-WORKPHASE-II.md`)
+
+Data-read hooks, views, and the TreeNode display family on Solid, read-only; edit (III) and create/author (IV) surfaces are TODO-marked holes. Non-obvious choices:
+
+- **Hook contracts: `Accessor<T>` in, accessors out.** Call sites pass thunks (`useElementById(() => props.parentId)`); each hook's `createEffect` reads the tracked accessors once into locals, subscribes to `storageEventBus` *before* the first load (events during startup sync must not be missed), and re-runs on navigation — fresh subscription + reload, the old Qwik `track` semantics. Hooks stay `.ts`/JSX-free (Vitest has no Solid transform).
+- **`disposed`-flag stale-async guard**: Solid effects capture values (Qwik QRLs re-read `.value` at run time), so an in-flight load from a previous `parentId` could land after navigation. Each loader effect sets `disposed` in `onCleanup` and skips its `set*` calls when set.
+- **`useAsyncOperation` not ported** — its only Solid consumer would be `useElementChildren`, which inlines a `createSignal(false)` + try/finally. The Qwik file stays for the unported hooks; dies at mop-up.
+- **`window.__cmm` DEV seeding hook in `App.tsx`**: creation surfaces don't exist until Phase IV, so migration verification seeds via the console (`execute`/`queries` wrapping the registry getters). `import.meta.env.DEV`-gated; removed at mop-up.
+- **`<For>` is reference-keyed**: bus reloads produce fresh `Element` objects, so all rows recreate per reload. Harmless read-only (expanded state lives in the FSM keyed by id; `NavigableRow`'s local `expanded` signal resets — within "roughly live" tolerance). Revisit with id-keyed mapping in Phase III if edit-focus churn appears.
+- **DataField chevron is wired but panel-less**: it drives `toggleFieldDetailsExpanded` (FSM + uiPrefs persist, aria/classes flip) but no `DataFieldDetails` mounts until Phase III. Renderers arrive via `<Dynamic component={manifest().Renderer}>` with a no-op `rootRef`.
+- **`solid/reactivity` lint shapes small idioms**: derived values off props are thunks, not consts (`labelId`, `lensTargetKind` — a `createMemo` accessor passed as a hook argument gets flagged, a plain thunk doesn't); the `types.ts` type guards renamed their parameter from `props` to `p` (the rule pattern-matches the name).
+
+---
+
 ## Critical Architectural Patterns
 
 ### Qwik Resumability and Service Registry
