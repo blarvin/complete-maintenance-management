@@ -62,10 +62,15 @@ export default [
       ...qwikRatchetRules,
     },
   },
-  // Same gate re-included for the ported Snackbar host (a separate block —
-  // negated patterns inside the global ignores are a flat-config trap).
+  // Same gate re-included for ported paths under src/components and src/hooks
+  // (a separate block — negated patterns inside the global ignores are a
+  // flat-config trap). This array grows in the same commit as the files it
+  // covers; per-file entries for mixed dirs that still hold Qwik files.
   {
-    files: ['src/components/Snackbar/**/*.{ts,tsx}'],
+    files: [
+      'src/components/Snackbar/**/*.{ts,tsx}',
+      'src/hooks/{useElementChildren,useLensGather,useLensPolicy,useFieldValueSync,useDoubleTap,useAncestorPath}.ts',
+    ],
     plugins: solidPreset.plugins,
     rules: {
       ...solidRulesAtError,
