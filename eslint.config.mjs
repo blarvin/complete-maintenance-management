@@ -70,6 +70,8 @@ export default [
     files: [
       'src/components/Snackbar/**/*.{ts,tsx}',
       'src/components/{UpButton,EllipsisButton,NodeTitle,NodeSubtitle,DataCard,TreeNodeDetails,Breadcrumbs}/**/*.{ts,tsx}',
+      'src/components/{FieldList,NavigableRow}/**/*.{ts,tsx}',
+      'src/components/DataField/DataField.tsx',
       'src/hooks/{useElementChildren,useLensGather,useLensPolicy,useFieldValueSync,useDoubleTap,useAncestorPath}.ts',
     ],
     plugins: solidPreset.plugins,
