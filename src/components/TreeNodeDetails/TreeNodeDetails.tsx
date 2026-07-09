@@ -5,22 +5,23 @@
  * Contains placeholder content for future features like metadata, breadcrumbs, and actions.
  */
 
-import { component$, Slot } from '@builder.io/qwik';
+import type { JSX } from 'solid-js';
 import styles from './TreeNodeDetails.module.css';
 
 export type TreeNodeDetailsProps = {
     nodeId: string;
     isOpen?: boolean;
+    children: JSX.Element;
 };
 
-export const TreeNodeDetails = component$((props: TreeNodeDetailsProps) => {
+export const TreeNodeDetails = (props: TreeNodeDetailsProps) => {
     return (
-        <div class={[styles.wrapper, props.isOpen && styles.wrapperOpen]}>
+        <div classList={{ [styles.wrapper]: true, [styles.wrapperOpen]: !!props.isOpen }}>
             <div class={styles.inner}>
-                <div class={[styles.details, props.isOpen && styles.detailsOpen]}>
-                    <Slot />
+                <div classList={{ [styles.details]: true, [styles.detailsOpen]: !!props.isOpen }}>
+                    {props.children}
                 </div>
             </div>
         </div>
     );
-});
+};
