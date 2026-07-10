@@ -8,7 +8,8 @@
  * like the other field kinds.
  */
 
-import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
+import { ConfigFieldStubConfigForm } from './configFieldStub';
+import { AssetDocField } from '../components/DataField/AssetDocField';
 import type { DataFieldValue, DefinitionConfig, AssetDocValue } from '../data/models';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { KindManifest } from './types';
@@ -19,7 +20,7 @@ export const assetDocManifest: KindManifest = {
     mintVia: 'composer',
     placement: 'inline',
     ...KIND_CAPABILITIES['asset-doc'],
-    Renderer: ConfigFieldStubRenderer, // TODO(Phase III): restore AssetDocField
+    Renderer: AssetDocField,
     ConfigForm: ConfigFieldStubConfigForm,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>

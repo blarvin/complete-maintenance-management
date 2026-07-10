@@ -1,8 +1,10 @@
-import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
+import type { Component } from 'solid-js';
+import { ConfigFieldStubConfigForm } from './configFieldStub';
+import { SingleImageField } from '../components/DataField/SingleImageField';
 import type { DataFieldValue, DefinitionConfig, SingleImageValue } from '../data/models';
 import { SINGLE_IMAGE_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { KindManifest } from './types';
+import type { FieldRendererProps, KindManifest } from './types';
 
 export const singleImageManifest: KindManifest = {
     kind: 'single-image',
@@ -10,7 +12,7 @@ export const singleImageManifest: KindManifest = {
     mintVia: 'composer',
     placement: 'inline',
     ...KIND_CAPABILITIES['single-image'], // capability subset — structural seam, not read yet
-    Renderer: ConfigFieldStubRenderer, // TODO(Phase III): restore SingleImageField
+    Renderer: SingleImageField as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm, // TODO(Phase IV): restore SingleImageConfigForm
     defaultConfig: (): DefinitionConfig => ({ maxSizeMB: 5 }),
     displayPreview: (v: DataFieldValue | null) =>
