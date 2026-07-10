@@ -13,11 +13,14 @@ import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import { getCommandBus } from '../../data/commands';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
 import { nodeRenderMode } from '../../kinds/renderMode';
 import type { DisplayNodeState } from './types';
 import type { Kind } from '../../data/models';
 import styles from './TreeNode.module.css';
+import detailsStyles from '../TreeNodeDetails/TreeNodeDetails.module.css';
 
 export type TreeNodeDisplayProps = {
     id: string;
@@ -41,6 +44,19 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     const toggleExpand = (e?: Event) => {
         e?.stopPropagation();
         toggleCardExpanded(props.id);
+    };
+
+    const handleDeleteNode = async () => {
+        const nodeId = props.id;
+        const parentId = props.parentId;
+        const ok = await commitWithUndo({
+            message: 'Node deleted',
+            execute: () => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: nodeId } }),
+            undo: () => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: nodeId } }),
+        });
+        if (ok) {
+            props.onNavigateUp?.(parentId ?? null);
+        }
     };
 
     const titleId = () => `node-title-${props.id}`;
@@ -77,7 +93,16 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                         {/* Future: Breadcrumb hierarchy */}
                         {/* Path: Root > Parent > Current */}
                     </div>
-                    {/* TODO(Phase III): Delete Asset (commitWithUndo + DELETE_ELEMENT/RESTORE_ELEMENT + navigateUp) — edit path */}
+                    <div class={detailsStyles.actionsRow}>
+                        <button
+                            type="button"
+                            class={detailsStyles.deleteButton}
+                            onClick={() => void handleDeleteNode()}
+                            aria-label="Delete this asset"
+                        >
+                            Delete Asset
+                        </button>
+                    </div>
                 </div>
             </TreeNodeDetails>
             <NodeHeader

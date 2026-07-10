@@ -1,13 +1,19 @@
 /**
- * DataFieldDetails - Inline metadata, history viewer (read-only for now), and
- * delete action displayed when a DataField is expanded.
+ * DataFieldDetails - Inline metadata, history viewer, and delete action
+ * displayed when a DataField is expanded.
  *
  * Preview/revert from history was removed during the Component split — the
  * preview state is now owned by each Component's renderer via useFieldEdit,
  * and hoisting it across the Component boundary is deferred.
+ *
+ * Lifecycle lives in component setup (fieldId is a mount-time constant; the
+ * panel remounts per expand). Subscribe-before-first-load: the bus
+ * subscription is registered before the initial fetch fires, which strictly
+ * closes the Qwik version's missed-event window (a write landing between
+ * mount and the visible-task's first fetch was never picked up).
  */
 
-import { component$, useSignal, useVisibleTask$, $, type PropFunction } from '@builder.io/qwik';
+import { Show, createSignal, onCleanup } from 'solid-js';
 import { getElementQueries, getDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
@@ -19,107 +25,107 @@ export type DataFieldDetailsProps = {
     fieldId: string;
     definitionId: string;
     kind: Kind;
-    currentValue: string | null;
-    onDelete$: PropFunction<() => void>;
+    onDelete: () => void;
 };
 
-export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
-    const history = useSignal<ElementHistory[]>([]);
-    const definition = useSignal<Definition | null>(null);
-    const isLoaded = useSignal(false);
-    const isHistoryOpen = useSignal(false);
+export const DataFieldDetails = (props: DataFieldDetailsProps) => {
+    const [history, setHistory] = createSignal<ElementHistory[]>([]);
+    const [definition, setDefinition] = createSignal<Definition | null>(null);
+    const [isLoaded, setIsLoaded] = createSignal(false);
+    const [isHistoryOpen, setIsHistoryOpen] = createSignal(false);
 
     // Only value-edit rows are field-value history (name/subtitle/parentId/
     // siblingOrder edits are not). Sorted ascending (oldest first) so the
     // history viewer can drop the last entry as the live-duplicate.
-    const fetchHistory$ = $(async (): Promise<ElementHistory[]> => {
+    const fetchHistory = async (): Promise<ElementHistory[]> => {
         const rows = await getElementQueries().getElementHistory(props.fieldId);
         return rows.filter(r => r.property === 'value').sort((a, b) => a.rev - b.rev);
+    };
+
+    // Shared stale-async guard for the subscription callback and initial load.
+    let disposed = false;
+    /* eslint-disable solid/reactivity -- mount-time constants; the panel remounts per expand (<Show> in DataField) */
+    const unsubscribe = storageEventBus.subscribe(async (event) => {
+        if (event.type !== 'ELEMENT_WRITTEN') return;
+        if (event.element.id !== props.fieldId) return;
+        try {
+            const h = await fetchHistory();
+            if (!disposed) setHistory(h);
+        } catch (e) {
+            console.error('Failed to refresh field history:', e);
+        }
+    });
+    onCleanup(() => {
+        disposed = true;
+        unsubscribe();
     });
 
-    useVisibleTask$(async () => {
+    void (async () => {
         try {
             const [h, def] = await Promise.all([
-                fetchHistory$(),
+                fetchHistory(),
                 getDefinitionQueries().getDefinitionById(props.definitionId),
             ]);
-            history.value = h;
-            definition.value = def;
+            if (!disposed) {
+                setHistory(h);
+                setDefinition(def);
+            }
         } catch (e) {
             console.error('Failed to load field details:', e);
         } finally {
-            isLoaded.value = true;
+            if (!disposed) setIsLoaded(true);
         }
-    });
+    })();
+    /* eslint-enable solid/reactivity */
 
-    useVisibleTask$(({ cleanup }) => {
-        const unsubscribe = storageEventBus.subscribe(async (event) => {
-            if (event.type !== 'ELEMENT_WRITTEN') return;
-            if (event.element.id !== props.fieldId) return;
-            try {
-                history.value = await fetchHistory$();
-            } catch (e) {
-                console.error('Failed to refresh field history:', e);
-            }
-        });
-        cleanup(() => unsubscribe());
-    });
+    const toggleHistory = () => setIsHistoryOpen(!isHistoryOpen());
 
-    const handleDelete$ = $(() => {
-        props.onDelete$();
-    });
+    const latestEntry = () => (history().length > 0 ? history()[history().length - 1] : null);
 
-    const toggleHistory$ = $(() => {
-        isHistoryOpen.value = !isHistoryOpen.value;
-    });
-
-    const latestEntry = history.value.length > 0
-        ? history.value[history.value.length - 1]
-        : null;
-
-    const editAt = latestEntry?.updatedAt ? formatTimestampShort(latestEntry.updatedAt) : '';
-    const editBy = latestEntry?.updatedBy ?? '';
-
-    const metadataText = isLoaded.value && editAt
-        ? `${editAt}  ${editBy}`
-        : '...';
+    const metadataText = () => {
+        const entry = latestEntry();
+        const editAt = entry?.updatedAt ? formatTimestampShort(entry.updatedAt) : '';
+        const editBy = entry?.updatedBy ?? '';
+        return isLoaded() && editAt ? `${editAt}  ${editBy}` : '...';
+    };
 
     // The most recent entry duplicates the live value and is hidden by
     // DataFieldHistory; require at least 2 entries before enabling the chevron.
-    const hasHistory = history.value.length > 1;
+    const hasHistory = () => history().length > 1;
 
     return (
-        <div class={[styles.inlineWrapper, 'no-caret']}>
-            <span class={[styles.metadata, 'no-caret']}>{metadataText}</span>
+        <div classList={{ [styles.inlineWrapper]: true, 'no-caret': true }}>
+            <span classList={{ [styles.metadata]: true, 'no-caret': true }}>{metadataText()}</span>
 
             <button
                 type="button"
-                class={[
-                    styles.historyChevron,
-                    isHistoryOpen.value ? styles.historyChevronDown : styles.historyChevronLeft,
-                ]}
-                onClick$={toggleHistory$}
-                aria-expanded={isHistoryOpen.value}
-                aria-label={isHistoryOpen.value ? 'Close field history' : 'Open field history'}
-                disabled={!hasHistory}
-                title={!hasHistory ? 'No history available' : 'View field history'}
+                classList={{
+                    [styles.historyChevron]: true,
+                    [styles.historyChevronDown]: isHistoryOpen(),
+                    [styles.historyChevronLeft]: !isHistoryOpen(),
+                }}
+                onClick={toggleHistory}
+                aria-expanded={isHistoryOpen()}
+                aria-label={isHistoryOpen() ? 'Close field history' : 'Open field history'}
+                disabled={!hasHistory()}
+                title={!hasHistory() ? 'No history available' : 'View field history'}
             />
 
-            {isHistoryOpen.value && hasHistory && (
+            <Show when={isHistoryOpen() && hasHistory()}>
                 <DataFieldHistory
                     fieldId={props.fieldId}
-                    history={history.value}
+                    history={history()}
                     kind={props.kind}
-                    config={definition.value?.config}
-                    isOpen={isHistoryOpen.value}
+                    config={definition()?.config}
+                    isOpen={isHistoryOpen()}
                 />
-            )}
+            </Show>
 
-            <div class={[styles.actionsRow, 'no-caret']}>
+            <div classList={{ [styles.actionsRow]: true, 'no-caret': true }}>
                 <button
                     type="button"
                     class={styles.deleteButton}
-                    onClick$={handleDelete$}
+                    onClick={() => props.onDelete()}
                     aria-label="Delete this field"
                 >
                     Delete Field
@@ -127,4 +133,4 @@ export const DataFieldDetails = component$<DataFieldDetailsProps>((props) => {
             </div>
         </div>
     );
-});
+};

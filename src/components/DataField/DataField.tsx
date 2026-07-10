@@ -1,12 +1,14 @@
 /**
  * DataField - Thin dispatcher: renders the chevron + label + Component-specific
- * body (via kind-keyed manifest lookup). Display-only in Phase II: the chevron
- * toggles the FSM/uiPrefs expanded state, but no details panel mounts yet.
+ * body (via kind-keyed manifest lookup) + optional DataFieldDetails.
  */
 
-import { createMemo, createSignal } from 'solid-js';
+import { Show, createMemo, createSignal } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
+import { getCommandBus } from '../../data/commands';
+import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { getInlineManifest } from '../../kinds/registry';
 import type { Kind, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
@@ -32,6 +34,15 @@ export const DataField = (props: DataFieldProps) => {
 
     const isDetailsExpanded = () =>
         selectors.getDataFieldDetailsState(appState, props.id) === 'EXPANDED';
+
+    const handleDelete = () => {
+        const fieldId = props.id;
+        void commitWithUndo({
+            message: 'Field deleted',
+            execute: () => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } }),
+            undo: () => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } }),
+        });
+    };
 
     const labelId = () => `field-label-${props.id}`;
 
@@ -79,7 +90,14 @@ export const DataField = (props: DataFieldProps) => {
                 rootRef={rootEl}
             />
 
-            {/* TODO(Phase III): mount <DataFieldDetails> + delete (commitWithUndo DELETE_ELEMENT/RESTORE_ELEMENT) */}
+            <Show when={isDetailsExpanded()}>
+                <DataFieldDetails
+                    fieldId={props.id}
+                    definitionId={props.definitionId}
+                    kind={props.kind}
+                    onDelete={handleDelete}
+                />
+            </Show>
         </div>
     );
 };
