@@ -2,12 +2,18 @@
  * EnumKvField - Renderer for enum-kv DataFields.
  *
  * Click/double-tap to open a dropdown of Definition.config.options. Pick
- * an option to save; Escape / outside-click cancels. `allowOther` is deferred —
- * Phase 1 MVP only shows the fixed options list.
+ * an option to save; Escape / outside-click cancels. `allowOther` swaps the
+ * option list for an inline text input so the user can type a custom value.
+ *
+ * Does NOT use useFieldEdit — the popover lifecycle is its own state machine
+ * over the same FSM seams (startFieldEdit/stopFieldEdit). The Qwik version's
+ * three setTimeout(0)s collapse into effects (meta-plan §10): the open-
+ * transition effect deliberately also tracks the options resource so first-
+ * open focus lands after the IDB config fetch (Qwik's timeout raced it and
+ * could miss); the activeElement guard prevents focus theft on re-runs.
  */
 
-import { component$, useSignal, useResource$, Resource, useVisibleTask$, $, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
-import { useOnDocument, useOnWindow } from '@builder.io/qwik';
+import { Show, For, createSignal, createEffect, createResource, onMount, onCleanup, type Accessor } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
@@ -23,43 +29,44 @@ export type EnumKvFieldProps = {
     id: string;
     definitionId: string;
     value: string | null;
-    rootRef: Signal<HTMLElement | undefined>;
-    onUpdated$?: PropFunction<() => void>;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange$.
+    rootRef: Accessor<HTMLElement | undefined>;
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange.
      *  `autoFocus` flags the row as just-ticked-by-user so the popover should
      *  auto-open and focus its first option; seeded rows leave it false. */
-    pendingMode?: { onChange$: QRL<(value: string | null) => void>; autoFocus?: boolean };
+    pendingMode?: { onChange: (value: string | null) => void | Promise<void>; autoFocus?: boolean };
 };
 
-export const EnumKvField = component$<EnumKvFieldProps>((props) => {
+export const EnumKvField = (props: EnumKvFieldProps) => {
     const appState = useAppState();
-    const { startFieldEdit$, stopFieldEdit$ } = useAppTransitions();
+    const { startFieldEdit, stopFieldEdit } = useAppTransitions();
 
-    const { checkDoubleTap$ } = useDoubleTap();
+    const { checkDoubleTap } = useDoubleTap();
 
-    const isOpen = useSignal(false);
-    const currentValue = useSignal<string | null>(props.value);
-    const triggerRef = useSignal<HTMLElement>();
-    const popoverRef = useSignal<HTMLElement>();
-    const popoverPos = useSignal<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [isOpen, setIsOpen] = createSignal(false);
+    // eslint-disable-next-line solid/reactivity -- mount-time seed; rows remount per field (<For> reference-keyed)
+    const [currentValue, setCurrentValueRaw] = createSignal<string | null>(props.value);
+    const setCurrentValue = (v: string | null) => setCurrentValueRaw(() => v);
+    const [popoverPos, setPopoverPos] = createSignal<{ top: number; left: number }>({ top: 0, left: 0 });
     // When config.allowOther is true, "Other…" swaps the option list for an
     // inline text input so the user can type a custom value.
-    const otherMode = useSignal(false);
-    const otherText = useSignal('');
-    const otherInputRef = useSignal<HTMLInputElement>();
+    const [otherMode, setOtherMode] = createSignal(false);
+    const [otherText, setOtherText] = createSignal('');
+    // Plain callback-ref locals — nothing tracks them.
+    let triggerEl: HTMLElement | undefined;
+    let popoverEl: HTMLElement | undefined;
+    let otherInputEl: HTMLInputElement | undefined;
 
-    useFieldValueSync<string>(props.id, currentValue);
+    // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
+    useFieldValueSync<string>(props.id, setCurrentValue);
 
-    const isEditing = selectors.getDataFieldState(appState, props.id) === 'EDITING';
+    const isEditing = () => selectors.getDataFieldState(appState, props.id) === 'EDITING';
 
-    const positionPopover$ = $(() => {
-        const trigger = triggerRef.value;
-        const popover = popoverRef.value;
-        if (!trigger || !popover) return;
-        const r = trigger.getBoundingClientRect();
+    const positionPopover = () => {
+        if (!triggerEl || !popoverEl) return;
+        const r = triggerEl.getBoundingClientRect();
         const margin = 8;
-        const popWidth = popover.offsetWidth || 200;
-        const popHeight = popover.offsetHeight || 200;
+        const popWidth = popoverEl.offsetWidth || 200;
+        const popHeight = popoverEl.offsetHeight || 200;
         let left = r.left;
         if (left + popWidth > window.innerWidth - margin) {
             left = Math.max(margin, window.innerWidth - popWidth - margin);
@@ -69,257 +76,275 @@ export const EnumKvField = component$<EnumKvFieldProps>((props) => {
             const above = r.top - 4 - popHeight;
             if (above >= margin) top = above;
         }
-        popoverPos.value = { top, left };
-    });
+        setPopoverPos({ top, left });
+    };
 
-    const optionsResource = useResource$<{ options: string[]; allowOther: boolean }>(async ({ track }) => {
-        track(() => props.definitionId);
-        const def = await getDefinitionQueries().getDefinitionById(props.definitionId);
-        if (!def || def.kind !== 'enum-kv') return { options: [], allowOther: false };
-        const config = def.config as EnumKvConfig;
-        return { options: config.options, allowOther: config.allowOther ?? false };
-    });
+    // Error-catching fetcher: never enters the throwing state (no ErrorBoundary).
+    const [options] = createResource(
+        () => props.definitionId,
+        async (definitionId): Promise<{ options: string[]; allowOther: boolean }> => {
+            try {
+                const def = await getDefinitionQueries().getDefinitionById(definitionId);
+                if (!def || def.kind !== 'enum-kv') return { options: [], allowOther: false };
+                const config = def.config as EnumKvConfig;
+                return { options: config.options, allowOther: config.allowOther ?? false };
+            } catch {
+                return { options: [], allowOther: false };
+            }
+        },
+    );
 
-    const open$ = $(() => {
+    const open = () => {
         if (appState.editingElementId === props.id) return;
-        startFieldEdit$(props.id);
-        isOpen.value = true;
-    });
+        startFieldEdit(props.id);
+        setIsOpen(true);
+    };
 
-    const close$ = $(() => {
-        if (appState.editingElementId === props.id) stopFieldEdit$();
-        isOpen.value = false;
-        otherMode.value = false;
-        otherText.value = '';
-    });
+    const close = () => {
+        if (appState.editingElementId === props.id) stopFieldEdit();
+        setIsOpen(false);
+        setOtherMode(false);
+        setOtherText('');
+    };
 
-    const pick$ = $(async (option: string) => {
+    const pick = async (option: string) => {
         const fieldId = props.id;
-        const prev = currentValue.value;
+        const prev = currentValue();
         if (props.pendingMode) {
-            await props.pendingMode.onChange$(option);
-            currentValue.value = option;
-            close$();
-            if (props.onUpdated$) await props.onUpdated$();
+            await props.pendingMode.onChange(option);
+            setCurrentValue(option);
+            close();
             return;
         }
         const ok = await commitWithUndo({
             message: 'Field updated',
-            execute$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: option } })),
-            undo$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prev } })),
+            execute: () => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: option } }),
+            undo: () => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prev } }),
         });
         if (ok) {
-            currentValue.value = option;
-            close$();
-            if (props.onUpdated$) await props.onUpdated$();
+            setCurrentValue(option);
+            close();
         }
-    });
+    };
 
-    const startOther$ = $(() => {
-        otherMode.value = true;
-        otherText.value = '';
-        setTimeout(() => {
-            positionPopover$();
-            otherInputRef.value?.focus();
-        }, 0);
-    });
+    const startOther = () => {
+        setOtherMode(true);
+        setOtherText('');
+        // Positioning + focus handled by the other-mode effect (§10: setTimeout(0) deleted).
+    };
 
-    const commitOther$ = $(async () => {
-        const trimmed = otherText.value.trim();
+    const commitOther = async () => {
+        const trimmed = otherText().trim();
         if (trimmed === '') return;
-        await pick$(trimmed);
-    });
+        await pick(trimmed);
+    };
 
-    const handleOtherKeyDown$ = $(async (e: KeyboardEvent) => {
+    const handleOtherKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            await commitOther$();
+            void commitOther();
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            close$();
-            triggerRef.value?.focus();
+            close();
+            triggerEl?.focus();
         }
-    });
+    };
 
-    useOnDocument('pointerdown', $((ev: Event) => {
-        if (!isOpen.value) return;
-        const container = props.rootRef.value;
-        const popover = popoverRef.value;
+    // Outside-click close — always-on document listener with the isOpen guard
+    // (the useOnDocument shape); dual containment: the DataField row (chevron/
+    // label/trigger) and the popover itself.
+    const onDocumentPointerDown = (ev: Event) => {
+        if (!isOpen()) return;
+        const container = props.rootRef();
         const target = ev.target as Node | null;
         if (!target) return;
         const insideRow = !!(container && container.contains(target));
-        const insidePopover = !!(popover && popover.contains(target));
+        const insidePopover = !!(popoverEl && popoverEl.contains(target));
         if (!insideRow && !insidePopover) {
-            close$();
+            close();
         }
-    }));
-
+    };
+    document.addEventListener('pointerdown', onDocumentPointerDown);
     // Reposition on scroll / resize so the popover tracks its trigger.
-    useOnWindow('scroll', $(() => { if (isOpen.value) positionPopover$(); }));
-    useOnWindow('resize', $(() => { if (isOpen.value) positionPopover$(); }));
+    const onWindowScroll = () => { if (isOpen()) positionPopover(); };
+    const onWindowResize = () => { if (isOpen()) positionPopover(); };
+    window.addEventListener('scroll', onWindowScroll);
+    window.addEventListener('resize', onWindowResize);
+    onCleanup(() => {
+        document.removeEventListener('pointerdown', onDocumentPointerDown);
+        window.removeEventListener('scroll', onWindowScroll);
+        window.removeEventListener('resize', onWindowResize);
+    });
 
-    const focusOption$ = $((index: number) => {
-        const popover = popoverRef.value;
-        if (!popover) return;
-        const items = popover.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    const focusOption = (index: number) => {
+        if (!popoverEl) return;
+        const items = popoverEl.querySelectorAll<HTMLButtonElement>('[role="option"]');
         if (items.length === 0) return;
         const clamped = ((index % items.length) + items.length) % items.length;
         items[clamped]?.focus();
-    });
+    };
 
-    // Auto-open + focus first option when mounted in pendingMode with no value
-    // AND this row is the one the user just ticked (autoFocus). Seeded rows
-    // (construction defaults / Undo restore) skip this so the composer opens
-    // with no field stealing focus.
-    useVisibleTask$(({ cleanup }) => {
+    // Auto-open when mounted in pendingMode with no value AND this row is the
+    // one the user just ticked (autoFocus). Seeded rows (construction defaults /
+    // Undo restore) skip this so the composer opens with no field stealing
+    // focus. Positioning/focus delegated to the open-transition effect.
+    onMount(() => {
         if (!props.pendingMode?.autoFocus) return;
-        if (currentValue.value !== null) return;
-        open$();
-        const t = setTimeout(() => {
-            positionPopover$();
-            focusOption$(0);
-        }, 0);
-        cleanup(() => clearTimeout(t));
+        if (currentValue() !== null) return;
+        open();
     });
 
-    // Track open transitions to position + focus on subsequent opens too.
-    useVisibleTask$(({ track }) => {
-        const open = track(() => isOpen.value);
-        if (!open) return;
-        const t = setTimeout(() => {
-            positionPopover$();
-            // Keep focus on the popover's first option for keyboard users.
-            const popover = popoverRef.value;
-            const active = document.activeElement;
-            if (popover && (!active || !popover.contains(active))) {
-                focusOption$(0);
-            }
-        }, 0);
-        return () => clearTimeout(t);
+    // Open-transition effect: position + focus the first option. Deliberate
+    // deviation from the Qwik setTimeout(0) (flagged in the plan): also tracks
+    // the options resource so first-open focus is deterministic after the IDB
+    // config fetch; the activeElement guard prevents focus theft on re-runs.
+    createEffect(() => {
+        if (!isOpen()) return;
+        options();
+        positionPopover();
+        const active = document.activeElement;
+        if (popoverEl && (!active || !popoverEl.contains(active))) {
+            focusOption(0);
+        }
     });
 
-    const handleTriggerPointerDown$ = $(async (ev: PointerEvent | MouseEvent) => {
-        if (isOpen.value) return;
+    // Other-mode effect: reposition (the list swapped for an input) and focus it.
+    createEffect(() => {
+        if (!otherMode()) return;
+        positionPopover();
+        otherInputEl?.focus();
+    });
+
+    const handleTriggerPointerDown = (ev: PointerEvent | MouseEvent) => {
+        if (isOpen()) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
-        const isDouble = await checkDoubleTap$(x, y);
-        if (isDouble) open$();
-    });
+        if (checkDoubleTap(x, y)) {
+            // Cancel the compatibility mousedown: its focus default action runs
+            // after the open-transition effect focused the first option and
+            // would steal focus back to the trigger (Qwik's setTimeout(0) focus
+            // happened to land after it; the effect runs before).
+            ev.preventDefault();
+            open();
+        }
+    };
 
-    const handleTriggerKeyDown$ = $((e: KeyboardEvent) => {
+    const handleTriggerKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
             e.preventDefault();
-            open$();
-        } else if (e.key === 'Escape' && isOpen.value) {
+            open();
+        } else if (e.key === 'Escape' && isOpen()) {
             e.preventDefault();
-            close$();
+            close();
         }
-    });
+    };
 
-    const handleOptionKeyDown$ = $((e: KeyboardEvent, index: number) => {
+    const handleOptionKeyDown = (e: KeyboardEvent, index: number) => {
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            focusOption$(index + 1);
+            focusOption(index + 1);
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            focusOption$(index - 1);
+            focusOption(index - 1);
         } else if (e.key === 'Home') {
             e.preventDefault();
-            focusOption$(0);
+            focusOption(0);
         } else if (e.key === 'End') {
             e.preventDefault();
-            const popover = popoverRef.value;
-            const count = popover?.querySelectorAll('[role="option"]').length ?? 0;
-            focusOption$(count - 1);
+            const count = popoverEl?.querySelectorAll('[role="option"]').length ?? 0;
+            focusOption(count - 1);
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            close$();
-            triggerRef.value?.focus();
+            close();
+            triggerEl?.focus();
         }
-    });
+    };
 
-    const displayValue = currentValue.value ?? '';
-    const hasValue = !!displayValue;
-    const labelId = `field-label-${props.id}`;
+    const displayValue = () => currentValue() ?? '';
+    const hasValue = () => !!displayValue();
+    const labelId = () => `field-label-${props.id}`;
 
     return (
-        <div style="display: contents">
+        <div style={{ display: 'contents' }}>
             <div
-                ref={triggerRef}
-                class={[
-                    styles.datafieldValue,
-                    hasValue && styles.datafieldValueUnderlined,
-                    styles.datafieldValueEditable,
-                    'no-caret',
-                ]}
-                onPointerDown$={handleTriggerPointerDown$}
-                onKeyDown$={handleTriggerKeyDown$}
+                ref={(el) => (triggerEl = el)}
+                classList={{
+                    [styles.datafieldValue]: true,
+                    [styles.datafieldValueUnderlined]: hasValue(),
+                    [styles.datafieldValueEditable]: true,
+                    'no-caret': true,
+                }}
+                onPointerDown={handleTriggerPointerDown}
+                onKeyDown={handleTriggerKeyDown}
                 tabIndex={0}
                 role="button"
                 aria-haspopup="listbox"
-                aria-expanded={isEditing}
-                aria-labelledby={labelId}
+                aria-expanded={isEditing()}
+                aria-labelledby={labelId()}
             >
-                {displayValue || <span class={styles.datafieldPlaceholder}>Empty</span>}
+                {displayValue() || <span class={styles.datafieldPlaceholder}>Empty</span>}
             </div>
 
-            {isOpen.value && (
+            <Show when={isOpen()}>
                 <div
-                    ref={popoverRef}
+                    ref={(el) => (popoverEl = el)}
                     class={enumStyles.popover}
                     role="listbox"
                     aria-label="Options"
-                    style={{ top: `${popoverPos.value.top}px`, left: `${popoverPos.value.left}px` }}
+                    style={{ top: `${popoverPos().top}px`, left: `${popoverPos().left}px` }}
                 >
-                    <Resource
-                        value={optionsResource}
-                        onPending={() => <div class={dropdownStyles.dropdownItem}>Loading…</div>}
-                        onResolved={({ options, allowOther }) => (
+                    <Show
+                        when={options()}
+                        keyed
+                        fallback={<div class={dropdownStyles.dropdownItem}>Loading…</div>}
+                    >
+                        {({ options: opts, allowOther }) => (
                             <>
-                                {options.map((opt, idx) => (
+                                <For each={opts}>
+                                    {(opt, idx) => (
+                                        <button
+                                            type="button"
+                                            class={dropdownStyles.dropdownItem}
+                                            onClick={() => void pick(opt)}
+                                            onKeyDown={(e) => handleOptionKeyDown(e, idx())}
+                                            role="option"
+                                            aria-selected={opt === currentValue()}
+                                            tabIndex={-1}
+                                        >
+                                            {opt}
+                                        </button>
+                                    )}
+                                </For>
+                                <Show when={allowOther && !otherMode()}>
                                     <button
-                                        key={opt}
                                         type="button"
                                         class={dropdownStyles.dropdownItem}
-                                        onClick$={() => pick$(opt)}
-                                        onKeyDown$={(e) => handleOptionKeyDown$(e, idx)}
-                                        role="option"
-                                        aria-selected={opt === currentValue.value}
-                                        tabIndex={-1}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                                {allowOther && !otherMode.value && (
-                                    <button
-                                        type="button"
-                                        class={dropdownStyles.dropdownItem}
-                                        onClick$={startOther$}
-                                        onKeyDown$={(e) => handleOptionKeyDown$(e, options.length)}
+                                        onClick={startOther}
+                                        onKeyDown={(e) => handleOptionKeyDown(e, opts.length)}
                                         role="option"
                                         aria-selected={false}
                                         tabIndex={-1}
                                     >
                                         Other…
                                     </button>
-                                )}
-                                {allowOther && otherMode.value && (
+                                </Show>
+                                <Show when={allowOther && otherMode()}>
                                     <input
-                                        ref={otherInputRef}
+                                        ref={(el) => (otherInputEl = el)}
                                         class={enumStyles.otherInput}
                                         type="text"
-                                        value={otherText.value}
+                                        value={otherText()}
                                         placeholder="Custom value"
                                         aria-label="Custom value"
-                                        onInput$={(e) => { otherText.value = (e.target as HTMLInputElement).value; }}
-                                        onKeyDown$={handleOtherKeyDown$}
+                                        onInput={(e) => setOtherText(e.currentTarget.value)}
+                                        onKeyDown={handleOtherKeyDown}
                                     />
-                                )}
+                                </Show>
                             </>
                         )}
-                    />
+                    </Show>
                 </div>
-            )}
+            </Show>
         </div>
     );
-});
+};

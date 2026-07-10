@@ -1,8 +1,10 @@
-import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
+import type { Component } from 'solid-js';
+import { ConfigFieldStubConfigForm } from './configFieldStub';
+import { EnumKvField } from '../components/DataField/EnumKvField';
 import type { DataFieldValue, DefinitionConfig } from '../data/models';
 import { ENUM_KV_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { KindManifest } from './types';
+import type { FieldRendererProps, KindManifest } from './types';
 
 export const enumKvManifest: KindManifest = {
     kind: 'enum-kv',
@@ -10,7 +12,7 @@ export const enumKvManifest: KindManifest = {
     mintVia: 'composer',
     placement: 'inline',
     ...KIND_CAPABILITIES['enum-kv'], // capability subset — structural seam, not read yet
-    Renderer: ConfigFieldStubRenderer, // TODO(Phase III): restore EnumKvField
+    Renderer: EnumKvField as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm, // TODO(Phase IV): restore EnumKvConfigForm
     defaultConfig: (): DefinitionConfig => ({ options: [] }),
     displayPreview: (v: DataFieldValue | null) => (v === null || v === undefined ? null : String(v)),
