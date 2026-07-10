@@ -73,6 +73,7 @@ export default [
       'src/components/{UpButton,EllipsisButton,NodeTitle,NodeSubtitle,DataCard,TreeNodeDetails,Breadcrumbs}/**/*.{ts,tsx}',
       'src/components/{FieldList,NavigableRow}/**/*.{ts,tsx}',
       'src/components/DataField/DataField.tsx',
+      'src/components/DataField/TextKvField.tsx',
       'src/components/TreeNode/{types.ts,TreeNode.tsx,TreeNodeDisplay.tsx,KindAdornment.tsx}',
       'src/components/{NodeHeader,LensRollup}/**/*.{ts,tsx}',
       'src/hooks/{useElementChildren,useLensGather,useLensPolicy,useFieldValueSync,useDoubleTap,useAncestorPath,useFieldEdit,useFocusManager,useEditableValue}.ts',

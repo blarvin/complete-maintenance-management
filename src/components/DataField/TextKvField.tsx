@@ -8,9 +8,12 @@
  * wrapped, multi-line value collapsing to a 1-line input on edit shifts the row
  * height, which Android dismisses the keyboard for; a textarea preserves the
  * height and keeps the keyboard up.
+ *
+ * Wrapper/Body split: the Body owns the `useFieldEdit` call so config is a
+ * mount-time constant it may capture (`makeValidate(config)`).
  */
 
-import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
+import { Show, createResource, type Accessor } from 'solid-js';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { getDefinitionQueries } from '../../data/queries';
@@ -21,11 +24,10 @@ export type TextKvFieldProps = {
     id: string;
     definitionId: string;
     value: string | null;
-    rootRef: Signal<HTMLElement | undefined>;
-    onUpdated$?: PropFunction<() => void>;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange$.
+    rootRef: Accessor<HTMLElement | undefined>;
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange.
      *  `autoFocus` is set only for the row the user just ticked. */
-    pendingMode?: { onChange$: QRL<(value: string | null) => void>; autoFocus?: boolean };
+    pendingMode?: { onChange: (value: string | null) => void | Promise<void>; autoFocus?: boolean };
 };
 
 const formatText = (v: string | null): string => v ?? '';
@@ -51,103 +53,119 @@ const makeValidate = (config: TextKvConfig) => {
     };
 };
 
-export const TextKvField = component$<TextKvFieldProps>((props) => {
-    const configResource = useResource$(async ({ track }) => {
-        track(() => props.definitionId);
-        const def = await getDefinitionQueries().getDefinitionById(props.definitionId);
-        if (!def || def.kind !== 'text-kv') return {} as TextKvConfig;
-        return def.config as TextKvConfig;
-    });
+export const TextKvField = (props: TextKvFieldProps) => {
+    // Error-catching fetcher: never enters the throwing state (no ErrorBoundary);
+    // missing/wrong-kind def degrades to an empty config.
+    const [config] = createResource(
+        () => props.definitionId,
+        async (definitionId): Promise<TextKvConfig> => {
+            try {
+                const def = await getDefinitionQueries().getDefinitionById(definitionId);
+                if (!def || def.kind !== 'text-kv') return {};
+                return def.config as TextKvConfig;
+            } catch {
+                return {};
+            }
+        },
+    );
 
     return (
-        <Resource
-            value={configResource}
-            onPending={() => <span class={styles.datafieldValue}>…</span>}
-            onResolved={(config) => <TextKvBody {...props} config={config} />}
-        />
+        <Show when={config()} keyed fallback={<span class={styles.datafieldValue}>…</span>}>
+            {(cfg) => <TextKvBody {...props} config={cfg} />}
+        </Show>
     );
-});
+};
 
-const TextKvBody = component$<TextKvFieldProps & { config: TextKvConfig }>((props) => {
-    const { config } = props;
-    const isMultiline = !!config.multiline;
-
+const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
+    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        currentValue,
-        editInputRef,
-        valuePointerDown$,
-        valueKeyDown$,
-        inputPointerDown$,
-        inputBlur$,
-        inputKeyDown$,
-        inputChange$,
+        setCurrentValue,
+        setEditInputRef,
+        valuePointerDown,
+        valueKeyDown,
+        inputPointerDown,
+        inputBlur,
+        inputKeyDown,
+        inputChange,
     } = useFieldEdit<string>({
         fieldId: props.id,
         initialValue: props.value,
         format: formatText,
         parse: parseText,
-        validate: makeValidate(config),
+        validate: makeValidate(props.config),
         rootRef: props.rootRef,
-        onUpdated$: props.onUpdated$,
         pendingMode: props.pendingMode,
     });
+    /* eslint-enable solid/reactivity */
 
-    useFieldValueSync<string>(props.id, currentValue);
+    // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
+    useFieldValueSync<string>(props.id, setCurrentValue);
 
-    const labelId = `field-label-${props.id}`;
-
-    if (isEditing) {
-        if (isMultiline) {
-            return (
-                <textarea
-                    ref={editInputRef as Signal<HTMLTextAreaElement | undefined>}
-                    class={[styles.datafieldValue, styles.datafieldTextarea, editValue.value && styles.datafieldValueUnderlined]}
-                    value={editValue.value}
-                    rows={4}
-                    onInput$={(e) => inputChange$((e.target as HTMLTextAreaElement).value)}
-                    onPointerDown$={inputPointerDown$}
-                    onBlur$={inputBlur$}
-                    onKeyDown$={inputKeyDown$}
-                    aria-labelledby={labelId}
-                    autoFocus
-                />
-            );
-        }
-        return (
-            <input
-                ref={editInputRef}
-                class={[styles.datafieldValue, editValue.value && styles.datafieldValueUnderlined]}
-                value={editValue.value}
-                onInput$={(e) => inputChange$((e.target as HTMLInputElement).value)}
-                onPointerDown$={inputPointerDown$}
-                onBlur$={inputBlur$}
-                onKeyDown$={inputKeyDown$}
-                aria-labelledby={labelId}
-                autoFocus
-            />
-        );
-    }
+    const labelId = () => `field-label-${props.id}`;
+    const isMultiline = () => !!props.config.multiline;
 
     return (
-        <div
-            class={[
-                styles.datafieldValue,
-                hasValue && styles.datafieldValueUnderlined,
-                styles.datafieldValueEditable,
-                'no-caret',
-            ]}
-            onPointerDown$={valuePointerDown$}
-            onKeyDown$={valueKeyDown$}
-            tabIndex={0}
-            role="button"
-            aria-labelledby={labelId}
-            aria-description="Press Enter to edit"
+        <Show
+            when={isEditing()}
+            fallback={
+                <div
+                    classList={{
+                        [styles.datafieldValue]: true,
+                        [styles.datafieldValueUnderlined]: hasValue(),
+                        [styles.datafieldValueEditable]: true,
+                        'no-caret': true,
+                    }}
+                    onPointerDown={valuePointerDown}
+                    onKeyDown={valueKeyDown}
+                    tabIndex={0}
+                    role="button"
+                    aria-labelledby={labelId()}
+                    aria-description="Press Enter to edit"
+                >
+                    {displayValue() || <span class={styles.datafieldPlaceholder}>Empty</span>}
+                </div>
+            }
         >
-            {displayValue || <span class={styles.datafieldPlaceholder}>Empty</span>}
-        </div>
+            <Show
+                when={isMultiline()}
+                fallback={
+                    <input
+                        ref={setEditInputRef}
+                        classList={{
+                            [styles.datafieldValue]: true,
+                            [styles.datafieldValueUnderlined]: !!editValue(),
+                        }}
+                        value={editValue()}
+                        onInput={(e) => inputChange(e.currentTarget.value)}
+                        onPointerDown={inputPointerDown}
+                        onBlur={inputBlur}
+                        onKeyDown={inputKeyDown}
+                        aria-labelledby={labelId()}
+                        autofocus
+                    />
+                }
+            >
+                <textarea
+                    ref={setEditInputRef}
+                    classList={{
+                        [styles.datafieldValue]: true,
+                        [styles.datafieldTextarea]: true,
+                        [styles.datafieldValueUnderlined]: !!editValue(),
+                    }}
+                    value={editValue()}
+                    rows={4}
+                    onInput={(e) => inputChange(e.currentTarget.value)}
+                    onPointerDown={inputPointerDown}
+                    onBlur={inputBlur}
+                    onKeyDown={inputKeyDown}
+                    aria-labelledby={labelId()}
+                    autofocus
+                />
+            </Show>
+        </Show>
     );
-});
+};

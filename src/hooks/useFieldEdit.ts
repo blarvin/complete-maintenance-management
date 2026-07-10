@@ -183,8 +183,15 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // the first-line FSM guard (the `useOnDocument` shape); onCleanup removes.
     const onDocumentPointerDown = (ev: Event) => {
         if (appState.editingElementId !== options.fieldId) return;
-        const container = options.rootRef();
         const target = ev.target as Node | null;
+        // A detached target means this very tap swapped the DOM mid-dispatch —
+        // the double-tap that begins an edit removes the display element
+        // synchronously (Solid), so by the time this document listener runs the
+        // target is outside the row *because it's outside the document*. That
+        // can't be an outside click; a real outside target is still connected.
+        // (Qwik's async QRL handlers never saw this window.)
+        if (target && !target.isConnected) return;
+        const container = options.rootRef();
         if (container && target && !container.contains(target)) {
             if (options.pendingMode) {
                 void save();
@@ -242,6 +249,11 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
         if (checkDoubleTap(x, y)) {
+            // Cancel the compatibility mousedown: beginEdit swaps the display
+            // element for the input synchronously, so the browser's post-
+            // pointerdown focus action would target a stale hit-test and steal
+            // focus from the just-focused input (killing the edit via blur).
+            ev.preventDefault();
             beginEdit();
         }
     };

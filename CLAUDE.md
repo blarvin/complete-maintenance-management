@@ -178,3 +178,6 @@ useStorageAdapter(new IDBAdapter());
 - `src/data/queries/index.ts` - `getElementQueries()` / `getDefinitionQueries()`
 - `src/data/models.ts` - `Element`, `ElementHistory`, `Definition` (assembled view), the config/value unions
 - `src/constants.ts` - Hardcoded values (USER_ID, library)
+
+ ### TOOL USE GUIDELINES
+ IMPORTANT: Chain dependent commands with &&, never wrap them in PowerShell if ($?) { }
