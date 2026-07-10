@@ -4,7 +4,7 @@
  * toggles the FSM/uiPrefs expanded state, but no details panel mounts yet.
  */
 
-import { createMemo } from 'solid-js';
+import { createMemo, createSignal } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getInlineManifest } from '../../kinds/registry';
@@ -20,12 +20,15 @@ export type DataFieldProps = {
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
     updatedAt?: number;
-    // TODO(Phase III): restore onUpdated
 };
 
 export const DataField = (props: DataFieldProps) => {
     const appState = useAppState();
     const { toggleFieldDetailsExpanded } = useAppTransitions();
+
+    // The row ref is owned here so outside-click detection inside each renderer
+    // covers the entire row (chevron, label, value), not just the value column.
+    const [rootEl, setRootEl] = createSignal<HTMLElement>();
 
     const isDetailsExpanded = () =>
         selectors.getDataFieldDetailsState(appState, props.id) === 'EXPANDED';
@@ -43,6 +46,7 @@ export const DataField = (props: DataFieldProps) => {
 
     return (
         <div
+            ref={setRootEl}
             classList={{
                 [styles.datafieldWrapper]: true,
                 [styles.datafieldWrapperExpanded]: isDetailsExpanded(),
@@ -72,7 +76,7 @@ export const DataField = (props: DataFieldProps) => {
                 definitionId={props.definitionId}
                 value={props.value}
                 updatedAt={props.updatedAt}
-                rootRef={() => { /* TODO(Phase III): outside-click root */ }}
+                rootRef={rootEl}
             />
 
             {/* TODO(Phase III): mount <DataFieldDetails> + delete (commitWithUndo DELETE_ELEMENT/RESTORE_ELEMENT) */}

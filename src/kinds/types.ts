@@ -13,7 +13,7 @@
  * the first readers, the cascade arbiter the second).
  */
 
-import type { Component } from 'solid-js';
+import type { Accessor, Component } from 'solid-js';
 import type { Kind, DataFieldValue, DefinitionConfig } from '../data/models';
 
 /**
@@ -69,10 +69,11 @@ export type FieldRendererProps = {
     id: string;
     definitionId: string;
     value: DataFieldValue | null;
-    /** Callback ref (Solid convention; parent picks reactivity) — provisional until Phase III. */
-    rootRef: (el: HTMLElement) => void;
+    /** Read accessor to the owning DataField row element (the dispatcher owns the
+     *  ref) — renderers read it for outside-click containment covering the whole
+     *  row (chevron, label, value), not just the value column. */
+    rootRef: Accessor<HTMLElement | undefined>;
     updatedAt?: number;
-    onUpdated?: () => void;
     pendingMode?: { onChange: (value: DataFieldValue | null) => void; autoFocus?: boolean };
 };
 
