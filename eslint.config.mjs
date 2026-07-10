@@ -75,7 +75,7 @@ export default [
       'src/components/DataField/DataField.tsx',
       'src/components/TreeNode/{types.ts,TreeNode.tsx,TreeNodeDisplay.tsx,KindAdornment.tsx}',
       'src/components/{NodeHeader,LensRollup}/**/*.{ts,tsx}',
-      'src/hooks/{useElementChildren,useLensGather,useLensPolicy,useFieldValueSync,useDoubleTap,useAncestorPath}.ts',
+      'src/hooks/{useElementChildren,useLensGather,useLensPolicy,useFieldValueSync,useDoubleTap,useAncestorPath,useFieldEdit,useFocusManager,useEditableValue}.ts',
     ],
     plugins: solidPreset.plugins,
     rules: {
