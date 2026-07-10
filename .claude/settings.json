@@ -1,5 +1,18 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+"hooks": {
+  "PreToolUse": [
+    {
+      "matcher": "PowerShell",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/smart_approve.js\""
+        }
+      ]
+    }
+  ]
+},
   "plansDirectory": ".claude/plans",
   "permissions": {
     "allow": [
@@ -41,7 +54,64 @@
       "Edit(tests/**)",
       "Write(tests/**)",
       "Edit(cypress/**)",
-      "Write(cypress/**)"
+      "Write(cypress/**)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(cd:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(claude mcp:*)",
+      "PowerShell(git *)",
+      "PowerShell(npm run *)",
+      "PowerShell(npm i *)",
+      "PowerShell(npm ls *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Set-Content *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:claude.ai)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__jcodemunch__index_folder",
+      "mcp__jcodemunch__list_repos",
+      "mcp__jcodemunch__get_file_tree",
+      "mcp__jcodemunch__search_symbols",
+      "mcp__jcodemunch__get_symbol",
+      "mcp__jcodemunch__get_symbol_source",
+      "mcp__jcodemunch__get_file_outline",
+      "mcp__jcodemunch__get_file_content",
+      "mcp__jcodemunch__search_text",
+      "Skill(update-config)",
+      "PowerShell(npm test *)",
+      "PowerShell(npx vitest *)",
+      "PowerShell(npx tsc *)",
+      "PowerShell(npx vite *)",
+      "PowerShell(npx cypress *)",
+      "PowerShell(grep *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Select-Object *)",
+      "PowerShell(Measure-Object *)",
+      "PowerShell(ForEach-Object *)",
+      "PowerShell(Where-Object *)",
+      "PowerShell(Sort-Object *)",
+      "PowerShell(Group-Object *)",
+      "PowerShell(Compare-Object *)",
+      "PowerShell(Get-Location)",
+      "PowerShell(Set-Location *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Resolve-Path *)",
+      "PowerShell(Join-Path *)",
+      "PowerShell(Split-Path *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Write-Output *)",
+      "PowerShell(Write-Host *)",
+      "PowerShell(Format-Table *)",
+      "PowerShell(Format-List *)",
+      "PowerShell(Out-String *)",
+      "PowerShell(Get-Date *)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -53,7 +123,17 @@
       "Read(./.env.*)",
       "Read(./secrets/**)",
       "Edit(./.env)",
-      "Edit(./.env.*)"
+      "Edit(./.env.*)",
+      "PowerShell(curl *)",
+      "PowerShell(wget *)",
+      "PowerShell(Invoke-WebRequest *)",
+      "PowerShell(Invoke-RestMethod *)",
+      "PowerShell(iwr *)",
+      "PowerShell(irm *)",
+      "PowerShell(firebase deploy *)",
+      "PowerShell(netlify deploy *)",
+      "PowerShell(Get-Content *.env)",
+      "PowerShell(Get-Content *.env.*)"
     ],
     "ask": [
       "Bash(git push:*)",
