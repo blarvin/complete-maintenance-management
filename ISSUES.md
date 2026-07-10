@@ -15,7 +15,9 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 ## Bugs
 
-*(none currently)*
+1.) **number-kv accepts trailing garbage on save** — editing `1200.00` to `120nnnnn` saves `120` instead of raising the parse error: `parseNumber` (NumberKvField.tsx) uses `parseFloat`, which parses the numeric prefix and ignores the rest. Reject non-numeric trailing input (`Number(trimmed)` or a full-string check). Pre-existing (same in the Qwik original); surfaced in the Phase III hand-test.
+
+2.) **One IndexedDB, two remotes — mode flips wipe data** — the plain page syncs against production Firestore while `?emulator=true` syncs against the emulator, but both share the same Dexie DB; each full-collection pull deletes local elements missing from *its* remote, so switching modes wipes the other mode's data (observed: flipping to the emulator blanked the seeded tree). Scope the Dexie DB name by sync target, or gate full-pull deletion behind a same-remote check.
 
 ## Features
 

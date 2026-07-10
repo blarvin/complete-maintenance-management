@@ -547,3 +547,19 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 ## Error Handling
 
 **StorageError Contract**: Normalized error shape enables consistent error handling at the write model. `IDBAdapter` wraps every public method in a single private `run()` helper implementing `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })`, with `mapDexieError` keying off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`). `FirestoreAdapter`'s sync methods throw raw Firestore errors; the sync layer (`SyncPusher`) catches per-item failures and marks the queue item failed rather than surfacing them to the UI.
+
+---
+
+## SolidJS Migration — Phase III edit-path notes (2026-07-10)
+
+**`rootRef` is a read accessor passed down; the DataField dispatcher owns the row ref.** `FieldRendererProps.rootRef: Accessor<HTMLElement | undefined>` — the dispatcher holds the signal ref on its wrapper div so outside-click containment covers the whole row (chevron + label + value); renderers only read it. `onUpdated` was deleted from the contract rather than ported — zero producers existed pre-migration.
+
+**`suppressBlurUntil` is a plain mutable box, deliberately not a signal.** Nothing tracks it; handlers read/write `.value` imperatively across the pointerdown/blur race. A signal would falsely promise reactivity at the call sites.
+
+**Always-on document/window listeners with first-line FSM guards replace `useOnDocument`/`useOnWindow`.** Attached once at hook/component setup, removed in `onCleanup`; the guard (`editingElementId !== fieldId` / `!isOpen()`) makes them no-ops while inactive — same handler shape as Qwik, no attach/detach churn.
+
+**The §10 Qwik-render workarounds are deleted, and two new Solid-timing guards took their place.** `FOCUS_DELAY_MS` and the four `setTimeout(0)`s are gone (Solid user effects run after render, so refs are ready). But Solid swapping display→input *synchronously inside the pointerdown dispatch* created two hazards Qwik's async QRLs never saw: (1) the outside-click document listener runs later in the same dispatch and sees the original tap target already detached — detached targets are now ignored (they cannot be an outside click); (2) the browser's compatibility-mousedown focus default action fires after the swap and steals focus from the just-focused editor — the double-tap branches call `ev.preventDefault()` (`useFieldEdit.valuePointerDown` and the EnumKvField trigger).
+
+**EnumKvField's open effect tracks the options resource on purpose.** Positioning + first-option focus re-run when the IDB config fetch resolves, closing a Qwik-era race where the `setTimeout(0)` could fire before the options rendered; an `activeElement` guard prevents focus theft on re-runs.
+
+**DataFieldDetails subscribes before its first fetch.** The bus subscription is registered ahead of the initial history/definition load (Phase II discipline), strictly closing the Qwik version's missed-event window between mount and the visible-task's first fetch.

@@ -164,24 +164,24 @@ Branch `MIGRATE-whole-app-move-to-SolidJS`, meta-plan `SOLIDJS-MIGRATION.md`. Ph
 4. Ratchet: `grep -rl "@builder.io" src` → **exactly 18 files** (17 Phase IV + 1 mop-up):
    `src/components/CreateDataField/CreateDataField.tsx`, `src/components/CreateNodeButton/CreateNodeButton.tsx`, `src/components/FieldComposer/{ComposerRow,DefinitionAuthoringForm,FieldComposer,FieldComposerSlot}.tsx`, `src/components/FieldComposer/configForms/{EnumKv,Logbook,NumberKv,SingleImage,TextKv}ConfigForm.tsx`, `src/components/LensCreate/LensCreate.tsx`, `src/components/LensCreateButton/LensCreateButton.tsx`, `src/components/TreeNode/TreeNodeConstruction.tsx`, `src/hooks/{useAsyncOperation,useDefinitionDraft,useNodeCreation,usePendingForms}.ts`. None of the III-1…III-6 files may appear.
 5. **Hand-test (user-run, dev build, offline or emulator — never production Firestore).** Seed via the Phase II `window.__cmm` console hook if IDB is empty (script in `SOLIDJS-WORKPHASE-II.md` §Verification-5); an enum field: `fd_status`; edit any field **twice** to mint history (chevron stays disabled under 2 entries). This is the meta-plan §10 checklist **minus the four composer items** (composer pending-row click-away commit, composer enum tick auto-open, tall-preview anchor, multi-field commit burst — those surfaces arrive in Phase IV; the pendingMode paths land dark now):
-   - [ ] Double-tap a field value → enters edit, input focused, cursor at end
-   - [ ] Double-tap *while editing* → cancels back to display
-   - [ ] Single tap on a field value → does nothing
-   - [ ] Enter/Space on a focused field value → enters edit
-   - [ ] Enter while editing → saves ('Field updated' + Undo works); Escape → cancels and restores display value
-   - [ ] Click away while editing → cancels
-   - [ ] Pointerdown inside an already-focused input → does not close the editor (220ms blur-suppress width re-verify)
-   - [ ] Save/cancel → focus lands somewhere sane; no focus loops or double-focus flicker
-   - [ ] **Fast-typing keystroke retest** (§9 known bug: "Frst value") — should vanish with synchronous signal writes; if it persists, the bug is in this port, not the framework
-   - [ ] Number field: bad input → error snackbar, stays editing; nominal-band helper text; `data-state` colors (warn/alarm/stale)
-   - [ ] Enum: double-tap trigger → popover opens positioned at trigger, first option focused; pick commits + Undo
-   - [ ] Enum: scroll/resize while open → popover tracks trigger; outside click closes; Escape returns focus to trigger; Other… → input focused, commit works
-   - [ ] Field chevron → details panel: metadata (timestamp + user), history chevron disabled with <2 entries
-   - [ ] History: newest first, row select, revert dot only on non-live rows → 'Field reverted' + Undo
-   - [ ] Delete Field → row disappears, 'Field deleted' snackbar, Undo restores
-   - [ ] Delete Asset on a branch parent → 'Node deleted', navigates up, Undo restores
-   - [ ] Rapid edits to several fields → one sync push after the 500ms window (network/emulator)
-   - [ ] Edit a field visible in a lens rollup → rollup + KindAdornment update within ~a beat
+   - [good] Double-tap a field value → enters edit, input focused, cursor at end
+   - [good] Double-tap *while editing* → cancels back to display
+   - [good] Single tap on a field value → does nothing
+   - [good] Enter/Space on a focused field value → enters edit
+   - [good] Enter while editing → saves ('Field updated' + Undo works); Escape → cancels and restores display value
+   - [good] Click away while editing → cancels
+   - [good] Pointerdown inside an already-focused input → does not close the editor (220ms blur-suppress width re-verify)
+   - [good] Save/cancel → focus lands somewhere sane; no focus loops or double-focus flicker
+   - [ok, I think] **Fast-typing keystroke retest** (§9 known bug: "Frst value") — should vanish with synchronous signal writes; if it persists, the bug is in this port, not the framework
+   - [good] Number field: bad input → error snackbar, stays editing; nominal-band helper text; `data-state` colors (warn/alarm/stale)
+   - [good] Enum: double-tap trigger → popover opens positioned at trigger, first option focused; pick commits + Undo
+   - [good] Enum: scroll/resize while open → popover tracks trigger; outside click closes; Escape returns focus to trigger; Other… → input focused, commit works
+   - [good] Field chevron → details panel: metadata (timestamp + user), history chevron disabled with <2 entries
+   - [revert-then-undo still saves new history row] History: newest first, row select, revert dot only on non-live rows → 'Field reverted' + Undo
+   - [good] Delete Field → row disappears, 'Field deleted' snackbar, Undo restores
+   - [good] Delete Asset on a branch parent → 'Node deleted', navigates up, Undo restores
+   - [i'm not that fast, seems ok] Rapid edits to several fields → one sync push after the 500ms window (network/emulator)
+   - [can't do this yet] Edit a field visible in a lens rollup → rollup + KindAdornment update within ~a beat
 6. Cypress: **not a gate** — specs still create data via Phase IV UI surfaces. Do not chase them.
 
 ## Project Context Management
