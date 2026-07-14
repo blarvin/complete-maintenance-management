@@ -50,25 +50,25 @@
 
 ## 4. Prep / Groundwork (before touching the framework)
 
-- **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests.  ✅
-- Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site. *(Not done separately — subsumed into Phase I, which flipped the QRL sites straight to plain function types.)* ✅
+- **Write the E2E behavior contract first**: a handful of Cypress specs against the *current* app covering the core loops (create node → add field → edit → history → delete/undo; lens create + rollup; offline queue drain). Aria-label/text selectors only — these become the migration's acceptance tests. Today there is exactly one spec.
+- Funnel the four QRL-type leak sites through one local handler-type alias, so the Solid swap is a one-line type change per site.
 - Nothing else — no component refactors; the rewrite subsumes them.
 
 ## 5. Resources (tooling swap)
 
-- **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`. ✅
-- **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it).  [  ]
-- **Change**: tsconfig JSX settings to Solid's; scripts collapse to plain `vite` / `vite build` / `vite preview`; service-worker registration becomes one explicit line. ✅
-- **Keep**: Vite, Vitest (config untouched), Cypress, Dexie, Firebase, fake-indexeddb, the precache plugin (re-pointed at the moved SW source), the web manifest, CSS modules + tokens. ✅
+- **Add**: `solid-js`, `vite-plugin-solid`;`eslint-plugin-solid`.
+- **Remove**: `@builder.io/qwik`, `@builder.io/qwik-city`, the static-adapter config, the three entry files, the root file, the routes directory (the service-worker source moves out of it).
+- **Change**: tsconfig JSX settings to Solid's; scripts collapse to plain `vite` / `vite build` / `vite preview`; service-worker registration becomes one explicit line.
+- **Keep**: Vite, Vitest (config untouched), Cypress, Dexie, Firebase, fake-indexeddb, the precache plugin (re-pointed at the moved SW source), the web manifest, CSS modules + tokens.
 - Use context7 for current solid-js documentation during the work.
 
 ## 6. Work Phases (each becomes its own plan)
 
 A cutover on this branch, not a strangler — two JSX runtimes in one Vite build isn't worth it. Invariant at every phase boundary: **typecheck clean, all 38 unit tests green**; the UI regains surfaces phase by phase.
 
-- **I — Boot & spine** ✅ **(done 2026-07-08, plan** `.claude/plans/SOLIDJS-WORKPHASE-I.md`**)**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time. *(All gates passed: typecheck, 39 test files, lint 0 errors, build + SW precache, dev-boot with 9 seeded Definitions. The §4 QRL-funnel prep was subsumed here. Rode along: ISSUES Bug #1 fix — seeded-Library exemption in full-sync deletion detection — after it blocked dev-boot verification.)*
-- **II — Read path** ✅ **(done 2026-07-09, plan** `.claude/plans/SOLIDJS-WORKPHASE-II.md`**)**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything. *(All gates passed: typecheck 0 errors — the reachability proof — lint 0 errors, 39 test files / 419 tests, ratchet grep = exactly the Phase III/IV remainder, user-verified seeded read-path walk. Notes: `useDoubleTap` rode along ahead of Phase III because `EllipsisButton` needs it; `useFieldValueSync` ported dormant — consumers are the Phase III renderers; `useAsyncOperation` deliberately not ported — its loading flag is inlined in `useElementChildren`.)*
-- **III — Edit path** ✅ **(done 2026-07-10, plan** `.claude/plans/SOLIDJS-WORKPHASE-III.md`**)**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo. *(All gates passed: typecheck 0 errors, lint 0 errors, 39 test files / 419 tests, ratchet grep = exactly the 18-file Phase IV + mop-up remainder, user-verified §10 hand-test minus the four composer items — re-walk with the composer in Phase IV; the renderers' pendingMode paths landed dark. Notes: `onUpdated` deleted as verified-dead plumbing (zero producers pre-migration); `DataFieldDetails.currentValue` prop dropped (unread); EnumKvField's open effect deliberately tracks the options resource (closes a Qwik-era first-open focus race); TreeNodeDisplay Delete Asset restored per its Phase II TODO. Two §10-class contingencies decided by dev smoke, both artifacts of Solid's synchronous display→input swap (see IMPLEMENTATION.md): the outside-click listener ignores detached targets, and the double-tap branches `preventDefault()` the compatibility mousedown. The §9 fast-typing keystroke drop is gone.)*
+- **I — Boot & spine**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time.
+- **II — Read path**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything.
+- **III — Edit path**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo.
 - **IV — Create & author path**: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation.
 - **V — PWA & build**: service-worker registration + precache rewire; production static build; offline/install pass; `preview:pwa` restored.
 
@@ -126,19 +126,19 @@ Every timeout in the codebase is one of two kinds. **Human/UI constants** (gestu
 
 The unit suite renders no components, so this checklist **is** the coverage for the timing risk. Walk it on the dev build at the end of phase III (composer rows again in phase IV):
 
-- [ ] Double-tap a field value → enters edit, input focused, cursor at end
-- [ ] Double-tap *while editing* → cancels back to display
-- [ ] Single tap on a field value → does nothing (no accidental edit)
-- [ ] Enter/Space on a focused field value → enters edit
-- [ ] Enter while editing → saves; Escape → cancels and restores display value
-- [ ] Click away while editing → cancels (normal mode)
-- [ ] Click away on a composer pending row → **commits** the typed value (pendingMode inverts click-away)
-- [ ] Pointerdown inside an already-focused input → does not close the editor (blur suppression)
-- [ ] Save/cancel → focus lands somewhere sane; no focus loops or double-focus flicker
-- [ ] Enum: double-tap trigger → popover opens positioned at trigger, first option focused
-- [ ] Enum: composer tick → auto-open + focus first option; seeded rows steal no focus
-- [ ] Enum: scroll/resize while open → popover tracks trigger; outside click closes; Escape returns focus to trigger
-- [ ] Composer: tick a tall-preview row → checkbox stays anchored on screen after the animation
-- [ ] Rapid edits to several fields → one sync push after the 500ms window (watch network/emulator)
-- [ ] Composer commit (multi-field write burst) → one reload per view, no flicker storm
-- [ ] Edit a field visible in a lens rollup → rollup and KindAdornment counts update within ~a beat
+- [x] Double-tap a field value → enters edit, input focused, cursor at end
+- [x] Double-tap *while editing* → cancels back to display
+- [x] Single tap on a field value → does nothing (no accidental edit)
+- [x] Enter/Space on a focused field value → enters edit
+- [x] Enter while editing → saves; Escape → cancels and restores display value
+- [x] Click away while editing → cancels (normal mode)
+- [x] Click away on a composer pending row → **commits** the typed value (pendingMode inverts click-away)
+- [x] Pointerdown inside an already-focused input → does not close the editor (blur suppression)
+- [x] Save/cancel → focus lands somewhere sane; no focus loops or double-focus flicker
+- [x] Enum: double-tap trigger → popover opens positioned at trigger, first option focused
+- [x] Enum: composer tick → auto-open + focus first option; seeded rows steal no focus
+- [x] Enum: scroll/resize while open → popover tracks trigger; outside click closes; Escape returns focus to trigger
+- [x] Composer: tick a tall-preview row → checkbox stays anchored on screen after the animation
+- [x] Rapid edits to several fields → one sync push after the 500ms window (watch network/emulator)
+- [x] Composer commit (multi-field write burst) → one reload per view, no flicker storm
+- [x] Edit a field visible in a lens rollup → rollup and KindAdornment counts update within ~a beat
