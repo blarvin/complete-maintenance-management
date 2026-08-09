@@ -2,7 +2,7 @@
  * Service Worker for Complete Maintenance Management
  *
  * Caching Strategy:
- * - App Shell (JS chunks, CSS, icons): Precached on install, cache-first
+ * - App Shell (Vite /assets/ chunks, CSS, icons): Precached on install, cache-first
  * - HTML: Network-first (fresh when online, fallback to cache offline)
  * - Data: IndexedDB (handled by application code, not SW)
  *
@@ -15,7 +15,9 @@ const sw = self as unknown as ServiceWorkerGlobalScope & typeof globalThis;
 // This will be injected by vite-plugin-precache at build time
 declare const PRECACHE_MANIFEST: string[] | undefined;
 
-const CACHE_VERSION = 'v2';
+// Bumped to v3 at the SolidJS cutover: `activate` only deletes caches whose
+// name differs, so a version bump is what evicts the previous build's shell.
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `cmm-app-shell-${CACHE_VERSION}`;
 
 /**
@@ -152,8 +154,8 @@ function isStaticAsset(pathname: string): boolean {
     return true;
   }
 
-  // Check if it's in the build directory (Qwik chunks)
-  if (pathname.startsWith('/build/') || pathname.startsWith('/assets/')) {
+  // Vite emits hashed chunks and styles under /assets/
+  if (pathname.startsWith('/assets/')) {
     return true;
   }
 
