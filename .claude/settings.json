@@ -85,7 +85,6 @@
       "PowerShell(npm ls *)",
       "PowerShell(Select-String *)",
       "PowerShell(Get-Content *)",
-      "PowerShell(Set-Content *)",
       "WebSearch",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:claude.ai)",
@@ -165,7 +164,10 @@
       "PowerShell(firebase deploy *)",
       "PowerShell(netlify deploy *)",
       "PowerShell(Get-Content *.env)",
-      "PowerShell(Get-Content *.env.*)"
+      "PowerShell(Get-Content *.env.*)",
+      "PowerShell(Set-Content *)",
+      "PowerShell(Add-Content *)",
+      "PowerShell(Out-File *)"
     ],
     "ask": [
       "Bash(npm publish:*)",

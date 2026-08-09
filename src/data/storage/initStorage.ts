@@ -27,14 +27,14 @@ import { seedDefinitions } from '../services/seedDefinitions';
 
 /**
  * Memoized init state. All callers share the same promise so concurrent
- * `await initializeStorage()` calls (e.g. one from useInitStorage and one from
+ * `await initializeStorage()` calls (e.g. one from App's onMount and one from
  * useElementChildren) never re-enter the init body and do duplicate work.
  *
  * Pinned on globalThis so it survives dev-server (Vite) module re-evaluation:
  * a re-instanced copy of this module would otherwise see `initPromise: null`
  * and re-run the full init — new SyncManager, duplicate bus subscriptions,
  * another startup syncFull — per edit-triggered reload (ISSUES Bugs #2).
- * Client-only state; SSR never calls initializeStorage.
+ * Client-only state — the app is a client-only SPA with no server render.
  */
 type InitState = { initialized: boolean; initPromise: Promise<void> | null };
 const globalState = globalThis as typeof globalThis & { __cmmInitState?: InitState };
