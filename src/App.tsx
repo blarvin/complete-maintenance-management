@@ -2,15 +2,13 @@
  * App — root Solid component.
  *
  * Provides the appState store/actions via context, initializes IDB storage and
- * the SyncManager on mount (the old useInitStorage body), and hosts the global
- * snackbar. Renders RootView/BranchView off the FSM view state (Phase II).
+ * the SyncManager on mount, and hosts the global snackbar. Renders
+ * RootView/BranchView off the FSM view state.
  */
 
 import { onMount, Show } from 'solid-js';
 import { createAppState, AppStateContext, selectors } from './state/appState';
 import { initializeStorage } from './data/storage/initStorage';
-import { getCommandBus, type Command } from './data/commands';
-import { getElementQueries } from './data/queries';
 import { SnackbarHost } from './components/Snackbar/SnackbarHost';
 import { RootView } from './components/views/RootView';
 import { BranchView } from './components/views/BranchView';
@@ -22,18 +20,10 @@ export const App = () => {
         // Initialize storage
         await initializeStorage();
 
-        if (import.meta.env.DEV) {
-            // Phase II migration-verification tooling: creation surfaces land in Phase IV,
-            // so expose the command bus for console seeding. TODO(mop-up): remove.
-            (window as unknown as Record<string, unknown>).__cmm = {
-                execute: (cmd: Command) => getCommandBus().execute(cmd),
-                queries: () => getElementQueries(),
-            };
-        }
-
         // Log service worker registration status. Not awaited: `ready` only
-        // resolves once a SW activates, and dev never registers one (the old
-        // Qwik dev server did) — an inline await would block the logs below.
+        // resolves once a SW activates, and dev never registers one (the SW is
+        // PROD-gated in entry.client.tsx) — an inline await would block the
+        // logs below.
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(
                 (registration) => console.log('[App] ServiceWorker registered:', registration.scope),

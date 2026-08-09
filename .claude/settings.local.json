@@ -2,9 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(npm run typecheck:*)",
-      "Bash(npm run build.preview:*)",
       "Bash(npx vitest run)",
-      "Bash(npx qwik:*)",
       "Bash(npx tsc:*)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
