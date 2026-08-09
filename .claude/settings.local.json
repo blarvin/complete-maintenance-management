@@ -66,8 +66,7 @@
     ],
     "deny": [
       "Read(.env*)",
-      "Edit(.env*)",
-      "Write(.env*)"
+      "Edit(.env*)"
     ]
   },
   "hooks": {
@@ -77,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'INPUT=$(cat); FILE_PATH=$(echo \"$INPUT\" | jq -r \".tool_input.file_path // empty\"); case \"$FILE_PATH\" in */package-lock.json|*.env|*.env.*|*/SPECIFICATION.md) echo \"BLOCKED: Protected file $FILE_PATH — do not edit directly\" >&2; exit 2;; esac'"
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect_files.js\""
           }
         ]
       }
@@ -87,7 +86,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/log-tool-use.sh"
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/log_tool_use.js\""
           }
         ]
       }
