@@ -7,7 +7,27 @@
       "hooks": [
         {
           "type": "command",
-          "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/smart_approve.js\""
+          "command": "node .claude/hooks/smart_approve.js"
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .claude/hooks/protect_files.js"
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .claude/hooks/log_tool_use.js"
         }
       ]
     }
@@ -102,6 +122,7 @@
       "PowerShell(Split-Path *)",
       "PowerShell(Get-Item *)",
       "PowerShell(Get-Command *)",
+      "PowerShell(echo *)",
       "PowerShell(Write-Output *)",
       "PowerShell(Write-Host *)",
       "PowerShell(Format-Table *)",

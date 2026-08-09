@@ -77,7 +77,10 @@ function loadMergedSettings() {
     path.join(os.homedir(), '.claude', 'settings.json');
   const settings = loadSettings(globalPath);
 
-  const projectDir = process.env.CLAUDE_PROJECT_DIR;
+  // CLAUDE_PROJECT_DIR is not reliably set on Windows; this file lives in
+  // <project>/.claude/hooks/, so derive the project dir from __dirname instead.
+  const projectDir =
+    process.env.CLAUDE_PROJECT_DIR || path.resolve(__dirname, '..', '..');
   if (!projectDir) return settings;
 
   const shared = loadSettings(path.join(projectDir, '.claude', 'settings.json'));

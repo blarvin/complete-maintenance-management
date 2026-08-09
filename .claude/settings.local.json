@@ -70,27 +70,6 @@
     ]
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect_files.js\""
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/log_tool_use.js\""
-          }
-        ]
-      }
-    ],
     "Notification": [
       {
         "hooks": [
