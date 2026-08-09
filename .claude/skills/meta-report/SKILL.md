@@ -79,7 +79,7 @@ Generate a comprehensive report on the Claude Code meta-layer for this project a
 6. **Web search: MCP ecosystem.** Search for:
    - Popular/useful MCP servers for development workflows
    - Compare against our current MCP setup
-   - Identify new opportunities that fit this project's needs (Qwik, TypeScript, offline-first, maintenance management)
+   - Identify new opportunities that fit this project's needs (solid-js, TypeScript, offline-first, maintenance management)
 
 ### Phase 3: Report Generation
 

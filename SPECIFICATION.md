@@ -215,14 +215,14 @@ interface ToastInput {
   durationMs?: number; // default by variant
   action?: {
     label: string; // e.g. "Undo", "Retry"
-    handler: QRL<() => void | Promise<void>>;
+    handler: () => void | Promise<void>;
   };
-  onExpire?: QRL<() => void | Promise<void>>; // runs if the toast auto-dismisses WITHOUT the action being invoked; used for deferred-write tails (see Undo semantics)
+  onExpire?: () => void | Promise<void>; // runs if the toast auto-dismisses WITHOUT the action being invoked; used for deferred-write tails (see Undo semantics)
 }
 ```
 
-- Access via `getSnackbarService()`; call inside `$()` handlers, never captured in closures (same rule as other services).
-- State is held in a Qwik signal store inside the service. The app renders exactly one `<SnackbarHost>` near the app root that reads from that store.
+- Access via `getSnackbarService()`; call at handler time, not at component setup (same rule as other services).
+- State is held in a store object inside the service. The app renders exactly one `<SnackbarHost>` near the app root, which registers a signal-backed accessor object as that store — so the service's plain property assignments stay reactive without the service knowing about the framework.
 - Replacement: `show()` while a toast is visible immediately runs the prior toast's `onExpire` (if any), cancels its timer, and renders the new one.
 
 ### Undo semantics
@@ -513,7 +513,7 @@ The data model is a single recursive primitive, the **Element**. A node is an El
 
 ### The registry & manifest
 
-All kind-specific behaviour lives in a module-level **manifest** keyed by `kind`, never serialized onto an Element (Qwik cannot serialize methods — a framework fact). The manifest is the entire plug-in seam, identical in shape for node-like and field-like kinds:
+All kind-specific behaviour lives in a module-level **manifest** keyed by `kind`, never stored on an Element: behaviour is code, and an Element is data that round-trips through IndexedDB and Firestore. The manifest is the entire plug-in seam, identical in shape for node-like and field-like kinds:
 
 ```ts
 type KindManifest = {

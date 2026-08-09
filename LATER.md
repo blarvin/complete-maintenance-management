@@ -408,7 +408,7 @@ Replace ad-hoc `console.log` with a lightweight logger (`src/utils/logger.ts`). 
 
 ### Error Handling & Resilience
 
-Surface view-layer data-load errors instead of swallowing them (`useAsyncOperation` sets an `error` signal that nothing renders — failed loads just look empty). A small wrapper (fallback value + contextual logging + an error state in the two views) covers it; the old `safeAsync()`/`withErrorHandling.ts` helper was deleted as dead code (audit §3) and should be rebuilt only when actually wired in. Low priority for Phase 1. Becomes valuable once:
+Surface view-layer data-load errors instead of swallowing them — the loader hooks and the error-catching `createResource` fetchers fall back to empty values, so a failed load is indistinguishable from no data. A small wrapper (fallback value + contextual logging + an error state in the two views) covers it; both the old `safeAsync()`/`withErrorHandling.ts` helper (audit §3) and `useAsyncOperation` (Solid mop-up) were deleted as dead code, and this should be rebuilt only when actually wired in. Low priority for Phase 1. Becomes valuable once:
 
 1. Snackbar is implemented for user-facing error messages
 2. Error monitoring (Sentry, etc.) is added
@@ -421,6 +421,14 @@ Surface view-layer data-load errors instead of swallowing them (`useAsyncOperati
 ### TailwindCSS (if adopted)
 
 Limit to `@apply` within component CSS to keep markup uncluttered. Defer heavy utility-class usage.
+
+### PWA & Build (deferred out of SolidJS Phase V)
+
+- **Service-worker update affordance.** The SW takes over aggressively — `skipWaiting()` on install, `clients.claim()` on activate — so a new build controls the page on the next load with no prompt. Correct for a single-user prototype; a real "update available, reload?" affordance (listen for `updatefound` / `controllerchange` in `entry.client.tsx`, surface it through the snackbar) is the upgrade if this ever ships to other people.
+- **`preview:pwa` depends on an undeclared `npx serve`.** Works, and is what the PWA has always been smoke-tested on, but it fetches a package that isn't in `devDependencies`. Drop-in replacement if that ever bites: `vite preview --port 4173 --strictPort` (already installed, and it honours `vite.config.ts`'s `preview.headers`).
+- **HTML is network-first.** Every online launch waits on the network for `index.html` before the cached shell renders; on a flaky connection that's a slow start where stale-while-revalidate would be instant. Only worth changing if it's felt.
+- **No hosting/deploy target.** Phase I deleted the Qwik static adapter and `deploy` script; `firebase.json` is firestore-only. `npm run build` → `dist/` served locally is the whole story today. Adding Firebase Hosting (public: `dist`, SPA rewrite, `no-cache` on `/service-worker.js`) is a small job whenever the app needs to be reachable from somewhere other than localhost.
+- **Single 600 KB JS chunk.** The build warns about it. Untouched deliberately — code-splitting is a real decision (route-less FSM app, so the natural seams are the kind renderers and the Firebase SDK), not a mop-up nicety.
 
 ---
 

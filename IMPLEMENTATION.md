@@ -206,28 +206,23 @@ Data-read hooks, views, and the TreeNode display family on Solid, read-only; edi
 
 ## Critical Architectural Patterns
 
-### Qwik Resumability and Service Registry
+### Module-Level Service Registry
 
-**Problem**: Qwik's resumability requires serializing closures captured in `$()` functions. Context-provided services can't serialize because they contain functions.
-
-**Solution**: Module-level registry (command bus + query objects) instead of React-style context:
+**Pattern**: The command bus and query objects live at module scope (`getCommandBus()` in `src/data/commands/`, `getElementQueries()` / `getDefinitionQueries()` in `src/data/queries/`) rather than in framework context, and are looked up **at call time**:
 
 ```typescript
-// ❌ Won't work: queries captured in closure, can't serialize functions
-const { elements } = useContext(DataContext);
-const load$ = $(async () => {
-  await elements.getRootElements();
-});
-
-// ✅ Works: nothing captured, registry looked up at runtime
-const load$ = $(async () => {
+// Registry looked up when the handler runs, so an adapter swap is always visible
+const load = async () => {
   await getElementQueries().getRootElements();
-});
+};
 ```
 
-The registry lives at module scope (`getCommandBus()` for writes in `src/data/commands/`, `getElementQueries()` / `getFieldDefinitionQueries()` for reads in `src/data/queries/`), swapped via `setElementQueries()` for tests. This maintains Dependency Inversion (components depend on the query/command interfaces) without serialization issues.
+**Why it stays**: two reasons that outlive any framework choice.
 
-**Why This Matters**: Without this pattern, Qwik's resumability breaks—the app can't serialize state for server-side rendering.
+1. **Test seams.** `setElementQueries(mock)` / `setCommandBus(mock)` swap the backend from a plain unit test with no render, no provider, and no component tree. The whole unit suite depends on this; moving the registry into Solid context would force component rendering into tests that currently render nothing.
+2. **Non-component callers.** `initStorage.ts`, the sync stack, and `commitWithUndo` all need the bus without being inside a component.
+
+**Origin note**: the pattern was originally forced by Qwik's serialization rules (context-provided services contain methods, which can't serialize). That constraint is gone — Solid context could hold services fine — but the two reasons above stand on their own, so the migration deliberately kept it (SOLIDJS-MIGRATION.md §8 lists the collapse to plain imports as optional and not required).
 
 ---
 
@@ -343,9 +338,9 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 ### Double-Tap Detection Algorithm
 
-**Pure Function Design**: `detectDoubleTap(state, x, y, now, threshold, slop)` is a pure function returning `[isDouble, newState]`. The hook (`useDoubleTap`) wraps it with Qwik signals for state persistence across renders.
+**Pure Function Design**: `detectDoubleTap(state, x, y, now, threshold, slop)` is a pure function returning `[isDouble, newState]`. The hook (`useDoubleTap`) wraps it with plain closure state — nothing tracks the tap state, so no signal is warranted.
 
-**Why Pure Function**: Enables direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
+**Why Pure Function**: Enables direct unit testing without rendering anything. Pass deterministic timestamps and positions, assert on return values.
 
 **Slop Distance**: Allows slight finger movement between taps. Uses Manhattan distance (`dx <= slop && dy <= slop`) rather than Euclidean—simpler and good enough for touch tolerance. Default: 6px slop, 280ms threshold.
 
@@ -500,13 +495,15 @@ Coordination is a single parent-owned mutex signal: `useSignal<ActiveSurface>('n
 
 ## Hook Patterns
 
-**useNodeCreation**: Extracts duplicate creation flow from RootView/BranchView. Returns `{ ucNode, start$, cancel$, complete$ }`. Internally calls `startConstruction$` (FSM transition), then on complete dispatches the node-creation command via `getCommandBus()` (data layer).
+The house shape is **`Accessor<T>` in, accessors out** — call sites pass thunks so a hook re-reads on navigation instead of capturing a stale value at mount.
 
-**useDoubleTap**: Returns `{ checkDoubleTap$ }` which takes `(x, y)` and returns boolean. Caller handles what to do on double-tap. Internal state persists across taps via Qwik signals.
+**useNodeCreation**: Extracts the duplicate creation flow from RootView/BranchView. Takes `parentId: Accessor<string | null>`, returns `{ ucNode, start, cancel, complete }`. `parentId` is read at `start()` time, so a long-lived BranchView can't parent a node under the view it already left. `complete` dispatches `CREATE_ELEMENT` via `getCommandBus()`, commits the pending draft, then closes the FSM's construction state.
 
-**usePendingForms**: Extracts pending form management from TreeNodeDisplay. Handles localStorage persistence of in-progress field creation forms. Returns `{ forms, add$, save$, cancel$, change$ }`.
+**useDoubleTap**: Returns `{ checkDoubleTap }`, which takes `(x, y)` and returns a boolean. Caller decides what to do on double-tap. Tap state is plain closure state — synchronous, nothing tracks it.
 
-**useFieldEdit**: Extracts all edit state/interaction logic from DataField. Handles FSM integration, double-tap detection, focus management, outside-click cancellation, preview mode. Returns refs, state, and handlers. Reduced DataField from 274 to 141 lines.
+**usePendingForms**: Owns the composer's pending batch and its localStorage persistence. Returns `{ forms, lastToggledId, togglePending, setPendingValue, commitAll, discardAll }`. Mutators write through to localStorage immediately so a commit from another component reads the current batch. `nodeId` is a mount-time constant by contract — the composer remounts per session via a keyed `<Show>`.
+
+**useFieldEdit**: All edit state/interaction logic for DataField — FSM integration, double-tap detection, focus management, outside-click cancellation, and the composer's `pendingMode` (where click-away *commits* instead of cancelling). Returns refs, accessors, and handlers.
 
 ---
 
@@ -538,7 +535,7 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 **Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Sync tests (`SyncPusher.test.ts`, `fieldDefinitionSync.test.ts`) mock `RemoteSyncAdapter`; no automated test currently exercises the real `FirestoreAdapter` against the emulator (see LATER.md §Emulator Round-Trip Sync Coverage).
 
-**Pure Function Testing**: `detectDoubleTap` is exported separately from hook for direct unit testing without Qwik rendering. Pass deterministic timestamps and positions, assert on return values.
+**Pure Function Testing**: `detectDoubleTap` is exported separately from the hook for direct unit testing without rendering. Pass deterministic timestamps and positions, assert on return values.
 
 **localStorage Mocking**: `uiPrefs.test.ts` uses a mock `localStorage` object. Tests verify Set↔Array conversion and persistence behavior.
 
@@ -577,3 +574,15 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 **The UC "namespaced key" rationale dissolves in Solid — a filter, not a key, prevents the dual render.** Qwik needed `key={`uc-${id}`}` so the reconciler wouldn't identity-match the construction vnode with the display TreeNode of the same id. In Solid the UC card renders in its own `<Show>` position and is never matched against the `<For>` rows. What still matters is the list filter (`RootView.displayNodes` / BranchView's children filter): the bus reload can land the created node in the list while `underConstruction` is still set, because `complete()` awaits CREATE_ELEMENT and `commitPendingDraft` before `completeConstruction`.
 
 **`usePendingForms` dropped Qwik's `initialized` latch.** It existed to guard `useVisibleTask$` re-runs on remount; `onMount` runs exactly once, so the seed load uses the standard `disposed` guard around its await instead. Stored-draft-wins ordering is preserved verbatim: `loadPendingForms(nodeId)` first, and only an empty result runs `initialSeedLoader`. All mutators keep their write-through `savePendingForms` calls — now genuinely same-tick before any construction commit reads localStorage.
+
+## SolidJS Migration — Phase V: PWA, build & mop-up (done 2026-08-09, plan `.claude/plans/SOLIDJS-WORKPHASE-V.md`)
+
+The closing phase: the PWA/build pass the cutover deferred, plus SOLIDJS-MIGRATION.md §8 mop-up. Non-obvious choices:
+
+- **`CACHE_VERSION` is the eviction lever, so it had to move.** `activate` deletes only caches whose *name* differs from the current one, and the name is `cmm-app-shell-${CACHE_VERSION}`. Leaving it at `'v2'` across the framework change would have let a returning browser keep serving Qwik-era chunks out of the identically-named cache indefinitely. Bumped to `'v3'`; verified on the built app that `cmm-app-shell-v3` is the only cache present.
+- **The precache plugin's defaults were pointing at a deleted file.** `swSource` still defaulted to `src/routes/service-worker.ts`, removed in Phase I — inert only because `vite.config.ts` passes the real path. Corrected, and the Qwik/SSG-specific `excludePatterns` (`q-manifest.json`, `bundle-graph.json`, `q-data.json`, `sitemap.xml`) replaced with `service-worker.js` + `.map`. The injected manifest is now the 8 real shipped files.
+- **`server/` was a live directory, not a stale ignore entry.** Dropping `'server/**'` from the eslint global ignores made lint fail on 80 KB of minified Qwik City SSG output (`@qwik-city-plan.mjs`, `entry.ssr.mjs`, `q-*.js`) still sitting on disk from before the cutover. Untracked by git, so it was deleted rather than re-ignored.
+- **`devTools.ts` survived mop-up; `window.__cmm` did not.** `window.__sync` / `__syncStatus` / `__wipeDefinitions` predate the migration and are un-gated project tooling. Only the `import.meta.env.DEV`-gated `__cmm` console-seeding hook (added in Phase II because creation surfaces didn't exist yet) was migration scaffolding, and it went with its `TODO(mop-up)`.
+- **The Qwik-comment sweep was a rewrite, not a strip.** Several comments named Qwik while guarding a constraint that outlived it: the `src/kinds/*` and unit-test "keep this component-free" notes are still true because `vitest.config.ts` has no Solid JSX transform, and `useFocusManager` / `useFieldEdit` still need an explicit *don't re-add a timeout* warning. Those were restated in Solid terms; only pure "the Qwik version did X" comparisons were deleted. The dated Phase I–IV sections above are left as historical record.
+- **Lint and typecheck scope collapsed to the whole tree.** The two-block eslint carve-out and the `no-restricted-imports` Qwik ratchet are gone — one Solid block now covers `src/**/*.{ts,tsx}` at error, which newly gates `useSyncTrigger.ts` (no findings). `tsconfig.json` is back to `"exclude": ["node_modules"]`; nothing new entered the program, since every component was already import-reachable from `entry.client.tsx`.
+- **No first-paint splash.** Meta-plan §9 pre-approved a static shell in `index.html` if CSR's blank window read badly. It didn't on the built app, so nothing was added — the cheap fix stays available if it ever bites.

@@ -70,7 +70,7 @@ A cutover on this branch, not a strangler — two JSX runtimes in one Vite build
 - **II — Read path**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything.
 - **III — Edit path**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo.
 - **IV — Create & author path** *(done 2026-08-09)*: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation. Qwik ratchet at **1** file (`src/hooks/useAsyncOperation.ts`, zero importers — dies at mop-up). Cypress became a gate for the first time and all 3 contract specs pass. The §10 checklist is now fully walked on real surfaces (the four composer items had only been verified through the hook paths in III). Deliberate deltas: the composer definition list is stale-while-revalidate (`createResource` serves the old list on a `DEFINITION_WRITTEN` bump — no `onPending` flash, first mount still shows `Loading field definitions…`); a composer list-fetch failure now renders `No field definitions available` instead of Qwik's blank rows region (the resource had no `onRejected`); `useNodeCreation` takes and returns accessors (`parentId` read at `start()` time, `ucNode` a store read) so a long-lived BranchView instance can't parent a node under the view it left.
-- **V — PWA & build**: service-worker registration + precache rewire; production static build; offline/install pass; `preview:pwa` restored.
+- **V — PWA & build + mop-up** *(done 2026-08-09)*: scoped to include §8 Mop-up, since that work is mostly build-graph (deps, tsconfig, eslint) and this was the last phase. **Qwik ratchet closed at 0** — `useAsyncOperation.ts` deleted, `@builder.io/qwik` + `@builder.io/qwik-city` uninstalled (134 packages), the eslint Qwik ratchet and both tsconfig carve-outs removed, `window.__cmm` scaffolding gone. Service worker rewired for Vite output (`CACHE_VERSION` v2 → v3 so the previous shell is actually evicted; dead `/build/` branch removed) and the precache plugin's stale `src/routes/…` default + Qwik exclude patterns corrected. Verified on the built app at `:4173`: SW activates, `cmm-app-shell-v3` is the only cache and holds all 8 shipped files, offline reload serves the shell and IDB data. All 3 Cypress specs green; 39 files / 419 tests green. Deploy target deliberately stayed **none** (local `preview:pwa`; no hosting config added). No first-paint splash — the CSR blank window wasn't perceptible.
 
 Phases III–IV hold the heavy rewrites; budget accordingly.
 
@@ -81,12 +81,13 @@ Phases III–IV hold the heavy rewrites; budget accordingly.
 - Sync round-trip against the Firestore emulator; airplane-mode pass on the built PWA; a real device install.
 - Against **Architecture & Intentions**: grep proves zero Qwik imports remain; the deployment shape matches (static dist + SW + precache manifest).
 
-## 8. Mop-up
+## 8. Mop-up — **done 2026-08-09, folded into Phase V**
 
-- Delete Qwik deps, configs, and the workaround archaeology: the runtime-qrl construction in the sync retry path, handler-type aliases, "Qwik-free so Vitest can transform" comments.
-- Docs sweep: CLAUDE.md (stack, Qwik idioms, serialization warnings), IMPLEMENTATION.md notes that explain Qwik workarounds, ISSUES/LATER items that reference Qwik mechanics, README.
-- Optional simplifications, each its own decision, none required: module-getter registry → plain imports or context (keep the test seams); drop the dangling firestore-test script.
-- Re-index the code-lookup MCP.
+- ✅ Qwik deps, configs, and workaround archaeology deleted. The runtime-qrl construction in the sync retry path and the handler-type aliases went in Phase I; the last Qwik import (`useAsyncOperation.ts`) and both npm deps went in V-1. The stale `server/` SSG output directory was deleted too — it was still physically present.
+- ✅ Comment sweep, with a caveat worth keeping: the "Qwik-free so Vitest can transform" comments were **rewritten, not deleted**. The constraint survives the framework — `vitest.config.ts` has no Solid JSX transform, so nothing test-reachable may import `registry.ts` / `*.manifest.ts` / any `.tsx`. Same for `useFocusManager` and `useFieldEdit`, which still need an explicit *don't re-add a timeout* warning.
+- ✅ Docs sweep: CLAUDE.md (stack, Solid idioms, the registry rationale, dev/build/preview commands), SPECIFICATION.md (snackbar handler types + store, the manifest's module-level rationale), IMPLEMENTATION.md (registry section rewritten; stale `$`-suffixed hook reference corrected; Phase V section added), `.claude/rules/testing-conventions.md`, `.claude/skills/meta-report/SKILL.md`, `.claude/settings.local.json` (dead Qwik permissions). No README.md exists. ISSUES.md's two "same in the Qwik original" notes are accurate provenance and stayed; `.claude/METAPROCESS.md` is a dated audit report and was left alone.
+- **Not done, by decision**: the module-getter registry stays as-is — the `setCommandBus`/`setElementQueries` test seams and non-component callers justify it independently of Qwik (rationale recorded in IMPLEMENTATION.md). The dangling `test:firestore` script also stays.
+- ⏳ Re-index the code-lookup MCP — still outstanding; the jcodemunch server wasn't connected when the phase closed.
 
 ## 9. Risks and Potential Snags
 

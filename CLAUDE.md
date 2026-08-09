@@ -4,7 +4,7 @@
 
 **Spec-Driven Development**: `SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
 **This is prototyping**: Do the simplest thing that works.
-**Context7 MCP**: When working with third-party libraries (Qwik, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
+**Context7 MCP**: When working with third-party libraries (solid-js, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
 **jCodeMunch MCP**: Use jcodemunch-mcp for all code lookups. Never read full files when MCP is available. Call `list_repos` first — if the project is not indexed, call `index_folder` with the current working directory. Use `search_symbols` / `get_symbol` to find and retrieve code by symbol name. Use `get_repo_outline` or `get_file_outline` to explore structure. Fall back to direct file reads only when editing or when MCP is unavailable.
 **Plan location**: Always save plan files (`.plan.md`, phase plans, etc.) to `.claude/plans/` in this project's local directory — never to a global or home-directory location.
 
@@ -28,7 +28,7 @@
 
 ### Tech Stack
 
-- **Framework**: Qwik 1.16.0 (resumable, SSR-first)
+- **Framework**: solid-js 1.9 (fine-grained reactivity, client-only SPA — no SSR, no router; the FSM is the navigation model)
 - **Language**: TypeScript (strict mode)
 - **Storage**: IndexedDB (Dexie 4.2.1) as primary, Firestore for sync
 - **Testing**: Vitest, Cypress (E2E)
@@ -53,10 +53,8 @@
 **Command/query registry**: `src/data/commands/` and `src/data/queries/`
 
 - Module-level getters: `getCommandBus()`, `getElementQueries()`, `getDefinitionQueries()`
-- IMPORTANT: Call these at runtime inside `$()` handlers — never capture in closures or serialize
-- `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping
-- Qwik `useContextProvider` CANNOT hold services (methods aren't serializable, `Code(3)` error)
-- `noSerialize` workaround not viable — values become `undefined` after SSR
+- Call these at runtime inside handlers, not at component setup — an adapter swap must be visible to the next call
+- `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping — these seams are why the registry stays module-level rather than moving into Solid context
 
 ### 4. Component Hierarchy with Type Safety
 
@@ -90,7 +88,7 @@ Components use discriminated unions + type guards (no prop spreading).
 ### Code Style
 
 - **TypeScript**: Strict mode, discriminated unions, type guards
-- **Qwik idioms**: Use `$()` for event handlers, avoid closures in hooks
+- **Solid idioms**: never destructure props (it breaks tracking); hooks take `Accessor<T>` in and return accessors out; `<Show keyed>` when a subtree must genuinely remount; `<Dynamic>` for registry-picked components. `eslint-plugin-solid` runs at **error** over all of `src/` — including `solid/reactivity`
 - **CSS**: Module CSS with design tokens, minimal inline styles
 - **Testing**: Test domain logic in service/adapter layers, not components
 
@@ -105,8 +103,9 @@ Components use discriminated unions + type guards (no prop spreading).
 ### Common Commands
 
 ```bash
-npm run dev          # Dev server (SSR mode)
-npm run preview:pwa  # Run preview server on port 4173
+npm run dev          # Vite dev server (client-only SPA; registers no service worker)
+npm run build        # Typecheck + production build to dist/ (compiles the SW, injects the precache manifest)
+npm run preview:pwa  # Serve the built dist/ on port 4173 — the only way to exercise the PWA
 npm run test         # Run all unit tests
 npm run test:watch   # Watch mode (Vitest)
 npm run cypress      # Open Cypress GUI
