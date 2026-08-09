@@ -57,8 +57,8 @@ export const FieldComposerSlot = (props: FieldComposerSlotProps) => {
         <>
             <Show when={composerOpen()}>
                 {/* Value-keyed <Show>: flipping 'fresh' → 'restored' recreates the
-                    composer, which is exactly what Qwik's key= did — the remount is
-                    what re-runs usePendingForms' seed loader against the restore seed. */}
+                    composer, and that remount is what re-runs usePendingForms'
+                    seed loader against the restore seed. */}
                 <Show when={restoreSeed() ? 'restored' : 'fresh'} keyed>
                     <FieldComposer
                         nodeId={props.nodeId}

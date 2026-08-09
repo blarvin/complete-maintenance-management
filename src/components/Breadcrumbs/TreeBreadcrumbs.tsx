@@ -9,8 +9,8 @@ type TreeBreadcrumbsProps = {
 
 export const TreeBreadcrumbs = (props: TreeBreadcrumbsProps) => {
     const { navigateToNode } = useAppTransitions();
-    // Same staleness semantics as Qwik: nodeIndex mutations don't re-render —
-    // only nodeId changes do.
+    // Deliberate staleness: nodeIndex mutations don't re-render — only nodeId
+    // changes do.
     const path = createMemo(() => useAncestorPath(props.nodeId));
 
     return (

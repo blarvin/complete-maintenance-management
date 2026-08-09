@@ -5,9 +5,9 @@
  * authoring home.
  *
  * Why a separate module: capability data must be readable without importing the
- * Qwik renderer `component$`s the manifests carry — both for the coherence test
- * (Vitest doesn't transform components; project convention forbids importing them
- * in unit tests) and for the SPEC's "degeneration anti-pattern is CI-lintable"
+ * `.tsx` renderer components the manifests carry — both for the coherence test
+ * (`vitest.config.ts` has no Solid JSX transform, so nothing test-reachable may
+ * import them) and for the SPEC's "degeneration anti-pattern is CI-lintable"
  * (§584), which reads capability subsets without booting the app. `satisfies
  * Record<Kind, CapabilitySet>` enforces an entry for every kind.
  *

@@ -14,8 +14,7 @@ import styles from './DataCard.module.css';
 export type DataCardProps = {
     isOpen?: boolean;
     children: JSX.Element;
-    /** Rendered after `children` — the successor to Qwik's <Slot name="actions"/>
-     *  (the under-construction Cancel/Create row). */
+    /** Rendered after `children` — the under-construction Cancel/Create row. */
     actions?: JSX.Element;
 };
 

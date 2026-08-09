@@ -5,8 +5,8 @@
  * Why a separate module (same constraint as `placement.ts` / `capabilities.ts`):
  * these predicates are consumed by the create surface and the shell, and must be
  * unit-testable without importing `registry.ts`/`*.manifest.ts` — those pull the
- * Qwik `component$` renderers, which Vitest can't transform. So this reads
- * `KIND_CAPABILITIES` (already component-free) directly.
+ * `.tsx` renderers, and `vitest.config.ts` has no Solid JSX transform. So this
+ * reads `KIND_CAPABILITIES` (already component-free) directly.
  *
  * First consumer of `childrenSpec.allowedKinds` (chrome entailment #5): the
  * create picker offers only what the parent admits, and a content-free lens

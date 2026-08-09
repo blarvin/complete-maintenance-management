@@ -8,9 +8,8 @@
  * Each action wraps its transition in `setState(produce(...))` so multi-field
  * FSM writes stay atomic (never observable mid-transition) and all writes stay
  * funneled through the actions. The transitions mutate a draft `AppState`
- * directly and ship unchanged from the Qwik version — the Set-bearing toggles
- * already reassign fresh `Set` instances, which is exactly what Solid's
- * property-level tracking needs (Sets are never proxied).
+ * directly; the Set-bearing toggles reassign fresh `Set` instances, which is
+ * what Solid's property-level tracking needs (Sets are never proxied).
  */
 
 import { createContext, useContext } from 'solid-js';

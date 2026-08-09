@@ -3,7 +3,7 @@
  * is relevant to a given reader.
  *
  * Used by the data hooks (src/hooks/useElementChildren.ts) to skip reloads
- * for writes that cannot affect what they display. Pure functions, no Qwik.
+ * for writes that cannot affect what they display. Pure, framework-free.
  */
 
 import type { StorageEvent } from './storageEventBus';

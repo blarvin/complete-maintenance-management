@@ -6,11 +6,11 @@
  * option list for an inline text input so the user can type a custom value.
  *
  * Does NOT use useFieldEdit — the popover lifecycle is its own state machine
- * over the same FSM seams (startFieldEdit/stopFieldEdit). The Qwik version's
- * three setTimeout(0)s collapse into effects (meta-plan §10): the open-
- * transition effect deliberately also tracks the options resource so first-
- * open focus lands after the IDB config fetch (Qwik's timeout raced it and
- * could miss); the activeElement guard prevents focus theft on re-runs.
+ * over the same FSM seams (startFieldEdit/stopFieldEdit). Positioning and
+ * focus run from effects, never from timeouts: the open-transition effect
+ * deliberately also tracks the options resource, so first-open focus lands
+ * after the IDB config fetch rather than racing it; the activeElement guard
+ * prevents focus theft on re-runs.
  */
 
 import { Show, For, createSignal, createEffect, createResource, onMount, onCleanup, type Accessor } from 'solid-js';
@@ -194,8 +194,7 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
         open();
     });
 
-    // Open-transition effect: position + focus the first option. Deliberate
-    // deviation from the Qwik setTimeout(0) (flagged in the plan): also tracks
+    // Open-transition effect: position + focus the first option. Also tracks
     // the options resource so first-open focus is deterministic after the IDB
     // config fetch; the activeElement guard prevents focus theft on re-runs.
     createEffect(() => {
@@ -222,8 +221,7 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
         if (checkDoubleTap(x, y)) {
             // Cancel the compatibility mousedown: its focus default action runs
             // after the open-transition effect focused the first option and
-            // would steal focus back to the trigger (Qwik's setTimeout(0) focus
-            // happened to land after it; the effect runs before).
+            // would otherwise steal focus back to the trigger.
             ev.preventDefault();
             open();
         }

@@ -6,8 +6,8 @@
  * Why a separate module (same constraint as `capabilities.ts`): the storage
  * layer (`IDBAdapter`, `initStorage`, `nodeIndexSubscriber`) and unit tests must
  * branch on placement without importing `registry.ts`/`*.manifest.ts` — those
- * pull the Qwik `component$` renderers, which Vitest can't transform. So the
- * node-vs-field split lives here as data, the component-free mirror of each
+ * pull the `.tsx` renderers, and `vitest.config.ts` has no Solid JSX transform.
+ * So the node-vs-field split lives here as data, the component-free mirror of each
  * manifest's `placement` discriminant. `as const satisfies Record<Kind,
  * Placement>` forces an entry per kind; the per-kind *value* must agree with the
  * manifest literal (not test-enforceable, since a test can't import the

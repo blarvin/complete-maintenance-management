@@ -4,7 +4,8 @@
  *
  * Why a separate module (same constraint as `placement.ts` / `childrenPolicy.ts`):
  * the provisioner runs in the command/data layer (`handlers.ts`), which must not
- * import `registry.ts`/`*.manifest.ts` (they pull the Qwik `component$` renderers).
+ * import `registry.ts`/`*.manifest.ts` (they pull the `.tsx` renderers, which
+ * `vitest.config.ts` has no Solid JSX transform for).
  * So the schedule reads `KIND_CAPABILITIES` (already component-free) directly.
  *
  * The lens *kind* + id-`suffix` are derived from each `provision.idScheme`

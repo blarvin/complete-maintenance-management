@@ -54,8 +54,8 @@ export function usePendingForms(options: UsePendingFormsOptions): UsePendingForm
     const [lastToggledId, setLastToggledId] = createSignal<string | null>(null);
 
     onMount(async () => {
-        // onMount runs exactly once, so no `initialized` latch is needed (Qwik's
-        // guarded remounting armor); a disposal guard covers the await instead.
+        // onMount runs exactly once, so no `initialized` latch is needed;
+        // a disposal guard covers the await instead.
         let disposed = false;
         onCleanup(() => { disposed = true; });
 

@@ -6,10 +6,10 @@
  * - Auto-focus with cursor at end when a reactive condition becomes true
  * - Blur suppression box for coordinating pointer/blur interactions
  *
- * The Qwik version scheduled focus behind a 10ms timeout to outwait render;
- * Solid user effects run after render, so the input is mounted (with `value`
- * bound) by the time the effect fires — the delay and its cleanup bookkeeping
- * are deleted (meta-plan §10).
+ * Focus is applied straight from the effect, with no delay: user effects run
+ * after render, so the input is already mounted (with `value` bound) by the
+ * time the effect fires. Don't add a timeout back — it would only reintroduce
+ * cleanup bookkeeping and a focus race.
  */
 
 import { createEffect, type Accessor } from 'solid-js';

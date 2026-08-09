@@ -1,9 +1,9 @@
 /**
  * Per-kind config schemas (config-as-Elements) — the `ChildrenSpec` over config
- * sub-field kinds for each field-like kind. Kept **Qwik-free** (no component
+ * sub-field kinds for each field-like kind. Kept **component-free** (no `.tsx`
  * imports) so the storage layer (`configElements`, the IDB adapter, the seed)
- * can consume them without dragging the renderer components — and the
- * `component$` optimizer — into non-Qwik contexts.
+ * can consume them without dragging the renderer components — and the JSX that
+ * would need transforming — into Node-only contexts like Vitest.
  *
  * The manifests re-expose these as `manifest.configSchema`; `configElements`
  * reads `CONFIG_SCHEMAS` directly. Both reference the same arrays (single source).

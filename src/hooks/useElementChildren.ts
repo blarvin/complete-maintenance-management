@@ -9,8 +9,7 @@
  *
  * Solid contract: Accessor in, accessors out. Call sites pass thunks
  * (`useElementChildren(() => props.parentId, 'nodes')`); the effect re-runs
- * when the tracked accessor changes — fresh subscription + reload, same
- * semantics as the old Qwik `track`.
+ * when the tracked accessor changes — fresh subscription + reload.
  *
  * Replaces: useRootViewData, useBranchViewData, useTreeNodeFields, the
  * window 'storage-change' CustomEvent, and the onDeleted$/onCreated$/
@@ -42,7 +41,7 @@ export function useElementChildren(
     createEffect(() => {
         const pid = parentId(); // tracked read, once, into a local
         // Stale-async guard: an in-flight load from a previous parentId must
-        // not land after navigation (Solid effects capture; Qwik re-read).
+        // not land after navigation (effects capture their values at run time).
         let disposed = false;
         let timer: ReturnType<typeof setTimeout> | null = null;
         const load = async () => {

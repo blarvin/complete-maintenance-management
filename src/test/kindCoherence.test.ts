@@ -5,8 +5,8 @@
  * capability.
  *
  * Reads `KIND_CAPABILITIES` (pure data) rather than the registry, which would pull
- * in the Qwik renderer `component$`s the optimizer doesn't transform under Vitest
- * (project convention: no Qwik components in unit tests). The `satisfies
+ * in the `.tsx` renderers — `vitest.config.ts` has no Solid JSX transform
+ * (project convention: no components in unit tests). The `satisfies
  * Record<Kind, CapabilitySet>` on that map guarantees an entry for every kind, so
  * iterating it covers the whole registry.
  */

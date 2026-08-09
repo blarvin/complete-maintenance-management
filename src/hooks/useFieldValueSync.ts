@@ -13,10 +13,9 @@
  * during an in-progress edit don't disturb the user's input — only the
  * underlying committed value updates.
  *
- * Ported dormant in Phase II: its consumers are the five field renderers,
- * which arrive in Phase III. `fieldId` is non-reactive (as in Qwik) —
- * renderers mount per field. Nothing is tracked, so the subscription is
- * made at hook call and torn down via onCleanup.
+ * Consumed by the five field renderers. `fieldId` is deliberately
+ * non-reactive — renderers mount per field. Nothing is tracked, so the
+ * subscription is made at hook call and torn down via onCleanup.
  */
 
 import { onCleanup } from 'solid-js';

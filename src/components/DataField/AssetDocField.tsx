@@ -22,7 +22,7 @@ export const AssetDocField = (props: FieldRendererProps) => {
 
     // Live resolution: fetch the target's name whenever the id changes (display
     // only). Stale-async guard: an in-flight resolve must not land after the
-    // tracked id changed (Solid effects capture; Qwik re-read).
+    // tracked id changed (effects capture their values at run time).
     createEffect(() => {
         const id = targetId();
         let disposed = false;

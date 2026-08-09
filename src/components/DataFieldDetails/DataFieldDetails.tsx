@@ -8,9 +8,8 @@
  *
  * Lifecycle lives in component setup (fieldId is a mount-time constant; the
  * panel remounts per expand). Subscribe-before-first-load: the bus
- * subscription is registered before the initial fetch fires, which strictly
- * closes the Qwik version's missed-event window (a write landing between
- * mount and the visible-task's first fetch was never picked up).
+ * subscription is registered before the initial fetch fires, so a write
+ * landing between mount and the first fetch can't be missed.
  */
 
 import { Show, createSignal, onCleanup } from 'solid-js';

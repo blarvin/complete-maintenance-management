@@ -16,10 +16,10 @@
  * Cross-component writes (e.g. revert from DataFieldHistory) update the
  * renderer's `currentValue` via `useFieldValueSync`, not through this hook.
  *
- * Solid timing notes (meta-plan §10): the FSM write mounts the input
- * synchronously, so `beginEdit` seeds the edit buffer BEFORE `startFieldEdit`;
- * the autoFocus mount task drops the Qwik `setTimeout(0)` (the focus-manager
- * effect fires on the FSM write, after render).
+ * Timing notes: the FSM write mounts the input synchronously, so `beginEdit`
+ * seeds the edit buffer BEFORE `startFieldEdit`; the autoFocus mount task needs
+ * no deferral — the focus-manager effect fires on the FSM write, after render.
+ * Don't reintroduce a `setTimeout(0)` here.
  */
 
 import { onMount, onCleanup, createMemo, type Accessor } from 'solid-js';
@@ -186,10 +186,9 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         const target = ev.target as Node | null;
         // A detached target means this very tap swapped the DOM mid-dispatch —
         // the double-tap that begins an edit removes the display element
-        // synchronously (Solid), so by the time this document listener runs the
-        // target is outside the row *because it's outside the document*. That
-        // can't be an outside click; a real outside target is still connected.
-        // (Qwik's async QRL handlers never saw this window.)
+        // synchronously, so by the time this document listener runs the target
+        // is outside the row *because it's outside the document*. That can't be
+        // an outside click; a real outside target is still connected.
         if (target && !target.isConnected) return;
         const container = options.rootRef();
         if (container && target && !container.contains(target)) {
