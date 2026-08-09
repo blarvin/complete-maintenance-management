@@ -2,7 +2,7 @@
 
 ## Development Philosophy
 
-**Spec-Driven Development**: `SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
+**Spec-Driven Development**: `docs/SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
 **This is prototyping**: Do the simplest thing that works.
 **Context7 MCP**: When working with third-party libraries (solid-js, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
 **jCodeMunch MCP**: Use jcodemunch-mcp for all code lookups. Never read full files when MCP is available. Call `list_repos` first — if the project is not indexed, call `index_folder` with the current working directory. Use `search_symbols` / `get_symbol` to find and retrieve code by symbol name. Use `get_repo_outline` or `get_file_outline` to explore structure. Fall back to direct file reads only when editing or when MCP is unavailable.
@@ -10,11 +10,11 @@
 
 **Documentation Hierarchy**:
 
-1. **SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
-2. **ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
-3. **LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
-4. **IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
-5. **ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
+1. **docs/SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
+2. **docs/ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
+3. **docs/LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
+4. **docs/IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
+5. **docs/ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
 
 **ISSUES vs LATER routing**: unfinished business, deferred parts of a feature already begun, and observed refactor needs (work-in-progress left for later) normally go in **ISSUES**, not LATER. **LATER** is for whole ideas/features not yet started and far-future-phase work. Consequence: a leftover directly caused by current-branch or Element-model work belongs in ISSUES — and much of what's currently parked in LATER under in-flight clusters (e.g. the §6b/§6c lens follow-ups) could migrate back.
 
@@ -209,7 +209,7 @@ useStorageAdapter(new IDBAdapter());
 
 ### Must-Read Before Changes
 
-- `SPECIFICATION.md` - Product requirements (always check first)
+- `docs/SPECIFICATION.md` - Product requirements (always check first)
 - `src/state/appState.types.ts` - FSM state definitions
 - `src/data/models.ts` - Domain types
 
@@ -224,3 +224,19 @@ useStorageAdapter(new IDBAdapter());
 
  ### TOOL USE GUIDELINES
  IMPORTANT: Chain dependent commands with &&, never wrap them in PowerShell if ($?) { }
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's own `docs/ISSUES.md` work queue — not GitHub Issues. `docs/LATER.md` is an ideas file, not a tracker. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles under their default names, applied as an inline `[label]` tag on a queue item only while triage is live. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, alongside the existing SPECIFICATION / ELEMENT-MODEL / IMPLEMENTATION set. See `docs/agents/domain.md`.

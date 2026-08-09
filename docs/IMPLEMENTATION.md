@@ -2,9 +2,22 @@
 
 Technical implementation details and architectural patterns. For feature scope, see SPECIFICATION.md. For feature status and detailed breakdowns, see ISSUES.md. For deferred work, see LATER.md.
 
+**What belongs here:** only decisions that are non-obvious, interesting, or ambiguous — where a future reader asks "why is it like this?" and the answer isn't in the code. Obvious choices need no note.
+
+**Status convention** (ADR vocabulary, applied per `##` section; `###` subsections inherit their parent's status unless they carry their own):
+
+- **Accepted** — decision and reasoning both still hold.
+- **Accepted (rationale superseded)** — the choice stands, but the argument that produced it has expired; the note states the *current* reason. This is the dangerous case: the code looks deliberate and the stated motive is a fossil.
+- **Superseded by _X_** — replaced by a later decision. Kept only when the supersession is itself instructive.
+- **Deprecated** — the thing described is gone. Kept only to stop someone re-deriving it; delete on sight otherwise.
+
+Inline `_(Superseded …)_` marks apply to a single paragraph or bullet inside an otherwise-Accepted section.
+
 ---
 
-## Unified Element Model (in progress on `REFACTOR-single-unified-data-model`)
+## Unified Element Model
+
+**Status:** Accepted. _(Landed; the `REFACTOR-single-unified-data-model` branch is merged — the heading's old "in progress" qualifier is gone.)_
 
 `TreeNode` and `DataField` are unified into a single `Element` primitive discriminated by `kind` (`"node"` for containers; the four field-kind literals for value-bearing kinds). One `elements` Dexie store and one `elementHistory` log replace the previous `nodes` / `fields` / `history` triple.
 
@@ -22,17 +35,21 @@ Technical implementation details and architectural patterns. For feature scope, 
 
 ## Draft Store & commit-with-undo (audit §2.5/§2.6, done 2026-06-13)
 
+**Status:** Accepted (rationale superseded) — see the `commitWithUndo` naming note below.
+
 **Composer draft is the single commit source.** The pending-field batch was always persisted in `localStorage` keyed by nodeId (`pendingFields:${nodeId}`); the commit logic now lives in a plain module `src/data/services/pendingDraft.ts` (`commitPendingDraft(nodeId, baseOrder)` / `discardPendingDraft(nodeId)`), not in the mounted component. `usePendingForms` is a thin Qwik layer over it. This deleted the entire handle-threading graph — three handle types (`FieldComposerHandle`, `FieldComposerSlotHandle`, `FieldListHandle`), every `handleRef` prop, and the `afterNodeCreated$` callback relayed through `CreateNodePayload`/`useNodeCreation`.
 
 **Construction commit moved into `useNodeCreation.complete$`.** That function already had the new node's id and already cleared the draft; it now commits the draft (`commitPendingDraft(id, -1)`) right after `CREATE_ELEMENT` succeeds. No component reaches into the composer anymore.
 
 **Write-through persistence.** Because the construction commit reads localStorage from a *different* component than the mounted composer, `setPendingValue$`/`togglePending$` now write to localStorage synchronously rather than relying on a reactive `useTask$` auto-save (which could lag the Create click by a tick). The race — whether the last keystroke flushes before Create — is browser-timing-only, so it's covered by a Cypress spec, not a unit test (ISSUES.md Tech Debt).
 
-**`commitWithUndo` is a plain function, deliberately not `$`-suffixed.** It wraps *execute → success snackbar with Undo → error snackbar via `describeForUser(toStorageError(err))`* (six former copies). A `$` suffix makes the Qwik optimizer treat `commitWithUndo$({…})` as an implicit-QRL API and try to hoist the whole options object — but that object holds inline `$()` QRLs capturing local ids (`nodeId`, `prevVal`), which it can't. As a plain function, those `$()` args are captured in the *caller's* handler scope, exactly like the snackbar action handlers were before. The execute result is threaded into both the message builder and the undo handler, so the discard/restore variant (`FieldComposer` cancel) rides the same path as the command sites.
+**`commitWithUndo` is a plain function, deliberately not `$`-suffixed.** _(Rationale superseded — the `$`/QRL convention died with Qwik; `commitWithUndo` is now simply an ordinary `async function` in `src/data/services/commitWithUndo.ts`, and there is no naming decision left to defend. The paragraph is retained only because the **caller-scope capture** argument still explains why the options object holds callbacks built at each call site rather than being hoisted into a shared config.)_ It wraps *execute → success snackbar with Undo → error snackbar via `describeForUser(toStorageError(err))`* (six former copies). A `$` suffix makes the Qwik optimizer treat `commitWithUndo$({…})` as an implicit-QRL API and try to hoist the whole options object — but that object holds inline `$()` QRLs capturing local ids (`nodeId`, `prevVal`), which it can't. As a plain function, those `$()` args are captured in the *caller's* handler scope, exactly like the snackbar action handlers were before. The execute result is threaded into both the message builder and the undo handler, so the discard/restore variant (`FieldComposer` cancel) rides the same path as the command sites.
 
 ---
 
 ## Renderer Registry (`src/kinds/`)
+
+**Status:** Accepted, with two internal supersessions (both marked in place below): `componentType` → `kind`, and `node` going from privileged-and-unregistered to a registered, placement-discriminated manifest.
 
 The per-kind dispatch that used to be smeared across six `switch (componentType)` sites is consolidated into one manifest per value-bearing kind. `KIND_REGISTRY` (in `src/kinds/registry.ts`) maps each `ComponentType` to a `KindManifest` of `{ Renderer, ConfigForm, defaultConfig, displayPreview, pickerLabel }`, and is typed `satisfies Record<ComponentType, KindManifest>` so registering a kind and declaring it in the `ComponentType` union are checked as one act — forget a kind and it's a compile error. Consumers call `getKindManifest(type)` and render `<manifest.Renderer …>` / `<manifest.ConfigForm …>` dynamically.
 
@@ -56,6 +73,8 @@ The per-kind dispatch that used to be smeared across six `switch (componentType)
 
 ## Config-as-Elements (done 2026-06-27, ISSUES Architecture Migration #1)
 
+**Status:** Accepted (rationale superseded) — the component-free-module rule survives the Solid migration, but for a different reason; see that bullet below.
+
 The `FieldDefinition.config` blob is retired. A Definition is now a **`library`-tree Element** (`treeType: 'library'`, `parentId: null`, `kind` = the kind it defines, `name` = the label, `value: null`) and its config **is its child sub-field subtree**. The standalone `fieldDefinitions` Dexie table and its `config` JSON column are gone (Dexie **v10**, clear-on-upgrade).
 
 **`FieldDefinition` is now an assembled read-model view, not a stored row.** It keeps its `.config` field, but the adapter assembles it on read from the Definition's config sub-field children — there is **no persisted derived config object** (SPEC §599). The payoff: the value renderers (`TextKvField`/`EnumKvField`/`NumberKvField`) and the four `ConfigForm`s are **unchanged** — they still read/produce a plain config object through `getFieldDefinitionById(...).config`; only persistence and assembly moved. `authorId` folds into the Definition Element's `updatedBy` (`"appDeveloper"` for seeds).
@@ -66,7 +85,7 @@ The `FieldDefinition.config` blob is retired. A Definition is now a **`library`-
 
 **Three new config-only kinds — `flag` / `compound` / `string-list`.** Config decomposes into existing field kinds plus these (booleans; the thresholds object; enum `options` as one list value). They register like any kind but carry `mintVia: 'config-only'`, so `FIELD_KINDS` (now filtered by `mintVia === 'composer'`) excludes them from the authoring picker. In Phase 1 they only ever exist inside config subtrees, never as standalone Data Card rows, so their manifests use a shared stub `Renderer`/`ConfigForm` (`configFieldStub.tsx`) — full standalone-row UX is deferred (LATER.md).
 
-**The schemas live in a Qwik-free module (`src/kinds/configSchema.ts`), not behind the registry.** This is the one non-obvious seam: importing `registry.ts` pulls the `component$` renderers into whatever imports it, and the Qwik optimizer doesn't transform those under Vitest (`component$` throws "Optimizer should replace all usages of `$()`"). Because the storage layer (`configElements` → IDB adapter → seed) needs the schemas, they had to be component-free. `configSchema.ts` imports only types + the pure `numberKvState` helpers; the manifests re-expose the same arrays as `manifest.configSchema`, and `configElements` reads `CONFIG_SCHEMAS` directly. **Rule of thumb: never import `src/kinds/registry.ts` (or a `*.manifest.ts`) from the storage layer or a unit test.**
+**The schemas live in a component-free module (`src/kinds/configSchema.ts`), not behind the registry.** _(Rationale superseded, rule intact. The original reason was Qwik-specific: importing `registry.ts` pulled `component$` renderers in, and the Qwik optimizer didn't transform them under Vitest. Post-migration the constraint is **Vitest has no Solid JSX transform**, so anything test-reachable must still contain no JSX — the same prohibition, a different cause. The rule of thumb below is unchanged and still load-bearing.)_ Historical form: importing `registry.ts` pulls the `component$` renderers into whatever imports it, and the Qwik optimizer doesn't transform those under Vitest (`component$` throws "Optimizer should replace all usages of `$()`"). Because the storage layer (`configElements` → IDB adapter → seed) needs the schemas, they had to be component-free. `configSchema.ts` imports only types + the pure `numberKvState` helpers; the manifests re-expose the same arrays as `manifest.configSchema`, and `configElements` reads `CONFIG_SCHEMAS` directly. **Rule of thumb: never import `src/kinds/registry.ts` (or a `*.manifest.ts`) from the storage layer or a unit test.**
 
 **`disposition` is encoded, not honored.** Each sub-field carries `owned | delegated | pinned`, but nothing acts on it yet — all config lives on the Definition and is read live (delegated-like, = current behaviour). Copy-at-mint for `owned` and override-disable for `pinned` land with the cascade arbiter (cluster 7 / ISSUES #4).
 
@@ -75,6 +94,8 @@ The `FieldDefinition.config` blob is retired. A Definition is now a **`library`-
 ---
 
 ## Typed trees (`treeType`) — the seam (done 2026-06-28, ISSUES Architecture Migration #1)
+
+**Status:** Accepted.
 
 The `treeType` axis is widened from the minimal `business | library` to the full four-value `business | library | config | view-state` (SPEC → *Populations are typed trees*). This is a **seam only** — there are no Phase-1 producers for `config`/`view-state` elements (no viewer/auth; view-state lives in `uiPrefs` localStorage; the `config` tree needs the cascade arbiter, cluster 7), so the new values are inert for current content. Mirrors how the registry-widening (Migration #2) and Config-as-Elements landed: build the structural seam, defer everything with no consumer.
 
@@ -92,13 +113,15 @@ The `treeType` axis is widened from the minimal `business | library` to the full
 
 ## Capability descriptors (the seam) — done 2026-06-28, ISSUES Architecture Migration #3
 
+**Status:** Accepted (rationale superseded) — same component-free-module case as Config-as-Elements: the rule holds, the Qwik reason does not.
+
 The six-capability vocabulary (SPEC → *The six capabilities*) lands as TypeScript on the manifest. **Structural seam only**, like the registry-widening and typed-trees seams before it: the descriptors are carried per kind but **read by no consumer** — the lens / node-like kinds (#6) are the first readers, the cascade arbiter (#7) the second. Same discipline: build the type-level seam, defer everything with no consumer.
 
 **Descriptors live on a shared `CapabilitySet`, intersected into `ManifestIdentity`.** `src/kinds/types.ts` gains the descriptor types and a `CapabilitySet` (`ownValue?`/`children?`/`edges?`/`derivation?`/`action?`/`reads?` + node-oriented `provision?`/`container?`/`arbiter?`), `&`-intersected into the shared `ManifestIdentity` base — so both arms of the `InlineManifest | ReRootManifest` union carry the capability fields (node-like and field-like are one composition space, SPEC §527). The union stays: the renderer/authoring surface still differs (inline carries `Renderer`/`ConfigForm`/…; re-root is identity-only until #5 gives `node` a Renderer). Collapsing to a single flat `KindManifest` is deferred to #5. `FieldRendererProps` is untouched — the placement-keyed `RendererProps` generalization is #5's, where a re-root Renderer finally consumes it.
 
 **Two descriptor tiers, by how soon a kind composes them.** Tier A — full SPEC shape for what #6 imminently needs: `ValueSpec`, `ChildrenSpec`, `TargetSpec`, `SourceSpec`, `ProvisionSpec`, `Container`. Tier B — minimal placeholders for capabilities no current kind composes: `ActionSpec` (built last, SPEC §565), `ArbiterSpec`/`ValiditySpec` (the cascade, #7). `ValueSpec` is deliberately a thin validation marker — the `scalar | block | stream | composite` value-shape vocabulary that drives *layout* is #5's bullet, kept out so the cluster boundary stays clean (the current `hideLabel`/`blockValueLayout` flags are the layout debt #5 retires).
 
-**Capability data is a component-free module the manifests spread (`src/kinds/capabilities.ts`).** The one non-obvious seam, and the *same* constraint already documented for `configSchema.ts`: importing `registry.ts` or any `*.manifest.ts` pulls the `component$` renderers into the importer, which the Qwik optimizer doesn't transform under Vitest. The coherence test must read every kind's capability subset, and the SPEC's "degeneration anti-pattern is CI-lintable" (§584) needs the same component-free read. So the subsets live as pure data in `KIND_CAPABILITIES` (`satisfies Record<Kind, CapabilitySet>` — an entry per kind, enforced), and each `*.manifest.ts` spreads `...KIND_CAPABILITIES['<kind>']`. Single source of truth; the manifest is still the assembled whole. Reaffirms the rule: never import `registry.ts`/`*.manifest.ts` from a unit test or the storage layer.
+**Capability data is a component-free module the manifests spread (`src/kinds/capabilities.ts`).** The one non-obvious seam, and the *same* constraint already documented for `configSchema.ts` — _(and superseded the same way: the prohibition now comes from Vitest having no Solid JSX transform, not from the Qwik optimizer)_. Historical form: importing `registry.ts` or any `*.manifest.ts` pulls the `component$` renderers into the importer, which the Qwik optimizer doesn't transform under Vitest. The coherence test must read every kind's capability subset, and the SPEC's "degeneration anti-pattern is CI-lintable" (§584) needs the same component-free read. So the subsets live as pure data in `KIND_CAPABILITIES` (`satisfies Record<Kind, CapabilitySet>` — an entry per kind, enforced), and each `*.manifest.ts` spreads `...KIND_CAPABILITIES['<kind>']`. Single source of truth; the manifest is still the assembled whole. Reaffirms the rule: never import `registry.ts`/`*.manifest.ts` from a unit test or the storage layer.
 
 **`node.allowedKinds` is provisional, hardcoded to dodge a cycle.** `node` composes `Children(open)` + `container: 'physical'` (ELEMENT-MODEL §node). `open` is allowlist-constrained (never `open(any)`, SPEC §564), but the honest allowlist is "child `node`s + the field kinds" — derivable from `FIELD_KINDS`, which lives in `registry.ts`, which imports `capabilities.ts` → a cycle. So the list is a literal `['node', 'text-kv', …]` with a `TODO(#6)`; the real allow-policy firms up with the node-like kinds.
 
@@ -139,6 +162,8 @@ The six-capability vocabulary (SPEC → *The six capabilities*) lands as TypeScr
 
 ## #6c — `logbook`/`log-entry`, the lens's second target (done 2026-07-01, ISSUES Architecture Migration #3)
 
+**Status:** Accepted.
+
 The lens (`Derivation(children/transitive) + Provision`) had exactly one consumer (`jobs → job`); this adds a second (`logbook → log-entry`) to prove it generalizes by target kind. **Minimal scope** — prove generalization + make the provisioner spec-driven; the authored-in policy Definition on `logbook` (which would force the `fieldDefinitionId → definitionId` binding seam, #7) is deferred (ISSUES #6). Non-obvious choices:
 
 - **The provisioner became spec-driven — the one real change.** Every lens surface was *already* generic (keyed off `derivation.targetKind`, not the string `'job'`): `LensRollup`/`LensCreate`/`useLensGather`, the lens branches in `BranchView`/`TreeNodeDisplay`, and `isLensSurfaced`/`LENS_TARGET_KINDS` all picked up the new kind for free (`log-entry` auto-joined `isLensSurfaced`). The *only* hardcoded-to-`jobs` code was the per-node provisioner. `ensureJobsLens` → `ensureProvisionedLenses` now loops `PROVISIONED_LENSES`, so creating a `node`/`org` provisions **both** a `::jobs` and a `::logbook` child; the old `parent.kind === 'jobs'` lens-on-lens special-case generalized to `isProvisionedLens(parent.kind)`.
@@ -150,6 +175,8 @@ The lens (`Derivation(children/transitive) + Provision`) had exactly one consume
 ---
 
 ## Definition-binding seam — `definitionId` + logbook's policy Definition (done 2026-07-01, ISSUES Architecture Migration #6 / #7a–c)
+
+**Status:** Accepted.
 
 The instance→Definition binding stopped being field-specific, forced by the concrete kind the docs said to decide it on: `logbook`, the first policy-container re-root that wants an authored-in config (entry label, staleness). Three commits, three moves:
 
@@ -165,6 +192,8 @@ The instance→Definition binding stopped being field-specific, forced by the co
 
 ## #5 value-shape + registry consolidations (done 2026-07-05, ISSUES Architecture Migration #2 + riders #9/#16)
 
+**Status:** Accepted.
+
 The last §5 chrome-entailment vocabulary piece plus two ISSUES riders of the same seam shape — three pure consolidations, no behaviour change (pixel-identical), no Dexie bump. Non-obvious choices:
 
 - **A kind picks a shape, never declares layout.** `ValueShape = 'scalar' | 'block' | 'composite'` is *required* on `ValueSpec.shape` (`src/kinds/types.ts`), authored as pure data in `capabilities.ts` and flowing through the manifest spread. The arrangement laws live in exactly one place — the `DataField` dispatcher: `scalar` → label shown, inline run, centred chevron; `block` → label shown, tall block, top-pinned chevron; `composite` → label suppressed (the renderer owns its sub-structure), tall block, top-pinned chevron. The per-kind `hideLabel`/`blockValueLayout` flags are deleted from `InlineManifest` (the layout debt the capability-seam note flagged for #5).
@@ -177,6 +206,8 @@ The last §5 chrome-entailment vocabulary piece plus two ISSUES riders of the sa
 
 ## SolidJS migration Phase I — boot & spine (done 2026-07-08, SOLIDJS-MIGRATION.md §6-I, plan `.claude/plans/SOLIDJS-WORKPHASE-I.md`)
 
+**Status:** Superseded by Phase V (mop-up). The migration mechanics below — the tsconfig exclusions, the retained Qwik deps, the ESLint import ratchet — were all scaffolding for a coexistence period that is over: Qwik is absent from `package.json`, from every `src/` import, from `eslint.config.mjs`, and `tsconfig.json` now excludes only `node_modules`. Kept because the *sequencing* is instructive if a comparable migration is ever attempted; nothing here describes current code.
+
 Cutover of the build graph, entry, state spine, and manifest types to solid-js; the Qwik UI tree stays in place unported until Phases II–IV. Non-obvious choices:
 
 - **tsconfig-exclude + import-following.** `exclude: ["node_modules", "src/components", "src/hooks"]` removes the unported Qwik tree only as tsc *roots*; anything the ported graph actually imports (ported `SnackbarHost`, Qwik-free `numberKvState.ts`, type-only `TreeNode/types.ts`) is still typechecked by import-following. No quarantine moves, so Phase II+ ports are `git mv`-free.
@@ -185,26 +216,30 @@ Cutover of the build graph, entry, state spine, and manifest types to solid-js; 
 - **JSX-free spine discipline**: Vitest has no Solid transform (`vitest.config.ts` untouched), so nothing test-reachable may contain JSX. `appState.context.ts` stays `.ts` (provider JSX lives in `App.tsx`); the kinds stub became `configFieldStub.ts` — its Renderer returns a reactive thunk, cast locally because solid-js's published JSX types omit `FunctionElement` from the `Element` union (runtime accepts thunks).
 - **appState**: `createStore` + each action wrapping its unchanged transition in `setState(produce(...))` — multi-field FSM writes stay atomic, writes stay funneled through actions. `transitions/selectors/guards/types/uiPrefs` shipped byte-identical (the Set-bearing toggles already reassign fresh `Set` instances, which suits Solid's property-level tracking; Sets are never proxied).
 - **Snackbar service unchanged**: `SnackbarHost` registers a signal-backed accessor object (`get/set current`) via `registerSnackbarStore`, so the service's plain property assignments stay reactive; `<Show keyed>` reproduces the old `key={toast.id}` remount semantics.
-- **Renderer prop contract flipped now**: `$` suffixes dropped (`onUpdated`, `onChange`); `rootRef` is a callback ref `(el: HTMLElement) => void` — **provisional until Phase III**, where `useFieldEdit` becomes the real consumer.
+- **Renderer prop contract flipped now**: `$` suffixes dropped (`onUpdated`, `onChange`); `rootRef` is a callback ref `(el: HTMLElement) => void` — was **provisional until Phase III**, where `useFieldEdit` became the real consumer. _(Provisional status resolved; the contract is settled — see the Phase III notes.)_
 - **Bug #1 fix rode along** (blocked dev-boot verification): `FullCollectionSync.syncElements` exempts seeded Library rows (`treeType: 'library'` ∧ `updatedBy: AUTHOR_ID_APP_DEVELOPER`) from delete-local-not-on-remote — seeds never sync by design, so server absence is not deletion evidence. User-authored library Definitions and business rows keep full server-authority semantics (`fullCollectionSync.test.ts`).
 
 ---
 
 ## SolidJS migration Phase II — read path (done 2026-07-09, SOLIDJS-MIGRATION.md §6-II, plan `.claude/plans/SOLIDJS-WORKPHASE-II.md`)
 
+**Status:** Accepted for the durable idioms (`Accessor<T>` in / accessors out, the `disposed` stale-async guard, `<For>` reference-keying, `solid/reactivity` shaping) — these describe how the code works today. The phase-scaffolding bullets are marked inline.
+
 Data-read hooks, views, and the TreeNode display family on Solid, read-only; edit (III) and create/author (IV) surfaces are TODO-marked holes. Non-obvious choices:
 
 - **Hook contracts: `Accessor<T>` in, accessors out.** Call sites pass thunks (`useElementById(() => props.parentId)`); each hook's `createEffect` reads the tracked accessors once into locals, subscribes to `storageEventBus` *before* the first load (events during startup sync must not be missed), and re-runs on navigation — fresh subscription + reload, the old Qwik `track` semantics. Hooks stay `.ts`/JSX-free (Vitest has no Solid transform).
 - **`disposed`-flag stale-async guard**: Solid effects capture values (Qwik QRLs re-read `.value` at run time), so an in-flight load from a previous `parentId` could land after navigation. Each loader effect sets `disposed` in `onCleanup` and skips its `set*` calls when set.
-- **`useAsyncOperation` not ported** — its only Solid consumer would be `useElementChildren`, which inlines a `createSignal(false)` + try/finally. The Qwik file stays for the unported hooks; dies at mop-up.
-- **`window.__cmm` DEV seeding hook in `App.tsx`**: creation surfaces don't exist until Phase IV, so migration verification seeds via the console (`execute`/`queries` wrapping the registry getters). `import.meta.env.DEV`-gated; removed at mop-up.
+- **`useAsyncOperation` not ported** _(Deprecated — resolved at mop-up; the symbol no longer exists anywhere in `src/`.)_ Its only Solid consumer would have been `useElementChildren`, which inlines a `createSignal(false)` + try/finally.
+- **`window.__cmm` DEV seeding hook in `App.tsx`**: creation surfaces don't exist until Phase IV, so migration verification seeds via the console (`execute`/`queries` wrapping the registry getters). `import.meta.env.DEV`-gated; removed at mop-up. _(Deprecated — removal confirmed in Phase V. Note that `__cmmInitState` and `__cmmSyncManager` still exist in `initStorage.ts` / `syncManager.ts`; those are unrelated globals, not survivors of this hook.)_
 - **`<For>` is reference-keyed**: bus reloads produce fresh `Element` objects, so all rows recreate per reload. Harmless read-only (expanded state lives in the FSM keyed by id; `NavigableRow`'s local `expanded` signal resets — within "roughly live" tolerance). Revisit with id-keyed mapping in Phase III if edit-focus churn appears.
-- **DataField chevron is wired but panel-less**: it drives `toggleFieldDetailsExpanded` (FSM + uiPrefs persist, aria/classes flip) but no `DataFieldDetails` mounts until Phase III. Renderers arrive via `<Dynamic component={manifest().Renderer}>` with a no-op `rootRef`.
+- **DataField chevron is wired but panel-less** _(Deprecated — a Phase-II-only intermediate state; `DataFieldDetails` mounts as of Phase III.)_: it drives `toggleFieldDetailsExpanded` (FSM + uiPrefs persist, aria/classes flip) but no `DataFieldDetails` mounts until Phase III. Renderers arrive via `<Dynamic component={manifest().Renderer}>` with a no-op `rootRef`.
 - **`solid/reactivity` lint shapes small idioms**: derived values off props are thunks, not consts (`labelId`, `lensTargetKind` — a `createMemo` accessor passed as a hook argument gets flagged, a plain thunk doesn't); the `types.ts` type guards renamed their parameter from `props` to `p` (the rule pattern-matches the name).
 
 ---
 
 ## Critical Architectural Patterns
+
+**Status:** Accepted — these are the load-bearing patterns of the current codebase. Subsections inherit this unless they say otherwise.
 
 ### Module-Level Service Registry
 
@@ -284,6 +319,8 @@ Orchestrator picks sub-component based on state.
 
 ### CQRS: Command/Query Responsibility Segregation
 
+**Status:** Accepted, but the **examples below use pre-Element vocabulary that no longer exists in `src/`** — `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE` all return zero hits. Read them as shape-only; the live names are `getElementQueries()` / `getDefinitionQueries()` and the element-shaped command types. Worth a rewrite pass.
+
 **Pattern**: Thin CommandBus dispatcher + separate query interfaces. Not a full mediator — no middleware, no logging pipeline (yet).
 
 **Write path**: UI hooks call `getCommandBus().execute({ type: 'DELETE_NODE', payload: { id } })`. The CommandBus routes to a handler registered in `src/data/commands/handlers.ts`. Handlers call `StorageAdapter` methods directly.
@@ -303,6 +340,8 @@ Orchestrator picks sub-component based on state.
 ---
 
 ## Non-Obvious Implementation Details
+
+**Status:** Accepted. Subsections inherit this unless they say otherwise.
 
 ### DataCard Animation: Dual-Transition Technique
 
@@ -495,6 +534,8 @@ Coordination is a single parent-owned mutex signal: `useSignal<ActiveSurface>('n
 
 ## Hook Patterns
 
+**Status:** Accepted.
+
 The house shape is **`Accessor<T>` in, accessors out** — call sites pass thunks so a hook re-reads on navigation instead of capturing a stale value at mount.
 
 **useNodeCreation**: Extracts the duplicate creation flow from RootView/BranchView. Takes `parentId: Accessor<string | null>`, returns `{ ucNode, start, cancel, complete }`. `parentId` is read at `start()` time, so a long-lived BranchView can't parent a node under the view it already left. `complete` dispatches `CREATE_ELEMENT` via `getCommandBus()`, commits the pending draft, then closes the FSM's construction state.
@@ -508,6 +549,8 @@ The house shape is **`Accessor<T>` in, accessors out** — call sites pass thunk
 ---
 
 ## CSS Architecture
+
+**Status:** Accepted. The *Deliberate Non-Abstractions* subsection is the part that earns its place — it records two abstractions considered and rejected, which is exactly what stops someone re-proposing them.
 
 **Three-Layer Token System** (`tokens.css`):
 
@@ -533,6 +576,8 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Testing Patterns
 
+**Status:** Accepted.
+
 **Service Testing**: Tests use the same registry abstraction as components (`getElementQueries()` / `getCommandBus()`). Tests can call `setElementQueries()` to swap a mock query object, or swap the adapter to redirect reads/writes. Sync tests (`SyncPusher.test.ts`, `fieldDefinitionSync.test.ts`) mock `RemoteSyncAdapter`; no automated test currently exercises the real `FirestoreAdapter` against the emulator (see LATER.md §Emulator Round-Trip Sync Coverage).
 
 **Pure Function Testing**: `detectDoubleTap` is exported separately from the hook for direct unit testing without rendering. Pass deterministic timestamps and positions, assert on return values.
@@ -543,11 +588,15 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## Error Handling
 
+**Status:** Accepted.
+
 **StorageError Contract**: Normalized error shape enables consistent error handling at the write model. `IDBAdapter` wraps every public method in a single private `run()` helper implementing `try/catch → (isStorageError passthrough) → toStorageError({ code, retryable })`, with `mapDexieError` keying off the IndexedDB/Dexie `.name` (`QuotaExceededError → unavailable`, `ConstraintError → conflict`, `NotFoundError → not-found`, `DataError → validation`, etc.; unknown → `internal`). The `isStorageError` guard preserves hand-thrown `makeStorageError` validation/not-found errors from being re-wrapped. UI surfaces these via `describeForUser()` through the Snackbar (`useFieldEdit`, `DataField`). `FirestoreAdapter`'s sync methods throw raw Firestore errors; the sync layer (`SyncPusher`) catches per-item failures and marks the queue item failed rather than surfacing them to the UI.
 
 ---
 
 ## SolidJS Migration — Phase III edit-path notes (2026-07-10)
+
+**Status:** Accepted. Despite the "migration" heading, these describe live edit-path behaviour — the pointerdown/detached-target and preventDefault guards, `suppressBlurUntil`, the always-on listeners. The Qwik references are comparative framing, not live constraints.
 
 **`rootRef` is a read accessor passed down; the DataField dispatcher owns the row ref.** `FieldRendererProps.rootRef: Accessor<HTMLElement | undefined>` — the dispatcher holds the signal ref on its wrapper div so outside-click containment covers the whole row (chevron + label + value); renderers only read it. `onUpdated` was deleted from the contract rather than ported — zero producers existed pre-migration.
 
@@ -563,6 +612,8 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 
 ## SolidJS Migration — Phase IV create/author notes (2026-08-09)
 
+**Status:** Accepted. Same as Phase III — the keyed-`<Show>` remount mechanism, the accessor+setter prop pair, and the `createEffect(on(…))` untracked-callback argument are all live and load-bearing.
+
 **A value-keyed `<Show>` is the successor to Qwik's `key=` remount idiom.** `FieldComposerSlot` wraps the composer in `<Show when={restoreSeed() ? 'restored' : 'fresh'} keyed>`: `keyed` recreates children whenever the `when` *value* changes, so a Snackbar-Undo restore flips `'fresh' → 'restored'` and remounts the composer, which is what re-runs `usePendingForms`' mount seed-loader against the restore seed. The remount — not any prop diff — is the mechanism, exactly as under Qwik. Children are plain JSX rather than a render function: Solid's keyed overload types the callback as `RequiredParameter`, so a zero-arg `() =>` fails typecheck and a one-arg one leaves an unused binding.
 
 **An accessor + setter pair replaces a `Signal<T>` passed as a prop.** Solid has no writable-signal-prop idiom, so the `activeSurface` mutex is threaded as `activeSurface?: Accessor<ActiveSurface>` + `setActiveSurface?: (s) => void` (the `rootRef`-accessor precedent, not a smuggled tuple). FieldList owns the signal; last-writer-wins semantics are unchanged, so opening one add-field surface still implicitly closes the other.
@@ -576,6 +627,8 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 **`usePendingForms` dropped Qwik's `initialized` latch.** It existed to guard `useVisibleTask$` re-runs on remount; `onMount` runs exactly once, so the seed load uses the standard `disposed` guard around its await instead. Stored-draft-wins ordering is preserved verbatim: `loadPendingForms(nodeId)` first, and only an empty result runs `initialSeedLoader`. All mutators keep their write-through `savePendingForms` calls — now genuinely same-tick before any construction commit reads localStorage.
 
 ## SolidJS Migration — Phase V: PWA, build & mop-up (done 2026-08-09, plan `.claude/plans/SOLIDJS-WORKPHASE-V.md`)
+
+**Status:** Accepted. This section is the supersession record for Phase I's scaffolding — it is what makes those bullets safe to read as history.
 
 The closing phase: the PWA/build pass the cutover deferred, plus SOLIDJS-MIGRATION.md §8 mop-up. Non-obvious choices:
 

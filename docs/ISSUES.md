@@ -83,4 +83,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 7.) **Dead `currentValue` prop on `DataFieldDetails`** — computed and passed by `DataField.tsx` but never read. Drop it, or wire it into the metadata display.
 
+8.) **IMPLEMENTATION.md CQRS section names pre-Element APIs** — its read/write-path examples use `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE`, all of which have zero hits in `src/`. Rewrite against the element-shaped API (`getElementQueries()` / `getDefinitionQueries()`, element command types); the section carries an inline warning meanwhile.
+
 8.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name. Pure renames; do only if they bother someone.
