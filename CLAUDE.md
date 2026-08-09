@@ -114,6 +114,50 @@ npm run lint         # ESLint
 npm run emulator     # Run Firebase emulator
 ```
 
+### Claude Code Settings Hygiene
+
+`.claude/settings.json` is **committed** and is the shared source of truth for permissions, hooks, and enabled MCP servers — it must work on every machine the user develops on. `.claude/settings.local.json` is **gitignored** and per-machine: Claude Code appends to it automatically every time the user approves a prompt, so it is a scratchpad, not a config file. Never hardcode absolute paths in `settings.json`.
+
+**Periodic sweep** (do this when `settings.local.json` has visibly accumulated, or when the user asks): read the local file and triage its `allow` entries into three buckets —
+
+1. **Already covered** by a `settings.json` pattern → drop.
+2. **One-off junk** — over-escaped single-invocation literals, machine-specific absolute paths → drop.
+3. **Genuinely durable and reusable** → propose promoting into `settings.json`.
+
+**Always ask the user to approve the promotions before editing `settings.json`.** Present bucket 3 as a list and let them cut it down — widening the committed allowlist changes the security posture on both machines, so it is never an automatic move. Buckets 1 and 2 can be discarded without ceremony.
+
+### Auto-Memory Is Committed To This Repo
+
+Claude Code's auto-memory store normally lives at `~/.claude/projects/<slug>/memory/`, which is per-machine and never committed — there is no setting to relocate it (`autoMemoryEnabled` is a boolean, nothing more). In this project the store has been **moved into the repo at `.claude/memory/`**, and the canonical home path is a **directory junction** pointing at it. Memory writes therefore land in the working tree as ordinary modified files and get committed like anything else.
+
+Consequence for Claude: memory files are repo content here. Treat a new or edited file under `.claude/memory/` as a normal working-tree change and mention it when summarising what changed — do not assume it is invisible to git.
+
+<!-- DELETE-AFTER-SECOND-MACHINE-IS-SET-UP : begin -->
+
+**Once-per-machine setup.** The junction cannot be committed (its path is machine-derived), so each new clone needs it created once. Symptom that it is missing: `.claude/memory/` exists in the repo but Claude never seems to recall anything from it. Run this from the repo root in PowerShell — no admin needed, junctions do not require elevation:
+
+```powershell
+$root = (git rev-parse --show-toplevel)
+$canon = Join-Path $env:USERPROFILE ".claude\projects\$($root -replace '[:/\\]','-')\memory"
+$repoMem = Join-Path $root ".claude\memory"
+
+if ((Test-Path $canon) -and (Get-Item $canon).LinkType -eq 'Junction') {
+  "Already linked."
+} else {
+  if (Test-Path $canon) {
+    Copy-Item "$canon\*" $repoMem -Recurse -Force   # fold any local-only memories in
+    Remove-Item $canon -Recurse -Force -Confirm:$false
+  }
+  New-Item -ItemType Directory -Force (Split-Path $canon) | Out-Null
+  New-Item -ItemType Junction -Path $canon -Target $repoMem | Out-Null
+  "Linked $canon -> $repoMem"
+}
+```
+
+Re-running it is safe: it no-ops when the junction already exists, and folds in any machine-local memories before swapping.
+
+<!-- DELETE-AFTER-SECOND-MACHINE-IS-SET-UP : end -->
+
 ### Testing Strategy
 
 - **Unit tests**: Service layer, adapters, sync logic, FSM transitions

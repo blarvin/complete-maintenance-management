@@ -34,6 +34,7 @@
   ]
 },
   "plansDirectory": ".claude/plans",
+  "enabledMcpjsonServers": ["jcodemunch", "context7"],
   "permissions": {
     "allow": [
       "Bash(npm run typecheck)",
@@ -128,7 +129,15 @@
       "PowerShell(Format-Table *)",
       "PowerShell(Format-List *)",
       "PowerShell(Out-String *)",
-      "PowerShell(Get-Date *)"
+      "PowerShell(Get-Date *)",
+      "PowerShell(npx eslint *)",
+      "PowerShell(npx prettier *)",
+      "PowerShell(Get-Job)",
+      "PowerShell(Get-Job *)",
+      "PowerShell(Receive-Job *)",
+      "PowerShell(Out-Null *)",
+      "PowerShell(claude mcp *)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -136,11 +145,11 @@
       "Bash(wget:*)",
       "Bash(netlify deploy:*)",
       "Bash(firebase deploy:*)",
-      "Read(./.env)",
-      "Read(./.env.*)",
+      "Read(.env*)",
+      "Read(**/.env*)",
       "Read(./secrets/**)",
-      "Edit(./.env)",
-      "Edit(./.env.*)",
+      "Edit(.env*)",
+      "Edit(**/.env*)",
       "PowerShell(curl *)",
       "PowerShell(wget *)",
       "PowerShell(Invoke-WebRequest *)",
