@@ -78,7 +78,9 @@
       "PowerShell(Test-Path *)",
       "PowerShell(Receive-Job *)",
       "PowerShell(Get-Job *)",
-      "PowerShell(Get-Job)"
+      "PowerShell(Get-Job)",
+      "PowerShell(claude mcp *)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [
       "Read(.env*)",
@@ -96,5 +98,8 @@
         ]
       }
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "jcodemunch"
+  ]
 }
