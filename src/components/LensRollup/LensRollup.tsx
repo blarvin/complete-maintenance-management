@@ -2,17 +2,16 @@
  * LensRollup — the compact, in-card summary of a lens's derived rollup (#5
  * container half). Rendered inside a Jobs container's DataCard when it is shown as
  * a CHILD (a row under a node): a "Jobs (N)" section header, each rolled-up job as
- * a `NavigableRow` (the field-row skin; name re-roots, chevron peeks fields), and
- * the `LensCreate` affordance.
+ * a `NavigableRow` (the field-row skin; name re-roots, chevron peeks fields).
  *
  * The *re-rooted* view of the same lens is NOT this — there the jobs render as
  * Node-like CHILD cards via `BranchView`, where each job's own DataCard expands.
- * Both surfaces share one gather (`useLensGather`) and one create (`LensCreate`).
+ * Both surfaces share one gather (`useLensGather`).
  *
  * Kind-agnostic — driven by `targetKind`, so `logbook`/`log-entry` (#6c) reuses it.
  */
 
-import { component$, useComputed$ } from '@builder.io/qwik';
+import { createMemo, For, Show } from 'solid-js';
 import { getKindManifest } from '../../kinds/registry';
 import { useElementById } from '../../hooks/useElementChildren';
 import { useLensGather } from '../../hooks/useLensGather';
@@ -25,37 +24,39 @@ import styles from './LensRollup.module.css';
 
 export type LensRollupProps = { lensId: string; targetKind: Kind };
 
-export const LensRollup = component$<LensRollupProps>((props) => {
+export const LensRollup = (props: LensRollupProps) => {
     // The lens rolls up its *owning node's* subtree (lens.parentId), where jobs live.
-    const lensIdSig = useComputed$(() => props.lensId);
-    const { element: lensEl } = useElementById(lensIdSig);
-    const ownerIdSig = useComputed$(() => lensEl.value?.parentId ?? '');
-    const targetKindSig = useComputed$<Kind | null>(() => props.targetKind);
-    const gathered = useLensGather(ownerIdSig, targetKindSig);
+    const { element: lensEl } = useElementById(() => props.lensId);
+    const ownerId = () => lensEl()?.parentId ?? '';
+    const targetKind = (): Kind | null => props.targetKind;
+    const gathered = useLensGather(ownerId, targetKind);
 
     // The bound policy Definition (entry label, staleness); `|| pickerLabel`
-    // covers the first-paint tick before the policy task resolves.
-    const policy = useLensPolicy(lensEl, targetKindSig);
-    const pickerLabel = getKindManifest(props.targetKind).pickerLabel;
-    const entryLabel = policy.value.entryLabel || pickerLabel;
+    // covers the first-paint tick before the policy effect resolves.
+    const policy = useLensPolicy(lensEl, targetKind);
+    const entryLabel = () => policy().entryLabel || getKindManifest(props.targetKind).pickerLabel;
 
-    const newestUpdatedAt = useComputed$(() =>
-        gathered.value.length ? Math.max(...gathered.value.map((e) => e.updatedAt)) : null);
-    const isStale = isLensStale(newestUpdatedAt.value, policy.value.staleness, Date.now());
+    const newestUpdatedAt = createMemo(() =>
+        gathered().length ? Math.max(...gathered().map((e) => e.updatedAt)) : null);
+    const isStale = () => isLensStale(newestUpdatedAt(), policy().staleness, Date.now());
 
     return (
         <div class={styles.rollup}>
             <div class={styles.sectionHeader}>
-                {entryLabel} ({gathered.value.length})
-                {isStale && <span class={styles.staleBadge}>stale</span>}
+                {entryLabel()} ({gathered().length})
+                <Show when={isStale()}>
+                    <span class={styles.staleBadge}>stale</span>
+                </Show>
             </div>
 
-            {gathered.value.map((j) => (
-                <NavigableRow key={j.id} id={j.id} name={j.name} />
-            ))}
-            {gathered.value.length === 0 && <div class={styles.empty}>none yet</div>}
+            <For each={gathered()}>
+                {(j) => <NavigableRow id={j.id} name={j.name} />}
+            </For>
+            <Show when={gathered().length === 0}>
+                <div class={styles.empty}>none yet</div>
+            </Show>
 
-            <LensCreate ownerId={ownerIdSig.value} targetKind={props.targetKind} entryLabel={entryLabel} />
+            <LensCreate ownerId={ownerId()} targetKind={props.targetKind} entryLabel={entryLabel()} />
         </div>
     );
-});
+};

@@ -5,19 +5,18 @@
  *  - aspectHint (free text, e.g. "4:3")
  */
 
-import { component$, $, type PropFunction } from '@builder.io/qwik';
 import type { SingleImageConfig } from '../../../data/models';
 import styles from './ConfigForms.module.css';
 
 export type SingleImageConfigFormProps = {
     config: SingleImageConfig;
-    onChange$: PropFunction<(cfg: SingleImageConfig) => void>;
+    onChange: (cfg: SingleImageConfig) => void;
 };
 
-export const SingleImageConfigForm = component$<SingleImageConfigFormProps>((props) => {
-    const update$ = $((patch: Partial<SingleImageConfig>) => {
-        return props.onChange$({ ...props.config, ...patch });
-    });
+export const SingleImageConfigForm = (props: SingleImageConfigFormProps) => {
+    const update = (patch: Partial<SingleImageConfig>) => {
+        props.onChange({ ...props.config, ...patch });
+    };
 
     return (
         <div class={styles.form}>
@@ -28,10 +27,10 @@ export const SingleImageConfigForm = component$<SingleImageConfigFormProps>((pro
                     min={1}
                     class={styles.input}
                     value={props.config.maxSizeMB ?? 5}
-                    onInput$={(e) => {
-                        const raw = (e.target as HTMLInputElement).value;
+                    onInput={(e) => {
+                        const raw = e.currentTarget.value;
                         const n = raw === '' ? undefined : parseFloat(raw);
-                        update$({ maxSizeMB: Number.isFinite(n) ? n : undefined });
+                        update({ maxSizeMB: Number.isFinite(n) ? n : undefined });
                     }}
                 />
             </label>
@@ -41,7 +40,7 @@ export const SingleImageConfigForm = component$<SingleImageConfigFormProps>((pro
                     type="checkbox"
                     class={styles.checkbox}
                     checked={!!props.config.requireCaption}
-                    onChange$={(e) => update$({ requireCaption: (e.target as HTMLInputElement).checked })}
+                    onChange={(e) => update({ requireCaption: e.currentTarget.checked })}
                 />
                 <span class={styles.label}>Require caption</span>
             </label>
@@ -53,12 +52,12 @@ export const SingleImageConfigForm = component$<SingleImageConfigFormProps>((pro
                     class={styles.input}
                     value={props.config.aspectHint ?? ''}
                     placeholder="e.g. 4:3"
-                    onInput$={(e) => {
-                        const v = (e.target as HTMLInputElement).value;
-                        update$({ aspectHint: v === '' ? undefined : v });
+                    onInput={(e) => {
+                        const v = e.currentTarget.value;
+                        update({ aspectHint: v === '' ? undefined : v });
                     }}
                 />
             </label>
         </div>
     );
-});
+};

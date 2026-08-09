@@ -8,11 +8,10 @@
  * a standalone Data Card row in Phase 1.
  */
 
-import type { Component } from '@builder.io/qwik';
 import type { DataFieldValue, DefinitionConfig, StringListValue } from '../data/models';
 import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
+import type { KindManifest } from './types';
 
 export const stringListManifest: KindManifest = {
     kind: 'string-list',
@@ -20,8 +19,8 @@ export const stringListManifest: KindManifest = {
     mintVia: 'config-only',
     placement: 'inline',
     ...KIND_CAPABILITIES['string-list'], // capability subset — structural seam, not read yet
-    Renderer: ConfigFieldStubRenderer as unknown as Component<FieldRendererProps>,
-    ConfigForm: ConfigFieldStubConfigForm as unknown as Component<ConfigFormProps>,
+    Renderer: ConfigFieldStubRenderer,
+    ConfigForm: ConfigFieldStubConfigForm,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined ? null : (v as StringListValue).join(', '),

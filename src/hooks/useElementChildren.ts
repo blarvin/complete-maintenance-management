@@ -7,12 +7,16 @@
  * through props — they subscribe here and reload when a relevant event
  * lands. Relevance lives in src/data/storageEventRelevance.ts (pure, tested).
  *
+ * Solid contract: Accessor in, accessors out. Call sites pass thunks
+ * (`useElementChildren(() => props.parentId, 'nodes')`); the effect re-runs
+ * when the tracked accessor changes — fresh subscription + reload.
+ *
  * Replaces: useRootViewData, useBranchViewData, useTreeNodeFields, the
  * window 'storage-change' CustomEvent, and the onDeleted$/onCreated$/
  * onCommitted$ reload threading. (Audit §2.3 + §4.4.)
  */
 
-import { useSignal, useVisibleTask$, $, type Signal } from '@builder.io/qwik';
+import { createSignal, createEffect, onCleanup, type Accessor } from 'solid-js';
 import { getElementQueries } from '../data/queries';
 import { initializeStorage } from '../data/storage/initStorage';
 import { storageEventBus } from '../data/storageEventBus';
@@ -20,7 +24,6 @@ import { affectsChildrenOf, affectsElement } from '../data/storageEventRelevance
 import { effectiveChildren } from '../data/effectiveChildren';
 import { isReRoot } from '../kinds/placement';
 import { getCurrentUserId } from '../context/userContext';
-import { useAsyncOperation, runAsync } from './useAsyncOperation';
 import type { Element } from '../data/models';
 
 export type ChildKindFilter = 'nodes' | 'fields'; // 'nodes' = re-root kinds, 'fields' = inline kinds
@@ -29,75 +32,90 @@ export type ChildKindFilter = 'nodes' | 'fields'; // 'nodes' = re-root kinds, 'f
 const RELOAD_DEBOUNCE_MS = 30;
 
 export function useElementChildren(
-    parentId: Signal<string | null>,
+    parentId: Accessor<string | null>,
     filter: ChildKindFilter,
-): { children: Signal<Element[]>; isLoading: Signal<boolean> } {
-    const children = useSignal<Element[]>([]);
-    const op = useAsyncOperation();
+): { children: Accessor<Element[]>; isLoading: Accessor<boolean> } {
+    const [children, setChildren] = createSignal<Element[]>([]);
+    const [isLoading, setIsLoading] = createSignal(false);
 
-    const load$ = $(async () => {
-        // Awaiting init closes the race where a view's first load runs before
-        // initializeQueries(); the init promise resolves on failure too.
-        await initializeStorage();
-        await runAsync(op, async () => {
-            const q = getElementQueries(); // runtime lookup inside $() — never captured
-            const pid = parentId.value;
-            const els = pid === null ? await q.getRootElements() : await q.getChildren(pid);
-            // Adapter already excludes deleted rows and sorts by siblingOrder.
-            // Route through the per-viewer chokepoint (pass-through in Phase 1).
-            const effective = effectiveChildren(els, getCurrentUserId());
-            children.value = effective.filter(e => (filter === 'nodes') === isReRoot(e.kind));
-            console.log('[useElementChildren] Loaded', children.value.length, filter, 'under', pid ?? 'ROOT');
-        });
-    });
-
-    useVisibleTask$(({ track, cleanup }) => {
-        track(() => parentId.value); // navigation re-runs this task → fresh subscription + reload
-        // Subscribe BEFORE the first load so events emitted during init/startup
-        // sync aren't missed. Debounce state is client-only closure state.
+    createEffect(() => {
+        const pid = parentId(); // tracked read, once, into a local
+        // Stale-async guard: an in-flight load from a previous parentId must
+        // not land after navigation (effects capture their values at run time).
+        let disposed = false;
         let timer: ReturnType<typeof setTimeout> | null = null;
+        const load = async () => {
+            // Awaiting init closes the race where a view's first load runs before
+            // initializeQueries(); the init promise resolves on failure too.
+            await initializeStorage();
+            setIsLoading(true);
+            try {
+                const q = getElementQueries(); // runtime lookup inside the async body — never captured
+                const els = pid === null ? await q.getRootElements() : await q.getChildren(pid);
+                // Adapter already excludes deleted rows and sorts by siblingOrder.
+                // Route through the per-viewer chokepoint (pass-through in Phase 1).
+                const effective = effectiveChildren(els, getCurrentUserId());
+                if (!disposed) {
+                    const next = effective.filter(e => (filter === 'nodes') === isReRoot(e.kind));
+                    setChildren(next);
+                    console.log('[useElementChildren] Loaded', next.length, filter, 'under', pid ?? 'ROOT');
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        // Subscribe BEFORE the first load so events emitted during init/startup
+        // sync aren't missed. Debounce state is plain closure state.
         const unsub = storageEventBus.subscribe((event) => {
-            if (!affectsChildrenOf(event, parentId.value)) return;
+            if (!affectsChildrenOf(event, pid)) return;
             if (timer !== null) clearTimeout(timer);
             timer = setTimeout(() => {
                 timer = null;
-                load$();
+                void load();
             }, RELOAD_DEBOUNCE_MS);
         });
-        cleanup(() => {
+        onCleanup(() => {
+            disposed = true;
             unsub();
             if (timer !== null) clearTimeout(timer);
         });
-        load$();
+        void load();
     });
 
-    return { children, isLoading: op.isLoading };
+    return { children, isLoading };
 }
 
 export function useElementById(
-    id: Signal<string>,
-): { element: Signal<Element | null>; isLoading: Signal<boolean> } {
-    const element = useSignal<Element | null>(null);
-    const op = useAsyncOperation();
+    id: Accessor<string>,
+): { element: Accessor<Element | null>; isLoading: Accessor<boolean> } {
+    const [element, setElement] = createSignal<Element | null>(null);
+    const [isLoading, setIsLoading] = createSignal(false);
 
-    const load$ = $(async () => {
-        await initializeStorage();
-        await runAsync(op, async () => {
-            element.value = await getElementQueries().getElementById(id.value);
-        });
-    });
-
-    useVisibleTask$(({ track, cleanup }) => {
-        track(() => id.value);
+    createEffect(() => {
+        const eid = id(); // tracked read, once, into a local
+        let disposed = false;
+        const load = async () => {
+            await initializeStorage();
+            setIsLoading(true);
+            try {
+                const el = await getElementQueries().getElementById(eid);
+                if (!disposed) setElement(el);
+            } finally {
+                setIsLoading(false);
+            }
+        };
         // No debounce — single-row fetch. Refetches rather than patching from
         // the event payload (ELEMENT_WRITTEN omits subtitle).
         const unsub = storageEventBus.subscribe((event) => {
-            if (!affectsElement(event, id.value)) return;
-            load$();
+            if (!affectsElement(event, eid)) return;
+            void load();
         });
-        cleanup(() => unsub());
-        load$();
+        onCleanup(() => {
+            disposed = true;
+            unsub();
+        });
+        void load();
     });
 
-    return { element, isLoading: op.isLoading };
+    return { element, isLoading };
 }

@@ -13,7 +13,8 @@
  * use `display: contents` wrappers which can't be transitioned.
  */
 
-import { component$, useSignal, useVisibleTask$, $, type QRL, type Signal } from '@builder.io/qwik';
+import { Show, createEffect, createSignal, onCleanup, type Accessor } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { getInlineManifest } from '../../kinds/registry';
 import type { Definition, DataFieldValue } from '../../data/models';
 import type { PendingForm } from '../../hooks/usePendingForms';
@@ -28,83 +29,86 @@ export type ComposerRowProps = {
      *  open. Seeded rows (construction defaults, restored Undo) are false so the
      *  composer opens with no field stealing focus. */
     autoFocus?: boolean;
-    onToggle$: QRL<(definition: Definition) => void>;
-    onValueChange$: QRL<(formId: string, value: DataFieldValue | null) => void>;
+    onToggle: (definition: Definition) => void;
+    onValueChange: (formId: string, value: DataFieldValue | null) => void;
 };
 
-export const ComposerRow = component$<ComposerRowProps>((props) => {
-    const rootRef = useSignal<HTMLElement>();
-    const checkboxRef = useSignal<HTMLInputElement>();
+export const ComposerRow = (props: ComposerRowProps) => {
+    // The row element is a signal (not a plain ref) — renderers read it for
+    // outside-click containment covering the whole row.
+    const [rootEl, setRootEl] = createSignal<HTMLElement>();
+    let checkboxEl: HTMLInputElement | undefined;
 
-    const handleCheckboxChange$ = $(() => {
+    const handleCheckboxChange = () => {
         if (props.locked) return;
-        props.onToggle$(props.definition);
-    });
+        props.onToggle(props.definition);
+    };
 
     // Anchor the checkbox after a toggle so a tall preview (e.g. single-image)
     // doesn't shove the user's place off-screen. Wait one frame past the
     // ~200ms animation budget so layout has settled before scrolling.
-    useVisibleTask$(({ track, cleanup }) => {
-        track(() => props.checked);
+    createEffect(() => {
+        void props.checked;
         const t = setTimeout(() => {
-            checkboxRef.value?.scrollIntoView({ block: 'nearest' });
+            checkboxEl?.scrollIntoView({ block: 'nearest' });
         }, 220);
-        cleanup(() => clearTimeout(t));
+        onCleanup(() => clearTimeout(t));
     });
 
-    const labelId = `composer-label-${props.definition.id}`;
+    const labelId = () => `composer-label-${props.definition.id}`;
 
     return (
-        <div class={styles.row} ref={rootRef}>
+        <div class={styles.row} ref={setRootEl}>
             <input
                 type="checkbox"
-                class={[styles.checkbox, props.locked && styles.checkboxLocked]}
+                classList={{ [styles.checkbox]: true, [styles.checkboxLocked]: !!props.locked }}
                 checked={props.checked}
                 title={props.locked ? 'Required' : undefined}
                 aria-disabled={props.locked ? 'true' : undefined}
                 tabIndex={props.locked ? -1 : undefined}
-                onChange$={handleCheckboxChange$}
-                aria-labelledby={labelId}
-                ref={checkboxRef}
+                onChange={handleCheckboxChange}
+                aria-labelledby={labelId()}
+                ref={checkboxEl}
             />
-            <label class={styles.label} id={labelId}>{props.definition.label}:</label>
-            {props.checked && props.pendingForm && (
+            <label class={styles.label} id={labelId()}>{props.definition.label}:</label>
+            <Show when={props.checked && props.pendingForm}>
                 <RowBody
                     definition={props.definition}
-                    pendingForm={props.pendingForm}
+                    pendingForm={props.pendingForm!}
                     autoFocus={!!props.autoFocus}
-                    rootRef={rootRef}
-                    onValueChange$={props.onValueChange$}
+                    rootRef={rootEl}
+                    onValueChange={props.onValueChange}
                 />
-            )}
+            </Show>
             {/* Auto-flows into the column after the value (the spacer column). */}
-            {props.locked && <span class={styles.requiredTag}>(required)</span>}
+            <Show when={props.locked}>
+                <span class={styles.requiredTag}>(required)</span>
+            </Show>
         </div>
     );
-});
+};
 
 type RowBodyProps = {
     definition: Definition;
     pendingForm: PendingForm;
     autoFocus: boolean;
-    rootRef: Signal<HTMLElement | undefined>;
-    onValueChange$: QRL<(formId: string, value: DataFieldValue | null) => void>;
+    rootRef: Accessor<HTMLElement | undefined>;
+    onValueChange: (formId: string, value: DataFieldValue | null) => void;
 };
 
-const RowBody = component$<RowBodyProps>((props) => {
+const RowBody = (props: RowBodyProps) => {
+    /* eslint-disable-next-line solid/reactivity -- mount-time captures; rows remount per definitions refetch */
     const formId = props.pendingForm.id;
-    const onChange$ = $((value: DataFieldValue | null) => {
-        return props.onValueChange$(formId, value);
-    });
+    const onChange = (value: DataFieldValue | null) => props.onValueChange(formId, value);
 
-    const Renderer = getInlineManifest(props.definition.kind).Renderer;
     return (
-        <Renderer
+        <Dynamic
+            component={getInlineManifest(props.definition.kind).Renderer}
             id={props.pendingForm.id}
             definitionId={props.definition.id}
             value={props.pendingForm.value ?? null}
             rootRef={props.rootRef}
-            pendingMode={{ onChange$, autoFocus: props.autoFocus }}
+            pendingMode={{ onChange, autoFocus: props.autoFocus }}
         />
     );
-});
+};

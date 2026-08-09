@@ -12,7 +12,7 @@
  * deferred (LATER.md), inherited from `jobs`.
  */
 
-import type { Component } from '@builder.io/qwik';
+import type { Component } from 'solid-js';
 import { LogbookConfigForm } from '../components/FieldComposer/configForms/LogbookConfigForm';
 import type { DefinitionConfig } from '../data/models';
 import { LOGBOOK_CONFIG_SCHEMA } from './configSchema';

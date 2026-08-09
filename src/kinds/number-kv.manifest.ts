@@ -1,7 +1,7 @@
-import type { Component } from '@builder.io/qwik';
+import type { Component } from 'solid-js';
+import { NumberKvConfigForm } from '../components/FieldComposer/configForms/NumberKvConfigForm';
 import { NumberKvField } from '../components/DataField/NumberKvField';
 import { formatNumberKvDisplay } from '../components/DataField/numberKvState';
-import { NumberKvConfigForm } from '../components/FieldComposer/configForms/NumberKvConfigForm';
 import type { DataFieldValue, DefinitionConfig, NumberKvConfig } from '../data/models';
 import { NUMBER_KV_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';

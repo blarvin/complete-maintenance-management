@@ -25,15 +25,12 @@ interface PrecachePluginOptions {
 
 const defaultOptions: Required<PrecachePluginOptions> = {
   outDir: 'dist',
-  swSource: 'src/routes/service-worker.ts',
+  swSource: 'src/service-worker.ts',
   swFileName: 'service-worker.js',
   includeExtensions: ['.js', '.css', '.html', '.json', '.png', '.svg', '.ico', '.woff', '.woff2'],
   excludePatterns: [
-    /q-manifest\.json$/,        // Qwik internal manifest
-    /bundle-graph\.json$/,      // Build info
-    /sitemap\.xml$/,            // SEO file
-    /service-worker\.js$/,      // Don't cache SW itself
-    /q-data\.json$/,            // SSR data
+    /service-worker\.js$/,      // Don't cache the SW itself
+    /\.map$/,                   // Source maps
   ],
 };
 

@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+"hooks": {
+  "PreToolUse": [
+    {
+      "matcher": "PowerShell",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .claude/hooks/smart_approve.js"
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .claude/hooks/protect_files.js"
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .claude/hooks/log_tool_use.js"
+        }
+      ]
+    }
+  ]
+},
+  "plansDirectory": ".claude/plans",
+  "enabledMcpjsonServers": ["jcodemunch", "context7"],
+  "permissions": {
+    "allow": [
+      "Bash(npm run typecheck)",
+      "Bash(npm run typecheck *)",
+      "Bash(npm run test)",
+      "Bash(npm run test *)",
+      "mcp__claude-in-chrome__read_page",
+      "mcp__claude-in-chrome__read_console_messages",
+      "Bash(npm:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx cypress:*)",
+      "Bash(vitest:*)",
+      "Bash(tsc:*)",
+      "Bash(node:*)",
+      "Bash(git add:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git restore:*)",
+      "Bash(git stash:*)",
+      "Bash(git branch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git status)",
+      "Bash(git show:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(touch:*)",
+      "Bash(firebase emulators:*)",
+      "Edit(src/**)",
+      "Edit(tests/**)",
+      "Edit(cypress/**)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(cd:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(claude mcp:*)",
+      "PowerShell(git *)",
+      "PowerShell(npm run *)",
+      "PowerShell(npm i *)",
+      "PowerShell(npm ls *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Get-Content *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:claude.ai)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__jcodemunch__index_folder",
+      "mcp__jcodemunch__list_repos",
+      "mcp__jcodemunch__get_file_tree",
+      "mcp__jcodemunch__search_symbols",
+      "mcp__jcodemunch__get_symbol",
+      "mcp__jcodemunch__get_symbol_source",
+      "mcp__jcodemunch__get_file_outline",
+      "mcp__jcodemunch__get_file_content",
+      "mcp__jcodemunch__search_text",
+      "Skill(update-config)",
+      "PowerShell(npm test *)",
+      "PowerShell(npx vitest *)",
+      "PowerShell(npx tsc *)",
+      "PowerShell(npx vite *)",
+      "PowerShell(npx cypress *)",
+      "PowerShell(grep *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Select-Object *)",
+      "PowerShell(Measure-Object *)",
+      "PowerShell(ForEach-Object *)",
+      "PowerShell(Where-Object *)",
+      "PowerShell(Sort-Object *)",
+      "PowerShell(Group-Object *)",
+      "PowerShell(Compare-Object *)",
+      "PowerShell(Get-Location)",
+      "PowerShell(Set-Location *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Resolve-Path *)",
+      "PowerShell(Join-Path *)",
+      "PowerShell(Split-Path *)",
+      "PowerShell(Get-Item *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(echo *)",
+      "PowerShell(Write-Output *)",
+      "PowerShell(Write-Host *)",
+      "PowerShell(Format-Table *)",
+      "PowerShell(Format-List *)",
+      "PowerShell(Out-String *)",
+      "PowerShell(Get-Date *)",
+      "PowerShell(npx eslint *)",
+      "PowerShell(npx prettier *)",
+      "PowerShell(Get-Job)",
+      "PowerShell(Get-Job *)",
+      "PowerShell(Receive-Job *)",
+      "PowerShell(Out-Null *)",
+      "PowerShell(claude mcp *)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(netlify deploy:*)",
+      "Bash(firebase deploy:*)",
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Read(./secrets/**)",
+      "Edit(.env*)",
+      "Edit(**/.env*)",
+      "PowerShell(curl *)",
+      "PowerShell(wget *)",
+      "PowerShell(Invoke-WebRequest *)",
+      "PowerShell(Invoke-RestMethod *)",
+      "PowerShell(iwr *)",
+      "PowerShell(irm *)",
+      "PowerShell(git commit *)",
+      "PowerShell(git push *)",
+      "PowerShell(git commit)",
+      "PowerShell(git push)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "PowerShell(firebase deploy *)",
+      "PowerShell(netlify deploy *)",
+      "PowerShell(Get-Content *.env)",
+      "PowerShell(Get-Content *.env.*)",
+      "PowerShell(Set-Content *)",
+      "PowerShell(Add-Content *)",
+      "PowerShell(Out-File *)"
+    ],
+    "ask": [
+      "Bash(npm publish:*)",
+      "Bash(firebase:*)",
+      "Bash(netlify:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}

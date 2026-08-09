@@ -1,11 +1,11 @@
 /**
  * TreeNodeDisplay - Read-only display mode for TreeNode.
- * 
+ *
  * Orchestrates the NodeHeader and DataCard.
  * Field logic is delegated to FieldList component.
  */
 
-import { component$, $, PropFunction } from '@builder.io/qwik';
+import { Show } from 'solid-js';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
@@ -29,69 +29,64 @@ export type TreeNodeDisplayProps = {
     nodeState: DisplayNodeState;
     kind: Kind;
     parentId?: string | null;
-    onNodeClick$?: PropFunction<() => void>;
-    onNavigateUp$?: PropFunction<(parentId: string | null) => void>;
+    onNodeClick?: () => void;
+    onNavigateUp?: (parentId: string | null) => void;
 };
 
-export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
+export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     const appState = useAppState();
-    const { toggleCardExpanded$, toggleNodeDetailsExpanded$ } = useAppTransitions();
+    const { toggleCardExpanded, toggleNodeDetailsExpanded } = useAppTransitions();
 
-    // Get card state from FSM (persisted)
-    const cardState = selectors.getDataCardState(appState, props.id);
-    const isExpanded = cardState === 'EXPANDED';
+    // Card / node-details state from the FSM (persisted)
+    const isExpanded = () => selectors.getDataCardState(appState, props.id) === 'EXPANDED';
+    const isDetailsExpanded = () => selectors.getNodeDetailsState(appState, props.id) === 'EXPANDED';
 
-    // Get node details state from FSM (persisted)
-    const detailsState = selectors.getNodeDetailsState(appState, props.id);
-    const isDetailsExpanded = detailsState === 'EXPANDED';
-
-    const toggleExpand$ = $((e?: Event) => {
+    const toggleExpand = (e?: Event) => {
         e?.stopPropagation();
-        toggleCardExpanded$(props.id);
-    });
+        toggleCardExpanded(props.id);
+    };
 
-    const toggleDetailsExpand$ = $(() => {
-        toggleNodeDetailsExpanded$(props.id);
-    });
-
-    const handleDeleteNode$ = $(async () => {
+    const handleDeleteNode = async () => {
         const nodeId = props.id;
         const parentId = props.parentId;
         const ok = await commitWithUndo({
             message: 'Node deleted',
-            execute$: $(() => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: nodeId } })),
-            undo$: $(() => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: nodeId } })),
+            execute: () => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: nodeId } }),
+            undo: () => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: nodeId } }),
         });
         if (ok) {
-            props.onNavigateUp$?.(parentId ?? null);
+            props.onNavigateUp?.(parentId ?? null);
         }
-    });
+    };
 
-    const titleId = `node-title-${props.id}`;
-    const isClickable = !!props.onNodeClick$;
-    const isParent = props.nodeState === 'PARENT';
-    const isChild = props.nodeState === 'CHILD';
-    const indentVar = isChild ? '18px' : '50px';
+    const titleId = () => `node-title-${props.id}`;
+    const isClickable = () => !!props.onNodeClick;
+    const isParent = () => props.nodeState === 'PARENT';
+    const isChild = () => props.nodeState === 'CHILD';
+    const indentVar = () => (isChild() ? '18px' : '50px');
 
     // Manifest-aware shell (#5): the DataCard is *display chrome*, orthogonal to
     // physical ownership. It renders for a kind that owns children (Children →
     // FieldList) OR that derives a typed rollup (a lens → LensRollup). The `jobs`
     // container is both: its own DataFields plus the "Jobs (N)" rollup.
-    const renderMode = nodeRenderMode(props.kind);
-    const lensTargetKind = renderMode.mode === 'lens' ? renderMode.targetKind : undefined;
-    const isLens = renderMode.mode === 'lens';
-    const ownsChildren = canHaveChildren(props.kind);
-    const showDataCard = ownsChildren || isLens;
+    const renderMode = () => nodeRenderMode(props.kind);
+    const lensTargetKind = () => {
+        const rm = renderMode();
+        return rm.mode === 'lens' ? rm.targetKind : undefined;
+    };
+    const isLens = () => renderMode().mode === 'lens';
+    const ownsChildren = () => canHaveChildren(props.kind);
+    const showDataCard = () => ownsChildren() || isLens();
 
     return (
-        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar }}>
-            <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded}>
+        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar() }}>
+            <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded()}>
                 <div>
                     <TreeBreadcrumbs nodeId={props.id} />
-                    <h3 style="margin: 0 0 var(--space-3) 0; font-size: var(--text-base); font-weight: 600;">
+                    <h3 style={{ margin: '0 0 var(--space-3) 0', 'font-size': 'var(--text-base)', 'font-weight': 600 }}>
                         Node Details
                     </h3>
-                    <div style="color: var(--text-muted); font-size: var(--text-sm);">
+                    <div style={{ color: 'var(--text-muted)', 'font-size': 'var(--text-sm)' }}>
                         {/* Future: Metadata section */}
                         {/* CreatedAt, UpdatedAt, UpdatedBy */}
 
@@ -102,7 +97,7 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
                         <button
                             type="button"
                             class={detailsStyles.deleteButton}
-                            onClick$={handleDeleteNode$}
+                            onClick={() => void handleDeleteNode()}
                             aria-label="Delete this asset"
                         >
                             Delete Asset
@@ -112,30 +107,34 @@ export const TreeNodeDisplay = component$((props: TreeNodeDisplayProps) => {
             </TreeNodeDetails>
             <NodeHeader
                 id={props.id}
-                titleId={titleId}
-                isExpanded={isExpanded}
-                isDetailsExpanded={isDetailsExpanded}
-                isParent={isParent}
-                isClickable={isClickable}
+                titleId={titleId()}
+                isExpanded={isExpanded()}
+                isDetailsExpanded={isDetailsExpanded()}
+                isParent={isParent()}
+                isClickable={isClickable()}
                 name={props.name}
                 subtitle={props.subtitle}
                 parentId={props.parentId}
-                onNodeClick$={props.onNodeClick$}
-                onNavigateUp$={props.onNavigateUp$}
-                onExpand$={showDataCard ? toggleExpand$ : undefined}
-                onDetailsToggle$={toggleDetailsExpand$}
-                showChevron={showDataCard}
+                onNodeClick={props.onNodeClick}
+                onNavigateUp={props.onNavigateUp}
+                onExpand={showDataCard() ? toggleExpand : undefined}
+                onDetailsToggle={() => toggleNodeDetailsExpanded(props.id)}
+                showChevron={showDataCard()}
             />
-            {showDataCard && (
-                <DataCard isOpen={isExpanded}>
-                    {ownsChildren && <FieldList nodeId={props.id} isConstruction={false} />}
+            <Show when={showDataCard()}>
+                <DataCard isOpen={isExpanded()}>
+                    <Show when={ownsChildren()}>
+                        <FieldList nodeId={props.id} isConstruction={false} />
+                    </Show>
                     {/* The compact in-card rollup is the lens's CHILD (under-a-node)
                         summary only. Re-rooted (PARENT), the jobs render as Node-like
                         CHILD cards via BranchView, so the lens's own card stays its
                         own DataFields (field details / history). */}
-                    {isLens && !isParent && <LensRollup lensId={props.id} targetKind={lensTargetKind!} />}
+                    <Show when={isLens() && !isParent()}>
+                        <LensRollup lensId={props.id} targetKind={lensTargetKind()!} />
+                    </Show>
                 </DataCard>
-            )}
+            </Show>
         </div>
     );
-});
+};

@@ -11,58 +11,53 @@
  * NOT the DataField component, which is welded to value-editing.
  */
 
-import { component$, useSignal, $ } from '@builder.io/qwik';
+import { createSignal, Show } from 'solid-js';
 import { useAppTransitions } from '../../state/appState.context';
 import { FieldList } from '../FieldList/FieldList';
 import styles from './NavigableRow.module.css';
 
 export type NavigableRowProps = { id: string; name: string };
 
-export const NavigableRow = component$<NavigableRowProps>((props) => {
-    const expanded = useSignal(false);
-    const { navigateToNode$ } = useAppTransitions();
+export const NavigableRow = (props: NavigableRowProps) => {
+    const [expanded, setExpanded] = createSignal(false);
+    const { navigateToNode } = useAppTransitions();
 
-    const toggle$ = $(() => {
-        expanded.value = !expanded.value;
-    });
-
-    const navigate$ = $(() => navigateToNode$(props.id));
-
-    const onKeyDown$ = $((e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            navigateToNode$(props.id);
+            navigateToNode(props.id);
         }
-    });
+    };
 
     return (
         <div class={styles.rowWrapper}>
             <div class={styles.row}>
                 <button
                     type="button"
-                    class={[
-                        styles.chevron,
-                        expanded.value ? styles.chevronDown : styles.chevronRight,
-                    ]}
-                    onClick$={toggle$}
-                    aria-expanded={expanded.value}
-                    aria-label={expanded.value ? 'Collapse' : 'Expand'}
+                    classList={{
+                        [styles.chevron]: true,
+                        [styles.chevronDown]: expanded(),
+                        [styles.chevronRight]: !expanded(),
+                    }}
+                    onClick={() => setExpanded(!expanded())}
+                    aria-expanded={expanded()}
+                    aria-label={expanded() ? 'Collapse' : 'Expand'}
                 />
                 <span
                     class={styles.name}
                     role="button"
                     tabIndex={0}
-                    onClick$={navigate$}
-                    onKeyDown$={onKeyDown$}
+                    onClick={() => navigateToNode(props.id)}
+                    onKeyDown={onKeyDown}
                 >
                     {props.name}
                 </span>
             </div>
-            {expanded.value && (
+            <Show when={expanded()}>
                 <div class={styles.expanded}>
                     <FieldList nodeId={props.id} hideAddSurfaces />
                 </div>
-            )}
+            </Show>
         </div>
     );
-});
+};

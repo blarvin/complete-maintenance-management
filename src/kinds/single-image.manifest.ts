@@ -1,6 +1,6 @@
-import type { Component } from '@builder.io/qwik';
-import { SingleImageField } from '../components/DataField/SingleImageField';
+import type { Component } from 'solid-js';
 import { SingleImageConfigForm } from '../components/FieldComposer/configForms/SingleImageConfigForm';
+import { SingleImageField } from '../components/DataField/SingleImageField';
 import type { DataFieldValue, DefinitionConfig, SingleImageValue } from '../data/models';
 import { SINGLE_IMAGE_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';

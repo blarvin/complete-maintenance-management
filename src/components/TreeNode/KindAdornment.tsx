@@ -13,7 +13,7 @@
  * on storage writes (debounced) so the count stays roughly live.
  */
 
-import { component$, useComputed$, useSignal, useVisibleTask$ } from '@builder.io/qwik';
+import { createSignal, createEffect, onCleanup, Show } from 'solid-js';
 import { nodeRenderMode } from '../../kinds/renderMode';
 import { isReRoot } from '../../kinds/placement';
 import { isProvisionedLens } from '../../kinds/provisionPolicy';
@@ -26,55 +26,53 @@ import type { Element } from '../../data/models';
 
 export type KindAdornmentProps = { id: string; isParent: boolean };
 
-export const KindAdornment = component$<KindAdornmentProps>((props) => {
-    const idSig = useComputed$(() => props.id);
-    const { element } = useElementById(idSig);
-    const gathered = useSignal<Element[] | null>(null);
+export const KindAdornment = (props: KindAdornmentProps) => {
+    const { element } = useElementById(() => props.id);
+    const [gathered, setGathered] = createSignal<Element[] | null>(null);
 
-    useVisibleTask$(({ track, cleanup }) => {
-        const el = track(() => element.value);
+    createEffect(() => {
+        const el = element();
         if (!el) {
-            gathered.value = null;
+            setGathered(null);
             return;
         }
         // Only the untyped rollup (`org`) draws a header chip. A lens (Provision)
         // renders its rollup in its DataCard (LensRollup), so it gathers nothing here.
         if (nodeRenderMode(el.kind).mode !== 'derivation-chip') {
-            gathered.value = null;
+            setGathered(null);
             return;
         }
 
+        let disposed = false;
         let timer: ReturnType<typeof setTimeout> | null = null;
         const regather = async () => {
             await initializeStorage();
             const all = await gatherDescendants(el.id, getElementQueries());
             // Count descendant nodes, excluding the auto-provisioned lens containers
             // (`jobs`/`logbook`, noise) — generic so new lens kinds drop out too.
-            gathered.value = all.filter((e) => isReRoot(e.kind) && !isProvisionedLens(e.kind));
+            if (!disposed) setGathered(all.filter((e) => isReRoot(e.kind) && !isProvisionedLens(e.kind)));
         };
         const unsub = storageEventBus.subscribe(() => {
             if (timer !== null) clearTimeout(timer);
-            timer = setTimeout(regather, 50);
+            timer = setTimeout(() => void regather(), 50);
         });
-        cleanup(() => {
+        onCleanup(() => {
+            disposed = true;
             unsub();
             if (timer !== null) clearTimeout(timer);
         });
         void regather();
     });
 
-    const el = element.value;
-    if (!el) return null;
-    if (nodeRenderMode(el.kind).mode !== 'derivation-chip') return null;
-
-    const items = gathered.value ?? [];
     const chipStyle =
         'display:inline-block;margin:2px 0 0 0;padding:1px 8px;border-radius:10px;' +
         'background:var(--surface-2,#eee);color:var(--text-muted);font-size:var(--text-sm);';
 
     return (
-        <span style={chipStyle}>
-            {items.length} descendant{items.length === 1 ? '' : 's'}
-        </span>
+        <Show when={element() && nodeRenderMode(element()!.kind).mode === 'derivation-chip'}>
+            <span style={chipStyle}>
+                {(gathered() ?? []).length} descendant{(gathered() ?? []).length === 1 ? '' : 's'}
+            </span>
+        </Show>
     );
-});
+};

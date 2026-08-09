@@ -14,17 +14,16 @@
  * live in the view (BranchView).
  */
 
-import { component$, type QRL } from '@builder.io/qwik';
 import styles from './LensCreateButton.module.css';
 
 export type LensCreateButtonProps = {
     /** Full, target-naming label, e.g. "Create New Job on Compressor #3". */
     label: string;
-    onClick$: QRL<() => void>;
+    onClick: () => void;
 };
 
-export const LensCreateButton = component$<LensCreateButtonProps>((props) => (
-    <button type="button" class={styles.addButton} onClick$={props.onClick$}>
+export const LensCreateButton = (props: LensCreateButtonProps) => (
+    <button type="button" class={styles.addButton} onClick={() => props.onClick()}>
         {props.label}
     </button>
-));
+);

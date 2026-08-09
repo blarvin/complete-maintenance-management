@@ -1,6 +1,6 @@
-import type { Component } from '@builder.io/qwik';
-import { EnumKvField } from '../components/DataField/EnumKvField';
+import type { Component } from 'solid-js';
 import { EnumKvConfigForm } from '../components/FieldComposer/configForms/EnumKvConfigForm';
+import { EnumKvField } from '../components/DataField/EnumKvField';
 import type { DataFieldValue, DefinitionConfig } from '../data/models';
 import { ENUM_KV_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';

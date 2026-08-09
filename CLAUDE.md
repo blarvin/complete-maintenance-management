@@ -2,18 +2,19 @@
 
 ## Development Philosophy
 
-**Spec-Driven Development**: `SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
+**Spec-Driven Development**: `docs/SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
 **This is prototyping**: Do the simplest thing that works.
-**Context7 MCP**: When working with third-party libraries (Qwik, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
+**Context7 MCP**: When working with third-party libraries (solid-js, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
 **jCodeMunch MCP**: Use jcodemunch-mcp for all code lookups. Never read full files when MCP is available. Call `list_repos` first — if the project is not indexed, call `index_folder` with the current working directory. Use `search_symbols` / `get_symbol` to find and retrieve code by symbol name. Use `get_repo_outline` or `get_file_outline` to explore structure. Fall back to direct file reads only when editing or when MCP is unavailable.
+**Plan location**: Always save plan files (`.plan.md`, phase plans, etc.) to `.claude/plans/` in this project's local directory — never to a global or home-directory location.
 
 **Documentation Hierarchy**:
 
-1. **SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
-2. **ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
-3. **LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
-4. **IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
-5. **ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
+1. **docs/SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
+2. **docs/ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
+3. **docs/LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
+4. **docs/IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
+5. **docs/ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
 
 **ISSUES vs LATER routing**: unfinished business, deferred parts of a feature already begun, and observed refactor needs (work-in-progress left for later) normally go in **ISSUES**, not LATER. **LATER** is for whole ideas/features not yet started and far-future-phase work. Consequence: a leftover directly caused by current-branch or Element-model work belongs in ISSUES — and much of what's currently parked in LATER under in-flight clusters (e.g. the §6b/§6c lens follow-ups) could migrate back.
 
@@ -27,7 +28,7 @@
 
 ### Tech Stack
 
-- **Framework**: Qwik 1.16.0 (resumable, SSR-first)
+- **Framework**: solid-js 1.9 (fine-grained reactivity, client-only SPA — no SSR, no router; the FSM is the navigation model)
 - **Language**: TypeScript (strict mode)
 - **Storage**: IndexedDB (Dexie 4.2.1) as primary, Firestore for sync
 - **Testing**: Vitest, Cypress (E2E)
@@ -52,10 +53,8 @@
 **Command/query registry**: `src/data/commands/` and `src/data/queries/`
 
 - Module-level getters: `getCommandBus()`, `getElementQueries()`, `getDefinitionQueries()`
-- IMPORTANT: Call these at runtime inside `$()` handlers — never capture in closures or serialize
-- `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping
-- Qwik `useContextProvider` CANNOT hold services (methods aren't serializable, `Code(3)` error)
-- `noSerialize` workaround not viable — values become `undefined` after SSR
+- Call these at runtime inside handlers, not at component setup — an adapter swap must be visible to the next call
+- `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping — these seams are why the registry stays module-level rather than moving into Solid context
 
 ### 4. Component Hierarchy with Type Safety
 
@@ -89,7 +88,7 @@ Components use discriminated unions + type guards (no prop spreading).
 ### Code Style
 
 - **TypeScript**: Strict mode, discriminated unions, type guards
-- **Qwik idioms**: Use `$()` for event handlers, avoid closures in hooks
+- **Solid idioms**: never destructure props (it breaks tracking); hooks take `Accessor<T>` in and return accessors out; `<Show keyed>` when a subtree must genuinely remount; `<Dynamic>` for registry-picked components. `eslint-plugin-solid` runs at **error** over all of `src/` — including `solid/reactivity`
 - **CSS**: Module CSS with design tokens, minimal inline styles
 - **Testing**: Test domain logic in service/adapter layers, not components
 
@@ -104,8 +103,9 @@ Components use discriminated unions + type guards (no prop spreading).
 ### Common Commands
 
 ```bash
-npm run dev          # Dev server (SSR mode)
-npm run preview:pwa  # Run preview server on port 4173
+npm run dev          # Vite dev server (client-only SPA; registers no service worker)
+npm run build        # Typecheck + production build to dist/ (compiles the SW, injects the precache manifest)
+npm run preview:pwa  # Serve the built dist/ on port 4173 — the only way to exercise the PWA
 npm run test         # Run all unit tests
 npm run test:watch   # Watch mode (Vitest)
 npm run cypress      # Open Cypress GUI
@@ -114,17 +114,61 @@ npm run lint         # ESLint
 npm run emulator     # Run Firebase emulator
 ```
 
+### Claude Code Settings Hygiene
+
+`.claude/settings.json` is **committed** and is the shared source of truth for permissions, hooks, and enabled MCP servers — it must work on every machine the user develops on. `.claude/settings.local.json` is **gitignored** and per-machine: Claude Code appends to it automatically every time the user approves a prompt, so it is a scratchpad, not a config file. Never hardcode absolute paths in `settings.json`.
+
+**Periodic sweep** (do this when `settings.local.json` has visibly accumulated, or when the user asks): read the local file and triage its `allow` entries into three buckets —
+
+1. **Already covered** by a `settings.json` pattern → drop.
+2. **One-off junk** — over-escaped single-invocation literals, machine-specific absolute paths → drop.
+3. **Genuinely durable and reusable** → propose promoting into `settings.json`.
+
+**Always ask the user to approve the promotions before editing `settings.json`.** Present bucket 3 as a list and let them cut it down — widening the committed allowlist changes the security posture on both machines, so it is never an automatic move. Buckets 1 and 2 can be discarded without ceremony.
+
+### Auto-Memory Is Committed To This Repo
+
+Claude Code's auto-memory store normally lives at `~/.claude/projects/<slug>/memory/`, which is per-machine and never committed — there is no setting to relocate it (`autoMemoryEnabled` is a boolean, nothing more). In this project the store has been **moved into the repo at `.claude/memory/`**, and the canonical home path is a **directory junction** pointing at it. Memory writes therefore land in the working tree as ordinary modified files and get committed like anything else.
+
+Consequence for Claude: memory files are repo content here. Treat a new or edited file under `.claude/memory/` as a normal working-tree change and mention it when summarising what changed — do not assume it is invisible to git.
+
+<!-- DELETE-AFTER-SECOND-MACHINE-IS-SET-UP : begin -->
+
+**Once-per-machine setup.** The junction cannot be committed (its path is machine-derived), so each new clone needs it created once. Symptom that it is missing: `.claude/memory/` exists in the repo but Claude never seems to recall anything from it. Run this from the repo root in PowerShell — no admin needed, junctions do not require elevation:
+
+```powershell
+$root = (git rev-parse --show-toplevel)
+$canon = Join-Path $env:USERPROFILE ".claude\projects\$($root -replace '[:/\\]','-')\memory"
+$repoMem = Join-Path $root ".claude\memory"
+
+if ((Test-Path $canon) -and (Get-Item $canon).LinkType -eq 'Junction') {
+  "Already linked."
+} else {
+  if (Test-Path $canon) {
+    Copy-Item "$canon\*" $repoMem -Recurse -Force   # fold any local-only memories in
+    Remove-Item $canon -Recurse -Force -Confirm:$false
+  }
+  New-Item -ItemType Directory -Force (Split-Path $canon) | Out-Null
+  New-Item -ItemType Junction -Path $canon -Target $repoMem | Out-Null
+  "Linked $canon -> $repoMem"
+}
+```
+
+Re-running it is safe: it no-ops when the junction already exists, and folds in any machine-local memories before swapping.
+
+<!-- DELETE-AFTER-SECOND-MACHINE-IS-SET-UP : end -->
+
 ### Testing Strategy
 
 - **Unit tests**: Service layer, adapters, sync logic, FSM transitions
-- **E2E tests**: Cypress against Firestore emulator (run cleanup before tests)
+- **E2E tests**: Cypress against Firestore emulator. Needs the emulator (`npm run emulator`, :8080) *and* the dev server (`npm run dev`, :5173) up — every spec starts with `cy.freshVisit()`, which wipes the emulator and deletes the app's IndexedDB before boot. No separate cleanup step.
 - **Fake-IndexedDB**: In-memory IndexedDB for fast unit tests
 - Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_FIRESTORE_EMULATOR', 'true')` or `?emulator=true` URL param
 
 ### Testing Infrastructure
 
 - `src/test/globalSetup.ts` - Vitest + Firebase emulator setup
-- `cypress/support/commands.ts` - E2E helpers
+- `cypress/support/e2e.ts` - E2E helpers (`freshVisit`, `createNode`, `expandCard`, `clearEmulator`)
 - `src/test/testUtils.ts` - Shared test utilities
 
 ## Quick Reference
@@ -165,7 +209,7 @@ useStorageAdapter(new IDBAdapter());
 
 ### Must-Read Before Changes
 
-- `SPECIFICATION.md` - Product requirements (always check first)
+- `docs/SPECIFICATION.md` - Product requirements (always check first)
 - `src/state/appState.types.ts` - FSM state definitions
 - `src/data/models.ts` - Domain types
 
@@ -177,3 +221,22 @@ useStorageAdapter(new IDBAdapter());
 - `src/data/queries/index.ts` - `getElementQueries()` / `getDefinitionQueries()`
 - `src/data/models.ts` - `Element`, `ElementHistory`, `Definition` (assembled view), the config/value unions
 - `src/constants.ts` - Hardcoded values (USER_ID, library)
+
+ ### TOOL USE GUIDELINES
+ IMPORTANT: Chain dependent commands with &&, never wrap them in PowerShell if ($?) { }
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's own `docs/ISSUES.md` work queue — not GitHub Issues. `docs/LATER.md` is an ideas file, not a tracker. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles under their default names, applied as an inline `[label]` tag on a queue item only while triage is live. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, alongside the existing SPECIFICATION / ELEMENT-MODEL / IMPLEMENTATION set. See `docs/agents/domain.md`.

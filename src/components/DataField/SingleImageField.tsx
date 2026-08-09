@@ -11,7 +11,7 @@
  * visual impact (`display: contents` + a wrapper with `grid-column: 3 / -2`).
  */
 
-import { component$, useSignal, $, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
+import { Show, createSignal, type Accessor } from 'solid-js';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import type { SingleImageValue } from '../../data/models';
@@ -33,11 +33,10 @@ const emptyImage = (caption: string): SingleImageValue => ({
 export type SingleImageFieldProps = {
     id: string;
     value: SingleImageValue | null;
-    rootRef: Signal<HTMLElement | undefined>;
-    onUpdated$?: PropFunction<() => void>;
+    rootRef: Accessor<HTMLElement | undefined>;
     /** `autoFocus` is set only for the row the user just ticked — focuses the
      *  caption input on mount; seeded rows leave it false. */
-    pendingMode?: { onChange$: QRL<(value: SingleImageValue | null) => void>; autoFocus?: boolean };
+    pendingMode?: { onChange: (value: SingleImageValue | null) => void | Promise<void>; autoFocus?: boolean };
 };
 
 const formatCaption = (v: SingleImageValue | null): string => v?.caption ?? '';
@@ -50,89 +49,106 @@ const parseCaption = (raw: string): SingleImageValue | null => {
     return emptyImage(trimmed);
 };
 
-export const SingleImageField = component$<SingleImageFieldProps>((props) => {
-    const flashing = useSignal(false);
+export const SingleImageField = (props: SingleImageFieldProps) => {
+    const [flashing, setFlashing] = createSignal(false);
 
-    const handleUploadTap$ = $(() => {
-        flashing.value = true;
-        setTimeout(() => { flashing.value = false; }, 180);
-    });
+    const handleUploadTap = () => {
+        setFlashing(true);
+        setTimeout(() => setFlashing(false), 180);
+    };
 
+    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        currentValue,
-        editInputRef,
-        valuePointerDown$,
-        valueKeyDown$,
-        inputPointerDown$,
-        inputBlur$,
-        inputKeyDown$,
-        inputChange$,
+        setCurrentValue,
+        setEditInputRef,
+        valuePointerDown,
+        valueKeyDown,
+        inputPointerDown,
+        inputBlur,
+        inputKeyDown,
+        inputChange,
     } = useFieldEdit<SingleImageValue>({
         fieldId: props.id,
         initialValue: props.value,
         format: formatCaption,
         parse: parseCaption,
         rootRef: props.rootRef,
-        onUpdated$: props.onUpdated$,
         pendingMode: props.pendingMode,
     });
 
-    useFieldValueSync<SingleImageValue>(props.id, currentValue);
+    useFieldValueSync<SingleImageValue>(props.id, setCurrentValue);
+    /* eslint-enable solid/reactivity */
 
-    const labelId = `field-label-${props.id}`;
+    const labelId = () => `field-label-${props.id}`;
 
     return (
-        <div style="display: contents">
-            <div class={[imageStyles.imageBlock, props.pendingMode && imageStyles.imageBlockPending]}>
+        <div style={{ display: 'contents' }}>
+            <div
+                classList={{
+                    [imageStyles.imageBlock]: true,
+                    [imageStyles.imageBlockPending]: !!props.pendingMode,
+                }}
+            >
                 <div
                     class={imageStyles.imageBox}
-                    onPointerDown$={handleUploadTap$}
+                    onPointerDown={handleUploadTap}
                     role="button"
                     tabIndex={0}
                     aria-label="Upload image (mock)"
                 >
-                    <span class={[imageStyles.uploadLink, flashing.value && imageStyles.uploadLinkFlash]}>
+                    <span
+                        classList={{
+                            [imageStyles.uploadLink]: true,
+                            [imageStyles.uploadLinkFlash]: flashing(),
+                        }}
+                    >
                         Upload Image
                     </span>
                 </div>
 
-                {isEditing ? (
+                <Show
+                    when={isEditing()}
+                    fallback={
+                        <div
+                            classList={{
+                                [styles.datafieldValue]: true,
+                                [imageStyles.caption]: true,
+                                [styles.datafieldValueUnderlined]: hasValue(),
+                                'no-caret': true,
+                            }}
+                            onPointerDown={valuePointerDown}
+                            onKeyDown={valueKeyDown}
+                            tabIndex={0}
+                            role="button"
+                            aria-labelledby={labelId()}
+                            aria-description="Double-tap to edit caption"
+                        >
+                            {displayValue() || <span class={imageStyles.captionPlaceholder}>Add caption…</span>}
+                        </div>
+                    }
+                >
                     <input
-                        ref={editInputRef}
-                        class={[styles.datafieldValue, imageStyles.captionInput]}
-                        value={editValue.value}
+                        ref={setEditInputRef}
+                        classList={{
+                            [styles.datafieldValue]: true,
+                            [imageStyles.captionInput]: true,
+                        }}
+                        value={editValue()}
                         maxLength={CAPTION_MAX}
                         placeholder="Add caption…"
-                        onInput$={(e) => inputChange$((e.target as HTMLInputElement).value)}
-                        onPointerDown$={inputPointerDown$}
-                        onBlur$={inputBlur$}
-                        onKeyDown$={inputKeyDown$}
-                        aria-labelledby={labelId}
-                        autoFocus
+                        onInput={(e) => inputChange(e.currentTarget.value)}
+                        onPointerDown={inputPointerDown}
+                        onBlur={inputBlur}
+                        onKeyDown={inputKeyDown}
+                        aria-labelledby={labelId()}
+                        autofocus
                     />
-                ) : (
-                    <div
-                        class={[
-                            styles.datafieldValue,
-                            imageStyles.caption,
-                            hasValue && styles.datafieldValueUnderlined,
-                            'no-caret',
-                        ]}
-                        onPointerDown$={valuePointerDown$}
-                        onKeyDown$={valueKeyDown$}
-                        tabIndex={0}
-                        role="button"
-                        aria-labelledby={labelId}
-                        aria-description="Double-tap to edit caption"
-                    >
-                        {displayValue || <span class={imageStyles.captionPlaceholder}>Add caption…</span>}
-                    </div>
-                )}
+                </Show>
             </div>
         </div>
     );
-});
+};

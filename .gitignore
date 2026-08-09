@@ -1,6 +1,9 @@
 # Claude Code local usage log
 .claude/usage.log
 
+# Per-machine Claude Code settings scratchpad (durable perms belong in .claude/settings.json)
+.claude/settings.local.json
+
 #build artifacts
 dist/
 server/

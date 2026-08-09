@@ -1,17 +1,12 @@
 import { defineConfig } from 'vite';
-import { qwikCity } from '@builder.io/qwik-city/vite';
-import { qwikVite } from '@builder.io/qwik/optimizer';
+import solid from 'vite-plugin-solid';
 import { precachePlugin } from './vite-plugin-precache';
 
 export default defineConfig(() => {
     return {
         plugins: [
-            qwikCity({
-                // Static site generation for PWA
-                // Service worker + IndexedDB handle dynamic behavior
-            }),
-            qwikVite(),
-            precachePlugin(),
+            solid(),
+            precachePlugin({ swSource: 'src/service-worker.ts' }),
         ],
         server: {
             allowedHosts: ['host.docker.internal'],
@@ -23,5 +18,3 @@ export default defineConfig(() => {
         }
     };
 });
-
-

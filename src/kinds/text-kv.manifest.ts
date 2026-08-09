@@ -1,6 +1,6 @@
-import type { Component } from '@builder.io/qwik';
-import { TextKvField } from '../components/DataField/TextKvField';
+import type { Component } from 'solid-js';
 import { TextKvConfigForm } from '../components/FieldComposer/configForms/TextKvConfigForm';
+import { TextKvField } from '../components/DataField/TextKvField';
 import type { DataFieldValue, DefinitionConfig } from '../data/models';
 import { TEXT_KV_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';

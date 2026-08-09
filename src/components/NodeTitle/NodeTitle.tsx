@@ -1,4 +1,3 @@
-import { component$ } from '@builder.io/qwik';
 import styles from '../TreeNode/TreeNode.module.css';
 
 export type NodeTitleProps = {
@@ -6,10 +5,8 @@ export type NodeTitleProps = {
     id?: string;
 };
 
-export const NodeTitle = component$<NodeTitleProps>((props) => {
+export const NodeTitle = (props: NodeTitleProps) => {
     return (
         <h2 class={styles.nodeTitle} id={props.id}>{props.nodeName}</h2>
     );
-});
-
-
+};

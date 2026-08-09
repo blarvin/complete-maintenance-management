@@ -9,28 +9,35 @@
  * UX) was retired when revert moved to a direct write from DataFieldHistory.
  */
 
-import { useSignal, type Signal } from '@builder.io/qwik';
+import { createSignal, createMemo, type Accessor } from 'solid-js';
 
 export type UseEditableValueResult<T> = {
     /** Persisted/committed value. */
-    current: Signal<T | null>;
+    current: Accessor<T | null>;
+    setCurrent: (value: T | null) => void;
     /** In-progress edit buffer (always a string; callers parse on save). */
-    edit: Signal<string>;
+    edit: Accessor<string>;
+    setEdit: (value: string) => void;
     /** Formatted display string for `current`. */
-    displayValue: string;
+    displayValue: Accessor<string>;
     /** True when `current` has a non-null, non-empty formatted value. */
-    hasValue: boolean;
+    hasValue: Accessor<boolean>;
 };
 
 export function useEditableValue<T>(
     initialValue: T | null,
     format: (value: T | null) => string,
 ): UseEditableValueResult<T> {
-    const current = useSignal<T | null>(initialValue);
-    const edit = useSignal<string>('');
+    const [current, setCurrentRaw] = createSignal<T | null>(initialValue);
+    // Wrap in a thunk so object values (e.g. SingleImageValue) never hit the
+    // function-overload of Solid setters.
+    const setCurrent = (value: T | null) => setCurrentRaw(() => value);
+    const [edit, setEdit] = createSignal<string>('');
 
-    const displayValue = format(current.value);
-    const hasValue = current.value !== null && current.value !== undefined && displayValue !== '';
+    const displayValue = createMemo(() => format(current()));
+    const hasValue = createMemo(
+        () => current() !== null && current() !== undefined && displayValue() !== '',
+    );
 
-    return { current, edit, displayValue, hasValue };
+    return { current, setCurrent, edit, setEdit, displayValue, hasValue };
 }

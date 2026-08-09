@@ -7,16 +7,16 @@
  * and a freshness expectation that flips the row to a stale state when the
  * value's `updatedAt` is older than `expectedRefreshSeconds`.
  *
- * Authoring of these configs is the next PR (PR 6 — number-kv authoring form);
- * here we just render and validate against whatever the Definition holds.
+ * Wrapper/Body split: the Body owns the `useFieldEdit` call so config is a
+ * mount-time constant it may capture (formatEdit/parseEdit/makeValidate).
  */
 
-import { component$, useResource$, Resource, type PropFunction, type Signal, type QRL } from '@builder.io/qwik';
+import { Show, createMemo, createResource, type Accessor } from 'solid-js';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { getDefinitionQueries } from '../../data/queries';
 import type { NumberKvConfig } from '../../data/models';
-import { computeNumberKvState, formatNumberKvDisplay, type NumberKvState } from './numberKvState';
+import { computeNumberKvState, formatNumberKvDisplay } from './numberKvState';
 import styles from './DataField.module.css';
 import numberStyles from './NumberKvField.module.css';
 
@@ -29,10 +29,9 @@ export type NumberKvFieldProps = {
      *  (composer pendingMode does this — pending values are about to be
      *  written, never stale). */
     updatedAt?: number;
-    rootRef: Signal<HTMLElement | undefined>;
-    onUpdated$?: PropFunction<() => void>;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange$. */
-    pendingMode?: { onChange$: QRL<(value: number | null) => void>; autoFocus?: boolean };
+    rootRef: Accessor<HTMLElement | undefined>;
+    /** When set, edits are buffered (no IDB write) and forwarded via onChange. */
+    pendingMode?: { onChange: (value: number | null) => void | Promise<void>; autoFocus?: boolean };
 };
 
 function parseNumber(raw: string): number | null {
@@ -82,29 +81,34 @@ function buildHelperText(config: NumberKvConfig): string {
     return `Nominal ${nominalValue}${u}`;
 }
 
-export const NumberKvField = component$<NumberKvFieldProps>((props) => {
-    const configResource = useResource$(async ({ track }) => {
-        track(() => props.definitionId);
-        const def = await getDefinitionQueries().getDefinitionById(props.definitionId);
-        if (!def || def.kind !== 'number-kv') return null;
-        return def.config as NumberKvConfig;
-    });
+export const NumberKvField = (props: NumberKvFieldProps) => {
+    // Error-catching fetcher: never enters the throwing state (no ErrorBoundary);
+    // missing/wrong-kind/failed def degrades to null → the "—" fallback.
+    const [config] = createResource(
+        () => props.definitionId,
+        async (definitionId): Promise<NumberKvConfig | null> => {
+            try {
+                const def = await getDefinitionQueries().getDefinitionById(definitionId);
+                if (!def || def.kind !== 'number-kv') return null;
+                return def.config as NumberKvConfig;
+            } catch {
+                return null;
+            }
+        },
+    );
 
     return (
-        <Resource
-            value={configResource}
-            onPending={() => <span class={styles.datafieldValue}>…</span>}
-            onRejected={() => <span class={styles.datafieldValue}>—</span>}
-            onResolved={(config) => {
-                if (!config) return <span class={styles.datafieldValue}>—</span>;
-                return <NumberKvBody {...props} config={config} />;
-            }}
-        />
+        <Show when={!config.loading} fallback={<span class={styles.datafieldValue}>…</span>}>
+            <Show when={config()} keyed fallback={<span class={styles.datafieldValue}>—</span>}>
+                {(cfg) => <NumberKvBody {...props} config={cfg} />}
+            </Show>
+        </Show>
     );
-});
+};
 
-const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>((props) => {
-    const { config } = props;
+const NumberKvBody = (props: NumberKvFieldProps & { config: NumberKvConfig }) => {
+    // eslint-disable-next-line solid/reactivity -- mount-time constant; the Body remounts per config (<Show keyed>)
+    const config = props.config;
     const decimals = config.decimals ?? 2;
     const isPercent = config.displayFormat === 'percent';
 
@@ -118,18 +122,20 @@ const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>
         return isPercent && n !== null ? n / 100 : n;
     };
 
+    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         hasValue,
         editValue,
-        editInputRef,
         currentValue,
-        valuePointerDown$,
-        valueKeyDown$,
-        inputPointerDown$,
-        inputBlur$,
-        inputKeyDown$,
-        inputChange$,
+        setCurrentValue,
+        setEditInputRef,
+        valuePointerDown,
+        valueKeyDown,
+        inputPointerDown,
+        inputBlur,
+        inputKeyDown,
+        inputChange,
     } = useFieldEdit<number>({
         fieldId: props.id,
         initialValue: props.value,
@@ -137,73 +143,76 @@ const NumberKvBody = component$<NumberKvFieldProps & { config: NumberKvConfig }>
         parse: parseEdit,
         validate: makeValidate(config),
         rootRef: props.rootRef,
-        onUpdated$: props.onUpdated$,
         pendingMode: props.pendingMode,
     });
 
-    useFieldValueSync<number>(props.id, currentValue);
+    useFieldValueSync<number>(props.id, setCurrentValue);
+    /* eslint-enable solid/reactivity */
 
-    const labelId = `field-label-${props.id}`;
+    const labelId = () => `field-label-${props.id}`;
     const helper = buildHelperText(config);
 
     const affixPos = config.affixPosition
         ?? (config.displayFormat === 'currency' ? 'prefix' : 'suffix');
 
-    if (isEditing) {
-        return (
-            <span style="display: contents">
+    // Display-mode derivations.
+    const state = createMemo(() => computeNumberKvState(currentValue(), config, props.updatedAt ?? 0));
+    const shown = () => currentValue() === null || currentValue() === undefined
+        ? ''
+        : formatNumberKvDisplay(currentValue()!, config);
+
+    return (
+        <Show
+            when={isEditing()}
+            fallback={
+                <div
+                    classList={{
+                        [styles.datafieldValue]: true,
+                        [styles.datafieldValueUnderlined]: hasValue(),
+                        [styles.datafieldValueEditable]: true,
+                        [numberStyles[`state_${state()}`]]: true,
+                        'no-caret': true,
+                    }}
+                    data-state={state()}
+                    onPointerDown={valuePointerDown}
+                    onKeyDown={valueKeyDown}
+                    tabIndex={0}
+                    role="button"
+                    aria-labelledby={labelId()}
+                    aria-description="Press Enter to edit"
+                >
+                    {shown() || <span class={styles.datafieldPlaceholder}>Empty</span>}
+                </div>
+            }
+        >
+            <span style={{ display: 'contents' }}>
                 {affixPos === 'prefix' && config.unitsSymbol && (
                     <span class={numberStyles.affix}>{config.unitsSymbol}</span>
                 )}
                 <input
-                    ref={editInputRef}
+                    ref={setEditInputRef}
                     type="text"
                     inputMode="decimal"
-                    class={[styles.datafieldValue, numberStyles.input]}
-                    value={editValue.value}
-                    onInput$={(e) => inputChange$((e.target as HTMLInputElement).value)}
-                    onPointerDown$={inputPointerDown$}
-                    onBlur$={inputBlur$}
-                    onKeyDown$={inputKeyDown$}
-                    aria-labelledby={labelId}
-                    aria-describedby={helper ? `${labelId}-helper` : undefined}
-                    autoFocus
+                    classList={{
+                        [styles.datafieldValue]: true,
+                        [numberStyles.input]: true,
+                    }}
+                    value={editValue()}
+                    onInput={(e) => inputChange(e.currentTarget.value)}
+                    onPointerDown={inputPointerDown}
+                    onBlur={inputBlur}
+                    onKeyDown={inputKeyDown}
+                    aria-labelledby={labelId()}
+                    aria-describedby={helper ? `${labelId()}-helper` : undefined}
+                    autofocus
                 />
                 {affixPos === 'suffix' && config.unitsSymbol && (
                     <span class={numberStyles.affix}>{config.unitsSymbol}</span>
                 )}
                 {helper && (
-                    <span id={`${labelId}-helper`} class={numberStyles.helper}>{helper}</span>
+                    <span id={`${labelId()}-helper`} class={numberStyles.helper}>{helper}</span>
                 )}
             </span>
-        );
-    }
-
-    // Display mode.
-    const stale = props.updatedAt ?? 0;
-    const state: NumberKvState = computeNumberKvState(currentValue.value, config, stale);
-    const shown = currentValue.value === null || currentValue.value === undefined
-        ? ''
-        : formatNumberKvDisplay(currentValue.value, config);
-
-    return (
-        <div
-            class={[
-                styles.datafieldValue,
-                hasValue && styles.datafieldValueUnderlined,
-                styles.datafieldValueEditable,
-                numberStyles[`state_${state}`],
-                'no-caret',
-            ]}
-            data-state={state}
-            onPointerDown$={valuePointerDown$}
-            onKeyDown$={valueKeyDown$}
-            tabIndex={0}
-            role="button"
-            aria-labelledby={labelId}
-            aria-description="Press Enter to edit"
-        >
-            {shown || <span class={styles.datafieldPlaceholder}>Empty</span>}
-        </div>
+        </Show>
     );
-});
+};

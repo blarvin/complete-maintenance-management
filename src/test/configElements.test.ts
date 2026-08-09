@@ -14,10 +14,10 @@ import { validateThresholds } from '../components/DataField/numberKvState';
 import type { DefinitionConfig, Kind } from '../data/models';
 
 // NB: this suite deliberately avoids importing the registry / manifests — they
-// pull in `component$` renderers that the optimizer doesn't transform under
-// Vitest (project convention: don't import Qwik components in unit tests). The
-// config-only kind registration is enforced by `satisfies` at compile time and
-// exercised by the app at runtime.
+// pull in `.tsx` renderers, and `vitest.config.ts` has no Solid JSX transform
+// (project convention: don't import components in unit tests). The config-only
+// kind registration is enforced by `satisfies` at compile time and exercised by
+// the app at runtime.
 
 function roundTrip(kind: Kind, config: DefinitionConfig): DefinitionConfig {
   const children = serializeConfig('fd', kind, config);

@@ -19,8 +19,6 @@
  * - Manual: syncOnce(), syncDelta(), syncFull() can be called directly
  */
 
-import { qrl } from '@builder.io/qwik';
-import type { QRL } from '@builder.io/qwik';
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../storage/storageAdapter';
 import type { SyncQueueManager } from './SyncQueueManager';
 import { now } from '../../utils/time';
@@ -35,16 +33,16 @@ import { FullCollectionSync, DeltaSync } from './strategies';
 import type { SyncStrategy } from './strategies';
 
 /**
- * Retry action for the exhausted-retries toast. ToastAction handlers must be
- * QRLs; built with the runtime `qrl()` API (not `$()`, which requires the
- * optimizer and would crash Vitest imports — see retryFailedSync.ts).
+ * Retry action for the exhausted-retries toast. Kept as a dynamic import of
+ * retryFailedSync — a static import would create a module cycle
+ * (retryFailedSync.ts imports getSyncManager back from this module).
  * Captures nothing; resolves getSyncManager at invoke time per the
  * registry-getter pattern.
  */
-export const retryFailedSyncQrl: QRL<() => Promise<void>> = qrl(
-  () => import('./retryFailedSync'),
-  'retryFailedSync'
-);
+export const retryFailedSyncAction = async (): Promise<void> => {
+  const { retryFailedSync } = await import('./retryFailedSync');
+  await retryFailedSync();
+};
 
 export class SyncManager {
   private _enabled: boolean = true;
@@ -213,7 +211,7 @@ export class SyncManager {
     getSnackbarService().show({
       message: `${pushResult.exhausted} change(s) failed to sync`,
       variant: 'error',
-      action: { label: 'Retry', handler: retryFailedSyncQrl },
+      action: { label: 'Retry', handler: retryFailedSyncAction },
     });
   }
 

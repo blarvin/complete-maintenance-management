@@ -8,52 +8,60 @@
  * of the Edges resolver in the capability engine.
  */
 
-import { component$, useSignal, useComputed$, useVisibleTask$, $, type QRL } from '@builder.io/qwik';
+import { Show, createSignal, createMemo, createEffect, onCleanup } from 'solid-js';
 import type { FieldRendererProps } from '../../kinds/types';
-import type { AssetDocValue, DataFieldValue } from '../../data/models';
+import type { AssetDocValue } from '../../data/models';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { resolveEdge } from '../../data/services/capabilityEngine';
 import styles from './DataField.module.css';
 
-export const AssetDocField = component$<FieldRendererProps>((props) => {
-    const targetId = useComputed$(() => (props.value as AssetDocValue | null)?.targetId ?? '');
-    const resolvedName = useSignal<string | null>(null);
+export const AssetDocField = (props: FieldRendererProps) => {
+    const targetId = createMemo(() => (props.value as AssetDocValue | null)?.targetId ?? '');
+    const [resolvedName, setResolvedName] = createSignal<string | null>(null);
 
-    // Live resolution: fetch the target's name whenever the id changes (display only).
-    useVisibleTask$(async ({ track }) => {
-        const id = track(() => targetId.value);
+    // Live resolution: fetch the target's name whenever the id changes (display
+    // only). Stale-async guard: an in-flight resolve must not land after the
+    // tracked id changed (effects capture their values at run time).
+    createEffect(() => {
+        const id = targetId();
+        let disposed = false;
+        onCleanup(() => { disposed = true; });
         if (props.pendingMode || !id) {
-            resolvedName.value = null;
+            setResolvedName(null);
             return;
         }
-        await initializeStorage();
-        const target = await resolveEdge(id, getElementQueries());
-        resolvedName.value = target ? target.name : null;
+        void (async () => {
+            await initializeStorage();
+            const target = await resolveEdge(id, getElementQueries());
+            if (!disposed) setResolvedName(target ? target.name : null);
+        })();
     });
 
-    // Composer: collect the target id as a raw string.
-    if (props.pendingMode) {
-        const onChange$: QRL<(value: DataFieldValue | null) => void> = props.pendingMode.onChange$;
-        return (
-            <input
-                type="text"
-                class={styles.datafieldValue}
-                placeholder="Target element id"
-                value={targetId.value}
-                onInput$={$((_, el) =>
-                    onChange$(el.value.trim() ? ({ targetId: el.value.trim() } as AssetDocValue) : null),
-                )}
-            />
-        );
-    }
-
-    if (!targetId.value) {
-        return <span class={styles.datafieldPlaceholder}>No link</span>;
-    }
     return (
-        <span class={styles.datafieldValue} title={targetId.value}>
-            → {resolvedName.value ?? `(unresolved: ${targetId.value})`}
-        </span>
+        <Show
+            when={props.pendingMode}
+            fallback={
+                <Show when={targetId()} fallback={<span class={styles.datafieldPlaceholder}>No link</span>}>
+                    <span class={styles.datafieldValue} title={targetId()}>
+                        → {resolvedName() ?? `(unresolved: ${targetId()})`}
+                    </span>
+                </Show>
+            }
+        >
+            {(pending) => (
+                // Composer: collect the target id as a raw string.
+                <input
+                    type="text"
+                    class={styles.datafieldValue}
+                    placeholder="Target element id"
+                    value={targetId()}
+                    onInput={(e) => {
+                        const trimmed = e.currentTarget.value.trim();
+                        void pending().onChange(trimmed ? ({ targetId: trimmed } as AssetDocValue) : null);
+                    }}
+                />
+            )}
+        </Show>
     );
-});
+};

@@ -1,10 +1,8 @@
-import type { QRL } from '@builder.io/qwik';
-
 export type SnackbarVariant = 'success' | 'error' | 'info';
 
 export type ToastAction = {
     label: string;
-    handler: QRL<() => void | Promise<void>>;
+    handler: () => void | Promise<void>;
 };
 
 export type ToastInput = {
@@ -12,7 +10,7 @@ export type ToastInput = {
     variant?: SnackbarVariant;
     durationMs?: number;
     action?: ToastAction;
-    onExpire?: QRL<() => void | Promise<void>>;
+    onExpire?: () => void | Promise<void>;
 };
 
 export type ActiveToast = {
@@ -21,7 +19,7 @@ export type ActiveToast = {
     variant: SnackbarVariant;
     durationMs: number;
     action?: ToastAction;
-    onExpire?: QRL<() => void | Promise<void>>;
+    onExpire?: () => void | Promise<void>;
     createdAt: number;
 };
 

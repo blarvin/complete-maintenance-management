@@ -1,5 +1,5 @@
 /**
- * pendingDraft — Plain (no-Qwik) draft store for the FieldComposer batch.
+ * pendingDraft — Framework-free draft store for the FieldComposer batch.
  *
  * A pending form is a Definition the user has checked in the composer plus
  * an in-flight (not yet persisted) value. The batch lives in localStorage keyed

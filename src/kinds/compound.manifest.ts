@@ -7,11 +7,10 @@
  * a standalone Data Card row in Phase 1.
  */
 
-import type { Component } from '@builder.io/qwik';
 import type { CompoundValue, DataFieldValue, DefinitionConfig } from '../data/models';
 import { ConfigFieldStubRenderer, ConfigFieldStubConfigForm } from './configFieldStub';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
+import type { KindManifest } from './types';
 
 export const compoundManifest: KindManifest = {
     kind: 'compound',
@@ -19,8 +18,8 @@ export const compoundManifest: KindManifest = {
     mintVia: 'config-only',
     placement: 'inline',
     ...KIND_CAPABILITIES['compound'], // capability subset — structural seam, not read yet
-    Renderer: ConfigFieldStubRenderer as unknown as Component<FieldRendererProps>,
-    ConfigForm: ConfigFieldStubConfigForm as unknown as Component<ConfigFormProps>,
+    Renderer: ConfigFieldStubRenderer,
+    ConfigForm: ConfigFieldStubConfigForm,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>
         v === null || v === undefined

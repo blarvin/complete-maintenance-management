@@ -11,7 +11,7 @@
  * view (`BranchView`).
  */
 
-import { component$, useComputed$, useSignal, useVisibleTask$, $ } from '@builder.io/qwik';
+import { Show, createEffect, createSignal } from 'solid-js';
 import { getKindManifest } from '../../kinds/registry';
 import { getCommandBus } from '../../data/commands';
 import { useElementById } from '../../hooks/useElementChildren';
@@ -27,66 +27,69 @@ export type LensCreateProps = {
     entryLabel?: string;
 };
 
-export const LensCreate = component$<LensCreateProps>((props) => {
-    const ownerIdSig = useComputed$(() => props.ownerId);
-    const { element: ownerEl } = useElementById(ownerIdSig);
+export const LensCreate = (props: LensCreateProps) => {
+    const { element: ownerEl } = useElementById(() => props.ownerId);
 
-    const creating = useSignal(false);
-    const inputRef = useSignal<HTMLInputElement>();
+    const [creating, setCreating] = createSignal(false);
+    let inputEl: HTMLInputElement | undefined;
 
-    useVisibleTask$(({ track }) => {
-        if (track(() => creating.value)) inputRef.value?.focus();
+    // The input mounts synchronously on the signal flip, so no delay is needed.
+    createEffect(() => {
+        if (creating()) inputEl?.focus();
     });
 
-    const startCreate$ = $(() => {
-        creating.value = true;
-    });
+    const startCreate = () => setCreating(true);
 
-    const commit$ = $(async () => {
-        const name = inputRef.value?.value.trim() ?? '';
-        if (inputRef.value) inputRef.value.value = '';
-        creating.value = false;
+    const commit = async () => {
+        const name = inputEl?.value.trim() ?? '';
+        if (inputEl) inputEl.value = '';
+        setCreating(false);
         if (!name || !props.ownerId) return; // empty Enter/blur just closes
         await getCommandBus().execute({
             type: 'CREATE_ELEMENT',
             payload: { kind: props.targetKind, parentId: props.ownerId, name },
         });
-    });
+    };
 
-    const cancel$ = $(() => {
-        if (inputRef.value) inputRef.value.value = '';
-        creating.value = false;
-    });
+    const cancel = () => {
+        if (inputEl) inputEl.value = '';
+        setCreating(false);
+    };
 
-    const onKeyDown$ = $((e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            commit$();
+            commit();
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            cancel$();
+            cancel();
         }
-    });
+    };
 
-    const entryLabel = props.entryLabel || getKindManifest(props.targetKind).pickerLabel;
+    const entryLabel = () => props.entryLabel || getKindManifest(props.targetKind).pickerLabel;
 
-    return creating.value ? (
-        <div class={styles.createRow}>
-            <span class={[styles.chevron, styles.chevronRight]} aria-hidden="true" />
-            <input
-                ref={inputRef}
-                class={styles.nameInput}
-                type="text"
-                placeholder={`${entryLabel} name`}
-                onKeyDown$={onKeyDown$}
-                onBlur$={commit$}
-                aria-label={`New ${entryLabel} name`}
-            />
-        </div>
-    ) : (
-        <LensCreateButton
-            label={`Create New ${entryLabel} on ${ownerEl.value?.name ?? 'this asset'}`}
-            onClick$={startCreate$}
-        />
+    return (
+        <Show
+            when={creating()}
+            fallback={
+                <LensCreateButton
+                    label={`Create New ${entryLabel()} on ${ownerEl()?.name ?? 'this asset'}`}
+                    onClick={startCreate}
+                />
+            }
+        >
+            <div class={styles.createRow}>
+                <span classList={{ [styles.chevron]: true, [styles.chevronRight]: true }} aria-hidden="true" />
+                <input
+                    ref={inputEl}
+                    class={styles.nameInput}
+                    type="text"
+                    placeholder={`${entryLabel()} name`}
+                    onKeyDown={onKeyDown}
+                    onBlur={commit}
+                    aria-label={`New ${entryLabel()} name`}
+                />
+            </div>
+        </Show>
     );
-});
+};

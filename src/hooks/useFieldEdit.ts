@@ -15,9 +15,14 @@
  *
  * Cross-component writes (e.g. revert from DataFieldHistory) update the
  * renderer's `currentValue` via `useFieldValueSync`, not through this hook.
+ *
+ * Timing notes: the FSM write mounts the input synchronously, so `beginEdit`
+ * seeds the edit buffer BEFORE `startFieldEdit`; the autoFocus mount task needs
+ * no deferral — the focus-manager effect fires on the FSM write, after render.
+ * Don't reintroduce a `setTimeout(0)` here.
  */
 
-import { useSignal, $, useVisibleTask$, useOnDocument, type Signal, type QRL } from '@builder.io/qwik';
+import { onMount, onCleanup, createMemo, type Accessor } from 'solid-js';
 import { getCommandBus } from '../data/commands';
 import { getSnackbarService } from '../services/snackbar';
 import { commitWithUndo } from '../data/services/commitWithUndo';
@@ -28,6 +33,7 @@ import { useEditableValue } from './useEditableValue';
 import type { DataFieldValue } from '../data/models';
 
 export type UseFieldEditOptions<T extends DataFieldValue> = {
+    /** Mount-time constant — rows remount per field (`<For>` reference-keyed). */
     fieldId: string;
     initialValue: T | null;
     /** Render T | null to a display string. */
@@ -36,13 +42,11 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
     parse: (raw: string) => T | null;
     /** Optional post-parse validation (throw to reject). Runs before dispatch. */
     validate?: (value: T | null) => void;
-    /** Ref to the outer DataField row; used for outside-click cancel. Owned by the dispatcher. */
-    rootRef: Signal<HTMLElement | undefined>;
-    /** Called after save completes. */
-    onUpdated$?: QRL<() => void>;
+    /** Read accessor to the outer DataField row; used for outside-click cancel. Owned by the dispatcher. */
+    rootRef: Accessor<HTMLElement | undefined>;
     /**
-     * When set, save$ does NOT dispatch UPDATE_FIELD_VALUE or show a Snackbar.
-     * Instead it forwards the parsed value to onChange$. Used by FieldComposer
+     * When set, save does NOT dispatch UPDATE_ELEMENT_VALUE or show a Snackbar.
+     * Instead it forwards the parsed value to onChange. Used by FieldComposer
      * for in-flight (un-persisted) Template previews.
      *
      * `autoFocus` (composer only): true when this row is the one the user just
@@ -50,50 +54,60 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
      * Seeded rows (construction defaults / Undo restore) pass false so nothing
      * steals focus when the composer opens.
      */
-    pendingMode?: { onChange$: QRL<(value: T | null) => void>; autoFocus?: boolean };
+    pendingMode?: { onChange: (value: T | null) => void | Promise<void>; autoFocus?: boolean };
 };
 
 export type UseFieldEditResult<T extends DataFieldValue> = {
-    isEditing: boolean;
-    displayValue: string;
-    hasValue: boolean;
-    editValue: Signal<string>;
-    currentValue: Signal<T | null>;
-    editInputRef: Signal<HTMLInputElement | undefined>;
-    rootRef: Signal<HTMLElement | undefined>;
-    beginEdit$: QRL<() => void>;
-    save$: QRL<() => Promise<void>>;
-    cancel$: QRL<() => void>;
-    valuePointerDown$: QRL<(ev: PointerEvent | MouseEvent) => Promise<void>>;
-    valueKeyDown$: QRL<(e: KeyboardEvent) => void>;
-    inputPointerDown$: QRL<(ev: PointerEvent | MouseEvent) => Promise<void>>;
-    inputBlur$: QRL<() => void>;
-    inputKeyDown$: QRL<(e: KeyboardEvent) => void>;
-    inputChange$: QRL<(value: string) => void>;
+    isEditing: Accessor<boolean>;
+    displayValue: Accessor<string>;
+    hasValue: Accessor<boolean>;
+    /** The edit buffer (no external writer — writes go via inputChange). */
+    editValue: Accessor<string>;
+    currentValue: Accessor<T | null>;
+    /** Renderers pass this to useFieldValueSync. */
+    setCurrentValue: (value: T | null) => void;
+    /** JSX `ref=` for the edit input/textarea. */
+    setEditInputRef: (el: HTMLInputElement | HTMLTextAreaElement) => void;
+    beginEdit: () => void;
+    save: () => Promise<void>;
+    cancel: () => void;
+    valuePointerDown: (ev: PointerEvent | MouseEvent) => void;
+    valueKeyDown: (e: KeyboardEvent) => void;
+    inputPointerDown: (ev: PointerEvent | MouseEvent) => void;
+    inputBlur: () => void;
+    inputKeyDown: (e: KeyboardEvent) => void;
+    inputChange: (value: string) => void;
 };
 
 export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOptions<T>): UseFieldEditResult<T> {
     const appState = useAppState();
-    const { startFieldEdit$, stopFieldEdit$ } = useAppTransitions();
+    const { startFieldEdit, stopFieldEdit } = useAppTransitions();
 
-    const fieldState = selectors.getDataFieldState(appState, options.fieldId);
-    const isEditing = fieldState === 'EDITING';
+    const isEditing = createMemo(
+        () => selectors.getDataFieldState(appState, options.fieldId) === 'EDITING',
+    );
 
-    const rootRef = options.rootRef;
-    const editInputRef = useSignal<HTMLInputElement>();
+    // Plain closure ref — nothing tracks it; the union type absorbs the
+    // textarea variant.
+    let inputEl: HTMLInputElement | HTMLTextAreaElement | undefined;
+    const setEditInputRef = (el: HTMLInputElement | HTMLTextAreaElement) => {
+        inputEl = el;
+    };
 
     const {
         current: currentValue,
+        setCurrent: setCurrentValue,
         edit: editValue,
+        setEdit,
         displayValue,
         hasValue,
     } = useEditableValue<T>(options.initialValue, options.format);
 
-    const { checkDoubleTap$ } = useDoubleTap();
+    const { checkDoubleTap } = useDoubleTap();
 
     const { suppressBlurUntil } = useFocusManager(
-        editInputRef,
-        () => appState.editingElementId === options.fieldId
+        () => inputEl,
+        () => appState.editingElementId === options.fieldId,
     );
 
     // Auto-enter edit mode on mount when used in the FieldComposer (pendingMode)
@@ -101,34 +115,32 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // EnumKvField auto-open UX: tick → ready to type. Outside-click / blur in
     // pendingMode commits the (possibly empty) value back to the pending row, so
     // dismissing without typing leaves the row checked with a null value.
-    useVisibleTask$(({ cleanup }) => {
+    onMount(() => {
         if (!options.pendingMode?.autoFocus) return;
         if (options.initialValue !== null) return;
         if (appState.editingElementId === options.fieldId) return;
-        startFieldEdit$(options.fieldId);
-        editValue.value = options.format(null);
-        const t = setTimeout(() => {
-            editInputRef.value?.focus();
-            editInputRef.value?.select?.();
-        }, 0);
-        cleanup(() => clearTimeout(t));
+        setEdit(options.format(null));
+        startFieldEdit(options.fieldId);
     });
 
     // === Edit Flow Handlers ===
 
-    const beginEdit$ = $(() => {
+    const beginEdit = () => {
         if (appState.editingElementId === options.fieldId) return;
-        startFieldEdit$(options.fieldId);
-        editValue.value = options.format(currentValue.value);
-    });
+        // Seed the buffer BEFORE the FSM write — Solid mounts the input
+        // synchronously on startFieldEdit, so the buffer must hold the right
+        // text first.
+        setEdit(options.format(currentValue()));
+        startFieldEdit(options.fieldId);
+    };
 
-    const save$ = $(async () => {
+    const save = async () => {
         if (appState.editingElementId !== options.fieldId) return;
         const fieldId = options.fieldId;
-        const prevVal = currentValue.value;
+        const prevVal = currentValue();
         let newVal: T | null;
         try {
-            newVal = options.parse(editValue.value);
+            newVal = options.parse(editValue());
             if (options.validate) options.validate(newVal);
         } catch (err) {
             getSnackbarService().show({
@@ -138,114 +150,120 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
             return;
         }
         if (options.pendingMode) {
-            await options.pendingMode.onChange$(newVal);
-            currentValue.value = newVal;
-            stopFieldEdit$();
-            if (options.onUpdated$) {
-                await options.onUpdated$();
-            }
+            await options.pendingMode.onChange(newVal);
+            setCurrentValue(newVal);
+            stopFieldEdit();
             return;
         }
         // No-op gate: identical value skips dispatch (no history, no sync, no snackbar).
         if (newVal === prevVal) {
-            stopFieldEdit$();
+            stopFieldEdit();
             return;
         }
         const ok = await commitWithUndo({
             message: 'Field updated',
-            execute$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: newVal } })),
-            undo$: $(() => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevVal } })),
+            execute: () => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: newVal } }),
+            undo: () => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prevVal } }),
         });
         if (ok) {
-            currentValue.value = newVal;
-            stopFieldEdit$();
-            if (options.onUpdated$) {
-                await options.onUpdated$();
-            }
+            setCurrentValue(newVal);
+            stopFieldEdit();
         }
-    });
+    };
 
-    const cancel$ = $(() => {
+    const cancel = () => {
         if (appState.editingElementId !== options.fieldId) return;
-        stopFieldEdit$();
-        editValue.value = options.format(currentValue.value);
-    });
+        stopFieldEdit();
+        setEdit(options.format(currentValue()));
+    };
 
     // Cancel edit on outside click — but in pendingMode, auto-commit to the
     // pending row so typed values aren't lost when the user clicks Save in the
-    // composer footer (or moves to another row).
-    useOnDocument('pointerdown', $(async (ev: Event) => {
+    // composer footer (or moves to another row). Always-on at hook setup with
+    // the first-line FSM guard (the `useOnDocument` shape); onCleanup removes.
+    const onDocumentPointerDown = (ev: Event) => {
         if (appState.editingElementId !== options.fieldId) return;
-        const container = rootRef.value;
         const target = ev.target as Node | null;
+        // A detached target means this very tap swapped the DOM mid-dispatch —
+        // the double-tap that begins an edit removes the display element
+        // synchronously, so by the time this document listener runs the target
+        // is outside the row *because it's outside the document*. That can't be
+        // an outside click; a real outside target is still connected.
+        if (target && !target.isConnected) return;
+        const container = options.rootRef();
         if (container && target && !container.contains(target)) {
             if (options.pendingMode) {
-                await save$();
+                void save();
             } else {
-                stopFieldEdit$();
-                editValue.value = options.format(currentValue.value);
+                stopFieldEdit();
+                setEdit(options.format(currentValue()));
             }
         }
-    }));
+    };
+    document.addEventListener('pointerdown', onDocumentPointerDown);
+    onCleanup(() => document.removeEventListener('pointerdown', onDocumentPointerDown));
 
     // === Input Event Handlers ===
 
-    const inputChange$ = $((value: string) => {
-        editValue.value = value;
-    });
+    const inputChange = (value: string) => {
+        setEdit(value);
+    };
 
-    const inputBlur$ = $(async () => {
+    const inputBlur = () => {
         if (Date.now() < suppressBlurUntil.value) return;
         if (appState.editingElementId === options.fieldId) {
             if (options.pendingMode) {
-                await save$();
+                void save();
             } else {
-                stopFieldEdit$();
-                editValue.value = options.format(currentValue.value);
+                stopFieldEdit();
+                setEdit(options.format(currentValue()));
             }
         }
-    });
+    };
 
-    const inputKeyDown$ = $((e: KeyboardEvent) => {
+    const inputKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            save$();
+            void save();
         } else if (e.key === 'Escape') {
             e.preventDefault();
-            cancel$();
+            cancel();
         }
-    });
+    };
 
-    const inputPointerDown$ = $(async (ev: PointerEvent | MouseEvent) => {
+    const inputPointerDown = (ev: PointerEvent | MouseEvent) => {
         if (appState.editingElementId !== options.fieldId) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
         suppressBlurUntil.value = Date.now() + BLUR_SUPPRESS_WINDOW_MS;
-        const isDouble = await checkDoubleTap$(x, y);
-        if (isDouble) {
-            cancel$();
+        if (checkDoubleTap(x, y)) {
+            cancel();
         }
-    });
+    };
 
     // === Display Value Event Handlers ===
 
-    const valuePointerDown$ = $(async (ev: PointerEvent | MouseEvent) => {
+    const valuePointerDown = (ev: PointerEvent | MouseEvent) => {
         if (appState.editingElementId === options.fieldId) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
-        const isDouble = await checkDoubleTap$(x, y);
-        if (isDouble) {
-            await beginEdit$();
+        if (checkDoubleTap(x, y)) {
+            // Cancel the compatibility mousedown: beginEdit swaps the display
+            // element for the input synchronously, so the browser's post-
+            // pointerdown focus action would target a stale hit-test and steal
+            // focus from the just-focused input (killing the edit via blur).
+            ev.preventDefault();
+            beginEdit();
         }
-    });
+    };
 
-    const valueKeyDown$ = $((e: KeyboardEvent) => {
+    const valueKeyDown = (e: KeyboardEvent) => {
         if (appState.editingElementId === options.fieldId) return;
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            beginEdit$();
+            beginEdit();
         }
-    });
+    };
 
     return {
         isEditing,
@@ -253,16 +271,16 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         hasValue,
         editValue,
         currentValue,
-        editInputRef,
-        rootRef,
-        beginEdit$,
-        save$,
-        cancel$,
-        valuePointerDown$,
-        valueKeyDown$,
-        inputPointerDown$,
-        inputBlur$,
-        inputKeyDown$,
-        inputChange$,
+        setCurrentValue,
+        setEditInputRef,
+        beginEdit,
+        save,
+        cancel,
+        valuePointerDown,
+        valueKeyDown,
+        inputPointerDown,
+        inputBlur,
+        inputKeyDown,
+        inputChange,
     };
 }

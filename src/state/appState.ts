@@ -27,7 +27,7 @@ export type { TreeNodeDetailsState } from './appState.selectors';
 // Re-export context and hooks
 export {
     AppStateContext,
-    useProvideAppState,
+    createAppState,
     useAppState,
     useAppTransitions,
 } from './appState.context';

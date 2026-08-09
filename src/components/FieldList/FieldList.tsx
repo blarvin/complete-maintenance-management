@@ -13,7 +13,7 @@
  * into the composer is threaded.
  */
 
-import { component$, useComputed$, useSignal } from '@builder.io/qwik';
+import { For, Show, createMemo, createSignal } from 'solid-js';
 import { DataField } from '../DataField/DataField';
 import { FieldComposerSlot } from '../FieldComposer/FieldComposerSlot';
 import { CreateDataField } from '../CreateDataField/CreateDataField';
@@ -32,51 +32,53 @@ export type FieldListProps = {
     hideAddSurfaces?: boolean;
 };
 
-export const FieldList = component$<FieldListProps>((props) => {
-    const nodeIdSig = useComputed$(() => props.nodeId);
-    const { children: fields } = useElementChildren(nodeIdSig, 'fields');
+export const FieldList = (props: FieldListProps) => {
+    const { children: fields } = useElementChildren(() => props.nodeId, 'fields');
 
-    const maxPersistedCardOrder = useComputed$(() => {
-        if (fields.value.length === 0) return -1;
-        return Math.max(...fields.value.map(f => f.siblingOrder));
+    const maxPersistedCardOrder = createMemo(() => {
+        if (fields().length === 0) return -1;
+        return Math.max(...fields().map(f => f.siblingOrder));
     });
 
     // Shared mutex for the display-mode add-field surfaces.
-    const activeSurface = useSignal<ActiveSurface>('none');
+    const [activeSurface, setActiveSurface] = createSignal<ActiveSurface>('none');
 
-    const mode = props.isConstruction ? 'construction' : 'display';
+    const mode = () => props.isConstruction ? 'construction' : 'display';
 
     return (
         <div class={styles.fieldList}>
-            {fields.value.map((field) => (
-                <DataField
-                    key={field.id}
-                    id={field.id}
-                    name={field.name}
-                    definitionId={field.definitionId!}
-                    kind={field.kind}
-                    value={field.value}
-                    updatedAt={field.updatedAt}
-                />
-            ))}
+            <For each={fields()}>
+                {(field) => (
+                    <DataField
+                        id={field.id}
+                        name={field.name}
+                        definitionId={field.definitionId!}
+                        kind={field.kind}
+                        value={field.value}
+                        updatedAt={field.updatedAt}
+                    />
+                )}
+            </For>
 
-            {!props.hideAddSurfaces && (props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer')) && (
+            <Show when={!props.hideAddSurfaces && (props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer'))}>
                 <FieldComposerSlot
                     nodeId={props.nodeId}
-                    mode={mode}
-                    currentMaxCardOrder={maxPersistedCardOrder.value}
+                    mode={mode()}
+                    currentMaxCardOrder={maxPersistedCardOrder()}
                     initialDefinitionIds={props.initialDefinitionIds}
                     activeSurface={activeSurface}
+                    setActiveSurface={setActiveSurface}
                 />
-            )}
+            </Show>
 
-            {!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction && (
+            <Show when={!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction}>
                 <CreateDataField
                     nodeId={props.nodeId}
-                    currentMaxCardOrder={maxPersistedCardOrder.value}
+                    currentMaxCardOrder={maxPersistedCardOrder()}
                     activeSurface={activeSurface}
+                    setActiveSurface={setActiveSurface}
                 />
-            )}
+            </Show>
         </div>
     );
-});
+};
