@@ -33,7 +33,9 @@ const qwikRatchetRules = {
 
 export default [
   {
-    ignores: ['dist/**', 'server/**', 'node_modules/**', '*.config.js', '*.config.mjs'],
+    // .claude/** holds plain CommonJS Node hook scripts — the TS-flavoured
+    // rules (no-require-imports etc.) do not apply to them.
+    ignores: ['dist/**', 'server/**', 'node_modules/**', '.claude/**', '*.config.js', '*.config.mjs'],
   },
   ...tseslint.configs.recommended,
   {
