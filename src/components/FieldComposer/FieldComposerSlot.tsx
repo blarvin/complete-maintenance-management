@@ -7,13 +7,13 @@
  * - the dismiss / restore plumbing the snackbar uses
  *
  * Open state is shared with FieldList's other surface (legacy `+ Add Field`
- * dropdown) via the parent-owned `activeSurface` signal — flipping it to
- * `"composer"` opens this slot and implicitly closes the other surface.
- * In construction mode the composer is always shown and `activeSurface` is
- * irrelevant.
+ * dropdown) via the parent-owned `activeSurface` accessor/setter pair —
+ * flipping it to `"composer"` opens this slot and implicitly closes the other
+ * surface. In construction mode the composer is always shown and
+ * `activeSurface` is irrelevant.
  */
 
-import { component$, useSignal, $, type Signal } from '@builder.io/qwik';
+import { Show, createSignal, type Accessor } from 'solid-js';
 import { FieldComposer, type FieldComposerMode } from './FieldComposer';
 import type { PendingForm } from '../../hooks/usePendingForms';
 import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
@@ -28,56 +28,60 @@ export type FieldComposerSlotProps = {
     initialDefinitionIds?: readonly string[];
     /** Shared mutex with the legacy "+ Add Field" surface (display mode only).
      *  Ignored in construction mode. */
-    activeSurface?: Signal<ActiveSurface>;
+    activeSurface?: Accessor<ActiveSurface>;
+    setActiveSurface?: (s: ActiveSurface) => void;
 };
 
-export const FieldComposerSlot = component$<FieldComposerSlotProps>((props) => {
-    const restoreSeed = useSignal<PendingForm[] | undefined>(undefined);
+export const FieldComposerSlot = (props: FieldComposerSlotProps) => {
+    const [restoreSeed, setRestoreSeed] = createSignal<PendingForm[] | undefined>(undefined);
 
-    const isConstruction = props.mode === 'construction';
-    const composerOpen =
-        isConstruction || (props.activeSurface?.value === 'composer');
+    const isConstruction = () => props.mode === 'construction';
+    const composerOpen = () => isConstruction() || props.activeSurface?.() === 'composer';
 
-    const handleAddFields$ = $(() => {
-        restoreSeed.value = undefined;
-        if (props.activeSurface) props.activeSurface.value = 'composer';
-    });
+    const handleAddFields = () => {
+        setRestoreSeed(undefined);
+        props.setActiveSurface?.('composer');
+    };
 
-    const handleDismiss$ = $(() => {
-        restoreSeed.value = undefined;
-        if (props.activeSurface) props.activeSurface.value = 'none';
-    });
+    const handleDismiss = () => {
+        setRestoreSeed(undefined);
+        props.setActiveSurface?.('none');
+    };
 
-    const handleRequestRestore$ = $((rows: PendingForm[]) => {
-        restoreSeed.value = rows;
-        if (props.activeSurface) props.activeSurface.value = 'composer';
-    });
+    const handleRequestRestore = (rows: PendingForm[]) => {
+        setRestoreSeed(() => rows);
+        props.setActiveSurface?.('composer');
+    };
 
     return (
         <>
-            {composerOpen && (
-                <FieldComposer
-                    key={restoreSeed.value ? 'restored' : 'fresh'}
-                    nodeId={props.nodeId}
-                    mode={props.mode}
-                    currentMaxCardOrder={props.currentMaxCardOrder}
-                    lockedDefinitionIds={props.initialDefinitionIds}
-                    restoreSeed={restoreSeed.value}
-                    onDismiss$={handleDismiss$}
-                    onRequestRestore$={handleRequestRestore$}
-                />
-            )}
+            <Show when={composerOpen()}>
+                {/* Value-keyed <Show>: flipping 'fresh' → 'restored' recreates the
+                    composer, which is exactly what Qwik's key= did — the remount is
+                    what re-runs usePendingForms' seed loader against the restore seed. */}
+                <Show when={restoreSeed() ? 'restored' : 'fresh'} keyed>
+                    <FieldComposer
+                        nodeId={props.nodeId}
+                        mode={props.mode}
+                        currentMaxCardOrder={props.currentMaxCardOrder}
+                        lockedDefinitionIds={props.initialDefinitionIds}
+                        restoreSeed={restoreSeed()}
+                        onDismiss={handleDismiss}
+                        onRequestRestore={handleRequestRestore}
+                    />
+                </Show>
+            </Show>
 
-            {!composerOpen && !isConstruction && (
+            <Show when={!composerOpen() && !isConstruction()}>
                 <button
                     type="button"
                     class={styles.addButton}
-                    onClick$={handleAddFields$}
+                    onClick={handleAddFields}
                     aria-label="Add fields (open composer)"
                 >
                     + Add Fields
                 </button>
-            )}
+            </Show>
         </>
     );
-});
+};

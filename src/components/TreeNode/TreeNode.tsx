@@ -1,7 +1,6 @@
 /**
  * TreeNode - Orchestrator component for tree nodes.
- * Delegates to TreeNodeDisplay (read mode); construction mode returns null
- * until Phase IV re-mounts TreeNodeConstruction.
+ * Delegates to TreeNodeDisplay (read mode) or TreeNodeConstruction (UC mode).
  *
  * Uses FSM states instead of "modes":
  * - ROOT: Top-level node in ROOT view
@@ -14,6 +13,7 @@
 
 import { isConstructionProps, type TreeNodeProps } from './types';
 import { TreeNodeDisplay } from './TreeNodeDisplay';
+import { TreeNodeConstruction } from './TreeNodeConstruction';
 
 // Re-export types for convenience
 export type { TreeNodeProps, TreeNodeDisplayProps, TreeNodeConstructionProps } from './types';
@@ -24,7 +24,14 @@ export const TreeNode = (props: TreeNodeProps) => {
     return (
         <>
             {isConstructionProps(props) ? (
-                null /* TODO(Phase IV): <TreeNodeConstruction> — must not be imported before then */
+                <TreeNodeConstruction
+                    id={props.id}
+                    initialName={props.name}
+                    initialSubtitle={props.subtitle}
+                    isChildConstruction={props.isChildConstruction}
+                    onCancel={props.onCancel}
+                    onCreate={props.onCreate}
+                />
             ) : (
                 <TreeNodeDisplay
                     id={props.id}

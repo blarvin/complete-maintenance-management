@@ -19,6 +19,8 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 2.) **One IndexedDB, two remotes — mode flips wipe data** — the plain page syncs against production Firestore while `?emulator=true` syncs against the emulator, but both share the same Dexie DB; each full-collection pull deletes local elements missing from *its* remote, so switching modes wipes the other mode's data (observed: flipping to the emulator blanked the seeded tree). Scope the Dexie DB name by sync target, or gate full-pull deletion behind a same-remote check.
 
+3.) **Composer draft loses the uncommitted keystrokes** — a ticked row survives reload (localStorage `pendingFields:<nodeId>`), but text still sitting in its editor does not: the value only reaches `setPendingValue` when the renderer commits (Enter / blur / outside-click via `pendingMode`), and a reload commits nothing. Falls short of the intended "tick + type, reload, rows restored". Flush the edit buffer on `beforeunload`/`visibilitychange`, or write through per keystroke in `pendingMode`. Pre-existing (same commit-on-blur structure in the Qwik original); surfaced in the Phase IV hand-test.
+
 ## Features
 
 1.) **Node metadata in TreeNodeDetails** — show `createdAt`, last `updatedAt`, last `updatedBy`.

@@ -15,7 +15,7 @@
  * gated by the parent's draft hook re-checking before commit.
  */
 
-import { component$, useSignal, useComputed$, $, type PropFunction } from '@builder.io/qwik';
+import { For, Show, createMemo, createSignal } from 'solid-js';
 import type {
     NumberKvAffixPosition,
     NumberKvConfig,
@@ -28,15 +28,8 @@ import styles from './NumberKvConfigForm.module.css';
 
 export type NumberKvConfigFormProps = {
     config: NumberKvConfig;
-    onChange$: PropFunction<(cfg: NumberKvConfig, error: string | null) => void>;
+    onChange: (cfg: NumberKvConfig, error: string | null) => void;
 };
-
-const PRECISION_OPTIONS: { value: number; label: string }[] = [
-    { value: 0, label: 'XX' },
-    { value: 1, label: 'XX.0' },
-    { value: 2, label: 'XX.00' },
-    { value: 3, label: 'XX.000' },
-];
 
 type RefreshUnit = 'sec' | 'min' | 'hr' | 'day';
 const UNIT_TO_SECONDS: Record<RefreshUnit, number> = {
@@ -55,30 +48,32 @@ function unitFromSeconds(s: number): RefreshUnit {
     return 'sec';
 }
 
-export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) => {
-    const commonOpen = useSignal(true);
-    const advancedOpen = useSignal(false);
+export const NumberKvConfigForm = (props: NumberKvConfigFormProps) => {
+    const [commonOpen, setCommonOpen] = createSignal(true);
+    const [advancedOpen, setAdvancedOpen] = createSignal(false);
 
     // Refresh-interval pair (numeric value + unit). Canonical seconds live in
     // config; this local pair just controls the input display.
+    // eslint-disable-next-line solid/reactivity -- mount-time seed; the form remounts per kind pick via <Dynamic>
     const initialRefreshSecs = props.config.expectedRefreshSeconds;
     const initialUnit = initialRefreshSecs !== undefined ? unitFromSeconds(initialRefreshSecs) : 'min';
-    const refreshAmount = useSignal<string>(
+    const [refreshAmount, setRefreshAmount] = createSignal<string>(
         initialRefreshSecs !== undefined ? String(initialRefreshSecs / UNIT_TO_SECONDS[initialUnit]) : ''
     );
-    const refreshUnit = useSignal<RefreshUnit>(initialUnit);
+    const [refreshUnit, setRefreshUnit] = createSignal<RefreshUnit>(initialUnit);
 
-    const dirty = useSignal(false);
-    const selectedPrecision = useSignal(props.config.decimals ?? 2);
-    const errorMessage = useComputed$(() => dirty.value ? validateNumberKvConfig(props.config) : null);
+    const [dirty, setDirty] = createSignal(false);
+    // eslint-disable-next-line solid/reactivity -- mount-time seed; the form remounts per kind pick via <Dynamic>
+    const [selectedPrecision, setSelectedPrecision] = createSignal(props.config.decimals ?? 2);
+    const errorMessage = createMemo(() => dirty() ? validateNumberKvConfig(props.config) : null);
 
-    const update$ = $((patch: Partial<NumberKvConfig>) => {
-        dirty.value = true;
+    const update = (patch: Partial<NumberKvConfig>) => {
+        setDirty(true);
         const newConfig = { ...props.config, ...patch };
-        return props.onChange$(newConfig, validateNumberKvConfig(newConfig));
-    });
+        props.onChange(newConfig, validateNumberKvConfig(newConfig));
+    };
 
-    const pickDisplayFormat$ = $((fmt: NumberKvDisplayFormat) => {
+    const pickDisplayFormat = (fmt: NumberKvDisplayFormat) => {
         const patch: Partial<NumberKvConfig> = { displayFormat: fmt };
         // Switching to currency auto-defaults affixPosition to prefix (per SPEC).
         if (fmt === 'currency' && props.config.affixPosition !== 'prefix') {
@@ -89,10 +84,10 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
         if (fmt !== 'currency') {
             patch.currencyCode = undefined;
         }
-        return update$(patch);
-    });
+        update(patch);
+    };
 
-    const pickNominalMode$ = $((mode: NumberKvNominalMode) => {
+    const pickNominalMode = (mode: NumberKvNominalMode) => {
         const patch: Partial<NumberKvConfig> = { nominalMode: mode };
         // Clear the other mode's fields so stale values don't trip invariants.
         if (mode === 'range') {
@@ -102,23 +97,23 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
             patch.nominalMin = undefined;
             patch.nominalMax = undefined;
         }
-        return update$(patch);
-    });
+        update(patch);
+    };
 
-    const setRefresh$ = $((amountStr: string, unit: RefreshUnit) => {
-        refreshAmount.value = amountStr;
-        refreshUnit.value = unit;
+    const setRefresh = (amountStr: string, unit: RefreshUnit) => {
+        setRefreshAmount(amountStr);
+        setRefreshUnit(unit);
         const n = amountStr === '' ? undefined : parseFloat(amountStr);
         const seconds = n !== undefined && Number.isFinite(n) && n > 0
             ? n * UNIT_TO_SECONDS[unit]
             : undefined;
-        return update$({ expectedRefreshSeconds: seconds });
-    });
+        update({ expectedRefreshSeconds: seconds });
+    };
 
-    const fmt = props.config.displayFormat ?? 'decimal';
-    const nominalMode: NumberKvNominalMode = props.config.nominalMode ?? 'range';
-    const affixPos: NumberKvAffixPosition = props.config.affixPosition
-        ?? (fmt === 'currency' ? 'prefix' : 'suffix');
+    const fmt = () => props.config.displayFormat ?? 'decimal';
+    const nominalMode = (): NumberKvNominalMode => props.config.nominalMode ?? 'range';
+    const affixPos = (): NumberKvAffixPosition => props.config.affixPosition
+        ?? (fmt() === 'currency' ? 'prefix' : 'suffix');
 
     return (
         <div class={formStyles.form}>
@@ -129,9 +124,9 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                     class={formStyles.input}
                     value={props.config.unitsSymbol ?? ''}
                     placeholder="e.g. kg, °C, psi, $"
-                    onInput$={(e) => {
-                        const v = (e.target as HTMLInputElement).value;
-                        update$({ unitsSymbol: v || undefined });
+                    onInput={(e) => {
+                        const v = e.currentTarget.value;
+                        update({ unitsSymbol: v || undefined });
                     }}
                 />
             </label>
@@ -141,13 +136,13 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                 <button
                     type="button"
                     class={styles.sectionHeader}
-                    aria-expanded={commonOpen.value}
-                    onClick$={() => { commonOpen.value = !commonOpen.value; }}
+                    aria-expanded={commonOpen()}
+                    onClick={() => setCommonOpen(!commonOpen())}
                 >
-                    <span class={styles.chevron}>{commonOpen.value ? '▾' : '▸'}</span>
+                    <span class={styles.chevron}>{commonOpen() ? '▾' : '▸'}</span>
                     Display & nominal
                 </button>
-                <div class={[styles.sectionBody, !commonOpen.value && styles.sectionBodyCollapsed]}>
+                <div classList={{ [styles.sectionBody]: true, [styles.sectionBodyCollapsed]: !commonOpen() }}>
                 <div class={styles.sectionBodyInner}>
                     <label class={formStyles.row}>
                         <span class={formStyles.label}>Long form</span>
@@ -156,9 +151,9 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                             class={formStyles.input}
                             value={props.config.unitsLongForm ?? ''}
                             placeholder="e.g. kilograms"
-                            onInput$={(e) => {
-                                const v = (e.target as HTMLInputElement).value;
-                                update$({ unitsLongForm: v === '' ? undefined : v });
+                            onInput={(e) => {
+                                const v = e.currentTarget.value;
+                                update({ unitsLongForm: v === '' ? undefined : v });
                             }}
                         />
                     </label>
@@ -166,17 +161,19 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                     <div class={formStyles.row}>
                         <span class={formStyles.label}>Affix position</span>
                         <div class={styles.radioGroup} role="radiogroup" aria-label="Affix position">
-                            {(['prefix', 'suffix'] as const).map((pos) => (
-                                <label key={pos} class={styles.radioLabel}>
-                                    <input
-                                        type="radio"
-                                        name="affixPosition"
-                                        checked={affixPos === pos}
-                                        onChange$={() => update$({ affixPosition: pos })}
-                                    />
-                                    {pos}
-                                </label>
-                            ))}
+                            <For each={['prefix', 'suffix'] as const}>
+                                {(pos) => (
+                                    <label class={styles.radioLabel}>
+                                        <input
+                                            type="radio"
+                                            name="affixPosition"
+                                            checked={affixPos() === pos}
+                                            onChange={() => update({ affixPosition: pos })}
+                                        />
+                                        {pos}
+                                    </label>
+                                )}
+                            </For>
                         </div>
                     </div>
 
@@ -184,20 +181,20 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                         <span class={formStyles.label}>Precision</span>
                         <div class={styles.precisionPicker}>
                             <button type="button"
-                                class={[styles.precisionBtn, selectedPrecision.value === 0 && styles.precisionBtnActive]}
-                                onClick$={() => { selectedPrecision.value = 0; return update$({ decimals: 0 }); }}
+                                classList={{ [styles.precisionBtn]: true, [styles.precisionBtnActive]: selectedPrecision() === 0 }}
+                                onClick={() => { setSelectedPrecision(0); update({ decimals: 0 }); }}
                             >XX</button>
                             <button type="button"
-                                class={[styles.precisionBtn, selectedPrecision.value === 1 && styles.precisionBtnActive]}
-                                onClick$={() => { selectedPrecision.value = 1; return update$({ decimals: 1 }); }}
+                                classList={{ [styles.precisionBtn]: true, [styles.precisionBtnActive]: selectedPrecision() === 1 }}
+                                onClick={() => { setSelectedPrecision(1); update({ decimals: 1 }); }}
                             >XX.0</button>
                             <button type="button"
-                                class={[styles.precisionBtn, selectedPrecision.value === 2 && styles.precisionBtnActive]}
-                                onClick$={() => { selectedPrecision.value = 2; return update$({ decimals: 2 }); }}
+                                classList={{ [styles.precisionBtn]: true, [styles.precisionBtnActive]: selectedPrecision() === 2 }}
+                                onClick={() => { setSelectedPrecision(2); update({ decimals: 2 }); }}
                             >XX.00</button>
                             <button type="button"
-                                class={[styles.precisionBtn, selectedPrecision.value === 3 && styles.precisionBtnActive]}
-                                onClick$={() => { selectedPrecision.value = 3; return update$({ decimals: 3 }); }}
+                                classList={{ [styles.precisionBtn]: true, [styles.precisionBtnActive]: selectedPrecision() === 3 }}
+                                onClick={() => { setSelectedPrecision(3); update({ decimals: 3 }); }}
                             >XX.000</button>
                         </div>
                     </div>
@@ -206,8 +203,8 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                         <span class={formStyles.label}>Display format</span>
                         <select
                             class={formStyles.input}
-                            value={fmt}
-                            onChange$={(e) => pickDisplayFormat$((e.target as HTMLSelectElement).value as NumberKvDisplayFormat)}
+                            value={fmt()}
+                            onChange={(e) => pickDisplayFormat(e.currentTarget.value as NumberKvDisplayFormat)}
                         >
                             <option value="decimal">decimal</option>
                             <option value="scientific">scientific</option>
@@ -217,7 +214,7 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                         </select>
                     </label>
 
-                    {fmt === 'currency' && (
+                    <Show when={fmt() === 'currency'}>
                         <label class={formStyles.row}>
                             <span class={formStyles.label}>Currency code*</span>
                             <input
@@ -226,69 +223,67 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                                 value={props.config.currencyCode ?? ''}
                                 placeholder="e.g. USD, EUR"
                                 maxLength={6}
-                                onInput$={(e) => {
-                                    const v = (e.target as HTMLInputElement).value;
-                                    update$({ currencyCode: v === '' ? undefined : v });
+                                onInput={(e) => {
+                                    const v = e.currentTarget.value;
+                                    update({ currencyCode: v === '' ? undefined : v });
                                 }}
                             />
                         </label>
-                    )}
+                    </Show>
 
                     <div class={formStyles.row}>
                         <span class={formStyles.label}>Nominal mode</span>
                         <div class={styles.radioGroup} role="radiogroup" aria-label="Nominal mode">
-                            {(['range', 'discrete'] as const).map((m) => (
-                                <label key={m} class={styles.radioLabel}>
-                                    <input
-                                        type="radio"
-                                        name="nominalMode"
-                                        checked={nominalMode === m}
-                                        onChange$={() => pickNominalMode$(m)}
-                                    />
-                                    {m}
-                                </label>
-                            ))}
+                            <For each={['range', 'discrete'] as const}>
+                                {(m) => (
+                                    <label class={styles.radioLabel}>
+                                        <input
+                                            type="radio"
+                                            name="nominalMode"
+                                            checked={nominalMode() === m}
+                                            onChange={() => pickNominalMode(m)}
+                                        />
+                                        {m}
+                                    </label>
+                                )}
+                            </For>
                         </div>
                     </div>
 
-                    {nominalMode === 'range' && (
-                        <>
-                            <label class={formStyles.row}>
-                                <span class={formStyles.label}>Nominal min</span>
-                                <NumericInput
-                                    value={props.config.nominalMin}
-                                    onChange$={$((n: number | undefined) => update$({ nominalMin: n }))}
-                                />
-                            </label>
-                            <label class={formStyles.row}>
-                                <span class={formStyles.label}>Nominal max</span>
-                                <NumericInput
-                                    value={props.config.nominalMax}
-                                    onChange$={$((n: number | undefined) => update$({ nominalMax: n }))}
-                                />
-                            </label>
-                        </>
-                    )}
+                    <Show when={nominalMode() === 'range'}>
+                        <label class={formStyles.row}>
+                            <span class={formStyles.label}>Nominal min</span>
+                            <NumericInput
+                                value={props.config.nominalMin}
+                                onChange={(n) => update({ nominalMin: n })}
+                            />
+                        </label>
+                        <label class={formStyles.row}>
+                            <span class={formStyles.label}>Nominal max</span>
+                            <NumericInput
+                                value={props.config.nominalMax}
+                                onChange={(n) => update({ nominalMax: n })}
+                            />
+                        </label>
+                    </Show>
 
-                    {nominalMode === 'discrete' && (
-                        <>
-                            <label class={formStyles.row}>
-                                <span class={formStyles.label}>Nominal value</span>
-                                <NumericInput
-                                    value={props.config.nominalValue}
-                                    onChange$={$((n: number | undefined) => update$({ nominalValue: n }))}
-                                />
-                            </label>
-                            <label class={formStyles.row}>
-                                <span class={formStyles.label}>Tolerance (±)</span>
-                                <NumericInput
-                                    value={props.config.tolerance}
-                                    min={0}
-                                    onChange$={$((n: number | undefined) => update$({ tolerance: n }))}
-                                />
-                            </label>
-                        </>
-                    )}
+                    <Show when={nominalMode() === 'discrete'}>
+                        <label class={formStyles.row}>
+                            <span class={formStyles.label}>Nominal value</span>
+                            <NumericInput
+                                value={props.config.nominalValue}
+                                onChange={(n) => update({ nominalValue: n })}
+                            />
+                        </label>
+                        <label class={formStyles.row}>
+                            <span class={formStyles.label}>Tolerance (±)</span>
+                            <NumericInput
+                                value={props.config.tolerance}
+                                min={0}
+                                onChange={(n) => update({ tolerance: n })}
+                            />
+                        </label>
+                    </Show>
                 </div>
                 </div>
             </section>
@@ -298,37 +293,37 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                 <button
                     type="button"
                     class={styles.sectionHeader}
-                    aria-expanded={advancedOpen.value}
-                    onClick$={() => { advancedOpen.value = !advancedOpen.value; }}
+                    aria-expanded={advancedOpen()}
+                    onClick={() => setAdvancedOpen(!advancedOpen())}
                 >
-                    <span class={styles.chevron}>{advancedOpen.value ? '▾' : '▸'}</span>
+                    <span class={styles.chevron}>{advancedOpen() ? '▾' : '▸'}</span>
                     Alarms & freshness
                 </button>
-                <div class={[styles.sectionBody, !advancedOpen.value && styles.sectionBodyCollapsed]}>
+                <div classList={{ [styles.sectionBody]: true, [styles.sectionBodyCollapsed]: !advancedOpen() }}>
                 <div class={styles.sectionBodyInner}>
                     <div class={styles.thresholdChain} aria-label="Threshold chain LL ≤ L ≤ … ≤ H ≤ HH">
                         <ThresholdInput
                             label="LL"
                             value={props.config.lowLow}
-                            onChange$={$((n: number | undefined) => update$({ lowLow: n }))}
+                            onChange={(n) => update({ lowLow: n })}
                         />
                         <span class={styles.chainSep}>≤</span>
                         <ThresholdInput
                             label="L"
                             value={props.config.low}
-                            onChange$={$((n: number | undefined) => update$({ low: n }))}
+                            onChange={(n) => update({ low: n })}
                         />
                         <span class={styles.chainSep}>≤ … ≤</span>
                         <ThresholdInput
                             label="H"
                             value={props.config.high}
-                            onChange$={$((n: number | undefined) => update$({ high: n }))}
+                            onChange={(n) => update({ high: n })}
                         />
                         <span class={styles.chainSep}>≤</span>
                         <ThresholdInput
                             label="HH"
                             value={props.config.highHigh}
-                            onChange$={$((n: number | undefined) => update$({ highHigh: n }))}
+                            onChange={(n) => update({ highHigh: n })}
                         />
                     </div>
 
@@ -338,15 +333,15 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                             type="number"
                             min={0}
                             step="any"
-                            class={[formStyles.input, styles.refreshAmount]}
-                            value={refreshAmount.value}
+                            classList={{ [formStyles.input]: true, [styles.refreshAmount]: true }}
+                            value={refreshAmount()}
                             placeholder="e.g. 5"
-                            onInput$={(e) => setRefresh$((e.target as HTMLInputElement).value, refreshUnit.value)}
+                            onInput={(e) => setRefresh(e.currentTarget.value, refreshUnit())}
                         />
                         <select
-                            class={[formStyles.input, styles.refreshUnit]}
-                            value={refreshUnit.value}
-                            onChange$={(e) => setRefresh$(refreshAmount.value, (e.target as HTMLSelectElement).value as RefreshUnit)}
+                            classList={{ [formStyles.input]: true, [styles.refreshUnit]: true }}
+                            value={refreshUnit()}
+                            onChange={(e) => setRefresh(refreshAmount(), e.currentTarget.value as RefreshUnit)}
                         >
                             <option value="sec">seconds</option>
                             <option value="min">minutes</option>
@@ -358,22 +353,22 @@ export const NumberKvConfigForm = component$<NumberKvConfigFormProps>((props) =>
                 </div>
             </section>
 
-            {errorMessage.value && (
+            <Show when={errorMessage()}>
                 <div class={styles.invariantError} role="alert" aria-invalid="true">
-                    {errorMessage.value}
+                    {errorMessage()}
                 </div>
-            )}
+            </Show>
         </div>
     );
-});
+};
 
 // ── Small input helpers ────────────────────────────────────────────────────
 
-const NumericInput = component$<{
+const NumericInput = (props: {
     value: number | undefined;
     min?: number;
-    onChange$: PropFunction<(n: number | undefined) => void>;
-}>((props) => {
+    onChange: (n: number | undefined) => void;
+}) => {
     return (
         <input
             type="number"
@@ -381,20 +376,20 @@ const NumericInput = component$<{
             min={props.min}
             class={formStyles.input}
             value={props.value ?? ''}
-            onInput$={(e) => {
-                const raw = (e.target as HTMLInputElement).value;
+            onInput={(e) => {
+                const raw = e.currentTarget.value;
                 const n = raw === '' ? undefined : parseFloat(raw);
-                props.onChange$(Number.isFinite(n) ? n : undefined);
+                props.onChange(Number.isFinite(n) ? n : undefined);
             }}
         />
     );
-});
+};
 
-const ThresholdInput = component$<{
+const ThresholdInput = (props: {
     label: string;
     value: number | undefined;
-    onChange$: PropFunction<(n: number | undefined) => void>;
-}>((props) => {
+    onChange: (n: number | undefined) => void;
+}) => {
     return (
         <label class={styles.thresholdCell}>
             <span class={styles.thresholdLabel}>{props.label}</span>
@@ -403,12 +398,12 @@ const ThresholdInput = component$<{
                 step="any"
                 class={styles.thresholdInput}
                 value={props.value ?? ''}
-                onInput$={(e) => {
-                    const raw = (e.target as HTMLInputElement).value;
+                onInput={(e) => {
+                    const raw = e.currentTarget.value;
                     const n = raw === '' ? undefined : parseFloat(raw);
-                    props.onChange$(Number.isFinite(n) ? n : undefined);
+                    props.onChange(Number.isFinite(n) ? n : undefined);
                 }}
             />
         </label>
     );
-});
+};

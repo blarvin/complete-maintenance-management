@@ -118,14 +118,14 @@ npm run emulator     # Run Firebase emulator
 ### Testing Strategy
 
 - **Unit tests**: Service layer, adapters, sync logic, FSM transitions
-- **E2E tests**: Cypress against Firestore emulator (run cleanup before tests)
+- **E2E tests**: Cypress against Firestore emulator. Needs the emulator (`npm run emulator`, :8080) *and* the dev server (`npm run dev`, :5173) up — every spec starts with `cy.freshVisit()`, which wipes the emulator and deletes the app's IndexedDB before boot. No separate cleanup step.
 - **Fake-IndexedDB**: In-memory IndexedDB for fast unit tests
 - Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_FIRESTORE_EMULATOR', 'true')` or `?emulator=true` URL param
 
 ### Testing Infrastructure
 
 - `src/test/globalSetup.ts` - Vitest + Firebase emulator setup
-- `cypress/support/commands.ts` - E2E helpers
+- `cypress/support/e2e.ts` - E2E helpers (`freshVisit`, `createNode`, `expandCard`, `clearEmulator`)
 - `src/test/testUtils.ts` - Shared test utilities
 
 ## Quick Reference

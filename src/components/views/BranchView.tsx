@@ -3,14 +3,18 @@
  * Uses centralized FSM state for navigation.
  */
 
-import { createMemo, For, Show } from 'solid-js';
+import { createEffect, createMemo, For, on, Show } from 'solid-js';
 import { TreeNode } from '../TreeNode/TreeNode';
-import { useAppTransitions } from '../../state/appState';
+import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
+import { LensCreate } from '../LensCreate/LensCreate';
+import { useAppState, useAppTransitions } from '../../state/appState';
+import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren, useElementById } from '../../hooks/useElementChildren';
 import { useLensGather } from '../../hooks/useLensGather';
 import { useLensPolicy } from '../../hooks/useLensPolicy';
 import { isReRoot } from '../../kinds/placement';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
+import { reRootCreateKindsFor } from '../../kinds/registry';
 import { nodeRenderMode } from '../../kinds/renderMode';
 import type { Kind } from '../../data/models';
 
@@ -19,7 +23,8 @@ export type BranchViewProps = {
 };
 
 export const BranchView = (props: BranchViewProps) => {
-    const { navigateToNode, navigateUp } = useAppTransitions();
+    const appState = useAppState();
+    const { navigateToNode, navigateUp, cancelConstruction } = useAppTransitions();
 
     // Data arrives via the storage event bus; navigation re-triggers loads
     // because the hooks track the parentId accessor.
@@ -46,10 +51,22 @@ export const BranchView = (props: BranchViewProps) => {
     const derivedJobs = useLensGather(ownerId, lensTargetKind);
     // Re-rooted into a lens, `parentEl` IS the lens Element (carries the bound
     // policy Definition). No-ops to the pickerLabel fallback for plain nodes.
-    // Read here keeps parity with the Qwik view; consumed by LensCreate in Phase IV.
-    useLensPolicy(parentEl, lensTargetKind);
+    const lensPolicy = useLensPolicy(parentEl, lensTargetKind);
 
-    // TODO(Phase IV): cancel in-flight construction on parentId change
+    // Navigating to a new branch cancels any in-flight construction. Defensive
+    // only — guards.notUnderConstruction blocks navigation while UC is open.
+    // `on()` is load-bearing: its callback runs untracked, so the
+    // `underConstruction` read never becomes a dependency — a plain effect would
+    // re-run on startConstruction and cancel the construction it just opened.
+    // Calls the raw transition (not the hook's cancel) so the localStorage draft
+    // survives navigation, as pre-migration.
+    createEffect(on(() => props.parentId, () => {
+        if (appState.underConstruction) {
+            cancelConstruction();
+        }
+    }));
+
+    const { ucNode, start, cancel, complete } = useNodeCreation(() => props.parentId);
 
     return (
         <Show
@@ -78,9 +95,13 @@ export const BranchView = (props: BranchViewProps) => {
                         when={lensTargetKind()}
                         fallback={
                             <>
-                                {/* Filter out lens-surfaced kinds, which live in their lens
-                                    rollup, not as loose tree children. */}
-                                <For each={children().filter(child => !isLensSurfaced(child.kind))}>
+                                {/* Filter out the UC node (dual render — see RootView) +
+                                    lens-surfaced kinds, which live in their lens rollup,
+                                    not as loose tree children. */}
+                                <For each={children().filter(child => {
+                                    const uc = ucNode();
+                                    return (!uc || child.id !== uc.id) && !isLensSurfaced(child.kind);
+                                })}>
                                     {(child) => (
                                         <TreeNode
                                             id={child.id}
@@ -92,7 +113,31 @@ export const BranchView = (props: BranchViewProps) => {
                                         />
                                     )}
                                 </For>
-                                {/* TODO(Phase IV): UC block + <CreateNodeButton variant="child"> */}
+
+                                {/* Under construction node */}
+                                <Show when={ucNode()} keyed>
+                                    {(uc) => (
+                                        <div class="branch-child-row">
+                                            <TreeNode
+                                                id={uc.id}
+                                                name={uc.name}
+                                                subtitle={uc.subtitle}
+                                                nodeState="UNDER_CONSTRUCTION"
+                                                isChildConstruction={true}
+                                                onCancel={cancel}
+                                                onCreate={complete}
+                                            />
+                                        </div>
+                                    )}
+                                </Show>
+
+                                {/* Normal node-create picker, trimmed of lens-surfaced kinds (jobs are
+                                    minted from inside the Jobs container, never as loose tree siblings). */}
+                                <CreateNodeButton
+                                    variant="child"
+                                    availableKinds={reRootCreateKindsFor(parentNode()!.kind).filter((k) => !isLensSurfaced(k))}
+                                    onClick={start}
+                                />
                             </>
                         }
                     >
@@ -111,7 +156,11 @@ export const BranchView = (props: BranchViewProps) => {
                                 />
                             )}
                         </For>
-                        {/* TODO(Phase IV): <LensCreate> */}
+                        <LensCreate
+                            ownerId={ownerId()}
+                            targetKind={lensTargetKind()!}
+                            entryLabel={lensPolicy().entryLabel || undefined}
+                        />
                     </Show>
                 </div>
             </main>

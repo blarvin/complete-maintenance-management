@@ -14,6 +14,9 @@ import styles from './DataCard.module.css';
 export type DataCardProps = {
     isOpen?: boolean;
     children: JSX.Element;
+    /** Rendered after `children` — the successor to Qwik's <Slot name="actions"/>
+     *  (the under-construction Cancel/Create row). */
+    actions?: JSX.Element;
 };
 
 export const DataCard = (props: DataCardProps) => {
@@ -26,7 +29,7 @@ export const DataCard = (props: DataCardProps) => {
                     aria-label="Node details"
                 >
                     {props.children}
-                    {/* TODO(Phase IV): actions prop for UC-mode buttons (was <Slot name="actions"/>) */}
+                    {props.actions}
                 </div>
             </div>
         </div>

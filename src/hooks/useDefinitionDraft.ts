@@ -11,7 +11,7 @@
  * Composer row at the same position").
  */
 
-import { useSignal, $, type Signal, type QRL } from '@builder.io/qwik';
+import { batch, createSignal, type Accessor } from 'solid-js';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
 import { getDefinitionAuthoring } from '../kinds/registry';
@@ -32,86 +32,94 @@ export function defaultConfigFor(kind: Kind): DefinitionConfig {
 const LABEL_MAX = 50;
 
 export type UseDefinitionDraftResult = {
-    kind: Signal<Kind>;
-    label: Signal<string>;
-    config: Signal<DefinitionConfig>;
+    kind: Accessor<Kind>;
+    label: Accessor<string>;
+    config: Accessor<DefinitionConfig>;
     /** Error from the kind-specific config sub-form (e.g. invariant violations). */
-    configError: Signal<string | null>;
-    pickKind$: QRL<(kind: Kind) => void>;
-    setLabel$: QRL<(value: string) => void>;
-    setConfig$: QRL<(cfg: DefinitionConfig) => void>;
+    configError: Accessor<string | null>;
+    pickKind: (kind: Kind) => void;
+    setLabel: (value: string) => void;
+    setConfig: (cfg: DefinitionConfig) => void;
     /** Push a config-level error from the sub-form; null means valid. */
-    setConfigError$: QRL<(error: string | null) => void>;
-    cancel$: QRL<() => void>;
+    setConfigError: (error: string | null) => void;
+    cancel: () => void;
     /** Returns the new Definition, or null if save is gated (label empty or config error). */
-    save$: QRL<() => Promise<Definition | null>>;
+    save: () => Promise<Definition | null>;
 };
 
 export function useDefinitionDraft(): UseDefinitionDraftResult {
-    const kind = useSignal<Kind>(DEFAULT_KIND);
-    const label = useSignal<string>('');
-    const config = useSignal<DefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
-    const configError = useSignal<string | null>(null);
+    const [kind, setKind] = createSignal<Kind>(DEFAULT_KIND);
+    const [label, setLabelSignal] = createSignal<string>('');
+    const [config, setConfigSignal] = createSignal<DefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
+    const [configError, setConfigErrorSignal] = createSignal<string | null>(null);
 
-    const pickKind$ = $((next: Kind) => {
-        kind.value = next;
-        config.value = defaultConfigFor(next);
-        configError.value = null;
-    });
+    // batch() so the <Dynamic> ConfigForm never mounts against the previous
+    // kind's config (kind and config must flip in the same tick).
+    const pickKind = (next: Kind) => {
+        batch(() => {
+            setKind(next);
+            setConfigSignal(defaultConfigFor(next));
+            setConfigErrorSignal(null);
+        });
+    };
 
-    const setLabel$ = $((value: string) => {
-        label.value = value.slice(0, LABEL_MAX);
-    });
+    const setLabel = (value: string) => {
+        setLabelSignal(value.slice(0, LABEL_MAX));
+    };
 
-    const setConfig$ = $((cfg: DefinitionConfig) => {
-        config.value = cfg;
-    });
+    const setConfig = (cfg: DefinitionConfig) => {
+        setConfigSignal(cfg);
+    };
 
-    const setConfigError$ = $((error: string | null) => {
-        configError.value = error;
-    });
+    const setConfigError = (error: string | null) => {
+        setConfigErrorSignal(error);
+    };
 
-    const cancel$ = $(() => {
-        kind.value = DEFAULT_KIND;
-        label.value = '';
-        config.value = defaultConfigFor(DEFAULT_KIND);
-        configError.value = null;
-    });
+    const cancel = () => {
+        batch(() => {
+            setKind(DEFAULT_KIND);
+            setLabelSignal('');
+            setConfigSignal(defaultConfigFor(DEFAULT_KIND));
+            setConfigErrorSignal(null);
+        });
+    };
 
-    const save$ = $(async (): Promise<Definition | null> => {
-        const trimmed = label.value.trim();
-        if (!trimmed || configError.value) return null;
+    const save = async (): Promise<Definition | null> => {
+        const trimmed = label().trim();
+        if (!trimmed || configError()) return null;
 
         try {
             const result = await getCommandBus().execute({
                 type: 'CREATE_DEFINITION',
                 payload: {
                     id: `fd_user_${generateId()}`,
-                    kind: kind.value,
+                    kind: kind(),
                     label: trimmed,
-                    config: config.value,
+                    config: config(),
                 },
             });
-            label.value = '';
-            config.value = defaultConfigFor(DEFAULT_KIND);
-            kind.value = DEFAULT_KIND;
-            configError.value = null;
+            batch(() => {
+                setLabelSignal('');
+                setConfigSignal(defaultConfigFor(DEFAULT_KIND));
+                setKind(DEFAULT_KIND);
+                setConfigErrorSignal(null);
+            });
             return result;
         } catch {
             return null;
         }
-    });
+    };
 
     return {
         kind,
         label,
         config,
         configError,
-        pickKind$,
-        setLabel$,
-        setConfig$,
-        setConfigError$,
-        cancel$,
-        save$,
+        pickKind,
+        setLabel,
+        setConfig,
+        setConfigError,
+        cancel,
+        save,
     };
 }

@@ -9,20 +9,18 @@
  * has a real re-root instance.
  */
 
-import { component$, $ } from '@builder.io/qwik';
-import type { PropFunction } from '@builder.io/qwik';
 import type { LogbookConfig } from '../../../data/models';
 import styles from './ConfigForms.module.css';
 
 export type LogbookConfigFormProps = {
     config: LogbookConfig;
-    onChange$: PropFunction<(cfg: LogbookConfig) => void>;
+    onChange: (cfg: LogbookConfig) => void;
 };
 
-export const LogbookConfigForm = component$<LogbookConfigFormProps>((props) => {
-    const update$ = $((patch: Partial<LogbookConfig>) => {
-        return props.onChange$({ ...props.config, ...patch });
-    });
+export const LogbookConfigForm = (props: LogbookConfigFormProps) => {
+    const update = (patch: Partial<LogbookConfig>) => {
+        props.onChange({ ...props.config, ...patch });
+    };
 
     return (
         <div class={styles.form}>
@@ -33,9 +31,9 @@ export const LogbookConfigForm = component$<LogbookConfigFormProps>((props) => {
                     class={styles.input}
                     value={props.config.entryLabel ?? ''}
                     placeholder="Entry"
-                    onInput$={(e) => {
-                        const v = (e.target as HTMLInputElement).value;
-                        update$({ entryLabel: v === '' ? undefined : v });
+                    onInput={(e) => {
+                        const v = e.currentTarget.value;
+                        update({ entryLabel: v === '' ? undefined : v });
                     }}
                 />
             </label>
@@ -48,13 +46,13 @@ export const LogbookConfigForm = component$<LogbookConfigFormProps>((props) => {
                     class={styles.input}
                     value={props.config.staleness ?? ''}
                     placeholder="604800"
-                    onInput$={(e) => {
-                        const raw = (e.target as HTMLInputElement).value;
+                    onInput={(e) => {
+                        const raw = e.currentTarget.value;
                         const n = raw === '' ? undefined : parseInt(raw, 10);
-                        update$({ staleness: Number.isFinite(n) ? n : undefined });
+                        update({ staleness: Number.isFinite(n) ? n : undefined });
                     }}
                 />
             </label>
         </div>
     );
-});
+};

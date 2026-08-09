@@ -18,7 +18,6 @@
     "wipe:fielddefs": "npx tsx scripts/wipe-field-definitions.ts",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
-    "cypress:cleanup": "npx tsx cypress/support/cleanup-firestore.ts",
     "emulator": "firebase emulators:start --only firestore",
     "test:firestore": "vitest run src/test/firestoreAdapter.test.ts"
   },

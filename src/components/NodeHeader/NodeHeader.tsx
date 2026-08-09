@@ -4,9 +4,6 @@
  * Contains the clickable header area with title, subtitle, navigation buttons,
  * and expand/collapse chevron. Handles keyboard events for accessibility.
  *
- * Phase II is display-only.
- * TODO(Phase IV): construction props (isConstruction, nameInputRef,
- * subtitleInputRef, onKeyDown, onNameInput, chevronDisabled) + the input branch.
  */
 
 import { Show } from 'solid-js';
@@ -31,6 +28,18 @@ export type NodeHeaderProps = {
     onNavigateUp?: (parentId: string | null) => void;
     onExpand?: (e?: Event) => void;
     onDetailsToggle?: () => void;
+    /** When true, renders input fields instead of NodeTitle/NodeSubtitle (construction mode) */
+    isConstruction?: boolean;
+    /** For construction mode: name input ref callback */
+    nameInputRef?: (el: HTMLInputElement) => void;
+    /** For construction mode: subtitle input ref callback */
+    subtitleInputRef?: (el: HTMLInputElement) => void;
+    /** For construction mode: keydown handler */
+    onKeyDown?: (e: KeyboardEvent) => void;
+    /** For construction mode: name input handler (drives Create-button validity) */
+    onNameInput?: (e: Event) => void;
+    /** For construction mode: disable chevron button */
+    chevronDisabled?: boolean;
     /** Whether to render the expand/collapse chevron. Default true; false for
      *  content-free kinds (no children/DataCard — e.g. the `jobs` lens, #5). */
     showChevron?: boolean;
@@ -83,10 +92,34 @@ export const NodeHeader = (props: NodeHeaderProps) => {
                     </div>
                 </Show>
                 <div>
-                    <NodeTitle nodeName={props.name} id={props.titleId} />
-                    <NodeSubtitle nodeSubtitle={props.subtitle} />
-                    {/* Manifest-driven meta in the subtitle slot: org count / jobs rollup (#6b). */}
-                    <KindAdornment id={props.id} isParent={!!props.isParent} />
+                    <Show
+                        when={props.isConstruction}
+                        fallback={
+                            <>
+                                <NodeTitle nodeName={props.name} id={props.titleId} />
+                                <NodeSubtitle nodeSubtitle={props.subtitle} />
+                                {/* Manifest-driven meta in the subtitle slot: org count / jobs rollup (#6b). */}
+                                <KindAdornment id={props.id} isParent={!!props.isParent} />
+                            </>
+                        }
+                    >
+                        <input
+                            class={styles.nodeTitle}
+                            ref={props.nameInputRef}
+                            placeholder="Name"
+                            onKeyDown={(e) => props.onKeyDown?.(e)}
+                            onInput={(e) => props.onNameInput?.(e)}
+                            aria-label="Node name"
+                            id={props.titleId}
+                        />
+                        <input
+                            class={styles.nodeSubtitle}
+                            ref={props.subtitleInputRef}
+                            placeholder="Subtitle / Location / Short description"
+                            onKeyDown={(e) => props.onKeyDown?.(e)}
+                            aria-label="Node subtitle"
+                        />
+                    </Show>
                 </div>
                 <div class={styles.nodeButtons}>
                     <EllipsisButton
@@ -101,6 +134,7 @@ export const NodeHeader = (props: NodeHeaderProps) => {
                             onKeyDown={handleExpandKeyDown}
                             aria-expanded={props.isExpanded}
                             aria-label={props.isExpanded ? 'Collapse details' : 'Expand details'}
+                            disabled={props.chevronDisabled}
                         >
                             {props.isExpanded ? '▾' : '◂'}
                         </button>

@@ -69,7 +69,7 @@ A cutover on this branch, not a strangler — two JSX runtimes in one Vite build
 - **I — Boot & spine**: tooling swap; `index.html` + mount; appState store/context in Solid (transitions lose their `$` wrappers); storage-init lifecycle; snackbar host; the manifest type spine flips to Solid component types. App boots to an empty shell. IMPORTANT: Turn on eslint-plugin-solid as a hard error in Phase I. It flags destructured props and untracked reactive reads at lint time.
 - **II — Read path**: the data hooks (element children / by-id, lens gather + policy, value sync) on Solid primitives; RootView/BranchView; the TreeNode display family; DataCard / FieldList / NavigableRow / KindAdornment / breadcrumbs, read-only. App navigates and displays everything.
 - **III — Edit path**: the DataField dispatcher + the five field renderers; the field-edit lifecycle (double-tap, focus, click-away); details / history / revert; delete + undo.
-- **IV — Create & author path**: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation.
+- **IV — Create & author path** *(done 2026-08-09)*: node construction + pending drafts; the create surfaces; the field composer + config forms + Definition drafts; lens creation. Qwik ratchet at **1** file (`src/hooks/useAsyncOperation.ts`, zero importers — dies at mop-up). Cypress became a gate for the first time and all 3 contract specs pass. The §10 checklist is now fully walked on real surfaces (the four composer items had only been verified through the hook paths in III). Deliberate deltas: the composer definition list is stale-while-revalidate (`createResource` serves the old list on a `DEFINITION_WRITTEN` bump — no `onPending` flash, first mount still shows `Loading field definitions…`); a composer list-fetch failure now renders `No field definitions available` instead of Qwik's blank rows region (the resource had no `onRejected`); `useNodeCreation` takes and returns accessors (`parentId` read at `start()` time, `ucNode` a store read) so a long-lived BranchView instance can't parent a node under the view it left.
 - **V — PWA & build**: service-worker registration + precache rewire; production static build; offline/install pass; `preview:pwa` restored.
 
 Phases III–IV hold the heavy rewrites; budget accordingly.
@@ -142,3 +142,14 @@ The unit suite renders no components, so this checklist **is** the coverage for 
 - [x] Rapid edits to several fields → one sync push after the 500ms window (watch network/emulator)
 - [x] Composer commit (multi-field write burst) → one reload per view, no flicker storm
 - [x] Edit a field visible in a lens rollup → rollup and KindAdornment counts update within ~a beat
+
+### Phase-IV additions (walked 2026-08-09)
+
+- [x] Composer Cancel → `N field(s) discarded` → **Undo reopens the composer with the rows restored** (the value-keyed `<Show>` remount)
+- [x] Composer tick → live renderer materialises auto-focused, with config-driven affix
+- [x] Child construction via `+ Add Sub-Asset` does **not** self-cancel (the `createEffect(on(…))` untracked callback — a plain effect would cancel the construction it just opened)
+- [x] UC card: name input focused on mount, Create disabled until named, the three defaults seeded as locked `(required)` rows
+- [x] Create → the node appears exactly once (no UC/display dual render) and the UC card unmounts
+- [x] Definition authoring: `<Dynamic>` kind swap Text→Enum→Number→Text renders each kind's knobs with no config leakage across kinds (`batch()` in `pickKind`)
+
+Known gap found in the walk, filed in ISSUES (pre-existing, not a port regression): a composer row survives reload ticked, but keystrokes still sitting uncommitted in its editor do not.

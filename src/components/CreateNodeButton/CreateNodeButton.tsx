@@ -1,4 +1,4 @@
-import { component$, $, useSignal, type PropFunction } from '@builder.io/qwik';
+import { For, Show, createSignal } from 'solid-js';
 import { getKindManifest } from '../../kinds/registry';
 import type { Kind } from '../../data/models';
 import styles from './CreateNodeButton.module.css';
@@ -12,71 +12,66 @@ export type CreateNodeButtonProps = {
      */
     availableKinds: Kind[];
     /** Receives the kind chosen in the picker (re-root kinds; defaults to the first available). */
-    onClick$?: PropFunction<(kind: Kind) => void>;
+    onClick?: (kind: Kind) => void;
 };
 
-export const CreateNodeButton = component$((props: CreateNodeButtonProps) => {
-    // useSignal before any early return (Qwik hooks must run unconditionally).
-    const selectedKind = useSignal<Kind>(props.availableKinds[0] ?? 'node');
+export const CreateNodeButton = (props: CreateNodeButtonProps) => {
+    // eslint-disable-next-line solid/reactivity -- seeds once and never reseeds on prop change, matching the pre-migration useSignal(initial) semantics
+    const [selectedKind, setSelectedKind] = createSignal<Kind>(props.availableKinds[0] ?? 'node');
 
-    const handleClick$ = $(async () => {
-        if (props.onClick$) await props.onClick$(selectedKind.value);
-    });
-
-    // A content-free lens admits nothing — offer no create surface at all.
-    if (props.availableKinds.length === 0) return null;
+    const handleClick = () => props.onClick?.(selectedKind());
 
     // Picker over the parent's admitted re-root kinds. Shown only when there's a
     // real choice; otherwise the lone kind is implied by the button.
-    const picker =
-        props.availableKinds.length > 1 ? (
+    const picker = () => (
+        <Show when={props.availableKinds.length > 1}>
             <select
                 class={styles.kindPicker}
-                value={selectedKind.value}
-                onChange$={$((_, el) => {
-                    selectedKind.value = el.value as Kind;
-                })}
+                value={selectedKind()}
+                onChange={(e) => setSelectedKind(e.currentTarget.value as Kind)}
                 aria-label="Kind of asset to create"
             >
-                {props.availableKinds.map((k) => (
-                    <option key={k} value={k}>
-                        {getKindManifest(k).pickerLabel}
-                    </option>
-                ))}
+                <For each={props.availableKinds}>
+                    {(k) => <option value={k}>{getKindManifest(k).pickerLabel}</option>}
+                </For>
             </select>
-        ) : null;
+        </Show>
+    );
 
-    if (props.variant === 'root') {
-        return (
-            <div class={styles.createRow}>
-                {picker}
-                <button
-                    type="button"
-                    class={[styles.createNode, 'no-caret']}
-                    onClick$={handleClick$}
-                    aria-label="Create New Asset"
-                >
-                    Create New Asset
-                </button>
-            </div>
-        );
-    }
+    // A content-free lens admits nothing — offer no create surface at all.
+    return (
+        <Show when={props.availableKinds.length > 0}>
+            <Show when={props.variant === 'root'}>
+                <div class={styles.createRow}>
+                    {picker()}
+                    <button
+                        type="button"
+                        classList={{ [styles.createNode]: true, 'no-caret': true }}
+                        onClick={handleClick}
+                        aria-label="Create New Asset"
+                    >
+                        Create New Asset
+                    </button>
+                </div>
+            </Show>
 
-    if (props.variant === 'child') {
-        return (
-            <div class={styles.createRow}>
-                {picker}
-                <button
-                    type="button"
-                    class={[styles.createNode, styles.createNodeChild, 'no-caret']}
-                    onClick$={handleClick$}
-                    aria-label="Add Sub-Asset"
-                >
-                    + Add Sub-Asset
-                </button>
-            </div>
-        );
-    }
-
-    return null;
-});
+            <Show when={props.variant === 'child'}>
+                <div class={styles.createRow}>
+                    {picker()}
+                    <button
+                        type="button"
+                        classList={{
+                            [styles.createNode]: true,
+                            [styles.createNodeChild]: true,
+                            'no-caret': true,
+                        }}
+                        onClick={handleClick}
+                        aria-label="Add Sub-Asset"
+                    >
+                        + Add Sub-Asset
+                    </button>
+                </div>
+            </Show>
+        </Show>
+    );
+};

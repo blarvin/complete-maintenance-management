@@ -6,8 +6,9 @@
  * mutex signal so at most one is open at a time.
  *
  * Contract for a surface component:
- *  - receives `activeSurface: Signal<ActiveSurface>` from FieldList
- *  - is open iff `activeSurface.value === <its own id>`
+ *  - receives an `activeSurface: Accessor<ActiveSurface>` + `setActiveSurface`
+ *    pair from FieldList (Solid has no writable-signal prop idiom)
+ *  - is open iff `activeSurface() === <its own id>`
  *  - opens by writing its own id; closes by writing 'none'
  *    (last writer wins — opening one surface implicitly closes the rest)
  *  - persists via the command bus; no reload callback needed — writes emit

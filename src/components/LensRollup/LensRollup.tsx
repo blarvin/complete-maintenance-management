@@ -18,6 +18,7 @@ import { useLensGather } from '../../hooks/useLensGather';
 import { useLensPolicy } from '../../hooks/useLensPolicy';
 import { isLensStale } from '../../kinds/lensPolicy';
 import { NavigableRow } from '../NavigableRow/NavigableRow';
+import { LensCreate } from '../LensCreate/LensCreate';
 import type { Kind } from '../../data/models';
 import styles from './LensRollup.module.css';
 
@@ -55,7 +56,7 @@ export const LensRollup = (props: LensRollupProps) => {
                 <div class={styles.empty}>none yet</div>
             </Show>
 
-            {/* TODO(Phase IV): <LensCreate ownerId targetKind entryLabel> */}
+            <LensCreate ownerId={ownerId()} targetKind={props.targetKind} entryLabel={entryLabel()} />
         </div>
     );
 };

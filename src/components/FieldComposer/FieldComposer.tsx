@@ -16,19 +16,11 @@
  *   footer; locked rows not used.
  * - "construction": Composer is the body of the under-construction node's
  *   DataCard. Save button hidden — the parent node's "Save" button drives
- *   commitAll$ via the handle. Locked Definitions pre-seed and can't be
+ *   commitAll via the handle. Locked Definitions pre-seed and can't be
  *   unchecked.
  */
 
-import {
-    component$,
-    useResource$,
-    useSignal,
-    useVisibleTask$,
-    Resource,
-    $,
-    type PropFunction,
-} from '@builder.io/qwik';
+import { For, Show, createResource, createSignal, onCleanup } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
 import { isInline } from '../../kinds/placement';
 import { storageEventBus } from '../../data/storageEventBus';
@@ -54,13 +46,14 @@ export type FieldComposerProps = {
     /** Pre-seed the batch (e.g. Snackbar Undo restoring a cancelled draft). */
     restoreSeed?: PendingForm[];
     /** Called when the composer should close itself (after Save / Cancel). */
-    onDismiss$: PropFunction<() => void>;
+    onDismiss: () => void;
     /** Re-open the composer with the given rows (Snackbar Undo path). */
-    onRequestRestore$?: PropFunction<(rows: PendingForm[]) => void>;
+    onRequestRestore?: (rows: PendingForm[]) => void;
 };
 
-export const FieldComposer = component$<FieldComposerProps>((props) => {
-    const initialSeedLoader$ = $(async (): Promise<PendingForm[]> => {
+export const FieldComposer = (props: FieldComposerProps) => {
+    // Mount-time constants: the composer remounts via the slot's keyed <Show>.
+    const initialSeedLoader = async (): Promise<PendingForm[]> => {
         if (props.restoreSeed && props.restoreSeed.length > 0) {
             return props.restoreSeed;
         }
@@ -74,164 +67,161 @@ export const FieldComposer = component$<FieldComposerProps>((props) => {
             return seeded;
         }
         return [];
-    });
+    };
 
-    const { forms, lastToggledId, togglePending$, setPendingValue$, commitAll$, discardAll$ } = usePendingForms({
+    const { forms, lastToggledId, togglePending, setPendingValue, commitAll, discardAll } = usePendingForms({
+        // eslint-disable-next-line solid/reactivity -- mount-time constant; the composer remounts via the slot's keyed <Show>
         nodeId: props.nodeId,
-        initialSeedLoader$,
+        initialSeedLoader,
     });
 
     // Definitions created during this Composer session — pinned above the
     // alphabetical pool, pre-checked. On next Composer open they fall into
     // alphabetical place (parent remounts the Composer fresh).
-    const justCreated = useSignal<Definition[]>([]);
-    const refreshKey = useSignal(0);
-    const authoringOpen = useSignal(false);
+    const [justCreated, setJustCreated] = createSignal<Definition[]>([]);
+    const [refreshKey, setRefreshKey] = createSignal(0);
+    const [authoringOpen, setAuthoringOpen] = createSignal(false);
 
-    useVisibleTask$(({ cleanup }) => {
-        const unsub = storageEventBus.subscribe((event) => {
-            if (event.type === 'DEFINITION_WRITTEN') {
-                refreshKey.value++;
-            }
-        });
-        cleanup(() => unsub());
+    // Subscribe BEFORE the resource's first fetch so no DEFINITION_WRITTEN
+    // lands in the gap between load and subscription.
+    const unsub = storageEventBus.subscribe((event) => {
+        if (event.type === 'DEFINITION_WRITTEN') {
+            setRefreshKey((k) => k + 1);
+        }
+    });
+    onCleanup(() => unsub());
+
+    const [definitions] = createResource(refreshKey, async (): Promise<Definition[]> => {
+        try {
+            const list = await getDefinitionQueries().listDefinitions();
+            // Field kinds only: re-root policy Definitions (logbook) live in the
+            // same library tree but are not composer-instantiable rows.
+            return list.filter((d) => isInline(d.kind)).sort((a, b) => a.label.localeCompare(b.label));
+        } catch {
+            return [];
+        }
     });
 
-    const definitionsResource = useResource$<Definition[]>(async ({ track }) => {
-        track(() => refreshKey.value);
-        const list = await getDefinitionQueries().listDefinitions();
-        // Field kinds only: re-root policy Definitions (logbook) live in the
-        // same library tree but are not composer-instantiable rows.
-        return list.filter((d) => isInline(d.kind)).sort((a, b) => a.label.localeCompare(b.label));
-    });
+    const rest = () => {
+        const justCreatedIds = new Set(justCreated().map(d => d.id));
+        return (definitions() ?? []).filter(d => !justCreatedIds.has(d.id));
+    };
 
-    const handleSave$ = $(async () => {
-        await commitAll$(props.currentMaxCardOrder);
-        await props.onDismiss$();
-    });
+    const handleSave = async () => {
+        await commitAll(props.currentMaxCardOrder);
+        props.onDismiss();
+    };
 
-    const handleCancel$ = $(async () => {
+    const handleCancel = async () => {
         await commitWithUndo({
-            execute$: $(async () => {
-                const captured = await discardAll$();
-                await props.onDismiss$();
+            execute: () => {
+                const captured = discardAll();
+                props.onDismiss();
                 return captured; // PendingForm[]
-            }),
-            undo$: $(async (captured) => {
-                if (props.onRequestRestore$) await props.onRequestRestore$(captured as PendingForm[]);
-            }),
+            },
+            undo: (captured) => {
+                props.onRequestRestore?.(captured as PendingForm[]);
+            },
             message: (captured) => {
                 const n = (captured as PendingForm[]).length;
                 return n ? `${n} field${n === 1 ? '' : 's'} discarded` : null; // null ⇒ no toast
             },
         });
-    });
+    };
 
-    const openAuthoring$ = $(() => {
-        authoringOpen.value = true;
-    });
-
-    const closeAuthoring$ = $(() => {
-        authoringOpen.value = false;
-    });
-
-    const handleAuthored$ = $(async (def: Definition) => {
-        justCreated.value = [...justCreated.value, def];
+    const handleAuthored = (def: Definition) => {
+        setJustCreated([...justCreated(), def]);
         // Pre-check the new definition so the user can immediately enter a value.
-        await togglePending$(def);
+        togglePending(def);
         // Refresh the alphabetical resource so subsequent opens see the new row.
-        refreshKey.value++;
-        authoringOpen.value = false;
-    });
+        setRefreshKey((k) => k + 1);
+        setAuthoringOpen(false);
+    };
 
-    const lockedSet = new Set(
-        props.mode === 'construction' ? (props.lockedDefinitionIds ?? []) : []
-    );
+    // eslint-disable-next-line solid/reactivity -- mount-time constant; the composer remounts via the slot's keyed <Show>
+    const lockedSet = new Set(props.mode === 'construction' ? (props.lockedDefinitionIds ?? []) : []);
+
+    const pendingFor = (def: Definition) => forms().find(f => f.definitionId === def.id);
 
     return (
         <div class={styles.composer}>
-            <Resource
-                value={definitionsResource}
-                onPending={() => <div class={styles.empty}>Loading field definitions…</div>}
-                onResolved={(definitions) => {
-                    const justCreatedIds = new Set(justCreated.value.map(d => d.id));
-                    const rest = definitions.filter(d => !justCreatedIds.has(d.id));
-                    return (
-                        <div class={styles.rows}>
-                            {/* Affordance / authoring form — top of the list. */}
-                            {authoringOpen.value ? (
-                                <DefinitionAuthoringForm
-                                    onCreated$={handleAuthored$}
-                                    onCancel$={closeAuthoring$}
+            <Show
+                when={definitions()}
+                fallback={<div class={styles.empty}>Loading field definitions…</div>}
+            >
+                <div class={styles.rows}>
+                    {/* Affordance / authoring form — top of the list. */}
+                    <Show
+                        when={authoringOpen()}
+                        fallback={
+                            <button
+                                type="button"
+                                class={styles.affordance}
+                                onClick={() => setAuthoringOpen(true)}
+                            >
+                                + New Field Definition…
+                            </button>
+                        }
+                    >
+                        <DefinitionAuthoringForm
+                            onCreated={handleAuthored}
+                            onCancel={() => setAuthoringOpen(false)}
+                        />
+                    </Show>
+
+                    {/* Just-created definitions, pinned above alphabetical pool. */}
+                    <For each={justCreated()}>
+                        {(def) => (
+                            <ComposerRow
+                                definition={def}
+                                checked={!!pendingFor(def)}
+                                pendingForm={pendingFor(def)}
+                                autoFocus={!!pendingFor(def) && pendingFor(def)!.id === lastToggledId()}
+                                onToggle={togglePending}
+                                onValueChange={setPendingValue}
+                            />
+                        )}
+                    </For>
+
+                    {/* Alphabetical pool. */}
+                    <Show
+                        when={rest().length > 0 || justCreated().length > 0}
+                        fallback={<div class={styles.empty}>No field definitions available</div>}
+                    >
+                        <For each={rest()}>
+                            {(def) => (
+                                <ComposerRow
+                                    definition={def}
+                                    checked={!!pendingFor(def)}
+                                    locked={lockedSet.has(def.id)}
+                                    pendingForm={pendingFor(def)}
+                                    autoFocus={!!pendingFor(def) && pendingFor(def)!.id === lastToggledId()}
+                                    onToggle={togglePending}
+                                    onValueChange={setPendingValue}
                                 />
-                            ) : (
-                                <button
-                                    type="button"
-                                    class={styles.affordance}
-                                    onClick$={openAuthoring$}
-                                >
-                                    + New Field Definition…
-                                </button>
                             )}
-
-                            {/* Just-created definitions, pinned above alphabetical pool. */}
-                            {justCreated.value.map((def) => {
-                                const pf = forms.value.find(f => f.definitionId === def.id);
-                                return (
-                                    <ComposerRow
-                                        key={def.id}
-                                        definition={def}
-                                        checked={!!pf}
-                                        pendingForm={pf}
-                                        autoFocus={!!pf && pf.id === lastToggledId.value}
-                                        onToggle$={togglePending$}
-                                        onValueChange$={setPendingValue$}
-                                    />
-                                );
-                            })}
-
-                            {/* Alphabetical pool. */}
-                            {rest.length === 0 && justCreated.value.length === 0 ? (
-                                <div class={styles.empty}>No field definitions available</div>
-                            ) : (
-                                rest.map((def) => {
-                                    const pf = forms.value.find(f => f.definitionId === def.id);
-                                    return (
-                                        <ComposerRow
-                                            key={def.id}
-                                            definition={def}
-                                            checked={!!pf}
-                                            locked={lockedSet.has(def.id)}
-                                            pendingForm={pf}
-                                            autoFocus={!!pf && pf.id === lastToggledId.value}
-                                            onToggle$={togglePending$}
-                                            onValueChange$={setPendingValue$}
-                                        />
-                                    );
-                                })
-                            )}
-                        </div>
-                    );
-                }}
-            />
+                        </For>
+                    </Show>
+                </div>
+            </Show>
 
             {/* Construction mode is driven by the parent node's Cancel/Create row,
                 so the composer hides its own footer to avoid a duplicate Cancel. */}
-            {props.mode === 'display' && (
+            <Show when={props.mode === 'display'}>
                 <div class={styles.footer}>
-                    <button type="button" class={styles.cancelBtn} onClick$={handleCancel$}>
+                    <button type="button" class={styles.cancelBtn} onClick={handleCancel}>
                         Cancel
                     </button>
                     <button
                         type="button"
                         class={styles.saveBtn}
-                        onClick$={handleSave$}
-                        disabled={forms.value.length === 0}
+                        onClick={handleSave}
+                        disabled={forms().length === 0}
                     >
                         Save
                     </button>
                 </div>
-            )}
+            </Show>
         </div>
     );
-});
+};
