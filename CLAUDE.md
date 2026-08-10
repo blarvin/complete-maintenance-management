@@ -98,6 +98,12 @@ This repo is indexed as **`blarvin/complete-maintenance-management`** — pass t
 as `repo` rather than spending a `resolve_repo` call. A PostToolUse hook
 reindexes edited files automatically; don't call `register_edit` by hand.
 
+Two limits, both observed: **`docs/*.md` isn't indexed at all** — Read/Grep the
+docs directly, jcm will report a confident zero for prose that's plainly there.
+And **`citable: false` on a zero-result answer means "absence not proven"**, not
+boilerplate — the index was stale or a channel was down, so go look yourself
+before reporting a gap. `citable: true` is real evidence of absence.
+
 **context7 MCP** — use liberally. Any time you touch a solid-js, Dexie,
 Firebase, Vite or Vitest API, fetch the docs rather than trusting recall, *even
 when you think you know it*. Much cheaper than a wrong reactive primitive.

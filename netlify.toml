@@ -1,21 +1,25 @@
-# example netlify.toml
 [build]
   command = "npm run build"
-  functions = "netlify/functions"
   publish = "dist"
 
-  ## Uncomment to use this redirect for Single Page Applications like create-react-app.
-  ## Not needed for static site generators.
-  #[[redirects]]
-  #  from = "/*"
-  #  to = "/index.html"
-  #  status = 200
+# Client-only SPA: every path must serve the shell. The FSM keeps no state in
+# the URL, so nothing deep-links today — this is here so a reload on any path
+# can't 404 once something does.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
-  ## (optional) Settings for Netlify Dev
-  ## https://github.com/netlify/cli/blob/main/docs/netlify-dev.md#project-detection
-  #[dev]
-  #  command = "yarn start" # Command to start your dev server
-  #  port = 3000 # Port that the dev server will be listening on
-  #  publish = "dist" # Folder with the static content for _redirect file
+# The SW is the update mechanism, so it must never be served stale — a cached
+# service-worker.js means a new build's CACHE_VERSION bump never runs and the
+# old app shell keeps being served from the previous cache.
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"
 
-  ## more info on configuring this file: https://ntl.fyi/file-based-build-config
+# index.html is fetched network-first by the SW; keep the CDN from pinning it.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

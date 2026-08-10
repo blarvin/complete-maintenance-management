@@ -567,6 +567,28 @@ Semantic tokens used throughout; primitives never referenced directly in compone
 - `.input-reset` — strips input defaults for inline editing
 - `.input-underline` — common underline pattern with focus color change
 
+**The mount element owns the container width** (`#app` in `global.css`, added 2026-08-10):
+
+`body` is `display: flex; justify-content: center`, so `#app` is a flex item. A flex
+item with no width is shrink-to-fit — sized by its *content*. For months `#app` had no
+CSS at all, which meant `.view-root` / `.view-branch`'s `width: 100%` resolved against a
+content-sized parent and their `max-width: var(--container-max)` was never reached: the
+whole app grew and shrank with whatever the current view happened to contain (measured
+at 559.81px on a 1536px viewport, and visibly narrower again two levels down the tree).
+Navigating re-rooted the FSM, the content changed, and the app jumped width.
+
+So `#app` carries `width: 100%; max-width: var(--container-max)` and the views inherit a
+stable box. This is also the whole of the responsive story — `width: 100%` fills a phone,
+`max-width` caps a desktop; there is no breakpoint and none is needed. **Don't remove the
+rule on the grounds that the views already declare their own max-width.** They do, and it
+does nothing without a parent that has a resolvable width.
+
+Two riders from the same fix: `min-width: var(--container-min)` came off both views (it
+forced overflow below 240px and bought nothing the content didn't already enforce — the
+token lives on in `TreeNode` / `CreateNodeButton`), and `body` took `env(safe-area-inset-*)`
+padding, paired with `viewport-fit=cover` in `index.html`, so an installed PWA clears the
+notch. The insets resolve to 0 in a normal browser.
+
 **Deliberate Non-Abstractions**: Evaluated and skipped these components:
 
 - **ActionButtons component** — Cancel/Save patterns vary enough (different labels, sizing, slot usage, conditional rendering) that abstraction would be more complex than duplication.
@@ -639,3 +661,17 @@ The closing phase: the PWA/build pass the cutover deferred, plus SOLIDJS-MIGRATI
 - **The Qwik-comment sweep was a rewrite, not a strip.** Several comments named Qwik while guarding a constraint that outlived it: the `src/kinds/*` and unit-test "keep this component-free" notes are still true because `vitest.config.ts` has no Solid JSX transform, and `useFocusManager` / `useFieldEdit` still need an explicit *don't re-add a timeout* warning. Those were restated in Solid terms; only pure "the Qwik version did X" comparisons were deleted. The dated Phase I–IV sections above are left as historical record.
 - **Lint and typecheck scope collapsed to the whole tree.** The two-block eslint carve-out and the `no-restricted-imports` Qwik ratchet are gone — one Solid block now covers `src/**/*.{ts,tsx}` at error, which newly gates `useSyncTrigger.ts` (no findings). `tsconfig.json` is back to `"exclude": ["node_modules"]`; nothing new entered the program, since every component was already import-reachable from `entry.client.tsx`.
 - **No first-paint splash.** Meta-plan §9 pre-approved a static shell in `index.html` if CSR's blank window read badly. It didn't on the built app, so nothing was added — the cheap fix stays available if it ever bites.
+
+---
+
+## Deployment — Netlify (`netlify.toml`, settled 2026-08-10)
+
+**Status:** Accepted. Corrects a Phase V claim: that section was written from `firebase.json` (firestore-only) and concluded there was no hosting target. There is. The app has deployed to `complete-maintenance-management.netlify.app` on every merge to `master` for months.
+
+`netlify.toml` had been Netlify's untouched example scaffold — build command and publish dir, SPA redirect commented out, no header rules, and a `functions = "netlify/functions"` pointing at a directory that doesn't exist (dropped). The three rules now in it are each load-bearing for a specific failure:
+
+- **`Cache-Control: no-cache` on `/service-worker.js`.** The SW *is* the update mechanism: `activate` evicts old caches only when `CACHE_VERSION` changes, and that constant ships inside `service-worker.js`. If the CDN serves a stale copy of that file, the bump never executes and returning visitors keep being served the previous app shell out of the previous cache — a deploy that silently doesn't land, indistinguishable from a broken fix. This is the one rule not to remove.
+- **Same header on `/index.html`.** The SW fetches HTML network-first (LATER.md), so an edge-cached shell defeats that path.
+- **`/*` → `/index.html` at status 200.** Inert today: the FSM is the navigation model and puts nothing in the URL, so no deep link exists to 404 on. It's here so that stays true if a URL-bearing surface ever lands.
+
+Deliberately still absent: build-time env vars (the Firebase config is committed), preview-deploy config, and any cache headers on the hashed `assets/*` bundles — Netlify's defaults are already correct for content-hashed filenames.

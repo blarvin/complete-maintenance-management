@@ -35,6 +35,22 @@ body {
 body {
     display: flex;
     justify-content: center;
+    /* Installed PWA: keep content clear of the notch / home indicator.
+       Paired with viewport-fit=cover in index.html; resolves to 0 everywhere else. */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+             env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/*
+ * The mount element must carry the container width itself. As a bare flex item
+ * it is shrink-to-fit, so the views' `width: 100%` resolved against a
+ * content-sized parent and their `max-width` never applied — the app got wider
+ * or narrower with whatever the current view happened to contain. With this,
+ * phones fill the viewport and desktop caps at --container-max.
+ */
+#app {
+    width: 100%;
+    max-width: var(--container-max);
 }
 
 /* ========================= */
@@ -125,7 +141,6 @@ button {
 .view-root {
     width: 100%;
     max-width: var(--container-max);
-    min-width: var(--container-min);
     min-height: 560px;
     padding: var(--space-3) var(--space-3) var(--space-3);
     /* Parent-only vertical spacing between children */
@@ -141,7 +156,6 @@ button {
 .view-branch {
     width: 100%;
     max-width: var(--container-max);
-    min-width: var(--container-min);
     min-height: 560px;
     padding: var(--space-3) var(--space-3) var(--space-3);
     display: flex;
