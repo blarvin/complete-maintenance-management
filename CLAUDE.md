@@ -1,242 +1,124 @@
-# Complete Maintenance Management - Developer Guide
+# Complete Maintenance Management — Agent Guide
 
-## Development Philosophy
+Asset-maintenance tracker built on a hierarchical tree UI. solid-js 1.9 SPA
+(client-only, no router — the FSM is the navigation model), TypeScript strict,
+Dexie/IndexedDB primary with Firestore as a sync mirror, Vitest + Cypress,
+CSS modules over a 3-layer token system. Phase 1 MVP.
 
-**Spec-Driven Development**: `docs/SPECIFICATION.md` is the source of truth for product requirements, UX patterns, data models, and component architecture. Always consult the spec before implementing features.
-**This is prototyping**: Do the simplest thing that works.
-**Context7 MCP**: When working with third-party libraries (solid-js, Dexie, etc.), use the context7 MCP tools to fetch up-to-date documentation rather than relying on potentially outdated knowledge.
-**jCodeMunch MCP**: Use jcodemunch-mcp for all code lookups. Never read full files when MCP is available. Call `list_repos` first — if the project is not indexed, call `index_folder` with the current working directory. Use `search_symbols` / `get_symbol` to find and retrieve code by symbol name. Use `get_repo_outline` or `get_file_outline` to explore structure. Fall back to direct file reads only when editing or when MCP is unavailable.
-**Plan location**: Always save plan files (`.plan.md`, phase plans, etc.) to `.claude/plans/` in this project's local directory — never to a global or home-directory location.
+## Philosophy
 
-**Documentation Hierarchy**:
+**Spec-driven.** `docs/SPECIFICATION.md` is the source of truth for product
+requirements, the data model, architecture, and UX. Consult it before
+implementing. It is not a summary of the code — it is what the code owes.
 
-1. **docs/SPECIFICATION.md** - Product requirements, the data model, the registry/manifest framework, and UX patterns (the spec). The architecture is the registry/manifest model: one `Element`, one immutable `kind`, behaviour in a per-kind manifest — see *Data Model*.
-2. **docs/ELEMENT-MODEL.md** - The kind catalogue: one self-contained spec per kind (composition, value shape, config sub-fields, placement, UX, status). SPEC owns the framework; this owns the kinds.
-3. **docs/LATER.md** - **Whole** ideas/features we've discussed but *not begun*, and work decided for later real phases (Phase 2+); plus resolved items. Not for leftovers of work already in progress — those go in ISSUES.
-4. **docs/IMPLEMENTATION.md** - Explanations for specific non-obvious choices made.
-5. **docs/ISSUES.md** - The active work queue: everything that needs doing now — bugs, unfinished business, deferred *parts* of work already begun, and observed refactor/cleanup needs (WIP left for later). The default home for leftovers of in-flight work, especially on the current branch and the Element-model unification.
+**This is prototyping.** Do the simplest thing that works. Build only what the
+spec requires; prefer a hardcoded choice over a generalisation where the spec
+defers the richer feature. If something genuinely bigger surfaces, explain it
+and offer to defer it to `docs/LATER.md` rather than building it.
 
-**ISSUES vs LATER routing**: unfinished business, deferred parts of a feature already begun, and observed refactor needs (work-in-progress left for later) normally go in **ISSUES**, not LATER. **LATER** is for whole ideas/features not yet started and far-future-phase work. Consequence: a leftover directly caused by current-branch or Element-model work belongs in ISSUES — and much of what's currently parked in LATER under in-flight clusters (e.g. the §6b/§6c lens follow-ups) could migrate back.
+## Where things go
 
----
+1. **docs/SPECIFICATION.md** — product requirements, data model, the
+   registry/manifest framework, UX patterns. One `Element`, one immutable
+   `kind`, behaviour in a per-kind manifest.
+2. **docs/ELEMENT-MODEL.md** — the kind catalogue: one self-contained spec per
+   kind (composition, value shape, config sub-fields, placement, UX, status).
+   SPEC owns the framework; this owns the kinds.
+3. **docs/IMPLEMENTATION.md** — non-obvious choices already made, only where a
+   future reader asks "why is it like this?" and the answer isn't in the code.
+4. **docs/ISSUES.md** — the active work queue; everything that needs doing now.
+5. **docs/LATER.md** — whole ideas not yet begun, and Phase 2+ work.
 
-## Project Overview
+**ISSUES vs LATER**: unfinished business, deferred *parts* of work already
+begun, and observed refactor needs go in **ISSUES**. **LATER** is for whole
+ideas not started and far-future phases. A leftover caused by current-branch
+work belongs in ISSUES.
 
-**Type**: Asset Management System based on a hierarchical tree view UI
-**Purpose**: Maintenance tracking for physical assets (vehicles, buildings, machinery, etc.)
-**Status**: Phase 1 MVP - local-first persistence, text-only fields
+Issues live in `docs/ISSUES.md` — never GitHub. See `docs/agents/issue-tracker.md`.
 
-### Tech Stack
+## Never
 
-- **Framework**: solid-js 1.9 (fine-grained reactivity, client-only SPA — no SSR, no router; the FSM is the navigation model)
-- **Language**: TypeScript (strict mode)
-- **Storage**: IndexedDB (Dexie 4.2.1) as primary, Firestore for sync
-- **Testing**: Vitest, Cypress (E2E)
-- **Styling**: CSS modules with 3-layer design token system
+- **Never `git commit` or `git push`.** Suggest the message; the user commits.
+- **Never `gh issue`** — this repo's tracker is `docs/ISSUES.md`.
+- **Never `&&` or `||`** in a command — see Shell below.
+- **Never bulk-rewrite a file** via `Get-Content`/`Set-Content`; it mangles
+  UTF-8 and adds a BOM. Use the Edit/Write tools.
+- **Never put double quotes inside a git commit message** — PS 5.1
+  argument-splitting breaks it.
+- **Never write plan files outside `.claude/plans/`** — not home, not global.
+- **Never hardcode absolute paths** in committed config; this repo is developed
+  on two machines, and `CLAUDE_PROJECT_DIR` arrives empty.
+- **No ADR or `CONTEXT.md` ceremony.** Reasoning lives in IMPLEMENTATION.md prose.
 
-### Four-Level Knowledge Structure (per SPEC)
+## Shell
 
-1. **Nodes** (rendered TreeNode, stored as `Element` with `kind: "node"`) — Things and their constituent parts (Title + Subtitle)
-2. **Data Card** — Container that lists an element's non-`"node"` children (DataFields)
-3. **Field Details** — Metadata, history, management actions per field
-4. **Element History** — Append-only audit log keyed `${elementId}:${rev}`, logs value / name / subtitle / parentId / siblingOrder changes
+The Bash tool runs **`powershell.exe` (Windows PowerShell 5.1)** regardless of
+which shell Claude Code was launched from. So:
 
----
+- `&&` and `||` are **parser errors**. Dependent: `A; if ($?) { B }`.
+  Independent: `A; B`.
+- Prefer parallel tool calls over chaining when commands don't depend on each other.
+- Commands the *user* runs via `!` go to Git Bash — bash syntax is fine there.
 
-## Architecture Patterns
-
-### 2. Adapter Pattern (Backend Abstraction)
-
-**Location**: `src/data/storage/`
-**Write model**: `IDBAdapter` is the sole `StorageAdapter`/`SyncableStorageAdapter` — element-shaped operations (`listRootElements`, `createElement`, `updateElement`, `getElementHistory`, …) plus Definition CRUD (`listDefinitions`/`getDefinition`/`createDefinition`), offline-first via Dexie
-**Sync mirror**: `FirestoreAdapter` implements `RemoteSyncAdapter` only (`applySyncItem` + pull methods) — Firestore is a dumb mirror, not a second CRUD backend; the swappable-backend story is served by `RemoteSyncAdapter`
-**Command/query registry**: `src/data/commands/` and `src/data/queries/`
-
-- Module-level getters: `getCommandBus()`, `getElementQueries()`, `getDefinitionQueries()`
-- Call these at runtime inside handlers, not at component setup — an adapter swap must be visible to the next call
-- `setElementQueries(mock)` / `setCommandBus(mock)` for test swapping — these seams are why the registry stays module-level rather than moving into Solid context
-
-### 4. Component Hierarchy with Type Safety
-
-Components use discriminated unions + type guards (no prop spreading).
-
----
-
-## Key Conventions
-
-### Component States (FSM)
-
-**TreeNode states**: `isRoot`, `isParent`, `isChild`, `isUnderConstruction`
-**DataCard states**: `isExpanded`, `isUnderConstruction`
-**DataField states**: `isMetadataExpanded`, `isEditing`
-
-### Application User Interaction Design Principles
-
-- **Double-tap to edit**: DataField values (also supports Enter/Space for keyboard)
-- **Single tap**: Navigate down (child → parent), expand/collapse DataCard
-- **"Up" button**: Navigate to parent or ROOT view
-- **In-situ creation**: CreateNodeButton shows construction form inline
-
-### 3. Offline-First Architecture
-
-1. All operations go to IndexedDB first (via IDBAdapter)
-2. Operations enqueued to `syncQueue` table (via standalone `SyncQueueManager`)
-3. SyncManager pushes to Firestore on timer/online event
-4. Pull fetches Firestore changes, applies server-authority conflict resolution
-5. UI works identically online or offline
-
-### Code Style
-
-- **TypeScript**: Strict mode, discriminated unions, type guards
-- **Solid idioms**: never destructure props (it breaks tracking); hooks take `Accessor<T>` in and return accessors out; `<Show keyed>` when a subtree must genuinely remount; `<Dynamic>` for registry-picked components. `eslint-plugin-solid` runs at **error** over all of `src/` — including `solid/reactivity`
-- **CSS**: Module CSS with design tokens, minimal inline styles
-- **Testing**: Test domain logic in service/adapter layers, not components
-
-### Sorting Policy (per SPEC)
-
-- All children (child nodes and DataCard fields alike): sorted by `siblingOrder` ascending. `siblingOrder` is assigned incrementally at mint; inserting between siblings renumbers the affected run (not fractional midpoints).
-
----
-
-## Development Workflow
-
-### Common Commands
+## Commands
 
 ```bash
-npm run dev          # Vite dev server (client-only SPA; registers no service worker)
-npm run build        # Typecheck + production build to dist/ (compiles the SW, injects the precache manifest)
-npm run preview:pwa  # Serve the built dist/ on port 4173 — the only way to exercise the PWA
-npm run test         # Run all unit tests
-npm run test:watch   # Watch mode (Vitest)
-npm run cypress      # Open Cypress GUI
-npm run typecheck    # TypeScript validation
-npm run lint         # ESLint
-npm run emulator     # Run Firebase emulator
+npm run dev          # Vite dev server, :5173 (registers no service worker)
+npm run build        # Typecheck + prod build to dist/ (compiles SW, injects precache manifest)
+npm run preview:pwa  # Serve dist/ on :4173 — the only way to exercise the PWA
+npm run test         # Vitest (known: hangs after passing — ISSUES → Tech Debt)
+npm run typecheck
+npm run lint
+npm run emulator     # Firebase emulator, :8080
+npm run cypress      # Needs emulator + dev server up; every spec's cy.freshVisit()
+                     # wipes the emulator and deletes the app's IndexedDB first
 ```
 
-### Claude Code Settings Hygiene
+Emulator mode in the browser: `?emulator=true`, or
+`localStorage.setItem('USE_FIRESTORE_EMULATOR','true')`.
 
-`.claude/settings.json` is **committed** and is the shared source of truth for permissions, hooks, and enabled MCP servers — it must work on every machine the user develops on. `.claude/settings.local.json` is **gitignored** and per-machine: Claude Code appends to it automatically every time the user approves a prompt, so it is a scratchpad, not a config file. Never hardcode absolute paths in `settings.json`.
+## Code style
 
-**Periodic sweep** (do this when `settings.local.json` has visibly accumulated, or when the user asks): read the local file and triage its `allow` entries into three buckets —
+- **TypeScript**: strict; discriminated unions + type guards; no prop spreading.
+- **Solid**: never destructure props (it breaks tracking); hooks take
+  `Accessor<T>` in and return accessors out; `<Show keyed>` only when a subtree
+  must genuinely remount; `<Dynamic>` for registry-picked components.
+  `eslint-plugin-solid` runs at **error** across `src/`, including
+  `solid/reactivity`.
+- **CSS**: module CSS with design tokens; minimal inline styles.
+- **Tests**: domain logic in service/adapter layers, not components.
 
-1. **Already covered** by a `settings.json` pattern → drop.
-2. **One-off junk** — over-escaped single-invocation literals, machine-specific absolute paths → drop.
-3. **Genuinely durable and reusable** → propose promoting into `settings.json`.
+## Tooling
 
-**Always ask the user to approve the promotions before editing `settings.json`.** Present bucket 3 as a list and let them cut it down — widening the committed allowlist changes the security posture on both machines, so it is never an automatic move. Buckets 1 and 2 can be discarded without ceremony.
+**jCodeMunch MCP** — use it for all code navigation; don't Read/Grep/Glob to
+explore. Call `jcodemunch_guide` once at session start and follow it exactly.
+Keep this pointer short on purpose: the guide is version-current, whereas a
+pasted snippet drifts (the previous one named five tools that no longer exist).
+This repo is indexed as **`blarvin/complete-maintenance-management`** — pass that
+as `repo` rather than spending a `resolve_repo` call. A PostToolUse hook
+reindexes edited files automatically; don't call `register_edit` by hand.
 
-### Auto-Memory Is Committed To This Repo
+**context7 MCP** — use liberally. Any time you touch a solid-js, Dexie,
+Firebase, Vite or Vitest API, fetch the docs rather than trusting recall, *even
+when you think you know it*. Much cheaper than a wrong reactive primitive.
 
-Claude Code's auto-memory store normally lives at `~/.claude/projects/<slug>/memory/`, which is per-machine and never committed — there is no setting to relocate it (`autoMemoryEnabled` is a boolean, nothing more). In this project the store has been **moved into the repo at `.claude/memory/`**, and the canonical home path is a **directory junction** pointing at it. Memory writes therefore land in the working tree as ordinary modified files and get committed like anything else.
+## Working with me
 
-Consequence for Claude: memory files are repo content here. Treat a new or edited file under `.claude/memory/` as a normal working-tree change and mention it when summarising what changed — do not assume it is invisible to git.
+**File what you find.** At the end of an implementation session, append to
+`docs/ISSUES.md` anything you **observed** — a failing test, a hand-test result,
+code you actually read. Never file a suspicion; raise those in chat instead.
+One line, outcome-shaped, with provenance ("surfaced in the Phase IV hand-test",
+"same in the Qwik original"). Append to the **bottom** of the section; ordering
+is the user's call, not yours.
 
-<!-- DELETE-AFTER-SECOND-MACHINE-IS-SET-UP : begin -->
+**Settings hygiene.** `.claude/settings.json` is committed and must work on both
+machines. `.claude/settings.local.json` is gitignored scratch that Claude Code
+appends to on every approval. When local has visibly accumulated, sweep it: drop
+entries already covered by a committed pattern and one-off junk, then **ask
+before** promoting anything into `settings.json` — widening the committed
+allowlist changes the security posture on both machines.
 
-**Once-per-machine setup.** The junction cannot be committed (its path is machine-derived), so each new clone needs it created once. Symptom that it is missing: `.claude/memory/` exists in the repo but Claude never seems to recall anything from it. Run this from the repo root in PowerShell — no admin needed, junctions do not require elevation:
-
-```powershell
-$root = (git rev-parse --show-toplevel)
-$canon = Join-Path $env:USERPROFILE ".claude\projects\$($root -replace '[:/\\]','-')\memory"
-$repoMem = Join-Path $root ".claude\memory"
-
-if ((Test-Path $canon) -and (Get-Item $canon).LinkType -eq 'Junction') {
-  "Already linked."
-} else {
-  if (Test-Path $canon) {
-    Copy-Item "$canon\*" $repoMem -Recurse -Force   # fold any local-only memories in
-    Remove-Item $canon -Recurse -Force -Confirm:$false
-  }
-  New-Item -ItemType Directory -Force (Split-Path $canon) | Out-Null
-  New-Item -ItemType Junction -Path $canon -Target $repoMem | Out-Null
-  "Linked $canon -> $repoMem"
-}
-```
-
-Re-running it is safe: it no-ops when the junction already exists, and folds in any machine-local memories before swapping.
-
-<!-- DELETE-AFTER-SECOND-MACHINE-IS-SET-UP : end -->
-
-### Testing Strategy
-
-- **Unit tests**: Service layer, adapters, sync logic, FSM transitions
-- **E2E tests**: Cypress against Firestore emulator. Needs the emulator (`npm run emulator`, :8080) *and* the dev server (`npm run dev`, :5173) up — every spec starts with `cy.freshVisit()`, which wipes the emulator and deletes the app's IndexedDB before boot. No separate cleanup step.
-- **Fake-IndexedDB**: In-memory IndexedDB for fast unit tests
-- Firebase emulator: `localhost:8080`, enable via `localStorage.setItem('USE_FIRESTORE_EMULATOR', 'true')` or `?emulator=true` URL param
-
-### Testing Infrastructure
-
-- `src/test/globalSetup.ts` - Vitest + Firebase emulator setup
-- `cypress/support/e2e.ts` - E2E helpers (`freshVisit`, `createNode`, `expandCard`, `clearEmulator`)
-- `src/test/testUtils.ts` - Shared test utilities
-
-## Quick Reference
-
-### Adding a New DataField Type
-
-1. Add to `DATAFIELD_LIBRARY` in `src/constants.ts`
-2. No component changes needed (Phase 1 text-only)
-
-### Creating a New View
-
-1. Define state type in `appState.types.ts`
-2. Add transition in `appState.transitions.ts`
-3. Create selector in `appState.selectors.ts`
-4. Create view component in `src/components/views/`
-
-### Modifying Data Models
-
-1. Update types in `src/data/models.ts`
-2. Update Dexie schema in `src/data/storage/db.ts`
-3. Update adapters (IDB, Firestore)
-4. Add migration if needed
-
-### Working with Storage
-
-```typescript
-// Get services (module-level registry)
-const bus = getCommandBus();
-const q = getElementQueries();
-
-// Swap adapter for testing
-useStorageAdapter(new IDBAdapter());
-```
-
----
-
-## Important Files
-
-### Must-Read Before Changes
-
-- `docs/SPECIFICATION.md` - Product requirements (always check first)
-- `src/state/appState.types.ts` - FSM state definitions
-- `src/data/models.ts` - Domain types
-
-### Frequently Modified
-
-- `src/components/TreeNode/TreeNode.tsx` - Main component orchestrator
-- `src/components/DataField/DataField.tsx` - Field editing logic
-- `src/data/commands/handlers.ts` - Element command handlers
-- `src/data/queries/index.ts` - `getElementQueries()` / `getDefinitionQueries()`
-- `src/data/models.ts` - `Element`, `ElementHistory`, `Definition` (assembled view), the config/value unions
-- `src/constants.ts` - Hardcoded values (USER_ID, library)
-
- ### TOOL USE GUIDELINES
- IMPORTANT: Chain dependent commands with &&, never wrap them in PowerShell if ($?) { }
-
----
-
-## Agent skills
-
-### Issue tracker
-
-Issues live in this repo's own `docs/ISSUES.md` work queue — not GitHub Issues. `docs/LATER.md` is an ideas file, not a tracker. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical roles under their default names, applied as an inline `[label]` tag on a queue item only while triage is live. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root, alongside the existing SPECIFICATION / ELEMENT-MODEL / IMPLEMENTATION set. See `docs/agents/domain.md`.
+**Memory is repo content.** The auto-memory store is committed at
+`.claude/memory/`, reached through a directory junction. Treat a new or edited
+file there as an ordinary working-tree change and mention it when summarising.
+New clone: run `scripts/link-memory.ps1` once.
