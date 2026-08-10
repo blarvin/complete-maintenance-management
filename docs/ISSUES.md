@@ -5,9 +5,10 @@ Live queue of open work, ordered by priority within each section. Completion liv
 **House rules:**
 
 - **Only open items.** When done, **delete** — don't check off. The code is the record.
-- **One-line outcomes**, not task breakdowns. "Delete with undo" beats five bullets about dialogs + snackbars + cascades.
-- **One screen.** If this file gets long, prune to LATER.md or delete stale items.
-- **Order = priority.** No labels, no statuses. Top of a section = do next.
+- **One-line outcomes**, not task breakdowns. "Delete with undo" beats five bullets about dialogs + snackbars + cascades. Say where it came from — "surfaced in the Phase IV hand-test", "same in the Qwik original". An item with no provenance is a guess.
+- **One screen where it counts.** Bugs and Features stay scannable — prune to LATER.md or delete. The themed sections and Tech Debt are long tails; sweep them when they stop being read.
+- **Sections group; position is a hint, not a queue.** Work is picked by what's worth doing, not by order. No statuses. A bracketed `[tag]` may appear anywhere in an item, meaning whatever it needed to mean that day — ad-hoc, never a vocabulary.
+- **Agents append to the bottom** of a section, and only file what they observed. Reordering is the dev's.
 - **Bugs first**, then Features, then Tech Debt.
 - For deferred ideas see LATER.md. For product scope see SPECIFICATION.md.
 

@@ -25,10 +25,19 @@ needs. Sections in order: Bugs, Features, then further themed sections
 
 - **Only open items.** When done, **delete** the item — don't check it off.
   Completion lives in git history.
-- **One-line outcomes**, not task breakdowns.
-- **One screen.** If the file grows, prune or delete stale items.
-- **Order = priority.** Top of a section = do next.
+- **One-line outcomes**, not task breakdowns. Say where it came from.
+- **One screen where it counts.** Bugs and Features stay scannable; the themed
+  sections and Tech Debt are long tails.
+- **Sections group; position is a hint, not a queue.** No statuses, no label
+  vocabulary. A bracketed `[tag]` is ad-hoc and means whatever it says.
+- **Append to the bottom** of a section. Reordering is the dev's, not yours.
 - Items are numbered `N.)` within their section: bold lead-in, then prose.
+
+## Filing issues at the end of a session
+
+File only what you **observed** — a failing test, a hand-test result, code you
+actually read. A suspicion is not an issue; raise it in chat instead. One line,
+outcome-shaped, with its provenance in the prose.
 
 ## When a skill says "publish to the issue tracker"
 
@@ -43,17 +52,7 @@ number (e.g. "Bugs 2" or "Architecture Migration 7"), or by their bold lead-in
 phrase. Numbers are **not** stable identifiers — they shift as items are
 deleted, so quote the lead-in phrase when referring to an item across a session.
 
-## Wayfinding operations
+## Triage labels
 
-Used by `/wayfinder`. The **map** is a file with one **child** section per ticket.
-
-- **Map**: `.claude/plans/<effort>-map.md` — the Notes / Decisions-so-far / Fog body.
-- **Child ticket**: a numbered section in that file, with a `Type:` line
-  (`research`/`prototype`/`grilling`/`task`) and a `Status:` line
-  (`open`/`claimed`/`resolved`).
-- **Blocking**: a `Blocked by: NN, NN` line near the top of the ticket. A ticket
-  is unblocked when every ticket it lists is `resolved`.
-- **Frontier**: the first ticket that is open, unblocked, and unclaimed, by number.
-- **Claim**: set `Status: claimed` and save before any work.
-- **Resolve**: append the answer under an `## Answer` heading, set
-  `Status: resolved`, then add a context pointer to the map's Decisions-so-far.
+There are none. If a skill asks for a triage label, apply nothing; if it asks
+for `wontfix`, delete the item (or move it to `docs/LATER.md` if it is more an idea than an issue).

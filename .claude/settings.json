@@ -19,6 +19,15 @@
           "command": "node .claude/hooks/protect_files.js"
         }
       ]
+    },
+    {
+      "matcher": "Read|Grep|Glob",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "uvx jcodemunch-mcp hook-pretooluse"
+        }
+      ]
     }
   ],
   "PostToolUse": [
@@ -28,6 +37,25 @@
         {
           "type": "command",
           "command": "node .claude/hooks/log_tool_use.js"
+        }
+      ]
+    },
+    {
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "uvx jcodemunch-mcp hook-posttooluse"
+        }
+      ]
+    }
+  ],
+  "TaskCompleted": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "uvx jcodemunch-mcp hook-taskcomplete"
         }
       ]
     }
@@ -90,15 +118,11 @@
       "WebFetch(domain:claude.ai)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
-      "mcp__jcodemunch__index_folder",
-      "mcp__jcodemunch__list_repos",
-      "mcp__jcodemunch__get_file_tree",
-      "mcp__jcodemunch__search_symbols",
-      "mcp__jcodemunch__get_symbol",
-      "mcp__jcodemunch__get_symbol_source",
-      "mcp__jcodemunch__get_file_outline",
-      "mcp__jcodemunch__get_file_content",
-      "mcp__jcodemunch__search_text",
+      "mcp__jcodemunch__jcodemunch_guide",
+      "mcp__jcodemunch__menu",
+      "mcp__jcodemunch__route",
+      "mcp__jcodemunch__announce_model",
+      "mcp__jcodemunch__order",
       "Skill(update-config)",
       "PowerShell(npm test *)",
       "PowerShell(npx vitest *)",
