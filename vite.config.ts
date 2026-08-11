@@ -11,10 +11,5 @@ export default defineConfig(() => {
         server: {
             allowedHosts: ['host.docker.internal'],
         },
-        preview: {
-            headers: {
-                'Cache-Control': 'public, max-age=600',
-            }
-        }
     };
 });
