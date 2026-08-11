@@ -38,7 +38,8 @@ Issues live in `docs/ISSUES.md` — never GitHub. See `docs/agents/issue-tracker
 
 ## Never
 
-- **Never `git commit` or `git push`.** Suggest the message; the user commits.
+- **Never `git push`.** What reaches the remote is the user's call, always.
+  Committing is allowed only on `[auto]`-marked issues — see Working with me.
 - **Never `gh issue`** — this repo's tracker is `docs/ISSUES.md`.
 - **Never `&&` or `||`** in a command — see Shell below.
 - **Never bulk-rewrite a file** via `Get-Content`/`Set-Content`; it mangles
@@ -116,6 +117,13 @@ code you actually read. Never file a suspicion; raise those in chat instead.
 One line, outcome-shaped, with provenance ("surfaced in the Phase IV hand-test",
 "same in the Qwik original"). Append to the **bottom** of the section; ordering
 is the user's call, not yours.
+
+**Autonomous issues.** An item tagged `[auto]` in `docs/ISSUES.md` may be taken
+end-to-end without checking in: implement, verify with typecheck/lint/test, then
+**one commit per issue** and delete the item from ISSUES.md in that same commit
+(house rule: completion lives in git history). Everything else still comes back
+for a decision first. Untagged work never gets committed. `git push` is never
+the agent's, tagged or not — the user reviews the local commits and pushes.
 
 **Settings hygiene.** `.claude/settings.json` is committed and must work on both
 machines. `.claude/settings.local.json` is gitignored scratch that Claude Code

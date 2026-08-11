@@ -18,6 +18,10 @@ authoring/picking surfaces — the composer (`FieldComposer/`, `pendingMode`,
 next branch replaces both with a tree-native inline picker, so tagged items are
 parked until it lands rather than fixed twice.
 
+`[auto]` marks items the agent may take end-to-end without checking in — each is
+self-contained and verifiable by typecheck/lint/test. One commit per item, which
+also deletes the item from here. Agreed 2026-08-11; `git push` stays manual.
+
 ---
 
 ## Bugs
@@ -66,7 +70,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 14.) **`node.allowedKinds` real allow-policy** — a provisional literal dodging a `registry`→`capabilities` cycle; derive the honest "child nodes + field kinds" policy.
 
-15.) **Enforce manifest key === manifest `kind`** — nothing checks a manifest registered under `'text-kv'` declares `kind: 'text-kv'`; a typed-key helper would make a mismatch a compile error.
+15.) **[auto] Enforce manifest key === manifest `kind`** — nothing checks a manifest registered under `'text-kv'` declares `kind: 'text-kv'`; a typed-key helper would make a mismatch a compile error.
 
 16.) **Per-kind `coherence` overrides** — the `coherence?(caps)` hook on `ManifestIdentity` is unused; add per-kind rules only when a kind needs one beyond the global set.
 
@@ -80,20 +84,20 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 3.) **[Fields UI] Cypress: construction commit captures last keystroke** — needs a spec that types a field value, immediately clicks Create, and asserts the value persisted (the write-through flush timing can't be reproduced in a unit test).
 
-4.) **`coerceTimestamps` only handles `updatedAt`/`deletedAt`** — a silent trap for any future timestamp column; a "coerce all `*At` keys" rule would be self-maintaining.
+4.) **[auto] `coerceTimestamps` only handles `updatedAt`/`deletedAt`** — a silent trap for any future timestamp column; a "coerce all `*At` keys" rule would be self-maintaining.
 
 5.) **History revisions collide across clients** — `ElementHistory.id = ${elementId}:${rev}` with `rev` minted locally, so two offline clients editing the same element mint the same id and sync silently overwrites one audit row. Fix candidates: random ids ordered by `(elementId, updatedAt)`, or client-scoped rev.
 
-6.) **Debug logging ships to production un-gated** — `syncManager.ts` and `SyncPusher.ts` log every cycle, and `useElementChildren.ts:61` logs on every child load; none are `import.meta.env.DEV`-gated, so the built PWA narrates itself to the console. All pre-existing (verbatim from the Qwik original), but the migration was the moment to gate them and didn't. Gate or drop.
+6.) **[auto] Debug logging ships to production un-gated** — `syncManager.ts` and `SyncPusher.ts` log every cycle, and `useElementChildren.ts:61` logs on every child load; none are `import.meta.env.DEV`-gated, so the built PWA narrates itself to the console. All pre-existing (verbatim from the Qwik original), but the migration was the moment to gate them and didn't. Gate or drop.
 
-7.) **`NavigableRow` chevron `aria-label` is generic** — "Expand"/"Collapse" with no row context; "Expand {name}" would be friendlier. Trivial.
+7.) **[auto] `NavigableRow` chevron `aria-label` is generic** — "Expand"/"Collapse" with no row context; "Expand {name}" would be friendlier. Trivial.
 
-8.) **Dead `currentValue` prop on `DataFieldDetails`** — computed and passed by `DataField.tsx` but never read. Drop it, or wire it into the metadata display.
+8.) **[auto] Dead `currentValue` prop on `DataFieldDetails`** — computed and passed by `DataField.tsx` but never read. Drop it, or wire it into the metadata display.
 
 9.) **IMPLEMENTATION.md CQRS section names pre-Element APIs** — its read/write-path examples use `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE`, all of which have zero hits in `src/`. Rewrite against the element-shaped API (`getElementQueries()` / `getDefinitionQueries()`, element command types); the section carries an inline warning meanwhile.
 
 10.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
-11.) **`vite.config.ts` `preview.headers` is dead config** — the `Cache-Control` block applies to `vite preview` (`npm run preview`), but the PWA is exercised via `preview:pwa` (`npx serve dist`), which never reads it. Either drop it or move the header tuning onto the `serve` invocation.
+11.) **[auto] `vite.config.ts` `preview.headers` is dead config** — the `Cache-Control` block applies to `vite preview` (`npm run preview`), but the PWA is exercised via `preview:pwa` (`npx serve dist`), which never reads it. Either drop it or move the header tuning onto the `serve` invocation.
 
 12.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky.
