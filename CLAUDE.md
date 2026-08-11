@@ -67,7 +67,7 @@ which shell Claude Code was launched from. So:
 npm run dev          # Vite dev server, :5173 (registers no service worker)
 npm run build        # Typecheck + prod build to dist/ (compiles SW, injects precache manifest)
 npm run preview:pwa  # Serve dist/ on :4173 — the only way to exercise the PWA
-npm run test         # Vitest (known: hangs after passing — ISSUES → Tech Debt)
+npm run test         # Vitest (exits cleanly since the globalSetup removal)
 npm run typecheck
 npm run lint
 npm run emulator     # Firebase emulator, :8080

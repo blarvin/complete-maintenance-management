@@ -70,7 +70,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 14.) **`node.allowedKinds` real allow-policy** — a provisional literal dodging a `registry`→`capabilities` cycle; derive the honest "child nodes + field kinds" policy.
 
-15.) **[auto] Enforce manifest key === manifest `kind`** — nothing checks a manifest registered under `'text-kv'` declares `kind: 'text-kv'`; a typed-key helper would make a mismatch a compile error.
+15.) **Enforce manifest key === manifest `kind`** — nothing checks a manifest registered under `'text-kv'` declares `kind: 'text-kv'`. Not the small typed-key helper it looks like: `Kind` is `keyof typeof KIND_REGISTRY` and `ManifestIdentity.kind` is `Kind`, so *any* compile-time key/kind comparison must resolve a manifest's type, which re-enters `Kind`, which needs the registry. Three shapes tried, all circular (TS2456/TS7022): a generic `keyedByOwnKind` wrapper, per-manifest `satisfies KindManifest` to preserve the literal, and a post-hoc mapped-type assertion over `typeof KIND_REGISTRY`. Needs a design call, not a helper — declare `Kind` as an explicit literal union and check the registry against it (inverts the documented "registry keys are the source of truth"), parameterise `ManifestIdentity` by its kind, or annotate `KIND_REGISTRY` per-key (duplicates the key list). Attempted and reverted in the 2026-08-11 autonomous pass.
 
 16.) **Per-kind `coherence` overrides** — the `coherence?(caps)` hook on `ManifestIdentity` is unused; add per-kind rules only when a kind needs one beyond the global set.
 
@@ -91,3 +91,5 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 6.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
 7.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky.
+
+8.) **`test:firestore` script targets a file that doesn't exist** — `package.json` runs `vitest run src/test/firestoreAdapter.test.ts`; there is no such file, so the script fails outright. Write the spec or drop the script. Surfaced in the 2026-08-11 autonomous pass.
