@@ -616,6 +616,10 @@ notch. The insets resolve to 0 in a normal browser.
 
 **localStorage Mocking**: `uiPrefs.test.ts` uses a mock `localStorage` object. Tests verify Set↔Array conversion and persistence behavior.
 
+**No `globalSetup` — deliberately (2026-08-11)**: `vitest.config.ts` has `setupFiles` (fake-indexeddb, the navigator stub) but *no* `globalSetup`, and must not regain one that touches `data/firebase`. The removed `src/test/globalSetup.ts` called `cleanupAllTestFixtures()`, which imports the real Firestore `db`; the emulator connect in `firebase.ts` is gated on `isBrowser`, so under Node it never fires and that `db` points at **production**. Every `npm run test` therefore read every document in `elements`, `elementHistory` and `fieldDefinitions` and batch-deleted any `TEST_`-prefixed id — reporting "Cleaned: 0" only because nothing mints `TEST_` ids any more (the Element refactor replaced the live-Firestore suite with mocks). It was also the long-standing "Vitest never exits" hang: `getDocs` opens a gRPC/HTTP2 session the Firestore SDK never closes and nothing called `terminate()`. The `hanging-process` reporter names it as `TCPWRAP`/`TLSWRAP`/`HTTP2SESSION`/`PendingRequest` inside `@grpc/grpc-js/build/src/transport.js` — and `TLSWRAP` is the giveaway that it was production rather than the plaintext emulator, not the SyncManager interval or a Dexie handle as long assumed.
+
+`src/test/testUtils.ts` and `src/test/cleanup.ts` survive as the manual sweep (`npm run test:cleanup`), which is the right shape for something that writes to production: deliberate, never implicit. Reinstating any automatic remote setup needs the Node emulator-connect path first (LATER.md §Emulator Round-Trip Sync Coverage) — otherwise it silently re-aims at production.
+
 ---
 
 ## Error Handling
