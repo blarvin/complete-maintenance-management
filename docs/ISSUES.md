@@ -12,6 +12,12 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Bugs first**, then Features, then Tech Debt.
 - For deferred ideas see LATER.md. For product scope see SPECIFICATION.md.
 
+**This pass's tag:** `[Fields UI]` marks work bound to the *current* Field
+authoring/picking surfaces — the composer (`FieldComposer/`, `pendingMode`,
+`pendingFields:` drafts) and the legacy "+ Add Field" (`CreateDataField`). The
+next branch replaces both with a tree-native inline picker, so tagged items are
+parked until it lands rather than fixed twice.
+
 ---
 
 ## Bugs
@@ -20,7 +26,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 2.) **One IndexedDB, two remotes — mode flips wipe data** — the plain page syncs against production Firestore while `?emulator=true` syncs against the emulator, but both share the same Dexie DB; each full-collection pull deletes local elements missing from *its* remote, so switching modes wipes the other mode's data (observed: flipping to the emulator blanked the seeded tree). Scope the Dexie DB name by sync target, or gate full-pull deletion behind a same-remote check. **Worse in the built PWA** (surfaced in the Phase V PWA pass): an installed app launches `start_url: "/"` with no query string, so the URL-param escape hatch doesn't exist there — the only way in is `localStorage.setItem('USE_FIRESTORE_EMULATOR','true')` on that origin *before* first load, and an empty IDB on an online first load migrates straight from production. A visible sync-target indicator would help as much as the fix.
 
-3.) **Composer draft loses the uncommitted keystrokes** — a ticked row survives reload (localStorage `pendingFields:<nodeId>`), but text still sitting in its editor does not: the value only reaches `setPendingValue` when the renderer commits (Enter / blur / outside-click via `pendingMode`), and a reload commits nothing. Falls short of the intended "tick + type, reload, rows restored". Flush the edit buffer on `beforeunload`/`visibilitychange`, or write through per keystroke in `pendingMode`. Pre-existing (same commit-on-blur structure in the Qwik original); surfaced in the Phase IV hand-test.
+3.) **[Fields UI] Composer draft loses the uncommitted keystrokes** — a ticked row survives reload (localStorage `pendingFields:<nodeId>`), but text still sitting in its editor does not: the value only reaches `setPendingValue` when the renderer commits (Enter / blur / outside-click via `pendingMode`), and a reload commits nothing. Falls short of the intended "tick + type, reload, rows restored". Flush the edit buffer on `beforeunload`/`visibilitychange`, or write through per keystroke in `pendingMode`. Pre-existing (same commit-on-blur structure in the Qwik original); surfaced in the Phase IV hand-test.
 
 ## Features
 
@@ -28,7 +34,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 
 2.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like DataFields? edit button?), then wire up. Nodes are rename-less after creation.
 
-3.) **DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't.
+3.) **[Fields UI] DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't.
 
 ## Architecture Migration (ELEMENT-MODEL → code)
 
@@ -48,15 +54,15 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 7.) **`KindAdornment` re-gathers the whole subtree on every write** — a BFS over the parent's subtree per (debounced) `storageEventBus` emit, plus a `FieldList` subscription per expanded `NavigableRow` — O(subtree) per write. Fine at prototype scale; revisit if sluggish.
 
-8.) **`NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
+8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
 
 9.) **Provisioned-lens lifecycle (jobs + logbook)** — provisioning is create-time only (`ensureProvisionedLenses`), leaving three gaps, generic across `PROVISIONED_LENSES`: backfill onto pre-existing nodes, de-provision/GC when the last target below is removed, and hiding an empty lens.
 
 10.) **`capabilityEngine` `ancestors`/`edges` traversal** — only `children` is built; `ancestors` (feeds the cascade, #4) and `edges` (the Edges family, #3) currently throw in `capabilityEngine.ts`.
 
-11.) **`asset-doc` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
+11.) **[Fields UI] `asset-doc` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
 
-12.) **Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
+12.) **[Fields UI] Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
 
 13.) **`job` admits `job` children (sub-tasks)?** — `job.allowedKinds` includes `job` but no picker mints a sub-job. Decide nested-jobs vs job-subtypes (Task/Work-Order/Project) — a `capabilities.ts` allowlist call, coupled to #3.
 
@@ -72,11 +78,11 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 1.) **Vitest never exits — leaked handle after the suite passes** — `npm run test` reports 419/419 then hangs: `close timed out after 10000ms … something prevents Vite server from exiting`. Most likely the SyncManager interval or a Dexie connection opened in `globalSetup.ts` and never torn down. Harmless locally, but it turns a green run into a hung job the moment this hits CI. Run with the `hanging-process` reporter to name the handle.
 
-2.) **`pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.
+2.) **[Fields UI] `pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.
 
-3.) **`useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Revisit only if a component genuinely needs a different edit lifecycle.
+3.) **[Fields UI] `useFieldEdit` size + 21-prop return** — 200+ lines, fat return surface. Revisit only if a component genuinely needs a different edit lifecycle — the tree-native picker is likely to be exactly that, so the shape is worth settling there rather than now.
 
-4.) **Cypress: construction commit captures last keystroke** — needs a spec that types a field value, immediately clicks Create, and asserts the value persisted (the write-through flush timing can't be reproduced in a unit test).
+4.) **[Fields UI] Cypress: construction commit captures last keystroke** — needs a spec that types a field value, immediately clicks Create, and asserts the value persisted (the write-through flush timing can't be reproduced in a unit test).
 
 5.) **`coerceTimestamps` only handles `updatedAt`/`deletedAt`** — a silent trap for any future timestamp column; a "coerce all `*At` keys" rule would be self-maintaining.
 
@@ -90,7 +96,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 10.) **IMPLEMENTATION.md CQRS section names pre-Element APIs** — its read/write-path examples use `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE`, all of which have zero hits in `src/`. Rewrite against the element-shaped API (`getElementQueries()` / `getDefinitionQueries()`, element command types); the section carries an inline warning meanwhile.
 
-11.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name. Pure renames; do only if they bother someone.
+11.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
 12.) **`vite.config.ts` `preview.headers` is dead config** — the `Cache-Control` block applies to `vite preview` (`npm run preview`), but the PWA is exercised via `preview:pwa` (`npx serve dist`), which never reads it. Either drop it or move the header tuning onto the `serve` invocation.
 

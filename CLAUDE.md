@@ -125,6 +125,12 @@ before** promoting anything into `settings.json` — widening the committed
 allowlist changes the security posture on both machines.
 
 **Memory is repo content.** The auto-memory store is committed at
-`.claude/memory/`, reached through a directory junction. Treat a new or edited
-file there as an ordinary working-tree change and mention it when summarising.
-New clone: run `scripts/link-memory.ps1` once.
+`.claude/memory/` — that is the **real directory**; the canonical store
+(`~/.claude/projects/<slug>/memory`) is a junction pointing *into* it. Treat a
+new or edited file there as an ordinary working-tree change and mention it when
+summarising. New clone: run `scripts/link-memory.ps1` once.
+
+**Write memories via the repo path** (`<repo>/.claude/memory/…`), not the
+`~/.claude/projects/<slug>/…` path the auto-memory prompt names. Same files
+either way, but only the repo path is machine-independent, so it's the one the
+`Read`/`Edit(.claude/memory/**)` allowlist entries can match on both machines.

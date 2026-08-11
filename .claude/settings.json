@@ -160,7 +160,9 @@
       "PowerShell(Receive-Job *)",
       "PowerShell(Out-Null *)",
       "PowerShell(claude mcp *)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(.claude/memory/**)",
+      "Edit(.claude/memory/**)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
