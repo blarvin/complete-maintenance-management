@@ -78,7 +78,7 @@ export class SyncManager {
    */
   start(): void {
     this.lifecycle.start();
-    console.log('[SyncManager] Started');
+    if (import.meta.env.DEV) console.log('[SyncManager] Started');
   }
 
   /**
@@ -87,7 +87,7 @@ export class SyncManager {
    */
   stop(): void {
     this.lifecycle.stop();
-    console.log('[SyncManager] Stopped');
+    if (import.meta.env.DEV) console.log('[SyncManager] Stopped');
   }
 
   /**
@@ -106,7 +106,7 @@ export class SyncManager {
     if (!this.canSync()) return;
 
     this._isSyncing = true;
-    console.log('[SyncManager] Starting delta sync cycle...');
+    if (import.meta.env.DEV) console.log('[SyncManager] Starting delta sync cycle...');
 
     try {
       // Push local changes first
@@ -115,13 +115,13 @@ export class SyncManager {
 
       // Then pull remote changes (delta). Timeout so a hung pull can't wedge
       // _isSyncing and silently stop all future cycles.
-      console.log('[SyncManager] Pull: Starting', this.deltaStrategy.name, 'sync');
+      if (import.meta.env.DEV) console.log('[SyncManager] Pull: Starting', this.deltaStrategy.name, 'sync');
       await withTimeout(this.deltaStrategy.sync(), SYNC_PULL_TIMEOUT_MS, 'delta pull');
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
-      console.log('[SyncManager] Delta sync cycle complete');
+      if (import.meta.env.DEV) console.log('[SyncManager] Delta sync cycle complete');
       // UI updates arrive via per-element storageEventBus emissions from
       // IDBAdapter.applyRemoteElement (which also re-signals the Composer for
       // arriving `library`-tree Definitions).
@@ -141,7 +141,7 @@ export class SyncManager {
     if (!this.canSync()) return;
 
     this._isSyncing = true;
-    console.log('[SyncManager] Starting full sync cycle...');
+    if (import.meta.env.DEV) console.log('[SyncManager] Starting full sync cycle...');
 
     try {
       // Push local changes first
@@ -150,13 +150,13 @@ export class SyncManager {
 
       // Then pull remote changes (full collection). Timeout so a hung pull
       // can't wedge _isSyncing and silently stop all future cycles.
-      console.log('[SyncManager] Pull: Starting', this.fullStrategy.name, 'sync');
+      if (import.meta.env.DEV) console.log('[SyncManager] Pull: Starting', this.fullStrategy.name, 'sync');
       await withTimeout(this.fullStrategy.sync(), SYNC_PULL_TIMEOUT_MS, 'full pull');
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
-      console.log('[SyncManager] Full sync cycle complete');
+      if (import.meta.env.DEV) console.log('[SyncManager] Full sync cycle complete');
     } catch (err) {
       console.error('[SyncManager] Full sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
@@ -171,7 +171,7 @@ export class SyncManager {
    */
   async retryFailed(): Promise<void> {
     const requeued = await this.syncQueue.requeueFailed();
-    console.log('[SyncManager] Re-armed', requeued, 'failed item(s)');
+    if (import.meta.env.DEV) console.log('[SyncManager] Re-armed', requeued, 'failed item(s)');
     await this.syncOnce();
   }
 
@@ -180,7 +180,7 @@ export class SyncManager {
    */
   setEnabled(enabled: boolean): void {
     this._enabled = enabled;
-    console.log('[SyncManager] Enabled:', enabled);
+    if (import.meta.env.DEV) console.log('[SyncManager] Enabled:', enabled);
   }
 
   /**
@@ -218,19 +218,19 @@ export class SyncManager {
   private canSync(): boolean {
     // Skip if disabled
     if (!this._enabled) {
-      console.log('[SyncManager] Sync skipped (disabled)');
+      if (import.meta.env.DEV) console.log('[SyncManager] Sync skipped (disabled)');
       return false;
     }
 
     // Skip if offline
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      console.log('[SyncManager] Sync skipped (offline)');
+      if (import.meta.env.DEV) console.log('[SyncManager] Sync skipped (offline)');
       return false;
     }
 
     // Skip if already syncing
     if (this._isSyncing) {
-      console.log('[SyncManager] Sync skipped (already in progress)');
+      if (import.meta.env.DEV) console.log('[SyncManager] Sync skipped (already in progress)');
       return false;
     }
 

@@ -58,7 +58,7 @@ export function useElementChildren(
                 if (!disposed) {
                     const next = effective.filter(e => (filter === 'nodes') === isReRoot(e.kind));
                     setChildren(next);
-                    console.log('[useElementChildren] Loaded', next.length, filter, 'under', pid ?? 'ROOT');
+                    if (import.meta.env.DEV) console.log('[useElementChildren] Loaded', next.length, filter, 'under', pid ?? 'ROOT');
                 }
             } finally {
                 setIsLoading(false);
