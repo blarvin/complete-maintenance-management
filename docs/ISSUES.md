@@ -90,12 +90,10 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 6.) **[auto] `NavigableRow` chevron `aria-label` is generic** — "Expand"/"Collapse" with no row context; "Expand {name}" would be friendlier. Trivial.
 
-7.) **[auto] Dead `currentValue` prop on `DataFieldDetails`** — computed and passed by `DataField.tsx` but never read. Drop it, or wire it into the metadata display.
+7.) **IMPLEMENTATION.md CQRS section names pre-Element APIs** — its read/write-path examples use `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE`, all of which have zero hits in `src/`. Rewrite against the element-shaped API (`getElementQueries()` / `getDefinitionQueries()`, element command types); the section carries an inline warning meanwhile.
 
-8.) **IMPLEMENTATION.md CQRS section names pre-Element APIs** — its read/write-path examples use `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE`, all of which have zero hits in `src/`. Rewrite against the element-shaped API (`getElementQueries()` / `getDefinitionQueries()`, element command types); the section carries an inline warning meanwhile.
+8.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
-9.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
+9.) **[auto] `vite.config.ts` `preview.headers` is dead config** — the `Cache-Control` block applies to `vite preview` (`npm run preview`), but the PWA is exercised via `preview:pwa` (`npx serve dist`), which never reads it. Either drop it or move the header tuning onto the `serve` invocation.
 
-10.) **[auto] `vite.config.ts` `preview.headers` is dead config** — the `Cache-Control` block applies to `vite preview` (`npm run preview`), but the PWA is exercised via `preview:pwa` (`npx serve dist`), which never reads it. Either drop it or move the header tuning onto the `serve` invocation.
-
-11.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky.
+10.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky.
