@@ -430,6 +430,16 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Retry-action QRL without `$()`**: `ToastAction.handler` must be a QRL, but a module-level `$()` in `syncManager.ts` crashes every Vitest import (no Qwik optimizer in tests: "Optimizer should replace all usages of $()"). The handler lives in `src/data/sync/retryFailedSync.ts` and `syncManager.ts` wraps it with the runtime API: `qrl(() => import('./retryFailedSync'), 'retryFailedSync')` — works with and without the optimizer, captures nothing, resolves `getSyncManager()` at invoke time per the registry-getter pattern.
 
+**One database per sync target (2026-08-11, ISSUES Bugs #1)**: production and the emulator open *different* Dexie databases. They cannot share one: `FullCollectionSync` deletes local elements absent from *its* remote, so on a shared database every flip between targets wipes the other target's data (observed: flipping to the emulator blanked the seeded tree; worse in an installed PWA, whose `start_url` carries no query string, so an online first load migrated straight from production). The alternative fix — gating the deletion pass behind a same-remote check — was rejected: it stops the wipe but leaves both remotes' rows interleaved in one store, trading a loud symptom for a subtler one.
+
+Three details that look arbitrary and aren't:
+
+- **Production keeps the unsuffixed name** (`complete-maintenance-management`); only the emulator moves to `…-emulator`. Suffixing both would be tidier but would orphan every existing local database behind a name nothing opens.
+- **The target resolver is its own module** (`src/data/syncTarget.ts`), not an export of `firebase.ts`. `storage/db.ts` needs the target at construction time, and importing `firebase.ts` would drag the Firebase SDK into the storage layer and fire its import-time `initializeApp`. Both modules now read the one resolver, so they cannot drift. It resolves once at load — the target cannot change without a reload, since Dexie fixes its name at construction.
+- **Cypress deletes both names** (`cypress/support/e2e.ts`). Specs visit `?emulator=true`, so the emulator-scoped database is the live one; deleting only the original would have let every spec boot against stale emulator state.
+
+`SyncTargetBadge` is the legibility half of the same fix: scoping removes the loud symptom (data vanishes) and leaves a quiet one (an unfamiliar dataset), so a floating badge marks emulator sessions. Deliberately not DEV-gated — in a PWA the only way into emulator mode is `localStorage.USE_FIRESTORE_EMULATOR` on a production build, which is exactly when the marker earns its place.
+
 ---
 
 ### DataField Components / Templates / Instances

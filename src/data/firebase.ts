@@ -5,6 +5,7 @@ import {
     connectFirestoreEmulator,
     memoryLocalCache,
 } from "firebase/firestore";
+import { isEmulatorTarget } from "./syncTarget";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBgVGwmf8o6eP7XRW-Jv8AwScIrIDPertA",
@@ -24,29 +25,6 @@ export const isBrowserEnv = isBrowser;
 
 // Track emulator connection state
 let emulatorConnected = false;
-
-/**
- * Check if we should use the Firestore Emulator.
- * Reads from localStorage (set by Cypress) or URL param.
- */
-function shouldUseEmulator(): boolean {
-    if (!isBrowser) return false;
-    
-    try {
-        // Check localStorage (set by Cypress before page load)
-        if (localStorage.getItem('USE_FIRESTORE_EMULATOR') === 'true') {
-            return true;
-        }
-        // Check URL param (alternative for manual testing)
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('emulator') === 'true') {
-            return true;
-        }
-    } catch {
-        // Ignore errors (SSR, security restrictions)
-    }
-    return false;
-}
 
 // Initialize Firestore only once (handle HMR gracefully).
 // IDB persistence intentionally disabled — Dexie + syncQueue is the app's
@@ -121,7 +99,7 @@ export const db = getDb();
 export const projectId = firebaseConfig.projectId;
 
 // Connect to emulator if flag is set (must happen after db init, before any operations)
-if (isBrowser && shouldUseEmulator() && !emulatorConnected) {
+if (isBrowser && isEmulatorTarget && !emulatorConnected) {
     try {
         connectFirestoreEmulator(db, 'localhost', 8080);
         emulatorConnected = true;

@@ -22,11 +22,9 @@ parked until it lands rather than fixed twice.
 
 ## Bugs
 
-1.) **One IndexedDB, two remotes — mode flips wipe data** — the plain page syncs against production Firestore while `?emulator=true` syncs against the emulator, but both share the same Dexie DB; each full-collection pull deletes local elements missing from *its* remote, so switching modes wipes the other mode's data (observed: flipping to the emulator blanked the seeded tree). Scope the Dexie DB name by sync target, or gate full-pull deletion behind a same-remote check. **Worse in the built PWA** (surfaced in the Phase V PWA pass): an installed app launches `start_url: "/"` with no query string, so the URL-param escape hatch doesn't exist there — the only way in is `localStorage.setItem('USE_FIRESTORE_EMULATOR','true')` on that origin *before* first load, and an empty IDB on an online first load migrates straight from production. A visible sync-target indicator would help as much as the fix.
+1.) **[Fields UI] Composer draft loses the uncommitted keystrokes** — a ticked row survives reload (localStorage `pendingFields:<nodeId>`), but text still sitting in its editor does not: the value only reaches `setPendingValue` when the renderer commits (Enter / blur / outside-click via `pendingMode`), and a reload commits nothing. Falls short of the intended "tick + type, reload, rows restored". Flush the edit buffer on `beforeunload`/`visibilitychange`, or write through per keystroke in `pendingMode`. Pre-existing (same commit-on-blur structure in the Qwik original); surfaced in the Phase IV hand-test.
 
-2.) **[Fields UI] Composer draft loses the uncommitted keystrokes** — a ticked row survives reload (localStorage `pendingFields:<nodeId>`), but text still sitting in its editor does not: the value only reaches `setPendingValue` when the renderer commits (Enter / blur / outside-click via `pendingMode`), and a reload commits nothing. Falls short of the intended "tick + type, reload, rows restored". Flush the edit buffer on `beforeunload`/`visibilitychange`, or write through per keystroke in `pendingMode`. Pre-existing (same commit-on-blur structure in the Qwik original); surfaced in the Phase IV hand-test.
-
-3.) **number-kv accepts radix literals** — `parseNumber` (numberKvState.ts) uses `Number`, which parses `0x1A` as 26, `0b101` as 5, `0o17` as 15 (verified at a node prompt). Harmless in practice — nobody types hex into a temperature field — and strictly better than the `parseFloat` it replaced, which read `0x1A` as 0. Rejecting them needs a full-string decimal/scientific regex. Left in deliberately when Bugs #1 was fixed; raise only if it ever bites.
+2.) **number-kv accepts radix literals** — `parseNumber` (numberKvState.ts) uses `Number`, which parses `0x1A` as 26, `0b101` as 5, `0o17` as 15 (verified at a node prompt). Harmless in practice — nobody types hex into a temperature field — and strictly better than the `parseFloat` it replaced, which read `0x1A` as 0. Rejecting them needs a full-string decimal/scientific regex. Left in deliberately when Bugs #1 was fixed; raise only if it ever bites.
 
 ## Features
 
@@ -76,7 +74,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 ## Tech Debt
 
-1.) **Vitest never exits — leaked handle after the suite passes** — `npm run test` reports 419/419 then hangs: `close timed out after 10000ms … something prevents Vite server from exiting`. Most likely the SyncManager interval or a Dexie connection opened in `globalSetup.ts` and never torn down. Harmless locally, but it turns a green run into a hung job the moment this hits CI. Run with the `hanging-process` reporter to name the handle.
+1.) **Vitest never exits — leaked handle after the suite passes** — `npm run test` reports 427/427 then hangs: `close timed out after 10000ms … something prevents Vite server from exiting`. Most likely the SyncManager interval or a Dexie connection opened in `globalSetup.ts` and never torn down. Harmless locally, but it turns a green run into a hung job the moment this hits CI. Run with the `hanging-process` reporter to name the handle.
 
 2.) **[Fields UI] `pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.
 

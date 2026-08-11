@@ -10,6 +10,7 @@ import { onMount, Show } from 'solid-js';
 import { createAppState, AppStateContext, selectors } from './state/appState';
 import { initializeStorage } from './data/storage/initStorage';
 import { SnackbarHost } from './components/Snackbar/SnackbarHost';
+import { SyncTargetBadge } from './components/SyncTargetBadge/SyncTargetBadge';
 import { RootView } from './components/views/RootView';
 import { BranchView } from './components/views/BranchView';
 
@@ -55,6 +56,9 @@ export const App = () => {
             >
                 <RootView />
             </Show>
+            {/* Before SnackbarHost on purpose — equal z-index, so the later
+                element paints on top and a toast is never hidden. */}
+            <SyncTargetBadge />
             <SnackbarHost />
         </AppStateContext.Provider>
     );
