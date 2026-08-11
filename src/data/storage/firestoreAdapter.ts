@@ -22,24 +22,7 @@ import type { Element, ElementHistory } from "../models";
 import type { RemoteSyncAdapter } from "./storageAdapter";
 import type { SyncQueueItem } from "./db";
 import { COLLECTIONS } from "../../constants";
-
-/**
- * Convert Firestore Timestamp fields to epoch ms numbers.
- * Firestore returns Timestamp objects for serverTimestamp() fields;
- * our domain models expect plain numbers (epoch ms).
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function coerceTimestamps<T>(data: any): T {
-  if (data && typeof data === 'object') {
-    for (const key of ['updatedAt', 'deletedAt']) {
-      const val = data[key];
-      if (val != null && typeof val === 'object' && typeof val.toMillis === 'function') {
-        data[key] = val.toMillis();
-      }
-    }
-  }
-  return data as T;
-}
+import { coerceTimestamps } from "./coerceTimestamps";
 
 export class FirestoreAdapter implements RemoteSyncAdapter {
   // ============================================================================
