@@ -1,9 +1,10 @@
 /**
  * useLensGather — the derived-children read for a lens (Derivation + Provision).
  *
- * Gathers the lens's owning-node subtree (the `ownerId` = `lens.parentId`) filtered
- * to the lens's `targetKind` — the `job`s a `jobs` lens rolls up — re-gathered on a
- * debounced `storageEventBus` subscription so the rollup stays roughly live.
+ * Runs the lens kind's own `derivation` descriptor against the lens's owning node
+ * (the `ownerId` = `lens.parentId`) — both halves, traversal and target kind — so
+ * the `job`s a `jobs` lens rolls up are the ones the manifest says it rolls up.
+ * Re-gathered on a debounced `storageEventBus` subscription so it stays roughly live.
  *
  * Shared by the two surfaces that show the rollup: the compact in-card summary
  * (`LensRollup`, NavigableRows) and the re-rooted parent view (`BranchView`, where
@@ -16,19 +17,20 @@ import { createSignal, createEffect, onCleanup, type Accessor } from 'solid-js';
 import { getElementQueries } from '../data/queries';
 import { initializeStorage } from '../data/storage/initStorage';
 import { storageEventBus } from '../data/storageEventBus';
-import { gatherDescendants } from '../data/services/capabilityEngine';
-import type { Element, Kind } from '../data/models';
+import { gatherByDerivation } from '../data/services/capabilityEngine';
+import type { DerivationSpec } from '../kinds/types';
+import type { Element } from '../data/models';
 
 export function useLensGather(
     ownerId: Accessor<string>,
-    targetKind: Accessor<Kind | null>,
+    derivation: Accessor<DerivationSpec | null>,
 ): Accessor<Element[]> {
     const [gathered, setGathered] = createSignal<Element[]>([]);
 
     createEffect(() => {
         const oid = ownerId();
-        const tk = targetKind();
-        if (!oid || !tk) {
+        const spec = derivation();
+        if (!oid || !spec) {
             setGathered([]);
             return;
         }
@@ -36,8 +38,8 @@ export function useLensGather(
         let timer: ReturnType<typeof setTimeout> | null = null;
         const regather = async () => {
             await initializeStorage();
-            const all = await gatherDescendants(oid, getElementQueries());
-            if (!disposed) setGathered(all.filter((e) => e.kind === tk));
+            const all = await gatherByDerivation(oid, spec, getElementQueries());
+            if (!disposed) setGathered(all);
         };
         const unsub = storageEventBus.subscribe(() => {
             if (timer !== null) clearTimeout(timer);

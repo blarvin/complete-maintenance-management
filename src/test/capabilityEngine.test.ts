@@ -7,7 +7,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { gatherDescendants, gatherAncestors, gatherBySource, resolveEdge } from '../data/services/capabilityEngine';
+import {
+  gatherDescendants,
+  gatherAncestors,
+  gatherBySource,
+  gatherByDerivation,
+  resolveEdge,
+} from '../data/services/capabilityEngine';
 import type { Element, Kind } from '../data/models';
 import type { IElementQueries } from '../data/queries/types';
 
@@ -78,6 +84,32 @@ describe('capabilityEngine', () => {
   it('edges traversal is declared but not yet implemented', async () => {
     const q = mockQueries(TREE);
     await expect(gatherBySource('relay', { relation: 'edges', reach: 'direct' }, q)).rejects.toThrow(/not implemented/);
+  });
+});
+
+describe('capabilityEngine — gatherByDerivation', () => {
+  it('applies both halves: the source traversal and the targetKind filter', async () => {
+    const q = mockQueries(TREE);
+    const jobs = await gatherByDerivation(
+      'root',
+      { source: { relation: 'children', reach: 'transitive' }, targetKind: 'job' },
+      q,
+    );
+    expect(jobs.map((e) => e.id).sort()).toEqual(['job1', 'job2']);
+  });
+
+  it('an untyped derivation (no targetKind) keeps everything gathered', async () => {
+    const q = mockQueries(TREE);
+    const all = await gatherByDerivation('root', { source: { relation: 'children', reach: 'transitive' } }, q);
+    expect(all).toHaveLength(5);
+  });
+
+  it('honours the declared source rather than assuming children/transitive', async () => {
+    const q = mockQueries(TREE);
+    const direct = await gatherByDerivation('root', { source: { relation: 'children', reach: 'direct' } }, q);
+    expect(direct.map((e) => e.id).sort()).toEqual(['a', 'b']);
+    const up = await gatherByDerivation('job1', { source: { relation: 'ancestors', reach: 'transitive' } }, q);
+    expect(up.map((e) => e.id)).toEqual(['relay', 'a', 'root']);
   });
 });
 

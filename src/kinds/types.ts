@@ -151,6 +151,20 @@ export type SourceSpec = {
 };
 
 /**
+ * A whole Derivation gather: where to look (`source`) and what to keep
+ * (`targetKind`). `targetKind` filters the gathered set to one kind — the lens's
+ * "→ job" / "→ log-entry" axis, which `SourceSpec` deliberately doesn't carry.
+ * Omitted = keep every gathered Element (e.g. `org`'s untyped rollup count).
+ *
+ * Executed by `gatherByDerivation` (capabilityEngine); consumers read it whole
+ * rather than picking a traversal themselves.
+ */
+export type DerivationSpec = {
+    source: SourceSpec;
+    targetKind?: Kind;
+};
+
+/**
  * Provisioning descriptor (node-oriented; rides on the six) — declarative,
  * framework-reconciled materialization: ensure exactly one node per target place,
  * keyed by a deterministic id so concurrent creates converge. `trigger`/`idScheme`
@@ -184,12 +198,7 @@ export type CapabilitySet = {
     ownValue?: ValueSpec;
     children?: { spec: ChildrenSpec };
     edges?: { target: TargetSpec };
-    /**
-     * Derivation gather. `targetKind` filters the gathered set to one kind — the
-     * lens's "→ job" / "→ log-entry" axis (SourceSpec carries relation×reach only).
-     * Omitted = gather every descendant (e.g. `org`'s untyped rollup count).
-     */
-    derivation?: { source: SourceSpec; targetKind?: Kind };
+    derivation?: DerivationSpec;
     action?: { spec: ActionSpec };
     reads?: { resolver?: boolean; historyStream?: boolean };
     // node-oriented descriptors (ride on the six; not new capabilities)

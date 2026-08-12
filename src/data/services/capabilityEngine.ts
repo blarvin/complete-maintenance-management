@@ -15,7 +15,7 @@
 
 import type { Element } from '../models';
 import type { IElementQueries } from '../queries/types';
-import type { SourceSpec } from '../../kinds/types';
+import type { DerivationSpec, SourceSpec } from '../../kinds/types';
 
 /**
  * Transitive children walk (`children/transitive`) — the single gather every
@@ -90,6 +90,25 @@ export async function gatherBySource(
                 `capabilityEngine: '${source.relation}' traversal not implemented (needs the Edges family)`,
             );
     }
+}
+
+/**
+ * Execute a whole `derivation` descriptor against `rootId` — both halves, the
+ * `source` traversal and the optional `targetKind` filter.
+ *
+ * **This is the entry point a Derivation consumer should use.** Reaching past it to
+ * `gatherDescendants` hardcodes `children/transitive` (silently ignoring whatever
+ * the kind declared) and leaves each caller to re-implement the kind filter, which
+ * is exactly how the two lens surfaces drifted apart before.
+ */
+export async function gatherByDerivation(
+    rootId: string,
+    derivation: DerivationSpec,
+    q: IElementQueries,
+): Promise<Element[]> {
+    const gathered = await gatherBySource(rootId, derivation.source, q);
+    const target = derivation.targetKind;
+    return target ? gathered.filter((e) => e.kind === target) : gathered;
 }
 
 /**

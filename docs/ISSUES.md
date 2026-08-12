@@ -78,8 +78,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 18.) **[auto] `part-supplier-link`** — the fourth `Edges` member and the only kind exercising `TargetSpec.scope: 'external'` (`asset-doc` covers `internal`, so the descriptor's other half has never been run). Value is `{ url }`, opens in a new tab; no resolver, no config sub-fields. Fully specced in ELEMENT-MODEL §part-supplier-link; split out of #3 because the rest of that family waits on the overlay (#1) or on `ElementHistory` reads. Note: the renderer is a `.tsx`, so typecheck/lint plus a unit test over the value handling is all the automated cover there is — the row itself wants a hand-look.
 
-19.) **[auto] Both lens consumers bypass the `derivation` descriptor** — `useLensGather` and `KindAdornment` each call `gatherDescendants` directly and then filter by kind in the component, so the manifest's `derivation.source` is never actually read (both hardcode `children/transitive`) and `targetKind` is applied twice, in two places, one of which also hand-excludes provisioned lenses. Give the engine a `gatherByDerivation(rootId, derivation, q)` honouring both halves and have the two consumers read it; the descriptor stops being decoration. Pure and unit-testable, no UI change. Read in the 2026-08-12 architecture pass.
-
 ## Tech Debt
 
 1.) **[Fields UI] `pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.

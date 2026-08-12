@@ -14,13 +14,13 @@
  */
 
 import { createSignal, createEffect, onCleanup, Show } from 'solid-js';
-import { nodeRenderMode } from '../../kinds/renderMode';
+import { derivationOf, nodeRenderMode } from '../../kinds/renderMode';
 import { isReRoot } from '../../kinds/placement';
 import { isProvisionedLens } from '../../kinds/provisionPolicy';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { storageEventBus } from '../../data/storageEventBus';
-import { gatherDescendants } from '../../data/services/capabilityEngine';
+import { gatherByDerivation } from '../../data/services/capabilityEngine';
 import { useElementById } from '../../hooks/useElementChildren';
 import type { Element } from '../../data/models';
 
@@ -43,13 +43,23 @@ export const KindAdornment = (props: KindAdornmentProps) => {
             return;
         }
 
+        // `org`'s derivation is untyped (no targetKind), so this gathers the whole
+        // subtree — but it gathers it because the capability says so, not because the
+        // component picked a traversal.
+        const derivation = derivationOf(el.kind);
+        if (!derivation) {
+            setGathered(null);
+            return;
+        }
+
         let disposed = false;
         let timer: ReturnType<typeof setTimeout> | null = null;
         const regather = async () => {
             await initializeStorage();
-            const all = await gatherDescendants(el.id, getElementQueries());
+            const all = await gatherByDerivation(el.id, derivation, getElementQueries());
             // Count descendant nodes, excluding the auto-provisioned lens containers
-            // (`jobs`/`logbook`, noise) — generic so new lens kinds drop out too.
+            // (`jobs`/`logbook`, noise) — a display choice on top of the gather, not
+            // part of the descriptor.
             if (!disposed) setGathered(all.filter((e) => isReRoot(e.kind) && !isProvisionedLens(e.kind)));
         };
         const unsub = storageEventBus.subscribe(() => {
