@@ -68,8 +68,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 17.) **`stream` shape member + arrangement law** — named in the SPEC value-shape vocabulary but carries no arrangement law yet; joins `ValueShape` with its first consumer (e.g. a logbook feed).
 
-18.) **[auto] `part-supplier-link`** — the fourth `Edges` member and the only kind exercising `TargetSpec.scope: 'external'` (`asset-doc` covers `internal`, so the descriptor's other half has never been run). Value is `{ url }`, opens in a new tab; no resolver, no config sub-fields. Fully specced in ELEMENT-MODEL §part-supplier-link; split out of #3 because the rest of that family waits on the overlay (#1) or on `ElementHistory` reads. Note: the renderer is a `.tsx`, so typecheck/lint plus a unit test over the value handling is all the automated cover there is — the row itself wants a hand-look.
-
 ## Tech Debt
 
 1.) **[Fields UI] `pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.

@@ -27,6 +27,7 @@ import { jobsManifest } from './jobs.manifest';
 import { logEntryManifest } from './log-entry.manifest';
 import { logbookManifest } from './logbook.manifest';
 import { assetDocManifest } from './asset-doc.manifest';
+import { partSupplierLinkManifest } from './part-supplier-link.manifest';
 import { flagManifest } from './flag.manifest';
 import { compoundManifest } from './compound.manifest';
 import { stringListManifest } from './string-list.manifest';
@@ -45,6 +46,7 @@ export const KIND_REGISTRY = {
     'log-entry': logEntryManifest,
     logbook: logbookManifest,
     'asset-doc': assetDocManifest,
+    'part-supplier-link': partSupplierLinkManifest,
     // Config-only sub-field kinds (config-as-Elements). Registered for value
     // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).
     flag: flagManifest,

@@ -128,6 +128,14 @@ export const KIND_CAPABILITIES = {
         reads: { resolver: true },
     },
 
+    // part-supplier-link: Edges(external) — the `asset-doc` twin pointing *out* of
+    // the app (a supplier page, a datasheet PDF). No `reads.resolver`: there is
+    // nothing internal to resolve, the stored URL is the whole value. Together the
+    // two exercise both halves of `TargetSpec.scope` (ELEMENT-MODEL §part-supplier-link).
+    'part-supplier-link': {
+        edges: { target: { scope: 'external' } },
+    },
+
     // Config-only sub-field kinds also bear an own value (inside config subtrees).
     // Scalar for now (behavior-preserving); reassign compound/string-list by
     // essence only when a consumer wants their own sub-structure.

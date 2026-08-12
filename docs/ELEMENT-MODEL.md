@@ -22,7 +22,7 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 | image                         | `OwnValue(blob)`                                                 | a nameplate photo              | inline           | describe |
 | image-with-caption            | `Children(template: image + text-kv)`                            | photo + "south face"           | inline           | describe |
 | asset-doc                     | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | current  |
-| part-supplier-link            | `Edges(external)`                                                | → supplier's web page          | inline           | describe |
+| part-supplier-link            | `Edges(external)`                                                | → supplier's web page          | inline           | current  |
 | other-end                     | `Edges(internal, virtual) + Reads.resolver`                      | "also lives under Pump House"  | inline / re-root | describe |
 | approval                      | `Edges(internal, revision) + Reads.resolver`                     | "approved @ rev 4 (now rev 7)" | inline           | describe |
 | asset-gallery                 | `Derivation(children/transitive → image) + Reads.resolver`       | every photo below, one place   | inline           | describe |
@@ -222,7 +222,9 @@ Subtle background colour in Phase 1; no icons.
 
 **Composition**: `Edges(external)`. **Placement**: inline. The value is `{ url }`; it opens in a new tab; there is no resolver (nothing internal to resolve). Together `asset-doc` and `part-supplier-link` exercise both halves of `TargetSpec.scope`.
 
-**Status: describe.**
+**UX**: the row shows the link scheme-less (`supplier.example/part/9`) and opens in a new tab. The stored value is exactly what was typed; normalization happens at display, so a half-typed value survives a reload. A bare host is read as `https`. A value that isn't `http(s)` renders as plain text and never as an anchor — the guard that keeps a typed `javascript:` from becoming a live link (`safeHttpUrl`, `src/utils/url.ts`).
+
+**Status: current** (2026-08-12 — no config sub-fields; editing a saved link rides on the general field-edit surface).
 
 ## other-end
 

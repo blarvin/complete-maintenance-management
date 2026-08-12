@@ -34,6 +34,7 @@ export const KIND_MINT_VIA = {
     'log-entry': 'node-create',
     logbook: 'provision',
     'asset-doc': 'composer',
+    'part-supplier-link': 'composer',
     // Config-only sub-field kinds — real kinds, but only inside a config subtree.
     flag: 'config-only',
     compound: 'config-only',
