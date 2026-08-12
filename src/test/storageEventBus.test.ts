@@ -15,6 +15,7 @@ describe('StorageEventBus', () => {
 
         const event: StorageEvent = {
             type: 'ELEMENT_WRITTEN',
+            origin: 'local',
             element: { id: 'n1', kind: 'node', parentId: null, name: 'Root', value: null, treeType: 'business', deletedAt: null },
         };
         bus.emit(event);
@@ -30,6 +31,7 @@ describe('StorageEventBus', () => {
 
         const event: StorageEvent = {
             type: 'ELEMENT_HARD_DELETED',
+            origin: 'remote',
             elementId: 'n1',
         };
         bus.emit(event);
@@ -48,6 +50,7 @@ describe('StorageEventBus', () => {
 
         const event: StorageEvent = {
             type: 'ELEMENT_WRITTEN',
+            origin: 'local',
             element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, treeType: 'business', deletedAt: null },
         };
         bus.emit(event);
@@ -62,14 +65,14 @@ describe('StorageEventBus', () => {
         bus.subscribe(e => received.push(e));
 
         bus.clear();
-        bus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
+        bus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'n1' });
 
         expect(received).toEqual([]);
     });
 
     it('emitting with no subscribers does not throw', () => {
         expect(() => {
-            bus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
+            bus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'n1' });
         }).not.toThrow();
     });
 });

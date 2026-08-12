@@ -182,6 +182,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       // subscribes to — its payload is just { id, deletedAt }.
       storageEventBus.emit({
         type: 'DEFINITION_WRITTEN',
+        origin: 'local',
         definition: { id: defElement.id, deletedAt: defElement.deletedAt },
       });
       return createResult(view);
@@ -316,6 +317,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       console.log('[IDBAdapter] Element created in IDB:', element.id, element.kind, element.name);
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
+        origin: 'local',
         element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, treeType: element.treeType, deletedAt: element.deletedAt },
       });
       return createResult(element);
@@ -371,6 +373,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       if (written) {
         storageEventBus.emit({
           type: 'ELEMENT_WRITTEN',
+          origin: 'local',
           element: { id: written.id, kind: written.kind, parentId: written.parentId, name: written.name, value: written.value, treeType: written.treeType, deletedAt: written.deletedAt },
         });
       }
@@ -418,6 +421,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
+        origin: 'local',
         element: { id, kind: existing.kind, parentId: existing.parentId, name: existing.name, value: existing.value, treeType: existing.treeType, deletedAt: timestamp },
       });
       return createResult(undefined);
@@ -449,6 +453,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       if (restored) {
         storageEventBus.emit({
           type: 'ELEMENT_WRITTEN',
+          origin: 'local',
           element: { id: restored.id, kind: restored.kind, parentId: restored.parentId, name: restored.name, value: restored.value, treeType: restored.treeType, deletedAt: restored.deletedAt },
         });
       }
@@ -477,8 +482,11 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async applyRemoteElement(element: Element): Promise<void> {
     return this.run(async () => {
       await db.elements.put(element);
+      // `origin: 'remote'` — the UI still repaints off these, but the sync
+      // subscriber must not read a pulled row back as a local change to push.
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
+        origin: 'remote',
         element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, treeType: element.treeType, deletedAt: element.deletedAt },
       });
       // A library Definition arriving from a pull is a Library change — signal the
@@ -486,6 +494,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       if (element.treeType === 'library' && element.parentId === null) {
         storageEventBus.emit({
           type: 'DEFINITION_WRITTEN',
+          origin: 'remote',
           definition: { id: element.id, deletedAt: element.deletedAt },
         });
       }
@@ -501,7 +510,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async deleteElementLocal(id: string): Promise<void> {
     return this.run(async () => {
       await db.elements.delete(id);
-      storageEventBus.emit({ type: 'ELEMENT_HARD_DELETED', elementId: id });
+      // Remote-origin: only `FullCollectionSync` calls this, dropping a row the
+      // server no longer has. Nothing to push back.
+      storageEventBus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: id });
     });
   }
 

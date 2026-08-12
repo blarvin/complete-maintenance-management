@@ -5,6 +5,9 @@ import type { StorageEvent } from '../data/storageEventBus';
 function written(overrides: Partial<Extract<StorageEvent, { type: 'ELEMENT_WRITTEN' }>['element']> = {}): StorageEvent {
     return {
         type: 'ELEMENT_WRITTEN',
+        // Relevance is about *which* element changed, never about where the write
+        // came from — a remote row is as relevant to a subscribed view as a local one.
+        origin: 'local',
         element: {
             id: 'el-1',
             kind: 'node',
@@ -18,9 +21,10 @@ function written(overrides: Partial<Extract<StorageEvent, { type: 'ELEMENT_WRITT
     };
 }
 
-const hardDeleted: StorageEvent = { type: 'ELEMENT_HARD_DELETED', elementId: 'el-1' };
+const hardDeleted: StorageEvent = { type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'el-1' };
 const fieldDefWritten: StorageEvent = {
     type: 'DEFINITION_WRITTEN',
+    origin: 'local',
     definition: { id: 'fd-1', deletedAt: null },
 };
 
