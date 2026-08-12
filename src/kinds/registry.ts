@@ -13,6 +13,8 @@ import type { Component } from 'solid-js';
 import type { Kind, DefinitionConfig } from '../data/models';
 import type { ConfigFormProps, ConfigSubField, InlineManifest, KindManifest } from './types';
 import { allowedChildKinds } from './childrenPolicy';
+import { KIND_PLACEMENT } from './placement';
+import { PROVISIONED_LENSES } from './provisionPolicy';
 import { nodeManifest } from './node.manifest';
 import { textKvManifest } from './text-kv.manifest';
 import { enumKvManifest } from './enum-kv.manifest';
@@ -48,6 +50,49 @@ export const KIND_REGISTRY = {
     compound: compoundManifest,
     'string-list': stringListManifest,
 } satisfies Record<string, KindManifest>;
+
+/**
+ * Dev-only registry self-check — three mirrors the type system cannot hold.
+ *
+ *  1. a manifest's own `kind` vs the key it is registered under. Not the small typed
+ *     helper it looks like: `Kind` is `keyof typeof KIND_REGISTRY`, so *any*
+ *     compile-time comparison must resolve a manifest's type, which re-enters `Kind`,
+ *     which needs the registry. Three shapes were tried and reverted, all circular
+ *     (TS2456/TS7022): a generic `keyedByOwnKind` wrapper, per-manifest `satisfies`,
+ *     and a mapped-type assertion over `typeof KIND_REGISTRY`.
+ *  2. `KIND_PLACEMENT[k]` vs the manifest's `placement`.
+ *  3. each provisioned lens's display `name` vs the manifest's `pickerLabel`.
+ *
+ * (2) and (3) are component-free *mirrors* of manifest values — they exist because
+ * the storage layer and unit tests may not import this module, and both say in their
+ * own docblocks that the agreement is unenforceable. It is enforceable *here*: this
+ * is the one module that legitimately sees both sides. A mismatch throws on the first
+ * `npm run dev` rather than surfacing later as a confusing symptom, and
+ * `import.meta.env.DEV` keeps the whole block out of the production bundle.
+ */
+if (import.meta.env.DEV) {
+    for (const [key, manifest] of Object.entries(KIND_REGISTRY)) {
+        if (manifest.kind !== key) {
+            throw new Error(
+                `KIND_REGISTRY: manifest registered under '${key}' declares kind '${manifest.kind}'`,
+            );
+        }
+        const mirrored = KIND_PLACEMENT[key as Kind];
+        if (mirrored !== manifest.placement) {
+            throw new Error(
+                `KIND_PLACEMENT['${key}'] is '${mirrored}' but its manifest declares placement '${manifest.placement}'`,
+            );
+        }
+    }
+    for (const lens of PROVISIONED_LENSES) {
+        const label = KIND_REGISTRY[lens.kind].pickerLabel;
+        if (lens.name !== label) {
+            throw new Error(
+                `provisionPolicy names the '${lens.kind}' lens '${lens.name}' but its manifest pickerLabel is '${label}'`,
+            );
+        }
+    }
+}
 
 export function getKindManifest(kind: Kind): KindManifest {
     return KIND_REGISTRY[kind];

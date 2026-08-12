@@ -13,7 +13,8 @@
  * schedule automatically. The display `name` is the one field not in the capability
  * data — carried here as a small mirror of each manifest's `pickerLabel` (the same
  * accepted cross-boundary duplication as `KIND_PLACEMENT`'s values; a lens name is
- * the container header shown under every node).
+ * the container header shown under every node). `registry.ts` checks the mirror
+ * against the manifest at boot in dev, so the two can't quietly drift apart.
  */
 
 import type { Kind } from '../data/models';

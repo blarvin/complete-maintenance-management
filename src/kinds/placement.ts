@@ -10,8 +10,10 @@
  * So the node-vs-field split lives here as data, the component-free mirror of each
  * manifest's `placement` discriminant. `as const satisfies Record<Kind,
  * Placement>` forces an entry per kind; the per-kind *value* must agree with the
- * manifest literal (not test-enforceable, since a test can't import the
- * component-bearing registry — same accepted constraint as `KIND_CAPABILITIES`).
+ * manifest literal. Still not test-enforceable (a test can't import the
+ * component-bearing registry — same constraint as `KIND_CAPABILITIES`), but no
+ * longer unchecked: `registry.ts` compares the two at boot in dev, where both sides
+ * are legitimately visible, and throws on a mismatch.
  *
  * This retires the hardcoded `kind === 'node'` checks scattered across the
  * framework — the honest predicate is "is this kind re-root?", not "is it the
