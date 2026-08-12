@@ -56,7 +56,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
-6.) **Cross-ancestor rollup duplication (by design)** — the transitive gather shows one job in every ancestor's Jobs rollup. Not a bug; revisit with depth-scoping / de-dup if it bites. The nested-job half of this is gone with #13; what remains is one deep job appearing in every ancestor above it.
+6.) **Cross-ancestor rollup duplication (by design)** — the transitive gather shows one job in every ancestor's Jobs rollup. Not a bug; revisit with depth-scoping / de-dup if it bites. The nested-job half is gone (sub-jobs decided against 2026-08-12, ELEMENT-MODEL §job); what remains is one deep job appearing in every ancestor above it.
 
 7.) **`KindAdornment` re-gathers the whole subtree on every write** — a BFS over the parent's subtree per (debounced) `storageEventBus` emit, plus a `FieldList` subscription per expanded `NavigableRow` — O(subtree) per write. Fine at prototype scale; revisit if sluggish.
 
@@ -69,8 +69,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 11.) **[Fields UI] `asset-doc` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
 
 12.) **[Fields UI] Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
-
-13.) **[auto] Drop `job` from `job.allowedKinds`** — it claims sub-tasks but no picker ever mints one, and a nested job would also double-count in every ancestor's Jobs rollup (#6). Decided 2026-08-12: remove the claim until something asks for it — one line to restore, and job-subtypes (Task/Work-Order/Project) remain the other fork. Record the call in ELEMENT-MODEL §job, which currently reads as if the question were still open.
 
 14.) **[auto] Derive the child-kind allowlists instead of hand-listing them** — `node`/`org`/`job`/`log-entry` each repeat a literal kind list in `capabilities.ts` (provisional literals dodging a `registry`→`capabilities` cycle), so a new kind has to be added to four lists by hand and a miss is silent. Derive the base — creatable node kinds + composer field kinds — from component-free data; that needs a `mintVia` mirror alongside `KIND_PLACEMENT`, the same accepted cross-boundary duplication, which #15's boot check then guards. Decided 2026-08-12: the current asymmetry is deliberate and survives the rewrite — `node`/`org` may hold other containers, `job`/`log-entry` may not hold an `org` — expressed once as a named exclusion rather than four times as an omission.
 

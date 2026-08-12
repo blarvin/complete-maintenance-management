@@ -60,11 +60,14 @@ export const KIND_CAPABILITIES = {
     // job: Children(open). A layered task node — status/priority/owner/due-dates
     // are ordinary Fields, not an OwnValue (so no Children+OwnValue flag). It earns
     // its kind as the trigger the `jobs` lens provisions against (ELEMENT-MODEL §job).
+    // `job` is deliberately NOT in its own allowlist: sub-tasks were claimed but no
+    // picker ever minted one, and a nested job would double-count in every ancestor's
+    // Jobs rollup. Decided 2026-08-12 — job-subtypes are the other fork if it returns.
     job: {
         children: {
             spec: {
                 mode: 'open',
-                allowedKinds: ['node', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
+                allowedKinds: ['node', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
             },
         },
         container: 'physical',

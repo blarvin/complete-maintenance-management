@@ -313,6 +313,8 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 **Composition**: `Children(open)`. **Placement**: re-root. Status/priority/owner/due-dates are ordinary **Fields** (scoped by the `children` allowlist), *not* an OwnValue — so `Children + OwnValue` never arises (the parked `intrinsic-node-scalar` shape). `job` composes the same capability as `node`; it **earns its kind as the trigger the `jobs` lens provisions against** — the framework reacts to its existence, behaviour keyed on the kind, not a passive `typeOf` label (the SPEC §584-585 boundary, a deliberate call). Org variants — task, work-order, ticket — are soft labels on `job` for now; if any ever needs distinct behaviour it becomes its own kind (and `jobs` may then need container behaviour — see the lens note). First-class validated transitions wait on `Action` (built last).
 
+**Sub-jobs: no** (decided 2026-08-12). `job` admitted `job` in its `children` allowlist, but nothing ever minted one — `LensCreate` parents every new job to the lens's owning node — so the claim was untested, and a nested job would also have been counted in every ancestor's Jobs rollup. `job` is now absent from its own allowlist. Restoring it is one line; job-subtypes (Task / Work-Order / Project) remain the other fork.
+
 **Status: current** (v1 stub, #6b — node shell; status lives as a Field).
 
 ## log-entry

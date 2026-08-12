@@ -20,11 +20,14 @@ describe('allowedChildKinds', () => {
     }
   });
 
-  it('admits node/job but NOT org under a job', () => {
+  it('admits node but NOT org, and NOT a sub-job, under a job', () => {
+    // Sub-jobs decided against 2026-08-12 (ELEMENT-MODEL §job): nothing ever minted
+    // one — LensCreate parents every job to the lens's owning node — and a nested job
+    // would have double-counted in every ancestor's Jobs rollup.
     const allowed = allowedChildKinds('job');
     expect(allowed).toContain('node');
-    expect(allowed).toContain('job');
     expect(allowed).not.toContain('org');
+    expect(allowed).not.toContain('job');
   });
 
   it('admits field kinds but no re-root kinds under the hybrid Jobs container (jobs)', () => {
