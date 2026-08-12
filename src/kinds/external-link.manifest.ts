@@ -1,9 +1,9 @@
 /**
  * external-link.manifest.ts — the `external-link` kind.
  *
- * `Edges(external)` / `inline`. The external twin of `asset-doc`: a stored URL
+ * `Edges(external)` / `inline`. The external twin of `internal-link`: a stored URL
  * opened in a new tab. No `reads.resolver` — nothing internal to resolve — and no
- * config knobs, so it reuses the inert config stub. Together with `asset-doc` it
+ * config knobs, so it reuses the inert config stub. Together with `internal-link` it
  * exercises both halves of `TargetSpec.scope` (ELEMENT-MODEL §external-link).
  *
  * Named for its composition, not its use. "Supplier Link", "Datasheet" and

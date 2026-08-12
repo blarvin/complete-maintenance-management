@@ -1,7 +1,7 @@
 /**
  * ExternalLinkField — renderer for the `external-link` kind.
  *
- * `Edges(external)`: the value is a stored URL, and unlike `asset-doc` there is no
+ * `Edges(external)`: the value is a stored URL, and unlike `internal-link` there is no
  * resolver — nothing internal to look up, so display is the link itself. Opens in a
  * new tab (`rel="noopener noreferrer"`, since `target="_blank"` otherwise hands the
  * opened page a reference back to this one).

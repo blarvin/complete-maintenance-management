@@ -113,7 +113,7 @@ export type ValueShape = 'scalar' | 'block' | 'composite';
 
 /**
  * OwnValue descriptor (field-like core) — the value shape + a value-validation
- * hook. A kind with no OwnValue at all (asset-doc — its value is an Edge)
+ * hook. A kind with no OwnValue at all (internal-link — its value is an Edge)
  * defaults to `scalar` at the dispatcher: no own value → a scalar-shaped
  * resolved read.
  */

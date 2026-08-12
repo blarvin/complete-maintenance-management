@@ -84,8 +84,9 @@ const SEEDS: SeedRow[] = [
     config: { requireCaption: false },
   },
   {
-    id: DEFINITION_IDS.assetDoc,
-    kind: 'asset-doc',
+    id: DEFINITION_IDS.internalLink,
+    kind: 'internal-link',
+    // The domain word lives here, on the Definition — not in the kind.
     label: 'Linked Doc',
     config: {},
   },

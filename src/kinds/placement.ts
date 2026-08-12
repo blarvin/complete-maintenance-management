@@ -37,7 +37,7 @@ export const KIND_PLACEMENT = {
     // Node-like kinds (#6c) — the lens's second target + its container
     'log-entry': 're-root',
     logbook: 're-root',
-    'asset-doc': 'inline',
+    'internal-link': 'inline',
     'external-link': 'inline',
     // Config-only sub-field kinds
     flag: 'inline',

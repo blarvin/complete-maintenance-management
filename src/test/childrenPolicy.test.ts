@@ -80,7 +80,7 @@ describe('canHaveChildren', () => {
   });
 
   it('is false for field-like kinds (no children capability)', () => {
-    for (const k of ['text-kv', 'asset-doc'] as const) {
+    for (const k of ['text-kv', 'internal-link'] as const) {
       expect(canHaveChildren(k)).toBe(false);
     }
   });

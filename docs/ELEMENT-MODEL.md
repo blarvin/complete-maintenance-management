@@ -21,7 +21,7 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 | node                          | `Children(open)`                                                 | `Pump P-101`                   | re-root          | current  |
 | image                         | `OwnValue(blob)`                                                 | a nameplate photo              | inline           | describe |
 | image-with-caption            | `Children(template: image + text-kv)`                            | photo + "south face"           | inline           | describe |
-| asset-doc                     | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | current  |
+| internal-link                 | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | current  |
 | external-link                 | `Edges(external)`                                                | → supplier's web page          | inline           | current  |
 | other-end                     | `Edges(internal, virtual) + Reads.resolver`                      | "also lives under Pump House"  | inline / re-root | describe |
 | approval                      | `Edges(internal, revision) + Reads.resolver`                     | "approved @ rev 4 (now rev 7)" | inline           | describe |
@@ -206,7 +206,7 @@ Subtle background colour in Phase 1; no icons.
 
 **Status: describe.**
 
-## asset-doc
+## internal-link
 
 **Purpose**: A live link to another internal Element, resolved at read time — it shows the target's current state, never a copy.
 
@@ -214,15 +214,17 @@ Subtle background colour in Phase 1; no icons.
 
 **Value shape**: an Element `id` (the target). `pin: 'live'` — always resolves the target's current state.
 
+**Named for its composition, not its use** (renamed from `asset-doc`, 2026-08-12). "Linked Doc" is the *Definition* label in the seeded library; "O&M Manual", "Drawing", "Parent Assembly" are others of this same kind. Nothing about the behaviour is document-specific — it is a live internal reference, and that is the whole of it. The internal twin of `external-link`.
+
 **UX**: an inline reference row rendered from the resolved target. **Status: current** (v1 stub, #6b 2026-06-28 — the value is a raw element-id resolved live to the target's name; a real target picker, an allowed-target-kind config, and editing a saved link are tracked in ISSUES).
 
 ## external-link
 
-**Purpose**: A link *out* of the app — a stored URL. The external twin of `asset-doc`.
+**Purpose**: A link *out* of the app — a stored URL. The external twin of `internal-link`.
 
-**Composition**: `Edges(external)`. **Placement**: inline. The value is `{ url }`; it opens in a new tab; there is no resolver (nothing internal to resolve). Together `asset-doc` and `external-link` exercise both halves of `TargetSpec.scope`.
+**Composition**: `Edges(external)`. **Placement**: inline. The value is `{ url }`; it opens in a new tab; there is no resolver (nothing internal to resolve). Together `internal-link` and `external-link` exercise both halves of `TargetSpec.scope`.
 
-**Named for its composition, not its use** (renamed from `part-supplier-link`, 2026-08-12). "Part Supplier Link", "Datasheet" and "Manufacturer Page" are *Definitions* of this one kind, authored in the library and bound by `definitionId` — the same relationship "Linked Doc" has to `asset-doc`. A supplier is domain typology, and by this file's own rule (→ *What is not a kind*) domain typology never becomes a kind. The behaviour is what earns the registry entry, and the behaviour here is "an external URL, opened, never resolved" — nothing about it is supplier-specific.
+**Named for its composition, not its use** (renamed from `part-supplier-link`, 2026-08-12). "Part Supplier Link", "Datasheet" and "Manufacturer Page" are *Definitions* of this one kind, authored in the library and bound by `definitionId` — the same relationship "Linked Doc" has to `internal-link`. A supplier is domain typology, and by this file's own rule (→ *What is not a kind*) domain typology never becomes a kind. The behaviour is what earns the registry entry, and the behaviour here is "an external URL, opened, never resolved" — nothing about it is supplier-specific.
 
 **UX**: the row shows the link scheme-less (`supplier.example/part/9`) and opens in a new tab. The stored value is exactly what was typed; normalization happens at display, so a half-typed value survives a reload. A bare host is read as `https`. A value that isn't `http(s)` renders as plain text and never as an anchor — the guard that keeps a typed `javascript:` from becoming a live link (`safeHttpUrl`, `src/utils/url.ts`).
 
@@ -235,7 +237,7 @@ Subtle background colour in Phase 1; no icons.
 **Composition**: `Edges(internal, virtual) + Reads.resolver`. **Placement**: inline / re-root. Authored from either end — *adopt-here* on the host's card, or *appears-also-under* from the element itself — but it writes **one** overlay edge, never a duplicate.
 
 - `appearance: 'portal'` → a navigable child of the virtual parent (tap drills in; edits write through to the one canonical Element).
-- `appearance: 'citation'` → a plain inline reference row, like `asset-doc`.
+- `appearance: 'citation'` → a plain inline reference row, like `internal-link`.
 
 One canonical `parentId` with appearances layered on top, so **detach** (remove an appearance) ≠ **delete** (remove the Element everywhere).
 

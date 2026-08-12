@@ -111,8 +111,8 @@ export type DefinitionConfig =
 export type TextKvValue = string;
 export type EnumKvValue = string;
 export type NumberKvValue = number;
-/** asset-doc: an internal Edge — the value is the target Element's id (resolved live). */
-export type AssetDocValue = { targetId: string };
+/** internal-link: an internal Edge — the value is the target Element's id (resolved live). */
+export type InternalLinkValue = { targetId: string };
 /** external-link: an external Edge — the value is a stored URL, never resolved. */
 export type ExternalLinkValue = { url: string };
 export type SingleImageValue = {
@@ -147,7 +147,7 @@ export type KindValueMap = {
   'enum-kv': EnumKvValue;
   'number-kv': NumberKvValue;
   'single-image': SingleImageValue;
-  'asset-doc': AssetDocValue;
+  'internal-link': InternalLinkValue;
   'external-link': ExternalLinkValue;
   flag: FlagValue;
   compound: CompoundValue;

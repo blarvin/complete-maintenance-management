@@ -121,14 +121,15 @@ export const KIND_CAPABILITIES = {
         provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::logbook' },
     },
 
-    // asset-doc: Edges(internal, live) + Reads.resolver — a live-resolved link to
-    // another Element (the value is the target id).
-    'asset-doc': {
+    // internal-link: Edges(internal, live) + Reads.resolver — a live-resolved link
+    // to another Element (the value is the target id). What the link *means* —
+    // "Linked Doc", "O&M Manual", "Parent Assembly" — is a Definition label.
+    'internal-link': {
         edges: { target: { scope: 'internal', pin: 'live', allowedKinds: ['node', 'org', 'job'] } },
         reads: { resolver: true },
     },
 
-    // external-link: Edges(external) — the `asset-doc` twin pointing *out* of the
+    // external-link: Edges(external) — the `internal-link` twin pointing *out* of the
     // app. No `reads.resolver`: there is nothing internal to resolve, the stored URL
     // is the whole value. Together the two exercise both halves of
     // `TargetSpec.scope` (ELEMENT-MODEL §external-link). What the link is *for* —

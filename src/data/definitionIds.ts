@@ -14,7 +14,7 @@ export const DEFINITION_IDS = {
   weight: 'fd_weight',
   powerRating: 'fd_power_rating',
   mainImage: 'fd_main_image',
-  assetDoc: 'fd_asset_doc',
+  internalLink: 'fd_internal_link',
   /** The logbook container's default policy Definition (entry label, staleness). */
   logbookPolicy: 'fd_logbook_policy',
 } as const;

@@ -26,7 +26,7 @@ import { jobManifest } from './job.manifest';
 import { jobsManifest } from './jobs.manifest';
 import { logEntryManifest } from './log-entry.manifest';
 import { logbookManifest } from './logbook.manifest';
-import { assetDocManifest } from './asset-doc.manifest';
+import { internalLinkManifest } from './internal-link.manifest';
 import { externalLinkManifest } from './external-link.manifest';
 import { flagManifest } from './flag.manifest';
 import { compoundManifest } from './compound.manifest';
@@ -45,7 +45,7 @@ export const KIND_REGISTRY = {
     // #6c — the lens's second target kind + its container
     'log-entry': logEntryManifest,
     logbook: logbookManifest,
-    'asset-doc': assetDocManifest,
+    'internal-link': internalLinkManifest,
     'external-link': externalLinkManifest,
     // Config-only sub-field kinds (config-as-Elements). Registered for value
     // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).

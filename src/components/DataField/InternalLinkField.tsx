@@ -1,5 +1,5 @@
 /**
- * AssetDocField — renderer for the `asset-doc` kind (#6b minimal set).
+ * InternalLinkField — renderer for the `internal-link` kind (#6b minimal set).
  *
  * `Edges(internal, live) + Reads.resolver`: the value is the target Element's id;
  * display resolves it live (via `resolveEdge`) and shows the target's name. Stub
@@ -10,14 +10,14 @@
 
 import { Show, createSignal, createMemo, createEffect, onCleanup } from 'solid-js';
 import type { FieldRendererProps } from '../../kinds/types';
-import type { AssetDocValue } from '../../data/models';
+import type { InternalLinkValue } from '../../data/models';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { resolveEdge } from '../../data/services/capabilityEngine';
 import styles from './DataField.module.css';
 
-export const AssetDocField = (props: FieldRendererProps) => {
-    const targetId = createMemo(() => (props.value as AssetDocValue | null)?.targetId ?? '');
+export const InternalLinkField = (props: FieldRendererProps) => {
+    const targetId = createMemo(() => (props.value as InternalLinkValue | null)?.targetId ?? '');
     const [resolvedName, setResolvedName] = createSignal<string | null>(null);
 
     // Live resolution: fetch the target's name whenever the id changes (display
@@ -58,7 +58,7 @@ export const AssetDocField = (props: FieldRendererProps) => {
                     value={targetId()}
                     onInput={(e) => {
                         const trimmed = e.currentTarget.value.trim();
-                        void pending().onChange(trimmed ? ({ targetId: trimmed } as AssetDocValue) : null);
+                        void pending().onChange(trimmed ? ({ targetId: trimmed } as InternalLinkValue) : null);
                     }}
                 />
             )}

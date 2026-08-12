@@ -51,8 +51,8 @@ export const DataField = (props: DataFieldProps) => {
     // The arrangement law, entailed by the kind's value shape (SPEC → chrome
     // entailment): scalar = label + inline run + centred chevron; block = label +
     // tall block + top chevron; composite = renderer-owned sub-structure, label
-    // suppressed, tall block + top chevron. No ownValue (asset-doc — the value is
-    // an Edge) → a scalar-shaped resolved read.
+    // suppressed, tall block + top chevron. No ownValue (internal-link — the value
+    // is an Edge) → a scalar-shaped resolved read.
     const shape = () => manifest().ownValue?.shape ?? 'scalar';
 
     return (
