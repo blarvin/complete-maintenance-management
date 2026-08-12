@@ -21,6 +21,8 @@ parked until it lands rather than fixed twice.
 `[auto]` marks items the agent may take end-to-end without checking in — each is
 self-contained and verifiable by typecheck/lint/test. One commit per item, which
 also deletes the item from here. Agreed 2026-08-11; `git push` stays manual.
+Second batch tagged 2026-08-12 — Architecture #9, #10, #13–#16, #18, #19, each
+carrying the decision it was blocked on.
 
 ---
 
@@ -48,35 +50,39 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 2.) **Chrome entailment — remaining regions** — rich lens rows (the per-job status/priority/owner "primary line"; waits on `Action`) and the manifest-driven shell regions (meta-field children → Details/Settings, grouping-tag → section header).
 
-3.) **The rest of the catalogue (#6c)** — the `Edges` family (`other-end` / `approval` / `part-supplier-link`), `asset-gallery`, `person`, `logical-container`. Specs in ELEMENT-MODEL.md.
+3.) **The rest of the catalogue (#6c)** — the `Edges` family (`other-end` / `approval`), `asset-gallery`, `person`, `logical-container`. Specs in ELEMENT-MODEL.md. `part-supplier-link`, the fourth Edges member, is split out as #18 — it is the one with no blocker.
 
-4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned / delegated / pinned), reading `ancestors/transitive`. The disposition vocabulary is already encoded on the schema; this wires it.
+4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned / delegated / pinned), reading `ancestors/transitive` (built in #10). The disposition vocabulary is already encoded on the schema; this wires it.
 
 5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
-6.) **Cross-ancestor rollup duplication (by design)** — the transitive gather shows one job in every ancestor's Jobs rollup. Not a bug; revisit with depth-scoping / de-dup if it bites (couples to the job-subtype question, #13).
+6.) **Cross-ancestor rollup duplication (by design)** — the transitive gather shows one job in every ancestor's Jobs rollup. Not a bug; revisit with depth-scoping / de-dup if it bites. The nested-job half of this is gone with #13; what remains is one deep job appearing in every ancestor above it.
 
 7.) **`KindAdornment` re-gathers the whole subtree on every write** — a BFS over the parent's subtree per (debounced) `storageEventBus` emit, plus a `FieldList` subscription per expanded `NavigableRow` — O(subtree) per write. Fine at prototype scale; revisit if sluggish.
 
 8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
 
-9.) **Provisioned-lens lifecycle (jobs + logbook)** — provisioning is create-time only (`ensureProvisionedLenses`), leaving three gaps, generic across `PROVISIONED_LENSES`: backfill onto pre-existing nodes, de-provision/GC when the last target below is removed, and hiding an empty lens.
+9.) **[auto] Provisioned-lens backfill onto pre-existing nodes** — provisioning is create-time only (`ensureProvisionedLenses` runs inside `CREATE_ELEMENT`), so a node that predates a lens kind never grows one; `logbook` landing after `jobs` is the case that already happened and will recur. Reconcile idempotently over existing re-root elements, generic across `PROVISIONED_LENSES`. Decided 2026-08-12: an empty lens **stays visible** — the only door to creating the first job is inside its own box — which also closes the other two gaps of this item as filed (no de-provision/GC, no hide-when-empty).
 
-10.) **`capabilityEngine` `ancestors`/`edges` traversal** — only `children` is built; `ancestors` (feeds the cascade, #4) and `edges` (the Edges family, #3) currently throw in `capabilityEngine.ts`.
+10.) **[auto] `capabilityEngine` `ancestors` traversal** — only `children` is built; `ancestors/direct` (the parent) and `ancestors/transitive` (nearest-first walk to the root) throw in `capabilityEngine.ts`. Build both on `getElementById`, unit-tested against a mock `IElementQueries` — this is what the cascade (#4) reads, and `inherit-unless-override` after it. `edges` stays throwing until the Edges family (#3) has a consumer.
 
 11.) **[Fields UI] `asset-doc` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
 
 12.) **[Fields UI] Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
 
-13.) **`job` admits `job` children (sub-tasks)?** — `job.allowedKinds` includes `job` but no picker mints a sub-job. Decide nested-jobs vs job-subtypes (Task/Work-Order/Project) — a `capabilities.ts` allowlist call, coupled to #3.
+13.) **[auto] Drop `job` from `job.allowedKinds`** — it claims sub-tasks but no picker ever mints one, and a nested job would also double-count in every ancestor's Jobs rollup (#6). Decided 2026-08-12: remove the claim until something asks for it — one line to restore, and job-subtypes (Task/Work-Order/Project) remain the other fork. Record the call in ELEMENT-MODEL §job, which currently reads as if the question were still open.
 
-14.) **`node.allowedKinds` real allow-policy** — a provisional literal dodging a `registry`→`capabilities` cycle; derive the honest "child nodes + field kinds" policy.
+14.) **[auto] Derive the child-kind allowlists instead of hand-listing them** — `node`/`org`/`job`/`log-entry` each repeat a literal kind list in `capabilities.ts` (provisional literals dodging a `registry`→`capabilities` cycle), so a new kind has to be added to four lists by hand and a miss is silent. Derive the base — creatable node kinds + composer field kinds — from component-free data; that needs a `mintVia` mirror alongside `KIND_PLACEMENT`, the same accepted cross-boundary duplication, which #15's boot check then guards. Decided 2026-08-12: the current asymmetry is deliberate and survives the rewrite — `node`/`org` may hold other containers, `job`/`log-entry` may not hold an `org` — expressed once as a named exclusion rather than four times as an omission.
 
-15.) **Enforce manifest key === manifest `kind`** — nothing checks a manifest registered under `'text-kv'` declares `kind: 'text-kv'`. Not the small typed-key helper it looks like: `Kind` is `keyof typeof KIND_REGISTRY` and `ManifestIdentity.kind` is `Kind`, so *any* compile-time key/kind comparison must resolve a manifest's type, which re-enters `Kind`, which needs the registry. Three shapes tried, all circular (TS2456/TS7022): a generic `keyedByOwnKind` wrapper, per-manifest `satisfies KindManifest` to preserve the literal, and a post-hoc mapped-type assertion over `typeof KIND_REGISTRY`. Needs a design call, not a helper — declare `Kind` as an explicit literal union and check the registry against it (inverts the documented "registry keys are the source of truth"), parameterise `ManifestIdentity` by its kind, or annotate `KIND_REGISTRY` per-key (duplicates the key list). Attempted and reverted in the 2026-08-11 autonomous pass.
+15.) **[auto] Enforce manifest key === manifest `kind`** — nothing checks a manifest registered under `'text-kv'` declares `kind: 'text-kv'`. Not the small typed-key helper it looks like: `Kind` is `keyof typeof KIND_REGISTRY` and `ManifestIdentity.kind` is `Kind`, so *any* compile-time key/kind comparison must resolve a manifest's type, which re-enters `Kind`, which needs the registry. Three shapes tried, all circular (TS2456/TS7022): a generic `keyedByOwnKind` wrapper, per-manifest `satisfies KindManifest` to preserve the literal, and a post-hoc mapped-type assertion over `typeof KIND_REGISTRY`. Attempted and reverted in the 2026-08-11 autonomous pass. Decided 2026-08-12: stop chasing the type and catch it at **boot in dev** — an `import.meta.env.DEV` loop in `registry.ts` that throws on any key/`kind` disagreement, absent from the prod bundle, failing on the first `npm run dev` rather than in CI. The same loop covers the mirrors that today say in prose they cannot be checked: `KIND_PLACEMENT[k]` vs the manifest's `placement`, and `provisionPolicy`'s `LENS_NAMES[k]` vs its `pickerLabel`.
 
-16.) **Per-kind `coherence` overrides** — the `coherence?(caps)` hook on `ManifestIdentity` is unused; add per-kind rules only when a kind needs one beyond the global set.
+16.) **[auto] Per-kind `coherence` hook can never fire where it lives** — it is declared on `ManifestIdentity`, but the one caller that would run it is the registry coherence test, which reads the component-free `KIND_CAPABILITIES` and may not import a manifest (no Solid JSX transform in `vitest.config.ts`); the running app never calls it either. So a kind that declared a rule today would be silently unchecked. Decided 2026-08-12: move per-kind rules to the pure-data side so the existing test picks them up. No kind needs a rule yet — this lands the wire, not a rule.
 
 17.) **`stream` shape member + arrangement law** — named in the SPEC value-shape vocabulary but carries no arrangement law yet; joins `ValueShape` with its first consumer (e.g. a logbook feed).
+
+18.) **[auto] `part-supplier-link`** — the fourth `Edges` member and the only kind exercising `TargetSpec.scope: 'external'` (`asset-doc` covers `internal`, so the descriptor's other half has never been run). Value is `{ url }`, opens in a new tab; no resolver, no config sub-fields. Fully specced in ELEMENT-MODEL §part-supplier-link; split out of #3 because the rest of that family waits on the overlay (#1) or on `ElementHistory` reads. Note: the renderer is a `.tsx`, so typecheck/lint plus a unit test over the value handling is all the automated cover there is — the row itself wants a hand-look.
+
+19.) **[auto] Both lens consumers bypass the `derivation` descriptor** — `useLensGather` and `KindAdornment` each call `gatherDescendants` directly and then filter by kind in the component, so the manifest's `derivation.source` is never actually read (both hardcode `children/transitive`) and `targetKind` is applied twice, in two places, one of which also hand-excludes provisioned lenses. Give the engine a `gatherByDerivation(rootId, derivation, q)` honouring both halves and have the two consumers read it; the descriptor stops being decoration. Pure and unit-testable, no UI change. Read in the 2026-08-12 architecture pass.
 
 ## Tech Debt
 
