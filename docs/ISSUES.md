@@ -30,6 +30,8 @@ also deletes the item from here. Agreed 2026-08-11; `git push` stays manual.
 
 2.) **number-kv accepts radix literals** — `parseNumber` (numberKvState.ts) uses `Number`, which parses `0x1A` as 26, `0b101` as 5, `0o17` as 15 (verified at a node prompt). Harmless in practice — nobody types hex into a temperature field — and strictly better than the `parseFloat` it replaced, which read `0x1A` as 0. Rejecting them needs a full-string decimal/scientific regex. Left in deliberately when Bugs #1 was fixed; raise only if it ever bites.
 
+3.) **Delta-sync cursor is the local clock, compared against server-stamped rows** — `syncDelta()` sets the cursor with `now()` while every row's `updatedAt` comes from `serverTimestamp()`, so a fast client's cursor can jump past rows it never pulled (elements and history share the one cursor). Heals on the next app start, which runs `syncFull()` — a staleness window, not lost history. High-water mark (cursor = `max(updatedAt)` over the rows actually received) is the probable solution. Read in the 2026-08-12 delta-sync session; not observed in the wild.
+
 ## Features
 
 1.) **Node metadata in TreeNodeDetails** — show `createdAt`, last `updatedAt`, last `updatedBy`.
@@ -91,5 +93,3 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 6.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
 7.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky.
-
-8.) **`test:firestore` script targets a file that doesn't exist** — `package.json` runs `vitest run src/test/firestoreAdapter.test.ts`; there is no such file, so the script fails outright. Write the spec or drop the script. Surfaced in the 2026-08-11 autonomous pass.
