@@ -24,6 +24,7 @@ import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
 import { seedDefinitions } from '../services/seedDefinitions';
+import { backfillProvisionedLenses } from '../services/provisionLenses';
 
 /**
  * Memoized init state. All callers share the same promise so concurrent
@@ -104,6 +105,14 @@ async function doInitializeStorage(): Promise<void> {
 
     // Seed dev Definitions (idempotent; no sync enqueue).
     await seedDefinitions();
+
+    // Reconcile lens containers onto nodes that predate a lens kind. Provisioning
+    // is otherwise create-time only, so every node minted before `logbook` landed
+    // has a Jobs box and no Logbook — and the next lens kind repeats that. Runs
+    // after the migration/seed so it sees the full local set; idempotent, so a
+    // steady-state startup writes nothing.
+    const backfilled = await backfillProvisionedLenses(await idbAdapter.getAllElements(), idbAdapter);
+    if (backfilled > 0) console.log('[Storage] Backfilled', backfilled, 'lens containers');
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);

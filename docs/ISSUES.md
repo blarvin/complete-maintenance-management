@@ -62,8 +62,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
 
-9.) **[auto] Provisioned-lens backfill onto pre-existing nodes** — provisioning is create-time only (`ensureProvisionedLenses` runs inside `CREATE_ELEMENT`), so a node that predates a lens kind never grows one; `logbook` landing after `jobs` is the case that already happened and will recur. Reconcile idempotently over existing re-root elements, generic across `PROVISIONED_LENSES`. Decided 2026-08-12: an empty lens **stays visible** — the only door to creating the first job is inside its own box — which also closes the other two gaps of this item as filed (no de-provision/GC, no hide-when-empty).
-
 11.) **[Fields UI] `asset-doc` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
 
 12.) **[Fields UI] Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
