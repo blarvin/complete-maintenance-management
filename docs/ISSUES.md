@@ -52,7 +52,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 3.) **The rest of the catalogue (#6c)** — the `Edges` family (`other-end` / `approval`), `asset-gallery`, `person`, `logical-container`. Specs in ELEMENT-MODEL.md. `part-supplier-link`, the fourth Edges member, is split out as #18 — it is the one with no blocker.
 
-4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned / delegated / pinned), reading `ancestors/transitive` (built in #10). The disposition vocabulary is already encoded on the schema; this wires it.
+4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned / delegated / pinned), reading `ancestors/transitive` — the traversal itself is built (`gatherAncestors`, nearest-first), so what remains is the arbitration. The disposition vocabulary is already encoded on the schema; this wires it.
 
 5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
@@ -63,8 +63,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
 
 9.) **[auto] Provisioned-lens backfill onto pre-existing nodes** — provisioning is create-time only (`ensureProvisionedLenses` runs inside `CREATE_ELEMENT`), so a node that predates a lens kind never grows one; `logbook` landing after `jobs` is the case that already happened and will recur. Reconcile idempotently over existing re-root elements, generic across `PROVISIONED_LENSES`. Decided 2026-08-12: an empty lens **stays visible** — the only door to creating the first job is inside its own box — which also closes the other two gaps of this item as filed (no de-provision/GC, no hide-when-empty).
-
-10.) **[auto] `capabilityEngine` `ancestors` traversal** — only `children` is built; `ancestors/direct` (the parent) and `ancestors/transitive` (nearest-first walk to the root) throw in `capabilityEngine.ts`. Build both on `getElementById`, unit-tested against a mock `IElementQueries` — this is what the cascade (#4) reads, and `inherit-unless-override` after it. `edges` stays throwing until the Edges family (#3) has a consumer.
 
 11.) **[Fields UI] `asset-doc` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
 
