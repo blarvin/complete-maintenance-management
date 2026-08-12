@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { allowedChildKinds, canHaveChildren, isLensSurfaced } from '../kinds/childrenPolicy';
+import { kindsMintedVia } from '../kinds/mintVia';
 
 describe('allowedChildKinds', () => {
   it('admits node/org/job under the open containers (node, org)', () => {
@@ -28,6 +29,37 @@ describe('allowedChildKinds', () => {
     expect(allowed).toContain('node');
     expect(allowed).not.toContain('org');
     expect(allowed).not.toContain('job');
+  });
+
+  it('is derived, so a new user-creatable kind joins the open containers for free', () => {
+    // The point of deriving these lists: adding a kind used to mean editing four
+    // literal arrays, and a miss was silent. This fails instead.
+    for (const parent of ['node', 'org'] as const) {
+      const allowed = allowedChildKinds(parent);
+      for (const k of [...kindsMintedVia('node-create'), ...kindsMintedVia('composer')]) {
+        expect(allowed).toContain(k);
+      }
+    }
+  });
+
+  it('never admits a framework-provisioned or config-only kind anywhere', () => {
+    // `jobs`/`logbook` are materialized per node; flag/compound/string-list exist
+    // only inside config subtrees. Neither is user-pickable under any parent.
+    const neverPickable = [...kindsMintedVia('provision'), ...kindsMintedVia('config-only')];
+    for (const parent of ['node', 'org', 'job', 'log-entry', 'jobs', 'logbook'] as const) {
+      for (const k of neverPickable) {
+        expect(allowedChildKinds(parent)).not.toContain(k);
+      }
+    }
+  });
+
+  it('a record node (job, log-entry) admits assets and fields but never an org', () => {
+    for (const parent of ['job', 'log-entry'] as const) {
+      const allowed = allowedChildKinds(parent);
+      expect(allowed).toContain('node');
+      expect(allowed).toContain('text-kv');
+      expect(allowed).not.toContain('org');
+    }
   });
 
   it('admits field kinds but no re-root kinds under the hybrid Jobs container (jobs)', () => {

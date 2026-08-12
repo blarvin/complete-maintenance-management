@@ -14,6 +14,7 @@ import type { Kind, DefinitionConfig } from '../data/models';
 import type { ConfigFormProps, ConfigSubField, InlineManifest, KindManifest } from './types';
 import { allowedChildKinds } from './childrenPolicy';
 import { KIND_PLACEMENT } from './placement';
+import { KIND_MINT_VIA } from './mintVia';
 import { PROVISIONED_LENSES } from './provisionPolicy';
 import { nodeManifest } from './node.manifest';
 import { textKvManifest } from './text-kv.manifest';
@@ -61,9 +62,11 @@ export const KIND_REGISTRY = {
  *     (TS2456/TS7022): a generic `keyedByOwnKind` wrapper, per-manifest `satisfies`,
  *     and a mapped-type assertion over `typeof KIND_REGISTRY`.
  *  2. `KIND_PLACEMENT[k]` vs the manifest's `placement`.
- *  3. each provisioned lens's display `name` vs the manifest's `pickerLabel`.
+ *  3. `KIND_MINT_VIA[k]` vs the manifest's `mintVia` — load-bearing, since the
+ *     child-kind allowlists in `capabilities.ts` are derived from that mirror.
+ *  4. each provisioned lens's display `name` vs the manifest's `pickerLabel`.
  *
- * (2) and (3) are component-free *mirrors* of manifest values — they exist because
+ * (2)-(4) are component-free *mirrors* of manifest values — they exist because
  * the storage layer and unit tests may not import this module, and both say in their
  * own docblocks that the agreement is unenforceable. It is enforceable *here*: this
  * is the one module that legitimately sees both sides. A mismatch throws on the first
@@ -81,6 +84,12 @@ if (import.meta.env.DEV) {
         if (mirrored !== manifest.placement) {
             throw new Error(
                 `KIND_PLACEMENT['${key}'] is '${mirrored}' but its manifest declares placement '${manifest.placement}'`,
+            );
+        }
+        const mintVia = KIND_MINT_VIA[key as Kind];
+        if (mintVia !== manifest.mintVia) {
+            throw new Error(
+                `KIND_MINT_VIA['${key}'] is '${mintVia}' but its manifest declares mintVia '${manifest.mintVia}'`,
             );
         }
     }

@@ -18,17 +18,40 @@
 
 import type { Kind } from '../data/models';
 import type { CapabilitySet } from './types';
+import { kindsMintedVia } from './mintVia';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Child-kind allowlists, derived rather than hand-listed.
+ *
+ * `open` children are always allowlist-constrained (never `open(any)`, SPEC §564),
+ * but the honest allowlist is "the node kinds a user can create + the field kinds a
+ * user can author" — which is `mintVia`, on the manifests. Four kinds used to repeat
+ * that as a literal array, so a new kind had to be added in four places and a miss
+ * was silent. Derived here from the component-free `KIND_MINT_VIA` mirror (importing
+ * `registry.ts` would be a cycle: registry → manifest → capabilities).
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Field kinds a user can author in the composer — what any container admits inline. */
+const FIELD_CHILD_KINDS: Kind[] = kindsMintedVia('composer');
+
+/** Everything an open physical container admits: creatable node kinds, then fields. */
+const CONTAINER_CHILD_KINDS: Kind[] = [...kindsMintedVia('node-create'), ...FIELD_CHILD_KINDS];
+
+const without = (kinds: Kind[], ...drop: Kind[]): Kind[] => kinds.filter((k) => !drop.includes(k));
+
+/**
+ * What a *record* node (`job`, `log-entry`) admits: the container set minus `org`.
+ * An `org` is a people/role container belonging to the asset tree; one nested inside
+ * a task or a log entry is a modelling accident, not a use case. Named once here
+ * rather than silently omitted from each list. Decided 2026-08-12.
+ */
+const RECORD_CHILD_KINDS: Kind[] = without(CONTAINER_CHILD_KINDS, 'org');
 
 export const KIND_CAPABILITIES = {
     // Children(open) + physical container (ELEMENT-MODEL §node). `jobs` is omitted
     // from the allowlist deliberately — it is framework-provisioned, never picked.
     node: {
-        children: {
-            spec: {
-                mode: 'open',
-                allowedKinds: ['node', 'org', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
-            },
-        },
+        children: { spec: { mode: 'open', allowedKinds: CONTAINER_CHILD_KINDS } },
         container: 'physical',
     },
 
@@ -47,12 +70,7 @@ export const KIND_CAPABILITIES = {
     // org: Children(open) + Derivation(children/transitive). The untyped rollup
     // (no `targetKind`) — a descendant count, no Provision.
     org: {
-        children: {
-            spec: {
-                mode: 'open',
-                allowedKinds: ['node', 'org', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
-            },
-        },
+        children: { spec: { mode: 'open', allowedKinds: CONTAINER_CHILD_KINDS } },
         container: 'physical',
         derivation: { source: { relation: 'children', reach: 'transitive' } },
     },
@@ -64,12 +82,7 @@ export const KIND_CAPABILITIES = {
     // picker ever minted one, and a nested job would double-count in every ancestor's
     // Jobs rollup. Decided 2026-08-12 — job-subtypes are the other fork if it returns.
     job: {
-        children: {
-            spec: {
-                mode: 'open',
-                allowedKinds: ['node', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
-            },
-        },
+        children: { spec: { mode: 'open', allowedKinds: without(RECORD_CHILD_KINDS, 'job') } },
         container: 'physical',
     },
 
@@ -78,12 +91,7 @@ export const KIND_CAPABILITIES = {
     // the trigger the `logbook` lens provisions against, so being a
     // `derivation.targetKind` it auto-joins `isLensSurfaced` (ELEMENT-MODEL §job).
     'log-entry': {
-        children: {
-            spec: {
-                mode: 'open',
-                allowedKinds: ['node', 'job', 'log-entry', 'text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
-            },
-        },
+        children: { spec: { mode: 'open', allowedKinds: RECORD_CHILD_KINDS } },
         container: 'physical',
     },
 
@@ -95,12 +103,7 @@ export const KIND_CAPABILITIES = {
     // parked for #6c) — `checkCoherence` admits Children+Derivation+Provision. Jobs
     // themselves stay derived/node-owned; a job created here parents to the node.
     jobs: {
-        children: {
-            spec: {
-                mode: 'open',
-                allowedKinds: ['text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
-            },
-        },
+        children: { spec: { mode: 'open', allowedKinds: FIELD_CHILD_KINDS } },
         container: 'physical',
         derivation: { source: { relation: 'children', reach: 'transitive' }, targetKind: 'job' },
         provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::jobs' },
@@ -112,12 +115,7 @@ export const KIND_CAPABILITIES = {
     // by the spec-driven provisioner (`provisionPolicy.ts`), which reads this
     // ProvisionSpec instead of hardcoding the kind.
     logbook: {
-        children: {
-            spec: {
-                mode: 'open',
-                allowedKinds: ['text-kv', 'enum-kv', 'number-kv', 'single-image', 'asset-doc'],
-            },
-        },
+        children: { spec: { mode: 'open', allowedKinds: FIELD_CHILD_KINDS } },
         container: 'physical',
         derivation: { source: { relation: 'children', reach: 'transitive' }, targetKind: 'log-entry' },
         provision: { trigger: 'node-create', target: { relation: 'children', reach: 'transitive' }, idScheme: '${parentId}::logbook' },

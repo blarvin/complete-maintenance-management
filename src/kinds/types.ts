@@ -122,6 +122,16 @@ export type ValueSpec = {
     validate?: (value: DataFieldValue | null) => string | null;
 };
 
+/**
+ * Which create affordance offers this kind (SPEC §registry & manifest).
+ * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
+ * renderable but exist solely inside config subtrees — never offered as a new
+ * Definition in the composer picker (which lists `composer` kinds only).
+ * `provision` kinds (`jobs`/`logbook`) are materialized by the framework (the lens
+ * provisioned per node), never offered in any user create affordance.
+ */
+export type MintVia = 'composer' | 'node-create' | 'config-only' | 'provision';
+
 /** `template` = fixed core; `open` = user-grown (always allowlist-constrained). */
 export type ChildrenMode = 'template' | 'open';
 
@@ -217,15 +227,7 @@ type ManifestIdentity = {
     kind: Kind;
     /** Label for the authoring-form segmented picker. */
     pickerLabel: string;
-    /**
-     * Which create affordance offers this kind (SPEC §registry & manifest).
-     * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
-     * renderable but exist solely inside config subtrees — never offered as a new
-     * Definition in the composer picker (which lists `composer` kinds only).
-     * `provision` kinds (`jobs`) are materialized by the framework (the lens
-     * provisioned per node), never offered in any user create affordance.
-     */
-    mintVia: 'composer' | 'node-create' | 'config-only' | 'provision';
+    mintVia: MintVia;
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';
     // Note: per-kind coherence rules are NOT declared here. They live in
