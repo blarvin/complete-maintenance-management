@@ -228,12 +228,9 @@ type ManifestIdentity = {
     mintVia: 'composer' | 'node-create' | 'config-only' | 'provision';
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';
-    /**
-     * Reject incoherent capability subsets (SPEC §589). Optional per-kind override;
-     * the global cross-capability rules live in `checkCoherence` (coherence.ts) and
-     * run over every registry entry in the registry test. Empty array = coherent.
-     */
-    coherence?: (caps: CapabilitySet) => string[];
+    // Note: per-kind coherence rules are NOT declared here. They live in
+    // `KIND_COHERENCE` (coherence.ts), because the only thing that runs them is the
+    // registry coherence test, which may not import a manifest. See that module.
     // ── Definition-authoring contract (placement-agnostic) ──────────────────
     // A kind that can carry a bound Definition declares how one is authored.
     // Required for inline kinds (re-asserted on InlineManifest); optional for
