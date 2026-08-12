@@ -38,7 +38,7 @@ export const KIND_PLACEMENT = {
     'log-entry': 're-root',
     logbook: 're-root',
     'asset-doc': 'inline',
-    'part-supplier-link': 'inline',
+    'external-link': 'inline',
     // Config-only sub-field kinds
     flag: 'inline',
     compound: 'inline',

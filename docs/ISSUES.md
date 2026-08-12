@@ -50,7 +50,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 2.) **Chrome entailment — remaining regions** — rich lens rows (the per-job status/priority/owner "primary line"; waits on `Action`) and the manifest-driven shell regions (meta-field children → Details/Settings, grouping-tag → section header).
 
-3.) **The rest of the catalogue (#6c)** — the `Edges` family (`other-end` / `approval`), `asset-gallery`, `person`, `logical-container`. Specs in ELEMENT-MODEL.md. `part-supplier-link`, the fourth Edges member, is split out as #18 — it is the one with no blocker.
+3.) **The rest of the catalogue (#6c)** — the `Edges` family (`other-end` / `approval`), `asset-gallery`, `person`, `logical-container`. Specs in ELEMENT-MODEL.md. The fourth Edges member landed separately as `external-link` (2026-08-12); these three still wait on the overlay (#1) or on `ElementHistory` reads.
 
 4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned / delegated / pinned), reading `ancestors/transitive` — the traversal itself is built (`gatherAncestors`, nearest-first), so what remains is the arbitration. The disposition vocabulary is already encoded on the schema; this wires it.
 
@@ -67,6 +67,8 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 12.) **[Fields UI] Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
 
 17.) **`stream` shape member + arrangement law** — named in the SPEC value-shape vocabulary but carries no arrangement law yet; joins `ValueShape` with its first consumer (e.g. a logbook feed).
+
+20.) **`asset-doc` is named for a use, not a composition** — the same drift caught in `part-supplier-link` (renamed to `external-link` 2026-08-12) sits one entry above it in the catalogue. Its composition is `Edges(internal, live) + Reads.resolver` — a live internal reference; nothing about it is document-specific, and "Linked Doc" is already the *Definition* label in the seeded library. Honest names: `internal-link` (the `external-link` twin) or `live-ref`. **Not free, unlike the other one**: `kind` is persisted on every Element and immutable, and there are live `asset-doc` rows, so this needs a data migration (rename the stored `kind` in IDB + Firestore, with the Dexie version bump) rather than an edit. Read in the 2026-08-12 catalogue-naming pass; raise the migration only if the name bothers you more than the migration costs.
 
 ## Tech Debt
 

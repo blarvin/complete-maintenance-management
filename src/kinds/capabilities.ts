@@ -128,11 +128,12 @@ export const KIND_CAPABILITIES = {
         reads: { resolver: true },
     },
 
-    // part-supplier-link: Edges(external) — the `asset-doc` twin pointing *out* of
-    // the app (a supplier page, a datasheet PDF). No `reads.resolver`: there is
-    // nothing internal to resolve, the stored URL is the whole value. Together the
-    // two exercise both halves of `TargetSpec.scope` (ELEMENT-MODEL §part-supplier-link).
-    'part-supplier-link': {
+    // external-link: Edges(external) — the `asset-doc` twin pointing *out* of the
+    // app. No `reads.resolver`: there is nothing internal to resolve, the stored URL
+    // is the whole value. Together the two exercise both halves of
+    // `TargetSpec.scope` (ELEMENT-MODEL §external-link). What the link is *for* —
+    // supplier page, datasheet, manufacturer — is a Definition label, not a kind.
+    'external-link': {
         edges: { target: { scope: 'external' } },
     },
 

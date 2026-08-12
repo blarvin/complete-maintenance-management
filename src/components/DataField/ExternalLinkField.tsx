@@ -1,5 +1,5 @@
 /**
- * PartSupplierLinkField — renderer for the `part-supplier-link` kind.
+ * ExternalLinkField — renderer for the `external-link` kind.
  *
  * `Edges(external)`: the value is a stored URL, and unlike `asset-doc` there is no
  * resolver — nothing internal to look up, so display is the link itself. Opens in a
@@ -12,12 +12,12 @@
 
 import { Show, createMemo } from 'solid-js';
 import type { FieldRendererProps } from '../../kinds/types';
-import type { PartSupplierLinkValue } from '../../data/models';
+import type { ExternalLinkValue } from '../../data/models';
 import { safeHttpUrl, displayUrl } from '../../utils/url';
 import styles from './DataField.module.css';
 
-export const PartSupplierLinkField = (props: FieldRendererProps) => {
-    const raw = createMemo(() => (props.value as PartSupplierLinkValue | null)?.url ?? '');
+export const ExternalLinkField = (props: FieldRendererProps) => {
+    const raw = createMemo(() => (props.value as ExternalLinkValue | null)?.url ?? '');
     const href = createMemo(() => safeHttpUrl(raw()));
 
     return (
@@ -55,7 +55,7 @@ export const PartSupplierLinkField = (props: FieldRendererProps) => {
                         const trimmed = e.currentTarget.value.trim();
                         // Stored as typed; normalization happens at display, so the
                         // user's own text survives a reload of a half-typed value.
-                        void pending().onChange(trimmed ? ({ url: trimmed } as PartSupplierLinkValue) : null);
+                        void pending().onChange(trimmed ? ({ url: trimmed } as ExternalLinkValue) : null);
                     }}
                 />
             )}

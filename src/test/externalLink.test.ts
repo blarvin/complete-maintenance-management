@@ -1,5 +1,5 @@
 /**
- * `Edges(external)` value handling for `part-supplier-link` — the pure half the
+ * `Edges(external)` value handling for `external-link` — the pure half the
  * renderer leans on. The renderer itself is a `.tsx` (Cypress territory); this is
  * the part that decides whether a typed value ever becomes a live `href`.
  */

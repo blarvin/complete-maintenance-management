@@ -1,5 +1,5 @@
 /**
- * External-link helpers for `Edges(external)` kinds (`part-supplier-link`).
+ * External-link helpers for the `external-link` kind (`Edges(external)`).
  *
  * Its own module, not the manifest, so a unit test can reach it: a manifest imports
  * its `.tsx` renderer, and `vitest.config.ts` has no Solid JSX transform.
