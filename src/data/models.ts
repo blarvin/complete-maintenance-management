@@ -267,7 +267,11 @@ export type Element = {
  * Unified history log replacing dataFieldHistory. Captures structural changes
  * (name, subtitle, parentId, siblingOrder) in addition to value edits.
  *
- * Primary key: `${elementId}:${rev}`.
+ * Primary key: `${elementId}:${rev}:${random}`. Append-only and never updated
+ * in place, so unique ids make the log a grow-only set — two clients merge by
+ * union, with no coordination and nothing overwritten (ISSUES Tech Debt #4).
+ * Order for display is `compareHistory` in `storage/historyHelpers.ts`; `rev`
+ * on its own is only a per-client sequence.
  */
 export type ElementHistoryProperty =
   | "value"
@@ -277,9 +281,9 @@ export type ElementHistoryProperty =
   | "siblingOrder";
 
 export type ElementHistory = {
-  id: string; // `${elementId}:${rev}`
+  id: string; // `${elementId}:${rev}:${random}` — the tail is what makes appends converge
   elementId: ID;
-  rev: number; // monotonic per elementId, start 0 on create
+  rev: number; // per-client sequence, start 0 on create. NOT unique across clients
   action: "create" | "update" | "delete";
   property: ElementHistoryProperty;
   prevValue: unknown;

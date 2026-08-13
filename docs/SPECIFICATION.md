@@ -648,12 +648,14 @@ Chrome is always **derived**, **device-local view state**, or **the rendered exp
 
 **Purpose:** Immutable append-only audit log of Element changes, spanning every tracked property: value edits, renames, re-subtitling, re-parenting (a *move* is a `parentId` change), reordering, and structural create/delete. Typed as a discriminated union over `kind` so value `prevValue` / `newValue` carry the element's value shape.
 
+**Append-only means it must converge.** Rows are never updated in place, so the log is a grow-only set: every append gets a unique id and two clients merge by union, with nothing overwritten and no coordination needed. This is why `id` carries a random tail and why `rev` is only a per-client sequence — `rev` is minted from a local read, which cannot see another client, so two offline edits to the same element legitimately share a `rev` and must not share an id. Display order is therefore `(rev, updatedAt, id)`, not `rev` alone.
+
 **Shared fields**:
 
 
 | Field     | Type          | Required | Description                        | Constraints                                      |
 | --------- | ------------- | -------- | ---------------------------------- | ------------------------------------------------ |
-| id        | string        | Yes      | Primary key                        | Composite key `${elementId}:${rev}`              |
+| id        | string        | Yes      | Primary key                        | `${elementId}:${rev}:${random}` — unique per append |
 | elementId | string (UUID) | Yes      | Reference to `Element.id`          | Must exist in `elements` table                   |
 | parentId  | string (UUID) | null     | Yes                                | Owning/canonical parent at time of change        |
 | kind      | string        | Yes      | Discriminator                      | Matches `Element.kind`                           |
@@ -663,7 +665,7 @@ Chrome is always **derived**, **device-local view state**, or **the rendered exp
 | newValue  | JSON          | null     | Cond.                              | New value of the changed property                |
 | updatedBy | string        | Yes      | Editor identifier                  | Constant `"localUser"`; real user IDs [Phase 2+] |
 | updatedAt | timestamp     | Yes      | When the change occurred (epoch)   | Client-assigned; server-assigned [Phase 2+]      |
-| rev       | number        | Yes      | Monotonic revision per `elementId` | Starts at 0 for create                           |
+| rev       | number        | Yes      | Per-client sequence per `elementId` | Starts at 0 for create; **not** unique across clients |
 
 
 `**prevValue` / `newValue` shapes**:

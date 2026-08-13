@@ -23,7 +23,7 @@ import { isInline } from '../../kinds/placement';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { devLog } from '../../utils/devMode';
-import { createElementHistoryEntry, diffElementChanges } from './historyHelpers';
+import { compareHistory, createElementHistoryEntry, diffElementChanges } from './historyHelpers';
 import { makeStorageError, toStorageError, isStorageError } from './storageErrors';
 import type { StorageErrorCode } from './storageErrors';
 import { storageEventBus } from '../storageEventBus';
@@ -465,7 +465,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async getElementHistory(elementId: string): Promise<StorageResult<ElementHistory[]>> {
     return this.run(async () => {
       const all = await db.elementHistory.where('elementId').equals(elementId).toArray();
-      all.sort((a, b) => a.rev - b.rev);
+      all.sort(compareHistory);
       return createResult(all);
     });
   }

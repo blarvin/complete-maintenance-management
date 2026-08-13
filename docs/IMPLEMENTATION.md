@@ -538,7 +538,9 @@ Coordination is a single parent-owned mutex signal: `useSignal<ActiveSurface>('n
 
 **Root Nodes**: Use `parentId: null`, not sentinel value like `"ROOT"`. Adapter queries use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.
 
-**History ID Scheme**: `${dataFieldId}:${rev}` composite key. `rev` is monotonic per field (0 on create, increments on update). Enables ordered history without timestamp collisions.
+**History ID Scheme**: `${elementId}:${rev}:${random}` (`createElementHistoryEntry`). The random tail is the load-bearing part; the prefix is for humans reading a raw row. `rev` is minted by `nextElementRev`, a max over *local* history, so it is a per-client sequence and **not** unique across clients — two clients editing the same element offline both reach rev 5. While the id was just `${elementId}:${rev}` that meant two distinct appends shared a key, and one destroyed the other: `setDoc` without merge pushing up, `put` keyed by id pulling down. Silent audit loss (ISSUES Tech Debt #4).
+
+Because history rows are append-only and never updated in place, unique ids are the entire fix: the log is a grow-only set, so merging two clients is union, `put` is idempotent, and a full sync can re-apply everything safely. No coordination, no allocator, no schema change — nothing parses the id, so old two-part ids stay valid beside new ones. Display order is `compareHistory` (`storage/historyHelpers.ts`), shared by both readers: `rev`, then server-stamped `updatedAt`, then `id` as an unbreakable tiebreak. Deterministic rather than notionally-true — nothing can recover the real authoring order of two offline edits, but every client sorting identically is achievable and is what convergence needs. Contract: `src/test/historyConvergence.test.ts`.
 
 **Timestamps**: `Date.now()` wrapped in `now()` from `src/utils/time.ts` for future mockability. Currently client-assigned; LATER.md tracks server-assigned timestamp migration.
 
