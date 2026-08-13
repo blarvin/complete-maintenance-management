@@ -346,7 +346,7 @@ The Element refactor traded the live-emulator adapter/sync suite for mock-based 
 
 **Wiring needed before this is possible:** emulator connect in `src/data/firebase.ts` is gated on `isBrowser`, so Node/Vitest never connects — a round-trip Vitest run needs a Node connect path (e.g. honor `FIRESTORE_EMULATOR_HOST`) plus a separate vitest config + opt-in script so the default `npm test` stays emulator-free. Also: the `test:firestore` npm script currently points at a non-existent `src/test/firestoreAdapter.test.ts` — remove or repoint it as part of this work.
 
-**Note (2026-06-11):** one Cypress E2E spec now exists again — `cypress/e2e/repro-create-node.cy.ts` (regression for the UC-TreeNode key collision, audit §2.3) plus a stub `cypress/support/e2e.ts`. It currently runs against the *live* Firestore config and writes real nodes; gate it to the emulator (`?emulator=true` / `USE_FIRESTORE_EMULATOR`) before wiring into any automated run.
+**Note (2026-08-13, supersedes a 2026-06-11 note):** the E2E layer this once described as a single ungated spec (`repro-create-node.cy.ts`, writing to *live* Firestore) is gone. `cypress/e2e/` now holds four behavior-contract specs — core-loop, lens-loop, offline-sync, retention — and `cy.freshVisit()` wipes the emulator and deletes the app's IndexedDB before every one, so they are hermetic and never touch production. What remains open here is unchanged: none of them is a round-trip assertion *about* sync internals, which is what this section wants.
 
 ### Extract Sync System as Standalone Package (Refactoring Audit 8.3)
 
