@@ -81,10 +81,17 @@ vs IndexedDB).
 
 ### 4. Local-first with no server
 
-Create a second node while the server is still down.
+Create a second node while the server is still down, then reload once more.
 
-**Done when:** it appears in the DOM and `__syncStatus()` shows it queued
-(`queueLength > 0`) rather than lost.
+**Done when:** the node appears in the DOM and is still there after that reload —
+proving the write reached IndexedDB, not just the view.
+
+Assert nothing about the sync queue here. Stopping `preview:pwa` removes the
+static asset host and nothing else: Firestore is a separate process, so the
+write pushes straight through and the queue drains immediately. A previous
+version of this step expected `queueLength > 0` and could only ever have passed
+by accident — it silently asserted that the emulator was down. Queue-while-
+offline is `offline-sync.cy.ts`'s contract, not this one.
 
 ### 5. Restore
 
