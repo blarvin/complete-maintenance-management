@@ -7,6 +7,8 @@
  * - Start/stop lifecycle
  */
 
+import { devLog } from '../../utils/devMode';
+
 export class SyncLifecycle {
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -34,7 +36,7 @@ export class SyncLifecycle {
       window.addEventListener('online', this.handleOnline);
     }
 
-    console.log('[SyncLifecycle] Started with poll interval:', this.pollIntervalMs, 'ms');
+    devLog('[SyncLifecycle] Started with poll interval:', this.pollIntervalMs, 'ms');
   }
 
   /**
@@ -51,7 +53,7 @@ export class SyncLifecycle {
       window.removeEventListener('online', this.handleOnline);
     }
 
-    console.log('[SyncLifecycle] Stopped');
+    devLog('[SyncLifecycle] Stopped');
   }
 
   /**
@@ -62,7 +64,7 @@ export class SyncLifecycle {
   }
 
   private handleOnline = (): void => {
-    console.log('[SyncLifecycle] Network online - triggering tick');
+    devLog('[SyncLifecycle] Network online - triggering tick');
     this.onTick().catch(err => {
       console.error('[SyncLifecycle] Online tick failed:', err);
     });

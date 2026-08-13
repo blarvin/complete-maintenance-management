@@ -6,6 +6,7 @@ import {
     memoryLocalCache,
 } from "firebase/firestore";
 import { isEmulatorTarget } from "./syncTarget";
+import { devLog } from "../utils/devMode";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBgVGwmf8o6eP7XRW-Jv8AwScIrIDPertA",
@@ -40,61 +41,6 @@ function getDb() {
     }
 }
 
-/**
- * Clear all Firebase IndexedDB databases.
- * The SDK no longer creates these (memory cache only), but orphaned mirror
- * DBs linger on devices that ran older builds with persistentLocalCache —
- * this is the cleanup tool for them.
- *
- * To use: Call `clearFirebaseIndexedDB()` in the browser console.
- */
-export async function clearFirebaseIndexedDB(): Promise<void> {
-    if (!isBrowser || !indexedDB.databases) {
-        console.warn('IndexedDB not available or databases() not supported');
-        return;
-    }
-
-    try {
-        const databases = await indexedDB.databases();
-        const firebaseDbs = databases.filter(db => 
-            db.name?.includes('firebase') || db.name?.includes('firestore')
-        );
-
-        if (firebaseDbs.length === 0) {
-            console.log('No Firebase IndexedDB databases found');
-            return;
-        }
-
-        console.log(`Clearing ${firebaseDbs.length} Firebase IndexedDB database(s)...`);
-        
-        await Promise.all(
-            firebaseDbs.map(db => {
-                return new Promise<void>((resolve, reject) => {
-                    const request = indexedDB.deleteDatabase(db.name!);
-                    request.onsuccess = () => {
-                        console.log(`✅ Deleted: ${db.name}`);
-                        resolve();
-                    };
-                    request.onerror = () => {
-                        console.error(`❌ Failed to delete: ${db.name}`);
-                        reject(request.error);
-                    };
-                });
-            })
-        );
-
-        console.log('✅ All Firebase IndexedDB databases cleared. Please refresh the page.');
-    } catch (error) {
-        console.error('Failed to clear IndexedDB:', error);
-    }
-}
-
-// Expose to window for easy console access
-if (isBrowser) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).clearFirebaseIndexedDB = clearFirebaseIndexedDB;
-}
-
 export const db = getDb();
 export const projectId = firebaseConfig.projectId;
 
@@ -103,7 +49,7 @@ if (isBrowser && isEmulatorTarget && !emulatorConnected) {
     try {
         connectFirestoreEmulator(db, 'localhost', 8080);
         emulatorConnected = true;
-        console.log('🔥 Connected to Firestore Emulator (localhost:8080)');
+        devLog('🔥 Connected to Firestore Emulator (localhost:8080)');
     } catch {
         // Already connected (HMR scenario)
         emulatorConnected = true;

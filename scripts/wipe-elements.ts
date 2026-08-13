@@ -1,7 +1,7 @@
 /**
- * Wipe Elements and history from Firestore.
+ * Wipe Elements and history from PRODUCTION Firestore.
  *
- * Run with: npx tsx scripts/wipe-elements.ts   (or: npm run wipe:elements)
+ * Run with: npm run wipe:elements -- --yes
  *
  * ⚠️  WARNING: This deletes ALL elements and element history from the
  * production Firestore database. Since config-as-Elements, Library Definitions
@@ -9,6 +9,11 @@
  * Definitions are wiped too — the client reseeds its Library locally on next
  * launch (seedDefinitions, version-gated). The legacy `fieldDefinitions`
  * collection is not in the list; scripts/wipe-field-definitions.ts clears it.
+ *
+ * Wiping the server no longer clears any client: full sync stopped purging
+ * local rows (ISSUES Bugs #4), so clients keep everything they hold. That is
+ * the point — but it means this script alone will not give you a clean slate.
+ * For that, prefer `npm run wipe:emulator` plus `window.__wipeLocal()`.
  */
 
 import { initializeApp } from 'firebase/app';
@@ -19,15 +24,9 @@ import {
     writeBatch,
     doc,
 } from 'firebase/firestore';
+import { PRODUCTION_FIREBASE_CONFIG, requireConfirmation } from './wipeShared';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBgVGwmf8o6eP7XRW-Jv8AwScIrIDPertA",
-    authDomain: "treeview-blarapp.firebaseapp.com",
-    projectId: "treeview-blarapp",
-    storageBucket: "treeview-blarapp.firebasestorage.app",
-    messagingSenderId: "1041054928276",
-    appId: "1:1041054928276:web:f4804c9c7b35c66cd4d381",
-};
+const firebaseConfig = PRODUCTION_FIREBASE_CONFIG;
 
 // Element-model data (incl. Library Definitions, which live in `elements`
 // since config-as-Elements). The legacy `fieldDefinitions` collection has its
@@ -72,6 +71,8 @@ async function deleteCollection(db: ReturnType<typeof getFirestore>, collectionN
 }
 
 async function main() {
+    requireConfirmation('delete every element and history row from production');
+
     console.log('⚠️  WIPE ELEMENTS - This deletes all elements + history (incl. Library Definitions)!\n');
     console.log(`Project: ${firebaseConfig.projectId}`);
     console.log('');
@@ -88,6 +89,7 @@ async function main() {
 
     console.log(`\n✅ Wipe complete! Deleted ${totalDeleted} documents total.`);
     console.log('   The client reseeds its Library locally on next launch.');
+    console.log('   Existing clients keep their local data — full sync does not purge.');
     process.exit(0);
 }
 

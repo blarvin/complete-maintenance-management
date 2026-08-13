@@ -264,6 +264,22 @@ Spec: "Deleting a node must handle or cascade to all children." Phase 1 allows l
 - Undo / restore within a window
 - Clarify: does Undo survive navigation? Are deletes soft until the timer elapses, or applied immediately with a restore snapshot?
 
+### Admin hard delete
+
+No code path removes an element row any more (2026-08-13): retention is the
+default and soft delete is the only delete channel. The one legitimate reason to
+purge is an admin forcing a row out — a GDPR-style erasure request, or clearing
+content that must not persist even as a tombstone. Deferred until there is an
+admin role to hang it on; there is no auth or viewer identity in Phase 1, so
+there is nobody to authorise it.
+
+When it lands it needs to be a *distinct* operation, not a flag on the existing
+delete — different authority, different audit expectation, and no undo window.
+Note the hard part is not the local delete: it is propagating a purge to clients
+that already hold the row, which soft delete gets for free (a tombstone syncs;
+an absence does not). That likely means an explicit purge tombstone rather than
+simply removing the document — i.e. the erasure itself has to sync.
+
 ### Recycle Bin / Audit-Preserving Delete
 
 - Soft delete with restore window (user-visible recycle bin)

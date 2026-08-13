@@ -34,15 +34,15 @@ carrying the decision it was blocked on.
 
 3.) **Delta-sync cursor is the local clock, compared against server-stamped rows** — `syncDelta()` sets the cursor with `now()` while every row's `updatedAt` comes from `serverTimestamp()`, so a fast client's cursor can jump past rows it never pulled (elements and history share the one cursor). Heals on the next app start, which runs `syncFull()` — a staleness window, not lost history. High-water mark (cursor = `max(updatedAt)` over the rows actually received) is the probable solution. Read in the 2026-08-12 delta-sync session; not observed in the wild. One amplifier is gone (2026-08-12): a pull used to schedule a second pull off its own applied rows, advancing this cursor twice per sync — see the `origin` tag on `StorageEvent`.
 
-4.) **A permanently-failed push can get its row hard-deleted** — `FullCollectionSync.syncElements()` deletes any local element absent from the server pull, skipping rows in `pendingIds`. But `getSyncQueue()` filters out retry-exhausted items (`status === 'failed' && retryCount >= MAX_SYNC_RETRIES`), so a row whose push permanently failed leaves `pendingIds`, isn't on the server, and isn't a seed — and is hard-deleted. The row you least want to drop is the one that couldn't upload. Narrow today, and safe by accident rather than design: `initStorage` calls `requeueFailed()` *before* `syncFull()` (budget back to 0, and `MAX_SYNC_RETRIES` is 5, so the same cycle's push can't re-exhaust it), and the 10-min timer + `online` both call `syncOnce()` → `syncDelta()`, which never purges. So the live route is a hand-called `syncFull()` mid-session after the "changes failed to sync" toast — but that ordering in `initStorage` is load-bearing and says nothing about it; swapping those two lines turns this into silent data loss. Root cause is that server-absence is ambiguous: never-pushed, push-failed, admin-deleted, or never-pushed *by design* (the seeds — that's Bugs #1, and why the `appDeveloper` exemption exists at FullCollectionSync.ts:53). Three ways out, a design call: **(a)** keep it and document the ordering; **(b)** provenance-gate — purge only rows known to have reached the server once, which subsumes the seed exemption and closes this; **(c)** drop the purge, leaving tombstones (soft delete, which already syncs as an ordinary `deletedAt` update) as the only delete channel — costs the wipe-server-wipes-client dev workflow, replaceable by wiring the already-existing `clearStorage()` to a dev-tools global, and also retires `ELEMENT_HARD_DELETED`'s only emitter. Read in the 2026-08-12 hard-delete discussion; not observed in the wild.
-
 ## Features
 
 1.) **Node metadata in TreeNodeDetails** — show `createdAt`, last `updatedAt`, last `updatedBy`.
 
-2.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like DataFields? edit button?), then wire up. Nodes are rename-less after creation.
+2.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like
 
 3.) **[Fields UI] DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't.
+
+5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
 ## Architecture Migration (ELEMENT-MODEL → code)
 
@@ -55,8 +55,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 3.) **The rest of the catalogue (#6c)** — the `Edges` family (`other-end` / `approval`), `asset-gallery`, `person`, `logical-container`. Specs in ELEMENT-MODEL.md. The fourth Edges member landed separately as `external-link` (2026-08-12); these three still wait on the overlay (#1) or on `ElementHistory` reads.
 
 4.) **The cascade / arbiter** — `inherit-unless-override` honoring the config-sub-field `disposition` (owned / delegated / pinned), reading `ancestors/transitive` — the traversal itself is built (`gatherAncestors`, nearest-first), so what remains is the arbitration. The disposition vocabulary is already encoded on the schema; this wires it.
-
-5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
 6.) **Cross-ancestor rollup duplication (by design)** — the transitive gather shows one job in every ancestor's Jobs rollup. Not a bug; revisit with depth-scoping / de-dup if it bites. The nested-job half is gone (sub-jobs decided against 2026-08-12, ELEMENT-MODEL §job); what remains is one deep job appearing in every ancestor above it.
 
@@ -84,4 +82,10 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 6.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
-7.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky.
+7.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky. DataFields? edit button?), then wire up. Nodes are rename-less after creation.
+
+8.) **IMPLEMENTATION.md cites a Cypress spec that doesn't exist** — the under-construction-key note names `cypress/e2e/repro-create-node.cy.ts` as its regression spec; `cypress/e2e/` holds only core-loop, lens-loop, offline-sync and retention. Either the spec was dropped in the SolidJS port and the guarantee is now untested, or the note should point at core-loop. Read during the 2026-08-13 hard-delete session.
+
+9.) **The narrowed `offline-test` skill is unrun** — rewritten 2026-08-13 around a genuine service-worker test (stop the preview server, reload, assert the shell still serves) after the old version was found asserting six console strings that had all drifted, on a build where the DEV-guarded ones never printed anyway. The new steps have not been executed once. First run should be treated as testing the skill, not just the app.
+
+10.) **Dev seeds are scaffolding but boot like product** — `seedDefinitions` calls itself "dev-seeded" and `__wipeDefinitions` calls restoring them a "factory-default reset", yet three of the seven (Type Of, Description, Tags) are the construction defaults every new node gets, so seeding cannot simply move behind the dev gate without changing what a production node is born with. Decide whether those three are product content (and rename away from "dev seed") or whether construction defaults should come from somewhere else. Surfaced 2026-08-13 when the `appDeveloper` author id stopped serving sync policy — it now marks authorship only.

@@ -150,34 +150,11 @@ describe('initStorage - Migration Fallback Paths', () => {
         });
     });
 
-    describe('Cypress seed mode detection', () => {
-        it('detects Cypress seed mode flag on window', () => {
-            // Simulate Cypress setting the flag
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const windowAny = global as any;
-            const originalFlag = windowAny.__CYPRESS_SEED_MODE__;
-            
-            windowAny.__CYPRESS_SEED_MODE__ = true;
-            
-            // The initStorage logic checks window.__CYPRESS_SEED_MODE__
-            expect(windowAny.__CYPRESS_SEED_MODE__).toBe(true);
-            
-            // Cleanup
-            if (originalFlag === undefined) {
-                delete windowAny.__CYPRESS_SEED_MODE__;
-            } else {
-                windowAny.__CYPRESS_SEED_MODE__ = originalFlag;
-            }
-        });
-
-        it('Cypress mode flag is falsy by default', () => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const windowAny = global as any;
-            
-            // Should be undefined or falsy by default
-            expect(windowAny.__CYPRESS_SEED_MODE__).toBeFalsy();
-        });
-    });
+    // A "Cypress seed mode detection" block used to sit here. It set
+    // `window.__CYPRESS_SEED_MODE__` itself and then asserted the flag was set —
+    // it exercised `window`, not initStorage. Nothing ever set that flag in
+    // anger either: Cypress gets a hermetic store by deleting the databases in
+    // `freshVisit`'s onBeforeLoad. Branch and tests both removed 2026-08-13.
 });
 
 describe('initStorage - Idempotent Initialization', () => {

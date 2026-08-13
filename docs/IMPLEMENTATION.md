@@ -397,9 +397,29 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Implicit Hiding**: Children of soft-deleted nodes are implicitly hidden (not cascade soft-deleted). Queries filter by `deletedAt: null` and exclude children where `parent.deletedAt !== null`. This avoids recursive queries while maintaining referential integrity.
 
-**Sync Behavior**: Soft deletes sync normally—`deletedAt` is just another field. Remote soft deletes are applied via LWW conflict resolution. This enables delta sync to detect deletions (hard-deleted entities wouldn't appear in `updatedAt > since` queries).
+**Sync Behavior**: Soft deletes sync normally—`deletedAt` is just another field. Remote soft deletes are applied via LWW conflict resolution. This enables delta sync to detect deletions (a hard-deleted row wouldn't appear in an `updatedAt > since` query at all — absence is not a signal).
+
+**Soft delete is the only delete (2026-08-13, ISSUES Bugs #4)**: no code path removes an element row. `IDBAdapter` has no local-delete method, `SyncableStorageAdapter` declares none, and there is no hard-delete event on `storageEventBus` — the union is `ELEMENT_WRITTEN` / `DEFINITION_WRITTEN`, and a deletion arrives as a write carrying `deletedAt`. See *Retention over reconciliation* under Sync Architecture for why the sync-side purge went.
 
 **History**: DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted. No cascade deletion of history—preserves audit trail.
+
+---
+
+### The developer surface (2026-08-13)
+
+**One gate: `DEV_TOOLS_ENABLED` in `src/utils/devMode.ts`** = `import.meta.env.DEV || isEmulatorTarget`. It governs both trace logging (`devLog`) and the `window.__*` console helpers.
+
+The obvious gate — bare `import.meta.env.DEV` — is wrong here, and the reason is worth keeping: `DEV` is false for *everything* `vite build` produces, and that one artifact is served three ways. Netlify serves it, `npm run preview:pwa` serves it (the only way to exercise the service worker), and any emulator-mode hand-test runs it. A bare DEV gate would strip the tools from the two local cases, which are exactly where they get used. Cypress is unaffected either way — it drives the dev server on :5173. Same reasoning as `SyncTargetBadge`, which is deliberately not DEV-gated.
+
+`devLog` wraps `console.log` only. `console.error`/`console.warn` stay bare everywhere: a real failure must be visible in a production session, which is the entire distinction. Before this, three conventions coexisted — DEV-guarded, unguarded, and silent — and ~40 unguarded trace lines shipped to Netlify.
+
+**Console helpers** (`src/data/sync/devTools.ts`, registered behind the gate): `__sync()`, `__syncStatus()`, `__wipeDefinitions()`, `__wipeLocal()`. `__syncStatus` is load-bearing beyond debugging — Cypress's `freshVisit` waits on it as the storage-init readiness signal.
+
+**`__wipeLocal()`** deletes the Dexie database and reloads. It exists to replace a workflow that used to come free from the sync purge (wipe server → restart → client clears itself). Making it explicit is the improvement: a local reset and a remote wipe are different intentions, and the old coupling meant a *production* wipe silently reached every client. `devTools.ts` importing `clearStorage` from `initStorage.ts` closes an import cycle (initStorage imports `initializeDevTools`); it is benign — both sides are function declarations resolved at call time, long after module evaluation.
+
+**Removed the same day**, all verified dead rather than merely suspicious: `window.__CYPRESS_SEED_MODE__` (nothing set it — Cypress deletes the databases in `freshVisit`'s `onBeforeLoad` instead) and its self-asserting test; `window.clearFirebaseIndexedDB` (obsolete per its own docblock); and two `window` network listeners in `App.tsx` whose bodies were only `console.log`. `scripts/wipe-field-definitions.ts` also advertised `window.__wipeFieldDefinitions()`, which never existed — the helper is `__wipeDefinitions`.
+
+**Wipe scripts point at production**, so `wipe:elements` and `wipe:fielddefs` now refuse without `--yes` (`scripts/wipeShared.ts`). `npm run wipe:emulator` is the safe default for a dev reset. Note that wiping the server no longer clears any client — that is the retention change working as intended, and it means a server wipe alone no longer gives a clean slate.
 
 ---
 
@@ -411,22 +431,28 @@ Both use identical `100ms cubic-bezier(0.4, 0, 0.2, 1)` timing. The grid techniq
 
 **Conflict Resolution**: Last-Write-Wins (LWW) based on `updatedAt` timestamps. Server timestamps are authoritative when available. During sync, remote entity with higher `updatedAt` wins.
 
+**Protect Pending Items**: `ServerAuthorityResolver` skips any remote row whose id is still in the sync queue, so an un-pushed local edit is never overwritten by the server copy it is about to replace. (This is distinct from the deletion guard that used to live in `FullCollectionSync` — see *Retention over reconciliation* below.)
+
 **Sync Strategies**:
 
 - **FullCollectionSync**: Pulls all entities (used on startup, ensures complete reconciliation)
 - **DeltaSync**: Pulls only changes since last sync (faster, used periodically)
 
-**Protect Pending Items**: Don't delete local items that are pending push. Ensures local changes aren't lost if remote has newer version.
+**Retention over reconciliation (2026-08-13, ISSUES Bugs #4)**: `FullCollectionSync` is purely additive — it applies what the server has and removes nothing. It used to delete any local element missing from the pull, skipping rows still in the sync queue, with a further exemption for the dev seeds (which never sync, so their absence proved nothing — Bugs #1).
 
-**Post-Sync UI Refresh (audit §2.3 + §4.4, 2026-06-11)**: One reactive model — *writes emit; readers subscribe*. Every write (local command or remote sync apply via `applyRemoteElement`/`applyRemoteFieldDefinition`) emits a per-element event on `storageEventBus` from `IDBAdapter`. Views read through `useElementChildren`/`useElementById` (`src/hooks/useElementChildren.ts`), which subscribe to the bus and reload when a relevant event lands (relevance predicates in `src/data/storageEventRelevance.ts`; 30ms trailing debounce coalesces write bursts). The former window `storage-change` CustomEvent and the `onDeleted$`/`onCreated$`/`onCommitted$` reload-callback threading were deleted — no reload callbacks are threaded through props.
+Both guards were patches on an unfixable premise: **server absence is ambiguous**. Never-pushed, push-failed, admin-deleted and never-pushed-by-design all look identical from the client. The queue guard leaked in exactly the worst case — `getSyncQueue()` filters out retry-exhausted items, so a row whose push *permanently failed* dropped out of `pendingIds`, wasn't on the server, and got purged. The row least safe to lose was the one the purge was most likely to take. It was safe only by accident of ordering (`initStorage` calls `requeueFailed()` before `syncFull()`), and swapping those two lines would have turned it into silent data loss.
+
+Removing the purge deletes the whole class: no `deleteElementLocal`, no `pendingIds` read, no seed exemption, no `SyncQueueManager` dependency on the strategy at all. The cost was a dev workflow that came free with it — wipe the server, restart, watch the client clear itself — now an explicit `window.__wipeLocal()`. Contract: `cypress/e2e/retention.cy.ts`.
+
+**Post-Sync UI Refresh (audit §2.3 + §4.4, 2026-06-11)**: One reactive model — *writes emit; readers subscribe*. Every write (local command or remote sync apply via `applyRemoteElement`) emits a per-element event on `storageEventBus` from `IDBAdapter`. Views read through `useElementChildren`/`useElementById` (`src/hooks/useElementChildren.ts`), which subscribe to the bus and reload when a relevant event lands (relevance predicates in `src/data/storageEventRelevance.ts`; 30ms trailing debounce coalesces write bursts). The former window `storage-change` CustomEvent and the `onDeleted$`/`onCreated$`/`onCommitted$` reload-callback threading were deleted — no reload callbacks are threaded through props.
 
 **Under-construction TreeNode key must be namespaced (`uc-${id}`)**: the bus reload puts a newly created node into the view's `nodes` list while the construction card is still mounted (it's filtered from display, but present). If the UC `<TreeNode>` and the display `<TreeNode>` share the raw element id as key, Qwik's keyed reconciler identity-matches them on the completion render and *reuses the construction component instance* instead of unmounting it — the construction card sticks on screen even though the FSM cleared correctly. Namespacing the UC key (`RootView.tsx` / `BranchView.tsx`) forces a clean unmount+mount. Regression spec: `cypress/e2e/repro-create-node.cy.ts`.
 
-**Event-Driven Sync Triggering**: Sync is triggered via `StorageEventBus` rather than manual `triggerSync()` calls in UI code. `IDBAdapter` emits typed events (`NODE_WRITTEN`, `NODE_HARD_DELETED`, `FIELD_WRITTEN`, `FIELD_DELETED`) after local CUD operations. `syncSubscriber.ts` subscribes to all events and calls `triggerSync()`, which debounces at 500ms. Remote/sync-originated operations (`applyRemoteUpdate`, `applyRemoteHistory`, `deleteFieldLocal`) do NOT emit events to avoid sync loops. UI code never calls `triggerSync()` directly.
+**Event-Driven Sync Triggering**: Sync is triggered via `StorageEventBus` rather than manual `triggerSync()` calls in UI code. `IDBAdapter` emits typed events (`ELEMENT_WRITTEN`, `DEFINITION_WRITTEN`) after local CUD operations. `syncSubscriber.ts` subscribes and calls `triggerSync()`, which debounces at 500ms. Remote-applied rows emit too — the UI must repaint either way — but carry `origin: 'remote'`, and the subscriber pushes only on `origin: 'local'`, so a pull cannot echo itself into another pull. UI code never calls `triggerSync()` directly.
 
 **SyncQueueManager Extracted from IDBAdapter**: The sync queue (`getSyncQueue`, `enqueue`, `markSynced`, `markFailed`) lives in `src/data/sync/SyncQueueManager.ts` rather than on the adapter. `IDBAdapter` holds a `SyncQueueManager` instance and delegates to it. This keeps the adapter a pure storage adapter and makes the queue reusable across storage backends.
 
-**Single offline cache (audit §2.2, 2026-06-11)**: Firestore is initialized with `memoryLocalCache()` unconditionally — Dexie + syncQueue is the app's only offline cache; Firestore is a dumb wire. `clearFirebaseIndexedDB()` remains as the console cleanup tool for orphaned SDK mirror DBs on devices that ran older builds.
+**Single offline cache (audit §2.2, 2026-06-11)**: Firestore is initialized with `memoryLocalCache()` unconditionally — Dexie + syncQueue is the app's only offline cache; Firestore is a dumb wire. (A `clearFirebaseIndexedDB()` console helper used to sit in `firebase.ts` to clear orphaned SDK mirror DBs left by pre-`memoryLocalCache` builds; removed 2026-08-13, since the SDK has not created one in a long time.)
 
 **Sync retry policy (audit §4.3, 2026-06-11)**: No dedicated backoff machinery — failed queue items simply ride existing sync cycles (write-debounce, `online` event, 10-min timer) up to `MAX_SYNC_RETRIES = 5` attempts. `getSyncQueue()` returns pending + under-cap failed items; at the cap an item is parked as exhausted. On exhaustion `SyncManager` shows an error snackbar with a **Retry** action that re-arms (`requeueFailed()`: status→pending, retryCount→0, `lastError` kept for forensics) and syncs immediately. App startup also re-arms all failed items, so a missed toast isn't permanent.
 

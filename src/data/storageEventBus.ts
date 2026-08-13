@@ -13,8 +13,7 @@ import type { Definition, Element } from './models';
 
 /**
  * Where a write came from. `local` = this client's own create/update/delete;
- * `remote` = a row applied by a sync pull (`applyRemoteElement`, or the hard
- * delete `FullCollectionSync` does when the server no longer has a row).
+ * `remote` = a row applied by a sync pull (`applyRemoteElement`).
  *
  * Read by the **sync subscriber only**. UI subscribers deliberately want both: a
  * pulled row must repaint exactly like a local edit, which is why a remote apply
@@ -29,10 +28,14 @@ import type { Definition, Element } from './models';
  */
 export type EventOrigin = 'local' | 'remote';
 
+/**
+ * Deletion is a soft delete throughout: it arrives as an ELEMENT_WRITTEN whose
+ * element carries a non-null `deletedAt`. There is deliberately no hard-delete
+ * event — no code path removes an element row (ISSUES Bugs #4, 2026-08-13).
+ */
 export type StorageEvent =
   | { type: 'DEFINITION_WRITTEN'; origin: EventOrigin; definition: Pick<Definition, 'id' | 'deletedAt'> }
-  | { type: 'ELEMENT_WRITTEN'; origin: EventOrigin; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'treeType' | 'deletedAt'> }
-  | { type: 'ELEMENT_HARD_DELETED'; origin: EventOrigin; elementId: string };
+  | { type: 'ELEMENT_WRITTEN'; origin: EventOrigin; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'treeType' | 'deletedAt'> };
 
 // ---------------------------------------------------------------------------
 // Bus implementation

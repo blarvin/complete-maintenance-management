@@ -30,9 +30,9 @@ describe('StorageEventBus', () => {
         bus.subscribe(e => b.push(e));
 
         const event: StorageEvent = {
-            type: 'ELEMENT_HARD_DELETED',
+            type: 'DEFINITION_WRITTEN',
             origin: 'remote',
-            elementId: 'n1',
+            definition: { id: 'fd-1', deletedAt: null },
         };
         bus.emit(event);
 
@@ -65,14 +65,14 @@ describe('StorageEventBus', () => {
         bus.subscribe(e => received.push(e));
 
         bus.clear();
-        bus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'n1' });
+        bus.emit({ type: 'DEFINITION_WRITTEN', origin: 'remote', definition: { id: 'fd-1', deletedAt: null } });
 
         expect(received).toEqual([]);
     });
 
     it('emitting with no subscribers does not throw', () => {
         expect(() => {
-            bus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'n1' });
+            bus.emit({ type: 'DEFINITION_WRITTEN', origin: 'remote', definition: { id: 'fd-1', deletedAt: null } });
         }).not.toThrow();
     });
 });

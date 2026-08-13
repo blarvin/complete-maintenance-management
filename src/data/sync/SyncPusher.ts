@@ -9,6 +9,7 @@ import type { RemoteSyncAdapter } from '../storage/storageAdapter';
 import type { SyncQueueManager } from './SyncQueueManager';
 import { SYNC_WRITE_TIMEOUT_MS } from '../../constants';
 import { withTimeout, TimeoutError } from '../../utils/withTimeout';
+import { devLog } from '../../utils/devMode';
 
 export type PushResult = {
   processed: number;
@@ -32,11 +33,11 @@ export class SyncPusher {
     const queue = await this.syncQueue.getSyncQueue();
 
     if (queue.length === 0) {
-      if (import.meta.env.DEV) console.log('[SyncPusher] No pending items');
+      devLog('[SyncPusher] No pending items');
       return { processed: 0, succeeded: 0, failed: 0, exhausted: 0 };
     }
 
-    if (import.meta.env.DEV) console.log('[SyncPusher] Processing', queue.length, 'items');
+    devLog('[SyncPusher] Processing', queue.length, 'items');
 
     let succeeded = 0;
     let failed = 0;
@@ -53,7 +54,7 @@ export class SyncPusher {
           `applySyncItem(${item.operation} ${item.entityId})`
         );
         await this.syncQueue.markSynced(item.id);
-        if (import.meta.env.DEV) console.log('[SyncPusher] Synced', item.operation, item.entityId);
+        devLog('[SyncPusher] Synced', item.operation, item.entityId);
         succeeded++;
       } catch (err) {
         console.error('[SyncPusher] Failed', item.operation, item.entityId, err);

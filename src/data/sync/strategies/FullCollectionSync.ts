@@ -1,16 +1,25 @@
 /**
  * FullCollectionSync - Full collection sync strategy.
  *
- * Pulls all entities from remote and applies them locally using server authority resolution.
- * Handles deletion detection: removes local entities not present in remote
- * (unless they have pending local changes).
+ * Pulls all entities from remote and applies them locally using server authority
+ * resolution. Purely additive: it never removes a local row.
+ *
+ * **No deletion detection, by design.** This strategy used to delete any local
+ * element absent from the server pull. Server absence turned out to be
+ * irreducibly ambiguous — never-pushed, push-failed, admin-deleted, or
+ * never-pushed *by design* (the dev seeds) all look identical from here — so the
+ * purge could drop the one row you least want to lose, the one whose push
+ * permanently failed (ISSUES Bugs #4). Retention is now the default: deletion
+ * travels one way only, as a soft delete (`deletedAt`), which syncs as an
+ * ordinary field update and so arrives through the apply loop below like any
+ * other change. Removing the purge also retired the seed exemption that used to
+ * live here (ISSUES Bugs #1) — seeds are safe now because nothing purges.
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
 import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
-import type { SyncQueueManager } from '../SyncQueueManager';
-import { AUTHOR_ID_APP_DEVELOPER } from '../../../constants';
+import { devLog } from '../../../utils/devMode';
 
 export class FullCollectionSync implements SyncStrategy {
   readonly name = 'full-collection';
@@ -18,8 +27,7 @@ export class FullCollectionSync implements SyncStrategy {
   constructor(
     private local: SyncableStorageAdapter,
     private remote: RemoteSyncAdapter,
-    private resolver: ServerAuthorityResolver,
-    private syncQueue: SyncQueueManager
+    private resolver: ServerAuthorityResolver
   ) {}
 
   async sync(): Promise<SyncResult> {
@@ -33,29 +41,9 @@ export class FullCollectionSync implements SyncStrategy {
 
   private async syncElements(): Promise<number> {
     const remoteElements = await this.remote.pullAllElements();
-    const remoteIds = new Set(remoteElements.map(e => e.id));
 
-    const localElements = await this.local.getAllElements();
-    const pendingQueue = await this.syncQueue.getSyncQueue();
-    const pendingIds = new Set(
-      pendingQueue
-        .filter(item => item.entityType === 'element')
-        .map(item => item.entityId)
-    );
-
-    // Delete local elements not in remote (unless pending push). Seeded
-    // Library rows are exempt: seedDefinitions deliberately never enqueues
-    // them, so they never reach the server and server absence is not deletion
-    // evidence — without this, any sparse/empty remote (fresh emulator, wiped
-    // server) wipes every seeded Definition on first full sync (ISSUES Bug #1).
-    for (const localElement of localElements) {
-      if (remoteIds.has(localElement.id) || pendingIds.has(localElement.id)) continue;
-      if (localElement.treeType === 'library' && localElement.updatedBy === AUTHOR_ID_APP_DEVELOPER) continue;
-      await this.local.deleteElementLocal(localElement.id);
-      console.log('[FullCollectionSync] Deleted local element (removed remotely):', localElement.id);
-    }
-
-    // Apply remote elements (server authority)
+    // Apply remote elements (server authority). Local-only rows are simply left
+    // alone — see the no-deletion-detection note above.
     let applied = 0;
     for (const remoteElement of remoteElements) {
       const result = await this.resolver.resolveElement(remoteElement);
@@ -74,7 +62,7 @@ export class FullCollectionSync implements SyncStrategy {
       await this.local.applyRemoteElementHistory(hist);
     }
 
-    console.log('[FullCollectionSync] Synced', remoteHistory.length, 'element history entries');
+    devLog('[FullCollectionSync] Synced', remoteHistory.length, 'element history entries');
     return remoteHistory.length;
   }
 }

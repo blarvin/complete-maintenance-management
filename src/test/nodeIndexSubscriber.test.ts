@@ -65,18 +65,27 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
         expect(getAncestorPath('fd_logbook_policy')).toEqual([]);
     });
 
-    it('ELEMENT_HARD_DELETED removes from the index', () => {
+    // Soft delete is the only removal channel — a written element carrying
+    // `deletedAt` is what drops a node out of the index (ISSUES Bugs #4).
+    it('a soft-deleted node is removed from the index', () => {
         initializeNodeIndex([{ id: 'n1', parentId: null, name: 'Root' }]);
 
-        handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'n1' });
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            origin: 'remote',
+            element: { id: 'n1', kind: 'node', parentId: null, name: 'Root', value: null, treeType: 'business', deletedAt: 5000 },
+        });
 
-        const path = getAncestorPath('n1');
-        expect(path).toEqual([]);
+        expect(getAncestorPath('n1')).toEqual([]);
     });
 
-    it('ELEMENT_HARD_DELETED for unknown id does not throw', () => {
+    it('a soft delete for an unknown id does not throw', () => {
         expect(() => {
-            handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'unknown' });
+            handleStorageEvent({
+                type: 'ELEMENT_WRITTEN',
+                origin: 'remote',
+                element: { id: 'unknown', kind: 'node', parentId: null, name: 'Gone', value: null, treeType: 'business', deletedAt: 5000 },
+            });
         }).not.toThrow();
     });
 

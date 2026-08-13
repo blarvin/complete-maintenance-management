@@ -62,11 +62,15 @@ describe('syncSubscriber', () => {
       expect(triggerSync).toHaveBeenCalledOnce();
     });
 
-    it('ELEMENT_HARD_DELETED — origin decides, not event type', () => {
-      // No local hard delete exists today (only FullCollectionSync purges), but the
-      // rule is about origin, so a future local purge would still push.
+    it('a local soft delete — origin decides, not the deletedAt payload', () => {
+      // Deletion is an ordinary write carrying `deletedAt`; it must push like any
+      // other local change. (There is no hard-delete event any more — Bugs #4.)
       subscribe();
-      bus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'local', elementId: 'n1' });
+      bus.emit({
+        type: 'ELEMENT_WRITTEN',
+        origin: 'local',
+        element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, treeType: 'business', deletedAt: 5000 },
+      });
       expect(triggerSync).toHaveBeenCalledOnce();
     });
 
@@ -94,9 +98,13 @@ describe('syncSubscriber', () => {
       expect(triggerSync).not.toHaveBeenCalled();
     });
 
-    it('ELEMENT_HARD_DELETED from a full-sync purge', () => {
+    it('a soft delete pulled from the server', () => {
       subscribe();
-      bus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'n1' });
+      bus.emit({
+        type: 'ELEMENT_WRITTEN',
+        origin: 'remote',
+        element: { id: 'n1', kind: 'node', parentId: null, name: 'X', value: null, treeType: 'business', deletedAt: 5000 },
+      });
       expect(triggerSync).not.toHaveBeenCalled();
     });
 

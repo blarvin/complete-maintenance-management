@@ -19,6 +19,7 @@ import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { now } from '../../utils/time';
 import { serializeConfig } from '../../kinds/configElements';
 import { DEFINITION_IDS } from '../definitionIds';
+import { devLog } from '../../utils/devMode';
 
 // Stable ids live in ../definitionIds (import-free, so kind policies can read
 // them); re-exported here for the existing consumers.
@@ -144,5 +145,5 @@ export async function seedDefinitions(): Promise<void> {
     await db.syncMetadata.put({ key: SEED_KEY, value: SEED_VERSION });
   });
 
-  console.log('[seedDefinitions] Seeded version', SEED_VERSION, 'as library Elements');
+  devLog('[seedDefinitions] Seeded version', SEED_VERSION, 'as library Elements');
 }

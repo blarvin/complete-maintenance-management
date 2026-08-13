@@ -78,6 +78,11 @@ npm run cypress      # Needs emulator + dev server up; every spec's cy.freshVisi
 Emulator mode in the browser: `?emulator=true`, or
 `localStorage.setItem('USE_FIRESTORE_EMULATOR','true')`.
 
+**`docs/DEVELOPING.md`** covers the choices these scripts don't show: the three
+run modes and which one the dev gate is open in, which reset to reach for
+(`__wipeLocal()` vs `wipe:emulator` vs the production wipes), and what each test
+layer owns. Read it before resetting anything.
+
 ## Code style
 
 - **TypeScript**: strict; discriminated unions + type guards; no prop spreading.

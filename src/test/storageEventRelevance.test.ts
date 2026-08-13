@@ -21,7 +21,6 @@ function written(overrides: Partial<Extract<StorageEvent, { type: 'ELEMENT_WRITT
     };
 }
 
-const hardDeleted: StorageEvent = { type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: 'el-1' };
 const fieldDefWritten: StorageEvent = {
     type: 'DEFINITION_WRITTEN',
     origin: 'local',
@@ -45,9 +44,11 @@ describe('affectsChildrenOf', () => {
         expect(affectsChildrenOf(written({ parentId: 'parent-1' }), null)).toBe(false);
     });
 
-    it('always matches ELEMENT_HARD_DELETED (payload has no parentId)', () => {
-        expect(affectsChildrenOf(hardDeleted, 'parent-1')).toBe(true);
-        expect(affectsChildrenOf(hardDeleted, null)).toBe(true);
+    // A soft delete is an ordinary write carrying `deletedAt`, so it routes on
+    // parentId like any other — no blind "reload everything" branch remains.
+    it('routes a soft delete by parentId, like any other write', () => {
+        expect(affectsChildrenOf(written({ parentId: 'parent-1', deletedAt: 5000 }), 'parent-1')).toBe(true);
+        expect(affectsChildrenOf(written({ parentId: 'parent-2', deletedAt: 5000 }), 'parent-1')).toBe(false);
     });
 
     it('never matches DEFINITION_WRITTEN', () => {
@@ -65,12 +66,9 @@ describe('affectsElement', () => {
         expect(affectsElement(written({ id: 'el-2' }), 'el-1')).toBe(false);
     });
 
-    it('matches ELEMENT_HARD_DELETED with the same id', () => {
-        expect(affectsElement(hardDeleted, 'el-1')).toBe(true);
-    });
-
-    it('rejects ELEMENT_HARD_DELETED with a different id', () => {
-        expect(affectsElement(hardDeleted, 'el-2')).toBe(false);
+    it('matches a soft delete by id', () => {
+        expect(affectsElement(written({ id: 'el-1', deletedAt: 5000 }), 'el-1')).toBe(true);
+        expect(affectsElement(written({ id: 'el-2', deletedAt: 5000 }), 'el-1')).toBe(false);
     });
 
     it('never matches DEFINITION_WRITTEN', () => {

@@ -1,321 +1,108 @@
 ---
-description: Test PWA offline functionality with browser automation
+description: Hand-test the service worker — that a built app still loads with its server dead. Use when changing the SW, the precache manifest, the build, or before shipping a PWA-affecting change.
 allowed-tools: Bash, mcp__claude-in-chrome__*, AskUserQuestion, TaskCreate, TaskUpdate, TaskList
 disable-model-invocation: true
-argument-hint: "[phase1|phase2|all] - optional, defaults to phase1 only"
+argument-hint: "(no arguments)"
 ---
 
 # PWA Offline Test
 
-Test that the app works offline using browser offline/online events and sync behavior.
+Prove the service worker serves the app shell from cache when the server is
+gone. That is the whole subject: **server dead, app still loads.**
 
-**IMPORTANT NOTES:**
-- This test uses **JavaScript event dispatch** to simulate browser offline/online state changes
-- This properly triggers the app's network detection and sync behavior (same as DevTools toggle)
-- All verifications use DOM inspection (`read_page`) + console logs, not just screenshots
-- **Screenshots:** When you see "Take screenshot #N", the image will appear in the conversation output immediately after the tool call. Always caption it clearly (e.g., "Screenshot #1 - Baseline state showing 5 root nodes")
-- **Console logs are critical:** This test relies heavily on structured console output for verification. Look for EXACT log messages as specified in each step:
-  - `[App]` prefix - Application-level events (network, service worker)
-  - `[IDBAdapter]` prefix - IndexedDB write confirmations
-  - `[SyncManager]` prefix - Sync operations
-  - `[Storage]` prefix - Storage initialization
-  - `[useElementChildren]` prefix - Data loading operations
+Everything else about offline behaviour is already covered hermetically by
+Cypress — `offline-sync.cy.ts` (queue while offline, drain on reconnect) and
+`retention.cy.ts` (a sync never drops local rows). Those run against the dev
+server, which registers no service worker. This skill exists for the one thing
+they structurally cannot reach: a real production build with a real SW.
 
----
+**Kill the server for real.** Dispatching `window.dispatchEvent(new Event('offline'))`
+tests the app's own network listeners and leaves the SW untested — the server is
+still there, so a broken SW passes. Stopping the process is what makes the test
+mean something.
 
-## Phase 1: Offline Functionality
+## Setup
 
-### 1. Pre-Build Cleanup
+The SW is PROD-gated, so this needs a build. Free port 4173 first — a running
+preview server locks `dist/service-worker.js` and the build fails.
 
-**Actions:**
-```bash
-# Kill any existing preview server on port 4173
-netstat -ano | grep ':4173'  # Find PID if running
-taskkill //F //PID <pid>     # Kill it (Windows)
-sleep 2                      # Wait for cleanup
-```
-
-**Why:** Running preview servers can lock dist/service-worker.js and cause build failures.
-
-**Verification:**
-- Port 4173 is free (netstat shows no listener)
-- Continue to build step
-
----
-
-### 2. Build and Serve
-
-```bash
+```powershell
+Get-NetTCPConnection -LocalPort 4173 -ErrorAction SilentlyContinue | Select-Object OwningProcess
+Stop-Process -Id <pid> -Force
 npm run build
-npm run preview:pwa  # background task on port 4173
+npm run preview:pwa   # background
+npm run emulator      # background, separate shell
 ```
 
-**Verification:**
-- Build must complete without errors
-- Server responds to `curl http://localhost:4173`
+Navigate to **`http://localhost:4173/?emulator=true`**.
 
----
+The query string does two jobs: it points sync at the local emulator so the test
+never touches production Firestore, and it opens the `DEV_TOOLS_ENABLED` gate
+(`src/utils/devMode.ts`), which a bare production URL leaves shut — no
+`__syncStatus`, no `devLog` output. It does not change service-worker behaviour,
+which is what is under test. Confirm the EMULATOR badge is visible.
 
-### 3. Baseline State (Online)
+## Steps
 
-**Actions:**
-1. Navigate to http://localhost:4173
-2. Wait 2 seconds for app initialization
-3. **Take screenshot #1 (initial state) - show to user with caption**
-4. Use `read_page` to get DOM structure
-5. Read console messages (pattern: "App.*ServiceWorker|App.*network|Storage.*IDB|useElementChildren.*Loaded")
+Read state with `javascript_tool` and `read_page`, not screenshots. Assert on
+observable state — DOM contents, `caches.keys()`, `__syncStatus()` — rather than
+on console strings, which drift silently as log lines get reworded.
 
-**Verification - Look for these EXACT logs:**
-- `[App] ServiceWorker registered: <scope>` - Confirms SW is ready
-- `[App] Initial network state: ONLINE` - Confirms network detection working
-- `[Storage] IDB has N nodes, using existing data` - Get IDB count
-- `[useElementChildren] Loaded N nodes under ROOT` - Get fetched count
-- Count nodes visible in DOM using `read_page`
-- **Record baseline count** (e.g., "5 root nodes before test")
+### 1. Service worker is live
 
-**Output to user:**
-```
-Baseline state verified:
-- Service worker: ✅ registered at <scope>
-- Network state: ONLINE
-- IndexedDB: N nodes total
-- Fetched: N root nodes
-- Visible in DOM: X nodes
-- Node names: [list from DOM]
+```js
+navigator.serviceWorker.controller !== null
 ```
 
----
+Then confirm the precache is populated: `(await caches.keys()).length > 0`, and
+that at least one cache holds the app shell.
 
-### 4. Create Test Node (Online)
+**Done when:** a controller exists and a cache contains `/index.html`. No
+controller on the first load means the SW activated after the page — reload once
+and re-check before treating it as a failure.
 
-**Actions:**
-1. Click "Create New Asset" button
-2. Wait 1 second for form to appear
-3. Enter "Offline Test Node" in name field
-4. Click "Create" button
-5. Wait 2 seconds for node to appear and state to settle
-6. Take screenshot #2 (with new node)
-7. Use `read_page` to verify node in DOM
-8. Read console messages (pattern: "IDBAdapter.*Node created|useElementChildren")
+### 2. Baseline data
 
-**Verification - Look for these EXACT logs:**
-- `[IDBAdapter] Node created in IDB: <id> Offline Test Node` - Confirms persistence
-- `[useElementChildren] Loaded N nodes under ROOT` - Should now be X+1
-- Node "Offline Test Node" appears in DOM (use `find` or `read_page`)
-- Node count increased by 1
-- No console errors
+Create a node via the UI (`Create New Asset`). Record the visible root-node names
+and count from `read_page` — that list is the comparison for every later step.
 
-**Output to user:**
-```
-Test node created:
-- IDB write confirmed: ✅ [IDBAdapter] Node created in IDB
-- Node "Offline Test Node" visible: ✅/❌
-- New node count: X+1
-- Console errors: none/[list]
-```
+**Done when:** the new node is in the DOM and `__syncStatus()` reports
+`queueLength: 0` (it reached the emulator).
 
----
+### 3. Kill the server, reload
 
-### 5. Simulate Going Offline
+Stop the `preview:pwa` process. Confirm it is actually dead —
+`curl http://localhost:4173` must fail — then reload the tab.
 
-**Actions:**
-1. Use JavaScript to dispatch offline event: `window.dispatchEvent(new Event('offline'))`
-2. Wait 1 second for app to react
-3. Read console messages (pattern: "App.*Network.*OFFLINE")
+**Done when:** the app renders with every node from step 2 present. This is the
+test. A blank page, a browser error page, or a shell with no data is a failure;
+report which of the three, since they point at different halves (shell precache
+vs IndexedDB).
 
-**Verification - Look for this EXACT log:**
-- `[App] Network: OFFLINE` - App detected offline state
+### 4. Local-first with no server
 
-**Output to user:**
-```
-Offline simulation:
-- Offline event dispatched: ✅
-- App detected offline: ✅ [App] Network: OFFLINE
-```
+Create a second node while the server is still down.
 
----
+**Done when:** it appears in the DOM and `__syncStatus()` shows it queued
+(`queueLength > 0`) rather than lost.
 
-### 6. Create Node While Offline
+### 5. Restore
 
-**Actions:**
-1. Click "Create New Asset" button
-2. Wait 1 second
-3. Enter "Created While Offline" in name field
-4. Click "Create" button
-5. Wait 2 seconds for node to appear
-6. Take screenshot #3 (offline creation)
-7. Use `read_page` to verify new node in DOM
-8. Read console messages (pattern: "IDBAdapter.*Node created|useElementChildren")
+Restart `npm run preview:pwa`, reload, and let sync run (or call `__sync()`).
 
-**Verification - Look for these EXACT logs:**
-- `[IDBAdapter] Node created in IDB: <id> Created While Offline` - Confirms persistence
-- `[useElementChildren] Loaded N nodes under ROOT` - Should now be X+2
-- Node "Created While Offline" appears in DOM
-- Node count is now X+2
-- No errors in console
+**Done when:** both nodes are present and `queueLength` returns to 0.
 
-**Output to user:**
-```
-Offline node creation:
-- IDB write confirmed: ✅ [IDBAdapter] Node created in IDB
-- Node "Created While Offline" visible: ✅/❌
-- Node count: X+2 (expected X+2) ✅/❌
-- Console errors: none/[list]
-```
+## Reporting
 
----
+State the outcome of each numbered step and the node counts you actually
+observed at each. Name the SW's cache keys — a changed `CACHE_VERSION` that did
+not take is the usual cause of a stale shell.
 
-### 7. Phase 1 Summary
-
-**Report to user:**
-```
-=== PHASE 1: OFFLINE FUNCTIONALITY TEST ===
-
-Build:
-- ✅/❌ Build succeeded
-- Service worker precached N files
-
-Online Baseline:
-- ✅/❌ App loaded successfully
-- ✅/❌ Baseline nodes: X
-- ✅/❌ Service worker registered
-
-Online Node Creation:
-- ✅/❌ Created "Offline Test Node"
-- ✅/❌ Node visible in UI
-- ✅/❌ No console errors
-
-Offline Simulation:
-- ✅/❌ Browser offline event dispatched
-- ✅/❌ App detected offline state
-
-Offline Node Creation:
-- ✅/❌ Created "Created While Offline"
-- ✅/❌ Node visible in UI
-- ✅/❌ IndexedDB operations working
-- ✅/❌ No errors
-
-RESULT: [PASS/FAIL]
-```
-
----
-
-## Phase 2 Decision Point
-
-Use AskUserQuestion to ask:
-- Question: "Phase 1 complete. Continue to Phase 2 (sync test)?"
-- Options:
-  - "Yes - Test sync to Firestore"
-  - "No - End here"
-
-If "No", END SKILL HERE.
-
----
-
-## Phase 2: Sync Verification (Optional)
-
-### 8. Simulate Going Back Online
-
-**Actions:**
-1. Use JavaScript to dispatch online event: `window.dispatchEvent(new Event('online'))`
-2. Wait 2 seconds for sync to trigger
-3. Take screenshot #4 (after reconnect)
-4. Read console messages (pattern: "App.*Network.*ONLINE|SyncManager.*sync|SyncManager.*Push|SyncManager.*Pull")
-
-**Verification - Look for these EXACT logs:**
-- `[App] Network: ONLINE` - Network state change detected
-- `[SyncManager] Network online - triggering sync` - Sync triggered by network change
-- `[SyncManager] Starting sync cycle...` - Sync started
-- `[SyncManager] Push: Processing N items` OR `[SyncManager] Push: No pending items`
-- `[SyncManager] Pull: Fetching changes since <timestamp>`
-- `[SyncManager] Sync cycle complete` - Sync finished
-- No sync errors
-
-**Output to user:**
-```
-Sync activity:
-- Network change detected: ✅ [App] Network: ONLINE
-- SyncManager triggered: ✅ [SyncManager] Network online - triggering sync
-- Sync started: ✅ [SyncManager] Starting sync cycle...
-- Push phase: ✅ [SyncManager] Push: <result>
-- Pull phase: ✅ [SyncManager] Pull: Fetching changes
-- Sync completed: ✅ [SyncManager] Sync cycle complete
-- Sync errors: none/[list]
-```
-
----
-
-### 9. Verify Sync Behavior
-
-**Actions:**
-1. Check if sync queue was processed (look for "Push: Processing N items" or "Push: No pending items")
-2. Note the behavior
-
-**Analysis for user:**
-```
-Sync Queue Analysis:
-- If "Push: No pending items" → Nodes were created with server available, already synced
-- If "Push: Processing N items" → Offline-created nodes are now being synced
-- Pull phase shows server data fetch
-
-Note: In this test, nodes may already be synced because:
-- The server was never actually down (we only simulated browser offline state)
-- IDBAdapter may have synced immediately on creation
-- This is correct behavior - testing browser offline detection, not server availability
-```
-
----
-
-### 10. Phase 2 Summary
-
-**Report to user:**
-```
-=== PHASE 2: SYNC VERIFICATION ===
-
-Network Reconnection:
-- ✅/❌ Online event dispatched
-- ✅/❌ App detected online state
-
-Sync Activity:
-- ✅/❌ Network change triggered sync
-- ✅/❌ SyncManager started cycle
-- ✅/❌ Push phase completed
-- ✅/❌ Pull phase completed
-- ✅/❌ Sync cycle finished
-- ✅/❌ No sync errors
-
-Key Findings:
-- Network detection: ✅/❌ Working correctly
-- Event-driven sync: ✅/❌ Triggered on online event
-- Sync infrastructure: ✅/❌ Operational
-
-RESULT: [PASS/FAIL]
-```
-
----
+If a step fails, stop and report rather than working around it: a failure here
+means the deployed app would fail the same way, which is the finding.
 
 ## Cleanup
 
-After both phases complete:
-1. Kill the preview server
-2. Note any issues or observations
-3. Provide summary:
-
-```
-TEST COMPLETE
-
-Phase 1 - Offline Functionality: [PASS/FAIL]
-- Service worker caching works
-- IndexedDB persistence works
-- Offline operations functional
-
-Phase 2 - Sync Verification: [PASS/FAIL]
-- Network change detection works
-- Sync triggers on online event
-- Sync cycle completes successfully
-
-Architectural Notes:
-- Browser offline/online events properly detected
-- Event-driven sync working as designed
-- Offline-first architecture validated
-```
+Stop the preview server and the emulator. Note that `dist/` is now a production
+build — `npm run dev` is unaffected, but a later `npm run build` needs port 4173
+free again.

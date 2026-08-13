@@ -752,13 +752,28 @@ Storage operations are abstracted through a backend-agnostic interface, enabling
 
 ### Soft Deletion
 
+**Retention is the default. Deletion is soft delete, and soft delete is the only
+delete.** No client code path removes an element row — not a user action, not a
+sync reconcile, not a reset. An element leaves the user's view by acquiring a
+`deletedAt`, and the row itself stays.
+
+This is a guarantee about the sync layer as much as the UI: a pull is additive.
+Absence of a row on the server never means "delete it locally", because server
+absence cannot distinguish a deletion from a row that never arrived — including
+the row whose upload permanently failed, the one least safe to drop.
+
 Elements support soft deletion via `deletedAt` timestamps:
 
 - Active elements have `deletedAt: null`
 - Deleted elements have `deletedAt: <timestamp>`
 - Queries filter out soft-deleted elements by default
 - Children of soft-deleted elements are implicitly hidden (not cascade soft-deleted)
+- Soft deletes sync as ordinary field updates, so they propagate through the same lane as any other change
 - Restoration: see Snackbar & Undo for the 5s undo window; beyond that, restore is currently cloud-db-only. [Phase 2+]: in-app restore UI (a dedicated view for browsing and restoring deleted elements).
+
+Purging a row outright is an admin capability, deferred — see LATER.md →
+Destructive Operations. Resetting a *development* client is a separate, local
+act (`window.__wipeLocal()`), not a data-model feature.
 
 #### Element Example (a container — a Node)
 

@@ -25,6 +25,7 @@ import { now } from '../../utils/time';
 import { getSnackbarService } from '../../services/snackbar';
 import { SYNC_PULL_TIMEOUT_MS } from '../../constants';
 import { withTimeout } from '../../utils/withTimeout';
+import { devLog } from '../../utils/devMode';
 import { SyncPusher } from './SyncPusher';
 import type { PushResult } from './SyncPusher';
 import { SyncLifecycle } from './SyncLifecycle';
@@ -68,7 +69,7 @@ export class SyncManager {
     const resolver = new ServerAuthorityResolver(local, syncQueue);
     this.pusher = new SyncPusher(syncQueue, remote);
     this.deltaStrategy = new DeltaSync(local, remote, resolver);
-    this.fullStrategy = new FullCollectionSync(local, remote, resolver, syncQueue);
+    this.fullStrategy = new FullCollectionSync(local, remote, resolver);
     this.lifecycle = new SyncLifecycle(() => this.syncOnce(), pollIntervalMs);
   }
 
@@ -78,7 +79,7 @@ export class SyncManager {
    */
   start(): void {
     this.lifecycle.start();
-    if (import.meta.env.DEV) console.log('[SyncManager] Started');
+    devLog('[SyncManager] Started');
   }
 
   /**
@@ -87,7 +88,7 @@ export class SyncManager {
    */
   stop(): void {
     this.lifecycle.stop();
-    if (import.meta.env.DEV) console.log('[SyncManager] Stopped');
+    devLog('[SyncManager] Stopped');
   }
 
   /**
@@ -106,7 +107,7 @@ export class SyncManager {
     if (!this.canSync()) return;
 
     this._isSyncing = true;
-    if (import.meta.env.DEV) console.log('[SyncManager] Starting delta sync cycle...');
+    devLog('[SyncManager] Starting delta sync cycle...');
 
     try {
       // Push local changes first
@@ -115,13 +116,13 @@ export class SyncManager {
 
       // Then pull remote changes (delta). Timeout so a hung pull can't wedge
       // _isSyncing and silently stop all future cycles.
-      if (import.meta.env.DEV) console.log('[SyncManager] Pull: Starting', this.deltaStrategy.name, 'sync');
+      devLog('[SyncManager] Pull: Starting', this.deltaStrategy.name, 'sync');
       await withTimeout(this.deltaStrategy.sync(), SYNC_PULL_TIMEOUT_MS, 'delta pull');
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
-      if (import.meta.env.DEV) console.log('[SyncManager] Delta sync cycle complete');
+      devLog('[SyncManager] Delta sync cycle complete');
       // UI updates arrive via per-element storageEventBus emissions from
       // IDBAdapter.applyRemoteElement (which also re-signals the Composer for
       // arriving `library`-tree Definitions).
@@ -141,7 +142,7 @@ export class SyncManager {
     if (!this.canSync()) return;
 
     this._isSyncing = true;
-    if (import.meta.env.DEV) console.log('[SyncManager] Starting full sync cycle...');
+    devLog('[SyncManager] Starting full sync cycle...');
 
     try {
       // Push local changes first
@@ -150,13 +151,13 @@ export class SyncManager {
 
       // Then pull remote changes (full collection). Timeout so a hung pull
       // can't wedge _isSyncing and silently stop all future cycles.
-      if (import.meta.env.DEV) console.log('[SyncManager] Pull: Starting', this.fullStrategy.name, 'sync');
+      devLog('[SyncManager] Pull: Starting', this.fullStrategy.name, 'sync');
       await withTimeout(this.fullStrategy.sync(), SYNC_PULL_TIMEOUT_MS, 'full pull');
 
       // Update last sync timestamp
       await this.local.setLastSyncTimestamp(now());
 
-      if (import.meta.env.DEV) console.log('[SyncManager] Full sync cycle complete');
+      devLog('[SyncManager] Full sync cycle complete');
     } catch (err) {
       console.error('[SyncManager] Full sync cycle failed:', err);
       // Don't rethrow - sync failures shouldn't crash the app
@@ -171,7 +172,7 @@ export class SyncManager {
    */
   async retryFailed(): Promise<void> {
     const requeued = await this.syncQueue.requeueFailed();
-    if (import.meta.env.DEV) console.log('[SyncManager] Re-armed', requeued, 'failed item(s)');
+    devLog('[SyncManager] Re-armed', requeued, 'failed item(s)');
     await this.syncOnce();
   }
 
@@ -180,7 +181,7 @@ export class SyncManager {
    */
   setEnabled(enabled: boolean): void {
     this._enabled = enabled;
-    if (import.meta.env.DEV) console.log('[SyncManager] Enabled:', enabled);
+    devLog('[SyncManager] Enabled:', enabled);
   }
 
   /**
@@ -218,19 +219,19 @@ export class SyncManager {
   private canSync(): boolean {
     // Skip if disabled
     if (!this._enabled) {
-      if (import.meta.env.DEV) console.log('[SyncManager] Sync skipped (disabled)');
+      devLog('[SyncManager] Sync skipped (disabled)');
       return false;
     }
 
     // Skip if offline
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      if (import.meta.env.DEV) console.log('[SyncManager] Sync skipped (offline)');
+      devLog('[SyncManager] Sync skipped (offline)');
       return false;
     }
 
     // Skip if already syncing
     if (this._isSyncing) {
-      if (import.meta.env.DEV) console.log('[SyncManager] Sync skipped (already in progress)');
+      devLog('[SyncManager] Sync skipped (already in progress)');
       return false;
     }
 

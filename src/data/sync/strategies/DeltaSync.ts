@@ -12,6 +12,7 @@
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
 import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
+import { devLog } from '../../../utils/devMode';
 
 export class DeltaSync implements SyncStrategy {
   readonly name = 'delta';
@@ -24,7 +25,7 @@ export class DeltaSync implements SyncStrategy {
 
   async sync(): Promise<SyncResult> {
     const since = await this.local.getLastSyncTimestamp();
-    console.log('[DeltaSync] Pulling changes since', since);
+    devLog('[DeltaSync] Pulling changes since', since);
 
     // Load pending IDs once — avoids N queue fetches across all entities.
     const pendingSet = await this.resolver.loadPendingSet();
@@ -34,13 +35,13 @@ export class DeltaSync implements SyncStrategy {
     const elementsApplied = await this.syncElements(since, pendingSet);
     const elementHistoryApplied = await this.syncElementHistory(since);
 
-    console.log('[DeltaSync] Complete:', { elementsApplied, elementHistoryApplied });
+    devLog('[DeltaSync] Complete:', { elementsApplied, elementHistoryApplied });
     return { elementsApplied, elementHistoryApplied };
   }
 
   private async syncElements(since: number, pendingSet: Set<string>): Promise<number> {
     const elements = await this.remote.pullElementsSince(since);
-    console.log('[DeltaSync] Pulled', elements.length, 'elements');
+    devLog('[DeltaSync] Pulled', elements.length, 'elements');
 
     let applied = 0;
     for (const element of elements) {
@@ -53,7 +54,7 @@ export class DeltaSync implements SyncStrategy {
 
   private async syncElementHistory(since: number): Promise<number> {
     const history = await this.remote.pullElementHistorySince(since);
-    console.log('[DeltaSync] Pulled', history.length, 'element history entries');
+    devLog('[DeltaSync] Pulled', history.length, 'element history entries');
 
     for (const h of history) {
       await this.local.applyRemoteElementHistory(h);

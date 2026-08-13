@@ -22,6 +22,7 @@ import { serializeConfig, assembleConfig } from '../../kinds/configElements';
 import { isInline } from '../../kinds/placement';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
+import { devLog } from '../../utils/devMode';
 import { createElementHistoryEntry, diffElementChanges } from './historyHelpers';
 import { makeStorageError, toStorageError, isStorageError } from './storageErrors';
 import type { StorageErrorCode } from './storageErrors';
@@ -177,7 +178,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       const byId = new Map(children.map((c) => [c.id, c]));
       const view = this.buildDefinitionView(defElement, (cid) => byId.get(cid));
-      console.log('[IDBAdapter] Definition (library Element) created:', view.id, view.label);
+      devLog('[IDBAdapter] Definition (library Element) created:', view.id, view.label);
       // Keep DEFINITION_WRITTEN as the "Library changed" signal the Composer
       // subscribes to — its payload is just { id, deletedAt }.
       storageEventBus.emit({
@@ -314,7 +315,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
         });
       });
 
-      console.log('[IDBAdapter] Element created in IDB:', element.id, element.kind, element.name);
+      devLog('[IDBAdapter] Element created in IDB:', element.id, element.kind, element.name);
       storageEventBus.emit({
         type: 'ELEMENT_WRITTEN',
         origin: 'local',
@@ -507,14 +508,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
   }
 
-  async deleteElementLocal(id: string): Promise<void> {
-    return this.run(async () => {
-      await db.elements.delete(id);
-      // Remote-origin: only `FullCollectionSync` calls this, dropping a row the
-      // server no longer has. Nothing to push back.
-      storageEventBus.emit({ type: 'ELEMENT_HARD_DELETED', origin: 'remote', elementId: id });
-    });
-  }
+  // No `deleteElementLocal` here: nothing in the app removes an element row.
+  // Deletion is `softDeleteElement` (sets `deletedAt`) throughout — see
+  // FullCollectionSync for why the sync-side purge that used to call it went.
 
   // ============================================================================
   // Internal Helpers

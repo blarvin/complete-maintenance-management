@@ -17,6 +17,7 @@ import { initializeSyncManager } from '../sync/syncManager';
 import { IDBSyncQueueManager } from '../sync/SyncQueueManager';
 import { initializeDevTools } from '../sync/devTools';
 import { now } from '../../utils/time';
+import { devLog } from '../../utils/devMode';
 import { initializeNodeIndex } from '../nodeIndex';
 import { subscribeNodeIndex } from '../nodeIndexSubscriber';
 import { isReRoot } from '../../kinds/placement';
@@ -55,11 +56,11 @@ export function initializeStorage(): Promise<void> {
 
 async function doInitializeStorage(): Promise<void> {
   if (state.initialized) {
-    console.log('[Storage] Already initialized');
+    devLog('[Storage] Already initialized');
     return;
   }
 
-  console.log('[Storage] Initializing...');
+  devLog('[Storage] Initializing...');
 
   try {
     // Ensure database is open
@@ -69,22 +70,16 @@ async function doInitializeStorage(): Promise<void> {
     const elementCount = await db.elements.count();
 
     if (elementCount === 0) {
-      // Check for Cypress test mode - IDB was seeded by Cypress, skip migration
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (typeof window !== 'undefined' && (window as any).__CYPRESS_SEED_MODE__) {
-        console.log('[Storage] Cypress test mode - skipping Firestore migration');
-      } else {
-        console.log('[Storage] IDB is empty, checking for Firestore data...');
+      devLog('[Storage] IDB is empty, checking for Firestore data...');
 
-        // Only migrate if online
-        if (typeof navigator !== 'undefined' && navigator.onLine) {
-          await migrateFromFirestore();
-        } else {
-          console.log('[Storage] Offline, skipping migration');
-        }
+      // Only migrate if online
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        await migrateFromFirestore();
+      } else {
+        devLog('[Storage] Offline, skipping migration');
       }
     } else {
-      console.log('[Storage] IDB has', elementCount, 'elements, using existing data');
+      devLog('[Storage] IDB has', elementCount, 'elements, using existing data');
     }
 
     await seedNodeIndexFromDb();
@@ -112,17 +107,20 @@ async function doInitializeStorage(): Promise<void> {
     // after the migration/seed so it sees the full local set; idempotent, so a
     // steady-state startup writes nothing.
     const backfilled = await backfillProvisionedLenses(await idbAdapter.getAllElements(), idbAdapter);
-    if (backfilled > 0) console.log('[Storage] Backfilled', backfilled, 'lens containers');
+    if (backfilled > 0) devLog('[Storage] Backfilled', backfilled, 'lens containers');
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);
 
-    // Initialize dev tools (exposes window.__sync() and window.__syncStatus())
+    // Dev-only console helpers; no-ops unless DEV_TOOLS_ENABLED (utils/devMode).
     initializeDevTools();
 
-    // Trigger immediate full sync on startup if online (to detect remote deletions, get latest changes)
+    // Trigger immediate full sync on startup if online. Purely a catch-up pull
+    // now — the full sync no longer purges local rows (ISSUES Bugs #4), so the
+    // requeueFailed() above is an ordinary fresh-retry-budget call rather than
+    // the load-bearing ordering it used to be.
     if (typeof navigator !== 'undefined' && navigator.onLine) {
-      console.log('[Storage] Triggering initial full sync on startup...');
+      devLog('[Storage] Triggering initial full sync on startup...');
       syncManager.syncFull().catch(err => {
         console.error('[Storage] Initial sync failed:', err);
         // Don't throw - app should still work even if initial sync fails
@@ -130,7 +128,7 @@ async function doInitializeStorage(): Promise<void> {
     }
 
     state.initialized = true;
-    console.log('[Storage] Initialization complete');
+    devLog('[Storage] Initialization complete');
     // No completion notification needed: data hooks await initializeStorage()
     // before their first query (and this promise resolves on failure too).
   } catch (err) {
@@ -146,7 +144,7 @@ async function doInitializeStorage(): Promise<void> {
  * Uses FirestoreAdapter for clean abstraction (DIP compliance).
  */
 async function migrateFromFirestore(): Promise<void> {
-  console.log('[Migration] Starting migration from Firestore...');
+  devLog('[Migration] Starting migration from Firestore...');
 
   try {
     const firestoreAdapter = new FirestoreAdapter();
@@ -154,10 +152,10 @@ async function migrateFromFirestore(): Promise<void> {
     // Fetch all data via adapter methods. Library Definitions are `library`-tree
     // Elements, so they come down with the elements pull — no separate fetch.
     const elements = await firestoreAdapter.pullAllElements();
-    console.log('[Migration] Found', elements.length, 'elements');
+    devLog('[Migration] Found', elements.length, 'elements');
 
     const elementHistory = await firestoreAdapter.pullAllElementHistory();
-    console.log('[Migration] Found', elementHistory.length, 'element history entries');
+    devLog('[Migration] Found', elementHistory.length, 'element history entries');
 
     // Bulk insert into IDB
     await db.transaction('rw', [db.elements, db.elementHistory, db.syncMetadata], async () => {
@@ -172,7 +170,7 @@ async function migrateFromFirestore(): Promise<void> {
       await db.syncMetadata.put({ key: 'lastSyncTimestamp', value: now() });
     });
 
-    console.log('[Migration] Migration complete');
+    devLog('[Migration] Migration complete');
   } catch (err) {
     console.error('[Migration] Migration failed:', err);
     // Don't throw - app should still work with empty IDB
@@ -203,5 +201,5 @@ export async function clearStorage(): Promise<void> {
   await db.delete();
   state.initialized = false;
   state.initPromise = null;
-  console.log('[Storage] Cleared all data');
+  devLog('[Storage] Cleared all data');
 }

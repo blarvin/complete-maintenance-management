@@ -5,8 +5,10 @@
  * → delete node + Undo.
  *
  * Runs offline: local-first UI behavior is the subject here; sync is contract
- * #3. (Online, a fresh emulator's startup full-sync wipes the un-pushed
- * Library seeds — a data-layer issue outside this contract.)
+ * #3 and retention is #4. (It ran offline originally because a startup full
+ * sync against a fresh emulator wiped the un-pushed Library seeds. That purge
+ * is gone — ISSUES Bugs #4 — so offline is now just scope discipline, not a
+ * workaround.)
  *
  * Selectors are aria-labels and visible text only; the SolidJS port must keep
  * these passing unchanged.
