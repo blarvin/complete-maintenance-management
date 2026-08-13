@@ -32,8 +32,6 @@ carrying the decision it was blocked on.
 
 2.) **number-kv accepts radix literals** — `parseNumber` (numberKvState.ts) uses `Number`, which parses `0x1A` as 26, `0b101` as 5, `0o17` as 15 (verified at a node prompt). Harmless in practice — nobody types hex into a temperature field — and strictly better than the `parseFloat` it replaced, which read `0x1A` as 0. Rejecting them needs a full-string decimal/scientific regex. Left in deliberately when Bugs #1 was fixed; raise only if it ever bites.
 
-3.) **Delta-sync cursor is the local clock, compared against server-stamped rows** — `syncDelta()` sets the cursor with `now()` while every row's `updatedAt` comes from `serverTimestamp()`, so a fast client's cursor can jump past rows it never pulled (elements and history share the one cursor). Heals on the next app start, which runs `syncFull()` — a staleness window, not lost history. High-water mark (cursor = `max(updatedAt)` over the rows actually received) is the probable solution. Read in the 2026-08-12 delta-sync session; not observed in the wild. One amplifier is gone (2026-08-12): a pull used to schedule a second pull off its own applied rows, advancing this cursor twice per sync — see the `origin` tag on `StorageEvent`.
-
 ## Features
 
 1.) **Node metadata in TreeNodeDetails** — show `createdAt`, last `updatedAt`, last `updatedBy`.
@@ -84,6 +82,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 7.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky. DataFields? edit button?), then wire up. Nodes are rename-less after creation.
 
-8.) **IMPLEMENTATION.md cites a Cypress spec that doesn't exist** — the under-construction-key note names `cypress/e2e/repro-create-node.cy.ts` as its regression spec; `cypress/e2e/` holds only core-loop, lens-loop, offline-sync and retention. Either the spec was dropped in the SolidJS port and the guarantee is now untested, or the note should point at core-loop. Read during the 2026-08-13 hard-delete session.
+8.) [auto] **IMPLEMENTATION.md cites a Cypress spec that doesn't exist** — the under-construction-key note names `cypress/e2e/repro-create-node.cy.ts` as its regression spec; `cypress/e2e/` holds only core-loop, lens-loop, offline-sync and retention. Either the spec was dropped in the SolidJS port and the guarantee is now untested, or the note should point at core-loop. Read during the 2026-08-13 hard-delete session.
 
 10.) **Dev seeds are scaffolding but boot like product** — `seedDefinitions` calls itself "dev-seeded" and `__wipeDefinitions` calls restoring them a "factory-default reset", yet three of the seven (Type Of, Description, Tags) are the construction defaults every new node gets, so seeding cannot simply move behind the dev gate without changing what a production node is born with. Decide whether those three are product content (and rename away from "dev seed") or whether construction defaults should come from somewhere else. Surfaced 2026-08-13 when the `appDeveloper` author id stopped serving sync policy — it now marks authorship only.

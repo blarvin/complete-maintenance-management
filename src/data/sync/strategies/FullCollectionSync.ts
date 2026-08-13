@@ -18,8 +18,12 @@
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
 import type { SyncStrategy, SyncResult } from './SyncStrategy';
+import { highestStamp } from './SyncStrategy';
 import type { ServerAuthorityResolver } from '../ServerAuthorityResolver';
 import { devLog } from '../../../utils/devMode';
+
+/** One lane's outcome: how many rows applied, and the newest stamp it saw. */
+type LaneResult = { count: number; mark: number | null };
 
 export class FullCollectionSync implements SyncStrategy {
   readonly name = 'full-collection';
@@ -33,13 +37,24 @@ export class FullCollectionSync implements SyncStrategy {
   async sync(): Promise<SyncResult> {
     // Library Definitions are `library`-tree Elements — they arrive through the
     // element lane below, no separate Definition pull.
-    const elementsApplied = await this.syncElements();
-    const elementHistoryApplied = await this.syncElementHistory();
+    const elements = await this.syncElements();
+    const history = await this.syncElementHistory();
 
-    return { elementsApplied, elementHistoryApplied };
+    // A full pull sees everything, so this mark is simply the newest row on the
+    // server. It is also the repair path for a cursor left in the future by the
+    // old clock-stamped code: the next full sync writes the real value, which
+    // may move the cursor *backwards*, and should — the window it re-opens is
+    // exactly the one that was being skipped (ISSUES Bugs #3).
+    const highWaterMark = highestStamp([elements.mark, history.mark]);
+
+    return {
+      elementsApplied: elements.count,
+      elementHistoryApplied: history.count,
+      highWaterMark,
+    };
   }
 
-  private async syncElements(): Promise<number> {
+  private async syncElements(): Promise<LaneResult> {
     const remoteElements = await this.remote.pullAllElements();
 
     // Apply remote elements (server authority). Local-only rows are simply left
@@ -50,10 +65,10 @@ export class FullCollectionSync implements SyncStrategy {
       if (result === 'applied') applied++;
     }
 
-    return applied;
+    return { count: applied, mark: highestStamp(remoteElements.map(e => e.updatedAt)) };
   }
 
-  private async syncElementHistory(): Promise<number> {
+  private async syncElementHistory(): Promise<LaneResult> {
     const remoteHistory = await this.remote.pullAllElementHistory();
 
     // Upsert all remote history entries (no deletion detection)
@@ -63,6 +78,6 @@ export class FullCollectionSync implements SyncStrategy {
     }
 
     devLog('[FullCollectionSync] Synced', remoteHistory.length, 'element history entries');
-    return remoteHistory.length;
+    return { count: remoteHistory.length, mark: highestStamp(remoteHistory.map(h => h.updatedAt)) };
   }
 }
