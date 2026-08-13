@@ -41,6 +41,16 @@ is the point: pick the one you actually mean.
 
 The console helpers need the gate open, so run them on :5173 or in emulator mode.
 
+**One wipe you don't ask for: `npm run test`.** `firestoreAdapter.test.ts` clears
+the whole emulator project in `beforeEach`, and it sits in the default suite —
+so a plain test run clears the emulator whenever one happens to be up (it skips,
+and says so, when one isn't). Deliberate, and safe in the way that matters: the
+suite mocks `../data/firebase` with an emulator-bound Firestore, so it has no
+path to production. But it means **hand-seeded emulator state does not survive a
+test run** — reach for `wipe:emulator` when you mean it, and don't leave data you
+care about sitting there while you run the suite. Cypress is the same bargain
+(`cy.freshVisit()`, every spec), just an expected one.
+
 ## Console helpers
 
 `__sync()` runs a cycle now. `__syncStatus()` returns the sync queue with each
@@ -54,6 +64,10 @@ Four layers, each owning something the others structurally cannot reach:
 
 - **`npm run test`** — Vitest. Domain logic at the service/adapter layer.
   Components are never unit-tested (no JSX transform in `vitest.config.ts`).
+  The emulator-backed specs run only when the emulator is up, skipping visibly
+  (yellow, with a warning naming the port) when it is down — so a green run does
+  not on its own mean they ran. `npm run test:firestore` runs one of them alone.
+  **This clears the emulator** — see Resets.
 - **`npm run cypress`** — behaviour contracts, on the dev server. Needs the
   emulator **and** `npm run dev` running; every spec's `cy.freshVisit()` wipes
   the emulator and deletes the app's IndexedDB first, so specs are hermetic.
