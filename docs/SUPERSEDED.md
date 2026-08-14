@@ -146,8 +146,13 @@ transaction, not entered in it.)*
 
 ### From LATER.md — Add-Field Surface A/B
 
-*The experiment is over: both surfaces lose. Retired rather than resolved,
-because the replacement is not a third variant of the same contract.*
+*The A/B **framing** is retired: the question is no longer which of these two
+earns its keep, because both lose. The **contract** described here is not — the
+surface registry in `addFieldSurfaces.ts` is how the Add Surface ships
+*alongside* them during its build, so all three can be compared in the running
+app by editing one array before the losers are deleted (ISSUES → Tech Debt).
+An earlier version of this note claimed the replacement was "not a third variant
+of the same contract"; that is true of the end state and wrong about the build.*
 
 > ### Add-Field Surface A/B
 >
