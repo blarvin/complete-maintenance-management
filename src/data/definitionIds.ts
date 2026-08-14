@@ -18,3 +18,14 @@ export const DEFINITION_IDS = {
   /** The logbook container's default policy Definition (entry label, staleness). */
   logbookPolicy: 'fd_logbook_policy',
 } as const;
+
+/**
+ * The Definitions every new node is born with (SPEC → *Default DataFields at
+ * Node Creation*). Owned here rather than by a picker component: node creation
+ * seeds them whether or not any add-field surface is mounted.
+ */
+export const CONSTRUCTION_DEFAULT_DEFINITION_IDS = [
+  DEFINITION_IDS.typeOf,
+  DEFINITION_IDS.description,
+  DEFINITION_IDS.tags,
+] as const;

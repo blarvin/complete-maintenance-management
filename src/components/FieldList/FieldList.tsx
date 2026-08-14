@@ -6,11 +6,14 @@
  * surfaces — opening one closes the others. Surface contract and roster
  * live in ./addFieldSurfaces.ts.
  *
+ * The roster gates construction mode too: with it empty, a node under
+ * construction renders its persisted fields only (there are none yet) and the
+ * defaults arrive anyway — useNodeCreation seeds and commits the pending draft
+ * itself, so nothing here has to be mounted for that to happen.
+ *
  * Data arrives via useElementChildren (writes emit; readers subscribe) —
  * no reload callbacks are threaded to children. Composer orchestration
- * (open/restore plumbing) lives inside FieldComposerSlot. The construction
- * draft is committed by useNodeCreation reading localStorage, so no handle
- * into the composer is threaded.
+ * (open/restore plumbing) lives inside FieldComposerSlot.
  */
 
 import { For, Show, createMemo, createSignal } from 'solid-js';
@@ -60,7 +63,7 @@ export const FieldList = (props: FieldListProps) => {
                 )}
             </For>
 
-            <Show when={!props.hideAddSurfaces && (props.isConstruction || ENABLED_ADD_FIELD_SURFACES.includes('composer'))}>
+            <Show when={!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('composer')}>
                 <FieldComposerSlot
                     nodeId={props.nodeId}
                     mode={mode()}

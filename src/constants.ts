@@ -16,15 +16,18 @@ export const USER_ID = "localUser" as const;
 export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
 
 /**
- * Which add-field surfaces FieldList renders in display mode (A/B roster).
- * Construction mode always uses the composer regardless of this list.
- * See src/components/FieldList/addFieldSurfaces.ts for the surface contract.
+ * Which add-field surfaces FieldList renders — in *both* display and
+ * construction mode. See src/components/FieldList/addFieldSurfaces.ts for the
+ * surface contract.
+ *
+ * Empty on this branch: both legacy surfaces (the composer and the single-pick
+ * "+ Add Field") are switched off while the tree-native picker is built. They
+ * are kept, not deleted — restore either id to bring it back verbatim. With
+ * the list empty there is no way to add a field to an existing node; new nodes
+ * still get their defaults, which useNodeCreation seeds directly.
  */
-export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [
-    "composer",
-    "legacy",
-];
-
+export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = []; // 'picker' or 'composer' or both
+ 
 /**
  * Max push attempts per sync queue item before it's parked as exhausted
  * (surfaced via error snackbar with Retry; re-armed on app startup).

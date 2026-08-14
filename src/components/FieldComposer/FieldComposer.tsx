@@ -25,7 +25,8 @@ import { getDefinitionQueries } from '../../data/queries';
 import { isInline } from '../../kinds/placement';
 import { storageEventBus } from '../../data/storageEventBus';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
-import { usePendingForms, pendingFormFromDefinition, type PendingForm } from '../../hooks/usePendingForms';
+import { usePendingForms, type PendingForm } from '../../hooks/usePendingForms';
+import { seedPendingDraft } from '../../data/services/pendingDraft';
 import type { Definition } from '../../data/models';
 import { ComposerRow } from './ComposerRow';
 import { DefinitionAuthoringForm } from './DefinitionAuthoringForm';
@@ -58,13 +59,9 @@ export const FieldComposer = (props: FieldComposerProps) => {
             return props.restoreSeed;
         }
         if (props.mode === 'construction' && props.lockedDefinitionIds && props.lockedDefinitionIds.length > 0) {
-            const fdq = getDefinitionQueries();
-            const seeded: PendingForm[] = [];
-            for (const fid of props.lockedDefinitionIds) {
-                const def = await fdq.getDefinitionById(fid);
-                if (def) seeded.push(pendingFormFromDefinition(def));
-            }
-            return seeded;
+            // The draft store owns seeding, so node creation can seed the same
+            // rows with no composer mounted (see useNodeCreation.complete).
+            return seedPendingDraft(props.nodeId, props.lockedDefinitionIds);
         }
         return [];
     };

@@ -6,14 +6,16 @@
  * by nodeId so picking a few Definitions, navigating away, and coming back
  * keeps the draft.
  *
- * Because the draft is fully external (localStorage), committing it needs nothing
- * from the mounted composer component: read the rows, create a DataField per row
- * via the command bus, clear the draft. commitPendingDraft/discardPendingDraft are
- * the single source for that, called both by usePendingForms (display-mode
- * Save/Cancel) and useNodeCreation (construction-time commit on node create).
+ * Because the draft is fully external (localStorage), the whole lifecycle needs
+ * nothing from a mounted picker component: seed the rows, read them, create a
+ * DataField per row via the command bus, clear the draft. seed/commit/discard
+ * here are the single source for that, called both by usePendingForms
+ * (display-mode Save/Cancel) and useNodeCreation (construction-time seed on
+ * start, commit on node create).
  */
 
 import { getCommandBus } from '../commands';
+import { getDefinitionQueries } from '../queries';
 import type { Definition, DataFieldValue, Kind } from '../models';
 import { generateId } from '../../utils/id';
 
@@ -66,6 +68,30 @@ export const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
     } catch {
         // Ignore storage errors
     }
+};
+
+/**
+ * Ensure a draft exists for nodeId, seeded from `definitionIds` if it doesn't.
+ * Idempotent and stored-draft-wins, so it is safe to call from more than one
+ * place: node creation calls it so the construction defaults land whether or
+ * not a picker was ever mounted, and the composer calls it on mount for the
+ * same rows. Returns the resulting draft.
+ */
+export const seedPendingDraft = async (
+    nodeId: string,
+    definitionIds: readonly string[]
+): Promise<PendingForm[]> => {
+    const existing = loadPendingForms(nodeId);
+    if (existing.length > 0) return existing;
+
+    const fdq = getDefinitionQueries();
+    const seeded: PendingForm[] = [];
+    for (const id of definitionIds) {
+        const def = await fdq.getDefinitionById(id);
+        if (def) seeded.push(pendingFormFromDefinition(def));
+    }
+    if (seeded.length > 0) savePendingForms(nodeId, seeded);
+    return seeded;
 };
 
 /** Remove any draft for nodeId. */

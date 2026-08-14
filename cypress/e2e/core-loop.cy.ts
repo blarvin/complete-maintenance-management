@@ -1,8 +1,7 @@
 /**
  * Behavior contract #1 — the core loop:
- * create node (construction defaults arrive) → edit a field value → add a
- * field via the display composer → revert from history → delete field + Undo
- * → delete node + Undo.
+ * create node (construction defaults arrive) → edit a field value → revert
+ * from history → delete field + Undo → delete node + Undo.
  *
  * Runs offline: local-first UI behavior is the subject here; sync is contract
  * #3 and retention is #4. (It ran offline originally because a startup full
@@ -47,18 +46,9 @@ describe('core loop', () => {
         cy.focused().should('have.value', 'Second value').type('{enter}');
         cy.contains('div[role="button"]', 'Second value').should('be.visible');
 
-        // Add a field via the display composer: check "Weight"; its editor
-        // auto-opens focused; Enter commits the pending value; Save persists.
-        cy.contains('button', '+ Add Fields').click();
-        cy.contains('label', 'Weight:').prev('input[type="checkbox"]').check();
-        // Wait for the auto-focused value editor (NOT the checkbox just ticked).
-        cy.focused().should('match', 'input:not([type="checkbox"]), textarea');
-        cy.focused().clear().type('80', { delay: 60 });
-        cy.focused().should('have.value', '80').type('{enter}');
-        cy.contains('button', /^Save$/).click();
-        cy.contains('button', '+ Add Fields').should('be.visible'); // composer closed
-        cy.contains('label', 'Weight:').should('be.visible');
-        cy.contains('div[role="button"]', '80').should('be.visible');
+        // (The add-a-field-to-an-existing-node leg is gone from this contract
+        // while ENABLED_ADD_FIELD_SURFACES is empty — there is no add surface to
+        // drive. It comes back against the tree-native picker.)
 
         // History: field details → history list → select the old value → revert.
         cy.contains('label', 'Description:').parent()
