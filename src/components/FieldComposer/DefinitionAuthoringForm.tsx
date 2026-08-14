@@ -11,12 +11,11 @@
  * back to the caller so the Composer can materialise a pre-checked row.
  */
 
-import { For, Show } from 'solid-js';
+import { For } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import type { Definition, DefinitionConfig } from '../../data/models';
 import { useDefinitionDraft } from '../../hooks/useDefinitionDraft';
 import { getKindManifest, getDefinitionAuthoring, FIELD_KINDS } from '../../kinds/registry';
-import { ConfigDraftForm } from '../ConfigDraftForm/ConfigDraftForm';
 import styles from './DefinitionAuthoringForm.module.css';
 
 const COMPONENT_CHOICES = FIELD_KINDS.map((type) => ({
@@ -96,39 +95,18 @@ export const DefinitionAuthoringForm = (props: DefinitionAuthoringFormProps) => 
             <div class={styles.section}>
                 <span class={styles.sectionLabel}>Config</span>
                 <div class={styles.configHost}>
-                    {/* A ConfigForm is an optional override; absent means the
-                        generic ConfigDraftForm builds rows from the kind's
-                        configSchema. <Dynamic> swaps the override reactively on a
-                        kind pick; the draft hook batches kind+config so the new
-                        form never sees the previous kind's config.
-
-                        This surface is dormant (ENABLED_ADD_FIELD_SURFACES), but
-                        it is kept working rather than left to rot — restoring a
-                        roster id has to bring the surface back intact. */}
-                    <Show
-                        when={getDefinitionAuthoring(kind())?.ConfigForm}
-                        fallback={
-                            <ConfigDraftForm
-                                kind={kind()}
-                                config={config()}
-                                onChange={(cfg: DefinitionConfig, error?: string | null) => {
-                                    setConfig(cfg);
-                                    setConfigError(error ?? null);
-                                }}
-                            />
-                        }
-                    >
-                        {(ConfigForm) => (
-                            <Dynamic
-                                component={ConfigForm()}
-                                config={config()}
-                                onChange={(cfg: DefinitionConfig, error?: string | null) => {
-                                    setConfig(cfg);
-                                    setConfigError(error ?? null);
-                                }}
-                            />
-                        )}
-                    </Show>
+                    {/* <Dynamic> swaps the sub-form reactively on a kind pick; the
+                        draft hook batches kind+config so the new form never sees
+                        the previous kind's config. The picker only offers
+                        FIELD_KINDS, all of which carry the authoring contract. */}
+                    <Dynamic
+                        component={getDefinitionAuthoring(kind())!.ConfigForm}
+                        config={config()}
+                        onChange={(cfg: DefinitionConfig, error?: string | null) => {
+                            setConfig(cfg);
+                            setConfigError(error ?? null);
+                        }}
+                    />
                 </div>
             </div>
 
