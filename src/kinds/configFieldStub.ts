@@ -1,34 +1,23 @@
 /**
- * Shared placeholder for the config-only kinds (`flag` / `compound` /
- * `string-list`). These kinds back the `library`-tree config subtree and, in
- * Phase 1, only ever exist as config sub-fields — never mounted as standalone
- * Data Card rows. Full standalone-row rendering/editing/history for them is
- * deferred (see LATER.md). The renderer shows a read-only value (defensive only);
- * the config form is inert because a config-only kind is never authored as its
- * own Definition.
+ * Inert authoring form for the config-only kinds (`flag` / `compound` /
+ * `string-list`).
  *
- * Kept JSX-free (a `.ts` file — a Solid component may return a thunk, which is
- * a valid, reactive `JSX.Element`) so Vitest, which has no Solid transform, can
- * load the kinds graph.
+ * A `ConfigForm` answers "how is a new Definition *of this kind* authored" —
+ * and these three kinds are never authored as Definitions. They exist only as
+ * sub-fields inside another kind's config subtree, so their config would
+ * terminate the recursion anyway (a boolean has no config; SPEC §601). The
+ * manifest type requires the field, so it gets a form that renders nothing.
+ *
+ * Their **renderers** are real — see `components/DataField/ConfigValueFields`.
+ * The stub renderer that used to live here was replaced once the Library
+ * picker's config peek and Field Details → Config began drawing config
+ * sub-fields as rows; its `JSON.stringify` fallback would have shown a user
+ * `{"lowLow":0,"low":2}` where a threshold chain belongs.
+ *
+ * Kept JSX-free (a `.ts` file) so it stays loadable from Node-only contexts.
  */
 
-import type { Component, JSX } from 'solid-js';
-import type { ConfigFormProps, FieldRendererProps } from './types';
-
-export const ConfigFieldStubRenderer: Component<FieldRendererProps> = (props) => {
-    const text = () => {
-        const v = props.value;
-        return v === null || v === undefined
-            ? '—'
-            : Array.isArray(v)
-                ? v.join(', ')
-                : typeof v === 'object'
-                    ? JSON.stringify(v)
-                    : String(v);
-    };
-    // A thunk is a valid, reactive JSX.Element at runtime; solid-js's published
-    // JSX types omit FunctionElement from the Element union, so cast locally.
-    return text as unknown as JSX.Element;
-};
+import type { Component } from 'solid-js';
+import type { ConfigFormProps } from './types';
 
 export const ConfigFieldStubConfigForm: Component<ConfigFormProps> = () => null;

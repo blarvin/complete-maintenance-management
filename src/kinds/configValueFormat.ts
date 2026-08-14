@@ -1,0 +1,43 @@
+/**
+ * configValueFormat — how a config sub-field value reads as text.
+ *
+ * One source of truth for two consumers that must agree: each config-only
+ * kind's manifest `displayPreview` (the string form, used by history) and its
+ * Renderer (the row form, used by the Library picker's config peek and a
+ * Field's Details → Config section). They were separate inline expressions
+ * while only `displayPreview` existed; surfacing config as rows gave the second
+ * consumer, and two hand-written formatters would drift.
+ *
+ * Kept **JSX-free** so the manifests — and the storage layer through them — can
+ * import it without pulling a component into a Node-only context.
+ *
+ * Each helper formats a *present* value only. Null is the caller's concern,
+ * because the two callers want different things from it: `displayPreview`
+ * returns null, while a renderer draws its own placeholder.
+ */
+
+import type { CompoundValue, FlagValue, StringListValue } from '../data/models';
+
+/** `true` → `Yes`. At this type size a word reads faster than a glyph, and it
+ *  matches how the value is spoken ("multiline: yes"). */
+export const formatFlag = (v: FlagValue): string => (v ? 'Yes' : 'No');
+
+/** `["In Service","Retired"]` → `In Service, Retired`.
+ *  An empty list is a distinct and meaningful state — an `enum-kv` with no
+ *  options cannot be filled in — so it reads as `None` rather than as blank,
+ *  which would be indistinguishable from unset. */
+export const formatStringList = (v: StringListValue): string =>
+    v.length === 0 ? 'None' : v.join(', ');
+
+/** `{lowLow:0, low:2, high:8}` → `lowLow=0, low=2, high=8`.
+ *
+ *  Deliberately generic `key=value`: `compound` is a kind, not a threshold
+ *  editor, and teaching it to print `LL` for `lowLow` would fold one consumer's
+ *  vocabulary into the shared kind. Key order is `packThresholds`' insertion
+ *  order, which for the only compound in the system is the ascending chain the
+ *  `lowLow ≤ low ≤ high ≤ highHigh` invariant is stated over — so it already
+ *  reads left-to-right as that chain. */
+export const formatCompound = (v: CompoundValue): string =>
+    Object.entries(v)
+        .map(([key, n]) => `${key}=${n}`)
+        .join(', ');
