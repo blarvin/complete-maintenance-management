@@ -54,14 +54,23 @@ const realService: SnackbarService = {
         clearTimer();
         const variant = toast.variant ?? 'success';
         const duration = toast.durationMs ?? DEFAULT_DURATIONS[variant];
+        // Coalescing: a matching key means this is the *same* toast saying
+        // something new (a third field added to the two it already reports), so
+        // it keeps its id. SnackbarHost renders `<Show keyed>`, so reusing the id
+        // is what stops the toast remounting and re-animating on every repeat.
+        // A missing key never coalesces — two undefined keys are not a match.
+        const prior = registeredStore.current;
+        const extends_ =
+            toast.coalesceKey !== undefined && prior?.coalesceKey === toast.coalesceKey;
         const active: ActiveToast = {
-            id: ++sequence,
+            id: extends_ ? prior!.id : ++sequence,
             message: toast.message,
             variant,
             durationMs: duration,
             action: toast.action,
             onExpire: toast.onExpire,
             createdAt: Date.now(),
+            coalesceKey: toast.coalesceKey,
         };
         registeredStore.current = active;
         scheduleExpiry(duration);
