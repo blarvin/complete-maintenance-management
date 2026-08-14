@@ -56,56 +56,8 @@
     gap: var(--space-2);
 }
 
-/* Chevron as a CSS triangle, matching the field-row disclosure exactly
-   (see DataField.module.css) so expanding a Definition reads as the same
-   gesture as expanding a field. */
-.chevron {
-    flex: none;
-    align-self: baseline;
-    width: var(--chevron-col-width);
-    height: 1em;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    color: var(--border-default);
-    cursor: pointer;
-    transform: translateY(0.15em);
-}
-
-.chevron::before {
-    content: '';
-    display: block;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-color: transparent;
-}
-
-.chevronRight::before {
-    border-width: var(--field-chevron-size) 0 var(--field-chevron-size)
-        calc(var(--field-chevron-size) * 1.4);
-    border-left-color: currentColor;
-}
-
-.chevronDown::before {
-    border-width: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
-        var(--field-chevron-size);
-    border-top-color: currentColor;
-}
-
-.chevron:hover {
-    color: var(--text-secondary);
-}
-
-.chevron:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: 1px;
-    border-radius: var(--radius-sm);
-}
+/* The disclosure triangle now lives in styles/disclosure.module.css — shared
+   with the config rows so the same gesture cannot drift across depths. */
 
 .rowName {
     flex: 1 1 auto;

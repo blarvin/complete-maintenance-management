@@ -1,0 +1,119 @@
+/* ConfigRows — a kind's config as tree rows.
+
+   Rows lay out in flex rather than the card's subgrid: these sit inside the
+   picker, not on a DataCard, and the picker deliberately declines that grid
+   (see AddFieldSurface.module.css). Labels align by a fixed column instead. */
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    min-height: 1.6em;
+}
+
+/* Focus lands on the row itself — it is the treeitem, and the editor only
+   opens on activation. Matches the field-row focus treatment. */
+.row:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+}
+
+.label {
+    flex: 0 0 auto;
+    min-width: 118px;
+    color: var(--text-muted);
+}
+
+.value {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+/* An unset knob reads as absent rather than as a value — same de-emphasis the
+   card uses for an unfilled field. */
+.valueEmpty {
+    color: var(--text-placeholder);
+    font-style: italic;
+}
+
+.input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: var(--border-width-thin) solid var(--border-input);
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-2);
+}
+
+.input:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.groupLabel {
+    flex: 1 1 auto;
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* One indent per level, aligned to the chevron column so a nested row's label
+   starts where its parent's label did. */
+.nested {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-left: var(--chevron-col-width);
+}
+
+.remove {
+    flex: none;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    line-height: 1;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0 var(--space-2);
+    cursor: pointer;
+}
+
+.remove:hover {
+    color: var(--destructive);
+}
+
+.addItem {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--accent);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.remove:focus-visible,
+.addItem:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}

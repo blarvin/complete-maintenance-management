@@ -19,6 +19,7 @@ import { getDefinitionQueries } from '../../data/queries';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
 import { isInline } from '../../kinds/placement';
 import type { Definition, Kind } from '../../data/models';
+import chevron from '../../styles/disclosure.module.css';
 import styles from './AddFieldSurface.module.css';
 
 export type LibraryPickerProps = {
@@ -91,9 +92,9 @@ const DefinitionRow = (props: DefinitionRowProps) => {
                     type="button"
                     tabIndex={-1}
                     classList={{
-                        [styles.chevron]: true,
-                        [styles.chevronDown]: expanded(),
-                        [styles.chevronRight]: !expanded(),
+                        [chevron.chevron]: true,
+                        [chevron.chevronDown]: expanded(),
+                        [chevron.chevronRight]: !expanded(),
                     }}
                     onClick={() => setExpanded(!expanded())}
                     aria-hidden="true"

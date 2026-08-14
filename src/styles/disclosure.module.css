@@ -1,0 +1,61 @@
+/* Shared disclosure triangle for flex-laid-out tree rows.
+
+   Third consumer is what earned the extraction: the Library picker's Definition
+   rows, and now the config rows inside an authoring row and inside a group. All
+   three are the same gesture at different depths, so they must not drift.
+
+   Deliberately NOT shared with `DataField.module.css`'s chevron: that one is
+   grid-positioned into a named subgrid column (`grid-column: details-chevron`)
+   and pins differently for block-shaped values. Same triangle, different
+   positioning contract — merging them would couple the card's grid to this. */
+
+.chevron {
+    flex: none;
+    align-self: baseline;
+    width: var(--chevron-col-width);
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--border-default);
+    cursor: pointer;
+    /* Box centre sits 0.5em above baseline, cap-centre ~0.35em; drop the
+       difference so the triangle lands on the adjacent text's cap-centre. */
+    transform: translateY(0.15em);
+}
+
+.chevron::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.chevronRight::before {
+    border-width: var(--field-chevron-size) 0 var(--field-chevron-size)
+        calc(var(--field-chevron-size) * 1.4);
+    border-left-color: currentColor;
+}
+
+.chevronDown::before {
+    border-width: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
+        var(--field-chevron-size);
+    border-top-color: currentColor;
+}
+
+.chevron:hover {
+    color: var(--text-secondary);
+}
+
+/* A leaf row keeps the same indent as a parent's chevron so labels line up
+   down the column whether or not a row can expand. */
+.chevronSpacer {
+    flex: none;
+    width: var(--chevron-col-width);
+}
