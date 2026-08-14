@@ -951,7 +951,7 @@ Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (ope
 **What "unstyled" means in practice:**
 
 - Borders are solid black (`--border-default`), uniform weight (`--border-width: 1.5px`)
-- Backgrounds are white or near-white; colour is reserved for interactive affordances (accent blue for focus/links, red for destructive actions). The **unfilled** field state (see DataField States) is drawn by de-emphasis — muted label, placeholder rule where the value would sit — not by a colour, because it marks an absence rather than an action
+- Backgrounds are white or near-white; colour is reserved for interactive affordances (accent blue for focus/links, red for destructive actions). The **unfilled** field state (see DataField States) is drawn by de-emphasis — a muted **label**, with the value column left to whatever empty affordance its renderer already draws — not by a colour, because it marks an absence rather than an action. Dimming the label is what makes it scannable: the label column reads as a work list down the card, uniformly across every kind
 - Typography is a single family (Inter) at a compact size scale (9–18px), with weight doing the work of visual hierarchy (bold titles, regular body)
 - Interactive elements are stripped to bare structure: `.btn-reset` and `.input-reset` remove all browser chrome; inline editing uses a minimal underline, not a boxed input
 - Animations are fast and functional (100–150ms), not decorative

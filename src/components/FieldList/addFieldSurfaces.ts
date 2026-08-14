@@ -19,7 +19,11 @@
  *  2. build the component to the contract above
  *  3. add the id to ENABLED_ADD_FIELD_SURFACES in src/constants.ts
  *  4. render it in FieldList gated on roster membership
+ *
+ * `add-surface` is the tree-native replacement (SPEC → The Add Surface). It ships
+ * *alongside* `composer` and `legacy` so all three can be compared in the running
+ * app; the two legacy ids are deleted once it wins (ISSUES → Tech Debt).
  */
-export type AddFieldSurfaceId = 'composer' | 'legacy';
+export type AddFieldSurfaceId = 'add-surface' | 'composer' | 'legacy';
 
 export type ActiveSurface = AddFieldSurfaceId | 'none';

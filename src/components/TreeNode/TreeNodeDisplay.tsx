@@ -124,7 +124,7 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             <Show when={showDataCard()}>
                 <DataCard isOpen={isExpanded()}>
                     <Show when={ownsChildren()}>
-                        <FieldList nodeId={props.id} isConstruction={false} />
+                        <FieldList nodeId={props.id} kind={props.kind} isConstruction={false} />
                     </Show>
                     {/* The compact in-card rollup is the lens's CHILD (under-a-node)
                         summary only. Re-rooted (PARENT), the jobs render as Node-like

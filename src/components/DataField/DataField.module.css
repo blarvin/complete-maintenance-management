@@ -101,6 +101,15 @@
     cursor: default;
 }
 
+/* isUnfilled — a fact the record doesn't hold yet. De-emphasis, not colour:
+   it marks an absence, not an action (SPEC → Style Guide). Dimming the *label*
+   is what makes it scannable — the label column reads as a work list down the
+   card, whatever each renderer draws in the value column. Higher specificity
+   than .datafieldLabel above, so it wins without !important. */
+.datafieldWrapperUnfilled .datafieldLabel {
+    color: var(--text-muted);
+}
+
 .datafieldValue {
     color: var(--text-secondary);
 }

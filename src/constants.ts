@@ -20,13 +20,17 @@ export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
  * construction mode. See src/components/FieldList/addFieldSurfaces.ts for the
  * surface contract.
  *
- * Empty on this branch: both legacy surfaces (the composer and the single-pick
- * "+ Add Field") are switched off while the tree-native picker is built. They
- * are kept, not deleted — restore either id to bring it back verbatim. With
- * the list empty there is no way to add a field to an existing node; new nodes
- * still get their defaults, which useNodeCreation seeds directly.
+ * The tree-native Add Surface runs alone. The two legacy surfaces are still in
+ * the codebase and still work — add their ids back to compare all three side by
+ * side in the running app, which is why the new surface shipped as a roster
+ * entry rather than a replacement.
+ *
+ * They are deleted, along with this roster, once the new surface is settled
+ * (ISSUES → Tech Debt). Until then this line is the whole switch.
  */
-export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = []; // 'legacy' or 'composer' or both
+export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [
+    'add-surface',
+]; // 'add-surface', 'composer', 'legacy' or any subset
  
 /**
  * Max push attempts per sync queue item before it's parked as exhausted

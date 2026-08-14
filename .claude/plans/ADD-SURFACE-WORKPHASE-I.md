@@ -118,10 +118,23 @@ New `src/components/AddFieldSurface/LibraryPicker.tsx`.
   filter from step 2. Sort by `label`.
 - Each row: a chevron that expands the **config peek**, and the name, which picks.
 - **Peek data comes from the Definition's children**, not from `def.config` —
-  config *is* Elements, the rows are drawn by their own kinds' Renderers
-  (`ConfigValueFields.tsx`), and Phase II's Field Details needs the same read.
-  `useElementChildren(() => def.id)` on the expanded row only; an unexpanded row
-  issues no query. Borrow the disclosure shape from `NavigableRow.tsx`.
+  config *is* Elements, so the peek reads the subtree.
+  `useElementChildren(() => def.id, 'fields')` on the expanded row only; an
+  unexpanded row issues no query. Borrow the disclosure shape from
+  `NavigableRow.tsx`.
+- **Corrected during implementation: values are drawn with `displayPreview`, not
+  with each kind's `Renderer`.** A Renderer *is* the editable surface — mounting
+  `TextKvField` for a Definition's `placeholder` would make it double-tap
+  editable inside a picker, which is wrong for a peek and wrong for Phase 1
+  (config is delegated and read-only until the arbiter). `displayPreview` is
+  read-only by construction and already exists for exactly this.
+  **Phase II inherits this problem**: SPEC → Field Details says the Config
+  section draws rows "by their own kinds' Renderers", which has the same
+  editability hole for the `text-kv`/`number-kv`/`enum-kv` sub-fields. Phase II
+  needs either a `readOnly` prop on `FieldRendererProps` or the same
+  `displayPreview` treatment — decide it there, not here. (The config-only
+  renderers from `674bbbe` are unaffected: they have no edit path, and their
+  formatters are what `displayPreview` calls.)
 - Empty Library → the picker still offers its (Phase II) authoring row; until then
   say so rather than rendering nothing.
 

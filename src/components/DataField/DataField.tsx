@@ -10,6 +10,7 @@ import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { getInlineManifest } from '../../kinds/registry';
+import { isUnfilled } from '../../data/models';
 import type { Kind, DataFieldValue } from '../../data/models';
 import styles from './DataField.module.css';
 
@@ -62,6 +63,9 @@ export const DataField = (props: DataFieldProps) => {
                 [styles.datafieldWrapper]: true,
                 [styles.datafieldWrapperExpanded]: isDetailsExpanded(),
                 [styles.datafieldWrapperBlock]: shape() !== 'scalar',
+                // Derived, not stored — a card shows at a glance which facts are
+                // still owed (SPEC → DataField States → isUnfilled).
+                [styles.datafieldWrapperUnfilled]: isUnfilled(props.value),
                 'no-caret': true,
             }}
         >

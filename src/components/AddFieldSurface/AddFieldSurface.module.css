@@ -1,0 +1,160 @@
+/* AddFieldSurface — the tree-native create affordance and its Library picker.
+   Self-contained: declines the FieldList subgrid and takes the full row via
+   `.fieldList > *`, like the other add surfaces. */
+
+.wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+/* Matches the legacy add button's weight so the A/B compares the flows rather
+   than the typography. */
+.addButton {
+    align-self: flex-start;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.addButton:hover {
+    text-decoration: underline;
+}
+
+.addButton:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+/* The picker is part of the card, not a popover — no shadow, no z-index, no
+   overlay. It is the tree continuing inline, which is the whole point. */
+.picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border-left: var(--border-width) solid var(--border-default);
+    padding-left: var(--space-4);
+    margin-left: var(--space-2);
+}
+
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.rowHead {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+/* Chevron as a CSS triangle, matching the field-row disclosure exactly
+   (see DataField.module.css) so expanding a Definition reads as the same
+   gesture as expanding a field. */
+.chevron {
+    flex: none;
+    align-self: baseline;
+    width: var(--chevron-col-width);
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--border-default);
+    cursor: pointer;
+    transform: translateY(0.15em);
+}
+
+.chevron::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.chevronRight::before {
+    border-width: var(--field-chevron-size) 0 var(--field-chevron-size)
+        calc(var(--field-chevron-size) * 1.4);
+    border-left-color: currentColor;
+}
+
+.chevronDown::before {
+    border-width: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
+        var(--field-chevron-size);
+    border-top-color: currentColor;
+}
+
+.chevron:hover {
+    color: var(--text-secondary);
+}
+
+.chevron:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+}
+
+.rowName {
+    flex: 1 1 auto;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rowName:hover {
+    text-decoration: underline;
+}
+
+.rowName:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+/* Config peek — indented to the chevron column so sub-fields sit under the
+   name they belong to. */
+.peek {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-left: calc(var(--chevron-col-width) + var(--space-2));
+}
+
+.peekRow {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+}
+
+.peekLabel {
+    color: var(--text-muted);
+    min-width: var(--label-width);
+}
+
+.peekValue {
+    color: var(--text-metadata);
+}
+
+.peekEmpty,
+.notice {
+    font-size: var(--text-xs);
+    color: var(--text-placeholder);
+    font-style: italic;
+}
