@@ -53,6 +53,56 @@ export type ConfigSubField = {
     pack?: (config: Record<string, unknown>) => DataFieldValue | null | undefined;
     /** stored value → partial config. Defaults to `{ [key]: value }`. */
     unpack?: (value: DataFieldValue | null) => Record<string, unknown>;
+
+    /* ── Authoring shape (read only by the Add Surface's config rows) ─────────
+     * Nesting and reveal come from data so a kind never declares layout — the
+     * same one-way rule as chrome entailment. None of these touch storage:
+     * `serializeConfig`/`assembleConfig` ignore them entirely.
+     * ────────────────────────────────────────────────────────────────────── */
+
+    /**
+     * Renders inside the expandable group row of this label, instead of at the
+     * kind's top level. The group must be declared in `CONFIG_GROUPS[kind]`,
+     * which owns the order groups appear in and whether each starts open.
+     * This is how `number-kv`'s progressive-disclosure tiers become tree depth.
+     */
+    group?: string;
+
+    /**
+     * For an atomic `compound`: the flat draft keys it packs, as authorable
+     * rows one level deeper. `thresholds` stores one `{lowLow, low, high,
+     * highHigh}` object, but the draft config carries those four as **flat
+     * keys** — `pack` reads them off the flat object — so this is purely how
+     * authoring renders them, never a second storage shape.
+     */
+    members?: ConfigSubFieldMember[];
+
+    /**
+     * Value-driven conditional reveal: the row is skipped when this returns
+     * false (`currencyCode` only under a currency format; the nominal pair that
+     * `nominalMode` selects). Reads the flat draft config, matching `pack`.
+     */
+    visibleWhen?: (config: Record<string, unknown>) => boolean;
+};
+
+/** One authorable part of a compound sub-field (see `ConfigSubField.members`). */
+export type ConfigSubFieldMember = {
+    /** Flat draft-config key — the same name `pack` reads. */
+    key: string;
+    label: string;
+    kind: Kind;
+};
+
+/**
+ * A collapsible group of config rows for one kind. Declared per kind rather than
+ * inferred from the sub-fields so the order of groups, and whether each starts
+ * open, are stated once instead of repeated on every member.
+ */
+export type ConfigGroup = {
+    /** Matches `ConfigSubField.group`. */
+    label: string;
+    /** SPEC's "Common" tier is expanded by default; "Advanced" is not. */
+    defaultOpen?: boolean;
 };
 
 /**

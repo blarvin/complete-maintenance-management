@@ -1,190 +1,230 @@
-# ADD-SURFACE-WORKPHASE-II — Authoring and Field Details
+# ADD-SURFACE-WORKPHASE-II — Authoring, tree-native
 
-> Rename to `.claude/plans/ADD-SURFACE-WORKPHASE-II.md` on approval (plan mode
-> assigns a generated name; the repo convention is `*-WORKPHASE-*`).
+> Supersedes the first Phase II plan (`54f72e2`), which specced authoring as a
+> segmented kind control plus a config form. That was a form wearing the tree's
+> clothes, and the whole branch exists to not do that. Reverted in `bad3f75`.
 
 ## Context
 
-Phase I (`beeeceb`) restored adding a field: the Add Surface picks a Definition
-from the Library and mints the DataField immediately. Two specced surfaces are
-still missing, and they are the two that make the Library *grow* rather than
-just be consumed:
+Phase I restored *picking* a Definition. Authoring one — coining a fact the
+Library doesn't have yet — is still unreachable: the only authoring UI is
+`DefinitionAuthoringForm`, inside the dormant composer.
 
-- **Authoring a Definition** — the picker's `+ New Field Definition` row. Today
-  the only authoring UI is `DefinitionAuthoringForm`, which lives inside the
-  dormant composer and is unreachable. Without it a user can only pick from what
-  is already there, which contradicts the Library's whole premise
-  (SPEC → *the kinds of fact the app understands are grown by the people using
-  it*).
-- **Field Details** — still a metadata line, a history chevron and Delete. SPEC
-  now specifies History / Config / Tools with the sections entailed by the kind,
-  and it is the app's first surface to render a **delegated** value.
+**Authoring must be the tree.** Not a picker plus a form, but rows and chevrons
+all the way down, the same disclosure gesture as everything else:
 
-Phase II also settles two decisions parked during Phase I: ISSUES #8 (the
-`mintVia: 'composer'` rename) and ISSUES #10 (how read-only config renders).
+```
+▾ + New Field Definition
+   ▸ Text
+   ▾ Number
+       Name              [ Discharge Pressure ]
+       Units symbol      [ psi ]
+       Decimals          [ 2 ]
+       ▸ Display & nominal
+       ▾ Alarms & freshness
+           ▾ Thresholds
+               Low low   [ 0 ]
+               Low       [ 2 ]
+               High      [ 8 ]
+               High high [ 10 ]
+           Refresh seconds [ 3600 ]
+       Create Number Definition
+   ▸ Enum
+   ▸ Image
+   ▸ Internal Link
+   ▸ External Link
+▸ Description
+▸ Serial Number
+```
+
+The kind choice **is which row you expand**. Config sub-fields are rows at that
+level; grouped and advanced config nests one level deeper. `number-kv`'s
+three-tier progressive disclosure (SPEC → ELEMENT-MODEL → number-kv) stops being
+a form idiom and becomes tree depth, which is what it was always describing.
 
 **Phase gate:** `typecheck`, `lint`, Vitest green, and a hand-test authoring a
 Definition of each kind and using it in one motion.
 
 ## Strategy decisions
 
-1. **Authoring reuses the pick path exactly.** `useDefinitionDraft.save()`
-   already returns the new Definition, and Phase I's `pick()` already mints an
-   instance from one. So commit is `const def = await save(); if (def) await
-   pick(def)` — authoring and using become literally the same act, including
-   the coalesced toast, rather than a parallel flow that resembles one.
-2. **`ConfigForm` becomes an optional override** (confirmed). Presence means "this
-   kind carries cross-field invariants a row list cannot express"; absence means
-   the generic rows. That is exactly what SPEC claims, and it makes a new thin
-   kind need no form at all.
-3. **Read-only config renders via `displayPreview`** (confirmed), shared with the
-   Phase I peek through one extracted component, so the two surfaces cannot
-   drift. A `readOnly` prop on `FieldRendererProps` is what the arbiter's
-   override work will force later; it buys nothing Phase 1 can use.
-4. **Field Details sections are a data-driven list.** Stacking is deliberately
-   unsettled (SPEC → *Stacking is open*), so the arrangement must be cheap to
-   change — one array, not three nested components.
-5. **Nothing is deleted.** The composer stack stays dormant and intact
-   (ISSUES #11). Where Phase II supersedes a form, the old one is left in place
-   and simply stops being referenced by its manifest.
+1. **`ConfigForm` is left exactly as it is** — required on `InlineManifest`, all
+   four still wired. The new authoring simply never reads it. This is the
+   opposite of last plan's optional-override churn, and it is what the
+   no-deletion posture (ISSUES #11) actually implies: leave the old machinery
+   alone and build beside it. `ConfigForm` becomes dead-but-harmless exactly like
+   the rest of the composer, and the dormant surface keeps working verbatim.
+2. **Nesting comes from data, not from special cases.** Three declarative
+   additions to `ConfigSubField` cover every shape the catalogue needs: `group`,
+   `members`, `visibleWhen`. A kind never declares layout.
+3. **Cross-field invariants become validation, not components.** The threshold
+   chain already lives on the compound's `validate`; the rules that span
+   sub-fields (`currency ⇒ currencyCode`, `default ∈ options`) get a per-kind
+   `validateConfig`. `validateNumberKvConfig` already exists in `numberKvState.ts`
+   and is component-free — reuse it rather than writing a second one.
+4. **Every row is a `treeitem`, including leaf config rows.** Focus lands on the
+   row with its focus ring; Enter or Space *activates* it — expanding a parent,
+   or opening the editor on a leaf; Enter saves and Escape cancels, both
+   returning focus to the row.
+
+   This is not a new interaction: it is exactly what every DataField value
+   already does. `useFieldEdit.valueKeyDown` (`useFieldEdit.ts:262`) begins
+   editing on Enter/Space, `inputKeyDown` (`:225`) saves on Enter and cancels on
+   Escape, and `TextKvField` renders the resting row as `role="button"` with
+   `aria-description="Press Enter to edit"`. SPEC → Keyboard already specifies
+   it. Reusing it means config rows behave like value rows, which is the whole
+   point of the surface being the tree.
+
+   There is therefore **no arrow-key/caret conflict**: you are only inside an
+   input after activating it deliberately, and you leave deliberately. Arrows
+   navigate the tree whenever a row is focused, and move the caret whenever an
+   editor is open. (An earlier draft of this plan split rows into treeitem and
+   non-treeitem to dodge a conflict that this idiom simply does not have.)
+
+   Activation differs by control, as it already does per kind: a `flag` toggles
+   outright, an `enum-kv` opens its select, a text or number row opens its
+   editor.
+5. **Commit is a Create row at the bottom** of the expanded kind (confirmed),
+   not Enter-on-name — required config means the gate has to be visible.
+   Committing reuses Phase I's `pick()`, so authoring and using stay one act.
 
 ## Steps
 
-### 1. `mintVia: 'composer'` → `'add-surface'` (ISSUES #8) — commit
+### 1. Schema: `group`, `members`, `visibleWhen`, `validateConfig` — commit
 
-Mechanical, first, so the rest of the phase reads in the right vocabulary. The
-value appears in `types.ts` (`MintVia`), `mintVia.ts` (six kinds), the six
-manifests themselves, `registry.ts` (`FIELD_KINDS` filter), `capabilities.ts`
-(`kindsMintedVia('composer')` → `FIELD_CHILD_KINDS`), and one LATER.md mention.
-The dev-boot mirror check in `registry.ts` catches any miss immediately.
+`src/kinds/types.ts` (`ConfigSubField`) and `src/kinds/configSchema.ts`. All
+component-free, all unit-testable without JSX — `configElements.test.ts` is the
+precedent.
 
-### 2. `ConfigSummary` — extract the read-only rows — commit
+- **`group?: string`** — sub-fields sharing a label render inside one expandable
+  group row, in first-appearance order. Absent = top level. Populate
+  `NUMBER_KV_CONFIG_SCHEMA`: `Display & nominal` for the format/nominal knobs,
+  `Alarms & freshness` for thresholds + `expectedRefreshSeconds`.
+- **`members?: { key, label, kind }[]`** — an atomic compound's authorable parts.
+  The `thresholds` entry stores one `{lowLow, low, high, highHigh}` object, but
+  the draft config already carries those four as **flat keys** (`packThresholds`
+  reads them off the flat object) — so `members` is purely how authoring renders
+  them, and storage is unchanged.
+- **`visibleWhen?: (config) => boolean`** — value-driven conditional reveal:
+  `currencyCode` only when `displayFormat === 'currency'`; `nominalMin`/`Max`
+  vs `nominalValue`/`tolerance` by `nominalMode`.
+- **Per-kind `validateConfig?: (config) => string | null`** on the manifest
+  (declared in `configSchema.ts` so it stays component-free). `number-kv` points
+  at the existing `validateNumberKvConfig`; `enum-kv` gets `default ∈ options`
+  plus non-empty `options`.
 
-Lift `ConfigPeek` out of `LibraryPicker.tsx` into
-`src/components/ConfigSummary/ConfigSummary.tsx`, unchanged in behaviour:
-`useElementChildren(() => definitionId, 'fields')`, one row per sub-field,
-value via `getInlineManifest(kind).displayPreview(value)`.
+Tests: `visibleWhen` predicates, group ordering, and that `serializeConfig` /
+`assembleConfig` round-trips are **unchanged** by any of it.
 
-It takes an optional `source?: string` for the Definition's name, rendered as
-the provenance chip Field Details needs (the picker passes nothing — inside a
-Definition's own row the source is obvious). `LibraryPicker` imports it; the CSS
-moves with it.
+### 2. `ConfigRows` — the editable rows
 
-### 3. `ConfigDraftForm` — the generic authoring rows
+New `src/components/ConfigRows/`. Bound to the draft config object (flat), not
+to Elements — nothing exists to parent a sub-field Element to until commit, and
+`serializeConfig` builds the subtree then, as it already does.
 
-New `src/components/ConfigDraftForm/ConfigDraftForm.tsx`: schema-driven editable
-rows, the default authoring UI.
+Four row kinds, one recursive component:
 
-- Reads `CONFIG_SCHEMAS[kind]` (`configSchema.ts`, already component-free) and
-  renders one row per `ConfigSubField`, bound to `useDefinitionDraft`'s **flat
-  config object** — not to Elements. Nothing exists to parent a sub-field
-  Element to until the Definition commits; `serializeConfig` builds the subtree
-  at commit time as it already does.
-- Control per `sub.kind`: `flag` → checkbox, `number-kv` → number input,
-  `text-kv` → text input, `enum-kv` → `<select>` over `sub.options`. `compound`
-  and `string-list` are **not** reachable here — they appear only in the two
-  schemas that keep a ConfigForm — so they get an explicit "not authorable
-  generically" guard rather than a silent fallthrough.
-- Emits through the existing `ConfigFormProps` shape (`onChange(cfg, error)`) so
-  it is a drop-in wherever a ConfigForm was.
-
-### 4. Make `ConfigForm` optional
-
-- `types.ts`: `InlineManifest.ConfigForm` required → optional.
-- `registry.ts`: split the authoring contract. `defaultConfig` is always
-  required, so `getDefinitionAuthoring` must stop returning `null` when only
-  `ConfigForm` is absent — today it gates on both, which would make
-  `defaultConfigFor` throw for every generic kind (`useDefinitionDraft.ts:28`).
-  Return `{ defaultConfig, configSchema, ConfigForm?: … }`.
-- Drop `ConfigForm` from `text-kv.manifest.ts` and `single-image.manifest.ts`.
-  **The two form files stay on disk**, unreferenced, per ISSUES #11's posture.
-- `number-kv` and `enum-kv` keep theirs — the threshold chain and
-  `default ∈ options` are the invariants that earn an override.
-
-### 5. The authoring row in the Add Surface
-
-`LibraryPicker` gains a first row, `+ New Field Definition`, expanding in place
-into `src/components/AddFieldSurface/DefinitionAuthoring.tsx`:
-
-- Kind segmented control over `FIELD_KINDS`, label input (max 50), then either
-  the kind's `ConfigForm` or `ConfigDraftForm` — chosen by presence, via
-  `<Dynamic>`. `DefinitionAuthoringForm.tsx` is the reference for the
-  segmented-control and `<Dynamic>` wiring; **read it, don't import it** (it
-  belongs to the dormant surface).
-- State is `useDefinitionDraft` unchanged — already ephemeral, already not
-  persisted, which is what SPEC calls for.
-- Commit → `save()` then the existing `pick()`. Dismiss → `cancel()`, nothing
-  written.
-- The row is a `treeitem` like the others, so roving focus covers it for free.
-
-### 6. Field Details → History / Config / Tools
-
-Rewrite `DataFieldDetails.tsx` around a **section list**, each entry
-`{ id, present, collapsible, render }`:
-
-| Section | Present when | Default |
+| Row | From | Renders |
 | --- | --- | --- |
-| History | the kind stores a value — `caps.ownValue \|\| caps.edges` | open, not collapsible |
-| Config | `CONFIG_SCHEMAS[kind]` is non-empty | collapsed, own chevron |
-| Tools | always | collapsed, own chevron |
+| scalar | `flag` / `number-kv` / `text-kv` / `enum-kv` | label + control, no chevron |
+| group | `group` on ≥1 sub-field | chevron row; children are its members' rows |
+| compound | `members` | chevron row; children are member rows, packed by existing `pack` |
+| list | `string-list` | chevron row; item rows + an `+ add` row + per-item remove |
 
-- **History always-open is the working default** (your "1+2 inside of 1"), which
-  changes today's behaviour: the chevron currently gates it and is disabled
-  below two entries. Empty history renders "No changes yet" rather than a dead
-  control. Swapping any section to collapsible is a one-line edit in the list —
-  that is the point of the list.
-- **Config** renders `ConfigSummary` with `source={definition()?.label}`, inert,
-  and the section's docblock must say *why* (delegated; the override is the
-  arbiter's job — SPEC → Field Details), or the next reader will "fix" it.
-- **Tools** holds the existing Delete.
-- The `caps` read must come from `childrenPolicy`/`capabilities` (component-free),
-  never by importing a manifest into anything test-reachable.
-- Config genuinely discriminates today: `internal-link` and `external-link` have
-  no `configSchema`, so they show two sections, not three.
+Skips any sub-field whose `visibleWhen` is false. Re-runs the sub-field's own
+`validate` on write and the kind's `validateConfig` on every change, surfacing
+one error line.
 
-### 7. Verification battery, then commit
+Reuses the picker's chevron classes so the disclosure is visually identical —
+lift them out of `AddFieldSurface.module.css` into a shared place rather than
+copying, since this is now the third consumer.
+
+### 3. The authoring subtree
+
+`LibraryPicker` gains a `+ New Field Definition` row **inside** the tree this
+time (last plan put it outside to dodge an index bug — see step 5, which fixes
+the cause instead). Expanding it lists one row per admitted kind; expanding a
+kind row shows:
+
+1. **Name** — text input row, required, max 50.
+2. **`ConfigRows`** for that kind.
+3. **`Create <Kind> Definition`** — disabled until name is non-empty and
+   `validateConfig` passes; on click, `useDefinitionDraft.save()` then the
+   caller's `pick()`.
+
+`useDefinitionDraft` is reused unchanged, but **one draft per expanded kind row**
+— expanding Number then Text must not carry units across. `pickKind` already
+batches kind+config, so a draft per row is the simpler read.
+
+### 4. Roving focus over a nested tree
+
+The Phase I `move()` walks `[role="treeitem"]` in document order and holds a flat
+`activeIndex`. Document order *is* visual order for a tree, and collapsed
+subtrees aren't in the DOM, so arrows keep working as depth arrives — but the
+index must be derived from the row's position in the live query, **not** from a
+`<For>` index, which is what broke last time. Compute the active row by
+comparing DOM nodes, not integers.
+
+Per strategy #4 every row participates, so the whole surface is one keyboard
+model:
+
+| Key | On a parent row | On a leaf config row |
+| --- | --- | --- |
+| ↑ / ↓ | move between visible rows | same |
+| → | expand | (nothing) |
+| ← | collapse, or move to parent | move to parent |
+| Enter / Space | expand or collapse | **activate the editor** (or toggle a flag) |
+| Enter *while editing* | — | save, focus returns to the row |
+| Escape *while editing* | — | cancel, focus returns to the row |
+| Escape | dismiss the picker | dismiss the picker |
+
+Returning focus to the row after save/cancel is the one piece `useFieldEdit`
+does not already do — it owns the input's lifecycle, not the tree's.
+
+### 5. Verification battery, then commit
 
 ## Verification
 
-1. `npm run typecheck`, `npm run lint`, `npm run test` → green. Canaries:
-   `kindCoherence`, `placement`, `nodeLikeKinds`, `configElements` (step 1 touches
-   the mirrors those assert on).
-2. **Dev boot** (`npm run dev`, offline or `?emulator=true` — never production
-   Firestore):
-   - `+ New Field Definition` is the picker's first row and reachable by arrow keys.
-   - Author a **text-kv** — generic rows (max length, multiline checkbox,
-     placeholder, max words). Save → the Definition appears *and* an unfilled
-     field of it lands on the card in one motion, with the usual toast.
-   - Author a **number-kv** — the rich ConfigForm, threshold chain validated,
-     Save blocked while a chain is broken.
-   - Author an **enum-kv** — options list, and the default select constrained to
-     the options entered.
-   - Dismiss mid-authoring → nothing written; reopen → a clean draft.
-   - Expand a field's details: History open with entries, Config collapsed and
-     inert with the Definition named as source, Tools holding Delete.
-   - Expand an `external-link` field → **no Config section at all**, not an empty one.
-3. **Regression:** the Phase I flows still work — pick, multi-pick coalescing,
-   the config peek, Escape, roving focus.
-4. Cypress `core-loop.cy.ts` still green.
+1. `npm run typecheck`, `npm run lint`, `npm run test` → green. New tests from
+   step 1; `configElements` is the canary that storage is untouched.
+2. **Dev boot** (offline or `?emulator=true`, never production Firestore):
+   - `+ New Field Definition` expands to six kind rows; each expands to its own
+     config as rows.
+   - **Text**: name + four scalar rows, no groups. Create → the Definition
+     appears *and* an unfilled field of it lands on the card in one motion.
+   - **Number**: `Display & nominal` and `Alarms & freshness` as nested group
+     rows; `Thresholds` nests one deeper into four member rows; a broken chain
+     blocks Create with one error line; `currencyCode` appears only when
+     `displayFormat` is currency; `nominalMode` swaps which nominal rows show.
+   - **Enum**: options as a list row with add/remove; the default row constrained
+     to the options entered.
+   - Expand Number, then Text — no config carries across.
+   - Collapse mid-authoring → draft discarded, nothing written.
+3. **Keyboard**: arrows traverse kinds → config groups → compound members;
+   Enter on a leaf opens its editor and Enter saves it, exactly as double-tapping
+   a DataField value does; Escape cancels; focus lands back on the row both
+   times. Arrows move the caret while an editor is open and the tree when it
+   isn't — confirm the handoff both ways.
+4. **Regression**: Phase I picking, multi-pick coalescing, the config peek,
+   and Field Details (`32438db`) all still work.
 
 ## Out of scope
 
-Reordering, the cascade arbiter (and therefore *editable* config on an
-instance), the tree switcher / Library view, and Definition editing —
-authoring only ever adds (SPEC → Edit / Delete Semantics).
+Editing an existing Definition (authoring only ever adds), the cascade arbiter,
+reordering, and the tree switcher. `ConfigForm` and the four config forms stay
+on disk, wired but unread by this surface.
 
 ## Project Context Management
 
 After the coding work is believed complete, ask the user to run the Verification
 steps. **Only if the user confirms it works:**
 
-1. **docs/ISSUES.md** — delete #8 (`mintVia` rename, done in step 1) and #10
-   (read-only config, decided and built). Renumber.
-2. **docs/IMPLEMENTATION.md** — notes in the bulleted voice: `ConfigForm` as an
-   optional override and what earns one; the draft-bound generic rows vs
-   Element-bound config, and why authoring cannot use Elements; the Field
-   Details section list and that stacking is deliberately swappable.
-3. **docs/SPECIFICATION.md** — if the hand-test settles *Stacking is open*,
-   replace that subsection with the decision. That is the one spec edit Phase II
-   is expected to earn.
+1. **docs/SPECIFICATION.md** — the *Authoring a Definition* section currently
+   describes a kind picker, a label input and a ConfigForm override. Rewrite it
+   as the tree, and retire the "ConfigForm is an override earned by cross-field
+   invariants" rule — invariants are validation now, not a component. Retired
+   text to SUPERSEDED.md.
+2. **docs/ISSUES.md** — delete #10 (read-only config, settled by `ConfigSummary`).
+   File that `ConfigForm` is now unread by any live surface.
+3. **docs/IMPLEMENTATION.md** — the three schema additions and why nesting is
+   data; the draft-per-kind-row rule; the DOM-node-not-index focus fix.
 4. **docs/LATER.md** — whatever the hand-test defers.
