@@ -16,8 +16,7 @@
 
 import { For, Show, createEffect, createResource, createSignal, type Accessor } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
-import { useElementChildren } from '../../hooks/useElementChildren';
-import { getInlineManifest } from '../../kinds/registry';
+import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
 import { isInline } from '../../kinds/placement';
 import type { Definition, Kind } from '../../data/models';
 import styles from './AddFieldSurface.module.css';
@@ -31,40 +30,6 @@ export type LibraryPickerProps = {
 /** Sentinel for a failed fetch — `createResource` has no rejected branch, so the
  *  fetcher catches and the render distinguishes failure from an empty Library. */
 const FAILED = Symbol('failed');
-
-/**
- * A Definition's config, read from its child sub-field Elements — config *is*
- * Elements, so the peek reads the subtree rather than an assembled blob.
- *
- * Values are drawn with each kind's `displayPreview`, **not** its `Renderer`.
- * A Renderer is the editable surface: mounting `TextKvField` here would make a
- * Definition's `placeholder` double-tap editable inside a picker, which is wrong
- * for a peek and wrong for Phase 1, where config is delegated and read-only
- * until the cascade arbiter exists (SPEC → Field Details).
- */
-const ConfigPeek = (props: { definitionId: string }) => {
-    const { children: subFields } = useElementChildren(() => props.definitionId, 'fields');
-
-    return (
-        <div class={styles.peek} role="group">
-            <Show
-                when={subFields().length > 0}
-                fallback={<span class={styles.peekEmpty}>No configuration</span>}
-            >
-                <For each={subFields()}>
-                    {(sub) => (
-                        <div class={styles.peekRow}>
-                            <span class={styles.peekLabel}>{sub.name}</span>
-                            <span class={styles.peekValue}>
-                                {getInlineManifest(sub.kind).displayPreview(sub.value) ?? '—'}
-                            </span>
-                        </div>
-                    )}
-                </For>
-            </Show>
-        </div>
-    );
-};
 
 type DefinitionRowProps = {
     definition: Definition;
@@ -143,7 +108,9 @@ const DefinitionRow = (props: DefinitionRowProps) => {
                 </button>
             </div>
             <Show when={expanded()}>
-                <ConfigPeek definitionId={props.definition.id} />
+                <div class={styles.peek}>
+                    <ConfigSummary definitionId={props.definition.id} />
+                </div>
             </Show>
         </div>
     );

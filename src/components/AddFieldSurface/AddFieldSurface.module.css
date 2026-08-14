@@ -128,31 +128,13 @@
     outline-offset: var(--focus-offset);
 }
 
-/* Config peek — indented to the chevron column so sub-fields sit under the
-   name they belong to. */
+/* Config peek — the picker owns only the indent, aligning sub-fields under the
+   name they belong to. The rows themselves are ConfigSummary's, shared with
+   Field Details so the two surfaces cannot drift. */
 .peek {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
     padding-left: calc(var(--chevron-col-width) + var(--space-2));
 }
 
-.peekRow {
-    display: flex;
-    gap: var(--space-2);
-    font-size: var(--text-xs);
-}
-
-.peekLabel {
-    color: var(--text-muted);
-    min-width: var(--label-width);
-}
-
-.peekValue {
-    color: var(--text-metadata);
-}
-
-.peekEmpty,
 .notice {
     font-size: var(--text-xs);
     color: var(--text-placeholder);
