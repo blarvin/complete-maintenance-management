@@ -239,10 +239,20 @@ type ManifestIdentity = {
     // registry coherence test, which may not import a manifest. See that module.
     // ── Definition-authoring contract (placement-agnostic) ──────────────────
     // A kind that can carry a bound Definition declares how one is authored.
-    // Required for inline kinds (re-asserted on InlineManifest); optional for
-    // re-root — policy containers (logbook) carry it, leaf re-roots (node, job)
-    // don't. Read through `getDefinitionAuthoring` (registry.ts).
-    /** Authoring sub-form for a new Definition of this kind. */
+    // `defaultConfig` is what makes a kind authorable at all (re-asserted
+    // required on InlineManifest); leaf re-roots (node, job) omit it entirely.
+    // Read through `getDefinitionAuthoring` (registry.ts).
+    /**
+     * **Optional override** for authoring a new Definition of this kind.
+     *
+     * Absent is the normal case: the generic `ConfigDraftForm` builds rows from
+     * `configSchema`, so a kind whose config is a set of independent knobs needs
+     * no form at all. A kind earns a `ConfigForm` only by carrying **cross-field
+     * invariants a row list cannot express** — `number-kv` (the
+     * `lowLow ≤ low ≤ high ≤ highHigh` chain plus its conditional reveals) and
+     * `enum-kv` (`default` must be one of `options`, so the two cannot be
+     * authored as independent rows). See SPEC → Authoring a Definition.
+     */
     ConfigForm?: Component<ConfigFormProps>;
     /** Fresh default config at mint time. */
     defaultConfig?: () => DefinitionConfig;
@@ -259,13 +269,13 @@ type ManifestIdentity = {
  * Inline (field-like) kinds: drawn as a DataField row, authored via the Add Surface.
  * Carries everything the framework needs to render and author one field kind.
  * The Definition-authoring contract lives on ManifestIdentity (placement-
- * agnostic); it is re-asserted required here — every field kind is authorable.
+ * agnostic); `defaultConfig` is re-asserted required here — every field kind is
+ * authorable — while `ConfigForm` stays the optional override it is there.
  */
 export type InlineManifest = ManifestIdentity & {
     placement: 'inline';
     /** Value renderer (display + composer pendingMode). */
     Renderer: Component<FieldRendererProps>;
-    ConfigForm: Component<ConfigFormProps>;
     defaultConfig: () => DefinitionConfig;
     /** Uniform string preview of a value (null → null). Config is consulted by
      *  kinds whose display formatting depends on it (e.g. number-kv decimals /

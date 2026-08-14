@@ -126,7 +126,8 @@ export function getInlineManifest(kind: Kind): InlineManifest {
 
 /** The Definition-authoring contract a kind carries (placement-agnostic). */
 export type DefinitionAuthoring = {
-    ConfigForm: Component<ConfigFormProps>;
+    /** Per-kind override; **absent means the generic `ConfigDraftForm`**. */
+    ConfigForm?: Component<ConfigFormProps>;
     defaultConfig: () => DefinitionConfig;
     configSchema?: ConfigSubField[];
 };
@@ -137,10 +138,15 @@ export type DefinitionAuthoring = {
  * (`node`, `job`) return null. The placement-agnostic counterpart to
  * `getInlineManifest` for the authoring hooks (map #7b: the contract is no
  * longer welded to `placement: 'inline'`).
+ *
+ * **`defaultConfig` alone decides authorability.** This used to gate on
+ * `ConfigForm` too, which was incidental — once a form became an optional
+ * override, that gate would have made every generic kind unauthorable and
+ * thrown out of `defaultConfigFor` (`useDefinitionDraft.ts`).
  */
 export function getDefinitionAuthoring(kind: Kind): DefinitionAuthoring | null {
     const manifest = getKindManifest(kind);
-    if (!manifest.ConfigForm || !manifest.defaultConfig) return null;
+    if (!manifest.defaultConfig) return null;
     return {
         ConfigForm: manifest.ConfigForm,
         defaultConfig: manifest.defaultConfig,
