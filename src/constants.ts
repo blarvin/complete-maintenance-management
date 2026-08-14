@@ -26,7 +26,7 @@ export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
  * the list empty there is no way to add a field to an existing node; new nodes
  * still get their defaults, which useNodeCreation seeds directly.
  */
-export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = []; // 'picker' or 'composer' or both
+export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = []; // 'legacy' or 'composer' or both
  
 /**
  * Max push attempts per sync queue item before it's parked as exhausted
