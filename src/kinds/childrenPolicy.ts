@@ -46,3 +46,22 @@ const LENS_TARGET_KINDS: ReadonlySet<Kind> = new Set(
 
 /** Whether a kind is surfaced in a lens (so hidden from the tree + trimmed from the picker). */
 export const isLensSurfaced = (kind: Kind): boolean => LENS_TARGET_KINDS.has(kind);
+
+/**
+ * Whether a kind keeps a value of its own worth a history stream — `OwnValue`
+ * (a stored value) or `Edges` (a stored target). Read by Field Details to
+ * entail its History section (SPEC → Field Details).
+ *
+ * Currently true for every inline kind; the first pure `Derivation` field kind
+ * (`asset-gallery`, which stores nothing and is by definition never in history)
+ * is what gives it something to exclude.
+ *
+ * Lives here for the `capsOf` cast — `KIND_CAPABILITIES` is a union of literal
+ * shapes, so a bare indexed access has no `ownValue` on the arms that lack it.
+ * (This module has outgrown its name: it is the component-free capability
+ * predicates, of which the children ones are merely the first.)
+ */
+export const storesOwnValue = (kind: Kind): boolean => {
+    const caps = capsOf(kind);
+    return !!caps.ownValue || !!caps.edges;
+};
