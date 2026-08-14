@@ -1,8 +1,8 @@
 /**
  * nodeRenderMode — the one registry-side derivation of how a re-root kind's
  * content region renders, from its Derivation/Provision capability combination
- * (IMPLEMENTATION.md → *#9 — `renderMode.ts` is a fifth component-free
- * selector*). The component-free mirror pattern of
+ * (IMPLEMENTATION.md → *`renderMode.ts` is a fifth component-free selector*).
+ * The component-free mirror pattern of
  * `placement.ts`/`childrenPolicy.ts`: reads `KIND_CAPABILITIES`, imports no
  * renderer components, so tests and the storage layer can branch on it.
  *
