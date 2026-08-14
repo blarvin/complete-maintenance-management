@@ -9,3 +9,4 @@
 - [jCodeMunch watcher setup](jcodemunch-watcher-setup.md) — Startup .cmd runs the watcher at logon; needs --with watchfiles, schtasks is denied
 - [Next branch: tree-native Field UI](next-branch-tree-native-field-ui.md) — composer + legacy add-field get replaced; [Fields UI]-tagged issues are parked
 - [Fix obvious doc prose errors](fix-obvious-doc-prose-errors.md) — repair mangled pastes and stale claims directly; report, don't ask
+- [Config tree sketches](config-tree-sketches.md) — the six ASCII wireframes: published page + transcript id, and how to recover diagrams from past sessions

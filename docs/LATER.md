@@ -31,7 +31,6 @@ The storage stack is fully unified end-to-end, including the Dexie v8 store-drop
 - **Renderer registry — now decided, build tracked in ISSUES.md** — The registry/manifest model is settled (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md): generalizing the key to full `Kind` incl. `node`, the `placement` field, `treeType` (the old `nature: data | reference`), and a manifest home for default-field-set knowledge are migration work items, not deferrals. (`Kind` itself is now registry-derived — done 2026-06-26.) Still genuinely deferred: the full `src/kinds/<kind>/` vertical-slice file move + `src/framework/` split, and lazy renderer loading for heavy kinds (canvas/video/iframe) — both wait on a second non-field surface forcing them.
 - **History `property` enum evolution path** — Phase 2 computed values / reference edges will expand the enum beyond `{value, name, subtitle, parentId, siblingOrder}`. Leave the slot open.
 - **Fractional `siblingOrder` keys** — Current policy is renumber-the-run on midpoint insert. If pathological cost shows up at scale, swap to fractional keys.
-- **Composer discard → real command** — `FieldComposer` cancel rides `commitWithUndo` via a no-throw `execute$` (discard) + restore-callback undo, so its error branch is inert. When draft discard becomes a real command (e.g. `DISCARD_DRAFT`), it slots into the standard command/inverse path and the dead branch goes live.
 - **Drop the `usePendingForms` auto-save backstop** — Persistence is now write-through in `setPendingValue$`/`togglePending$` (audit §2.5). The old reactive `useTask$` auto-save was removed; if write-through proves fully sufficient in practice, no action — this note just records that the backstop is gone intentionally.
 
 ### Config-as-Elements — remaining items
@@ -42,13 +41,13 @@ The blob is retired and config lives as a `library`-tree sub-field subtree (done
 - **Disposition honoring (cascade arbiter)** — `owned`/`delegated`/`pinned` is **encoded** on each `ConfigSubField` but nothing acts on it; everything reads live from the Definition. Copy-at-mint for `owned` and override-disable for `pinned` are the cascade arbiter's job (ISSUES Architecture Migration #4). Until then, edit-is-fork (new `definitionId`) already prevents a Definition change from rewriting existing instances.
 - **Per-sub-field reactive signals** — renderers assemble the whole config object on read via `getDefinitionById` (a `useResource$` keyed on `definitionId`). Live propagation of an individual Definition sub-field edit into mounted instances is unneeded in Phase 1 (no Definition-edit UI; fork-not-mutate). Revisit if/when Definitions become live-editable.
 - **enum-kv `options` as repeatable child Elements** — modeled as one `string-list` value for now. The SPEC's "repeatable data = many children" (ChildrenSpec cardinality `many`) is the eventual shape; deferred until cardinality machinery exists.
-- **Config-only kinds excluded from the picker via `mintVia`** — `FIELD_KINDS` filters `mintVia === 'composer'`. If a richer authoring surface ever needs to offer a config-only kind directly, revisit.
+- **Config-only kinds excluded from the picker via `mintVia`** — `FIELD_KINDS` filters on the add-surface `mintVia` value. If a richer authoring surface ever needs to offer a config-only kind directly, revisit. (Note the value itself is renamed `'composer'` → `'add-surface'` with the Add Surface build — ISSUES.)
 
 ### Definition-binding seam — remaining items
 
 The seam landed 2026-07-01 (full `fieldDefinitionId → definitionId` type-family rename, placement-agnostic authoring contract, logbook's seeded policy Definition stamped at mint — IMPLEMENTATION.md → *Definition-binding seam*). Deliberately out of scope that cluster:
 
-- **Re-root Definition authoring UI** — `LogbookConfigForm` exists (the lifted contract's first re-root instance) but nothing mounts it; the only logbook policy is the seed. The composer's authoring form is a *field* surface. **Where it mounts is now decided** (2026-08-14): on the lens's own DataCard, which already renders (`TreeNodeDisplay.tsx` — `ownsChildren() || isLens()`) — not in node details, not in a Library view, and deliberately *not* as a step in node creation, since lenses are created rarely and a nag step in the common path is the wrong trade. See UI/UX → *Config-tree UI*.
+- **Re-root Definition authoring UI** — `LogbookConfigForm` exists (the lifted contract's first re-root instance) but nothing mounts it; the only logbook policy is the seed. The Add Surface's authoring row is a *field* surface. **Where it mounts is now decided** (2026-08-14): on the lens's own DataCard, which already renders (`TreeNodeDisplay.tsx` — `ownsChildren() || isLens()`) — not in node details, not in a Library view, and deliberately *not* as a step in node creation, since lenses are created rarely and a nag step in the common path is the wrong trade. See UI/UX → *Config-tree UI*.
 - **`definitionId` → internal revision-pinned Edge (the #7 end-state)** — the column stays the binding + version pointer for now; the principled retirement models the instance→Definition link with the `internal-link` Edge machinery (internal scope, revision pin) once the Edges family (#6c) and the arbiter (#7) exist.
 - **A `jobs` policy Definition** — jobs deliberately ships unbound (proving re-root binding is optional). When jobs wants config (child label, priority scheme, job-subtype vocabulary), it binds through the identical seam: a `JOBS_CONFIG_SCHEMA`, a seed row, one `LENS_POLICY_DEFINITIONS` entry.
 - **Per-node policy variation + the config tree** — every `::logbook` lens binds the same seeded Definition today. Per-org/per-node policy (a different staleness on one subtree) is the cascade arbiter's job (#4), resolved through the `config` tree; the stamp-at-mint seam already supports pointing different lenses at different Definitions.
@@ -86,6 +85,7 @@ The format is the existing `SeedRow[]` plus three binding maps — `serializeCon
 - **Pack ids need a namespace** so two packs cannot collide. Author ids in the file; never generate them.
 - **Boot ordering.** `provisionPolicy.ts` must stay component-free and sync-readable (`handlers.ts` imports it and cannot pull the registry), so a fetched pack must be fully loaded before the first mint. `initStorage.ts` currently seeds *after* the command bus initialises.
 - **A failed fetch must not degrade silently.** `handlers.ts` stamps lens policy only if resolvable; with a fetched pack, that guard becomes the path a fetch failure takes, minting unbound lenses. Bundled fallback; never boot packless.
+- **Grouping the Library by pack provenance hits the same blocker as categories.** The export sketch groups the Library into "From: <pack>" and "Authored here" — which, like `category` grouping, needs a Definition to sit *under* something. `parentId === null` is currently the storage layer's test for "is a Definition" (`IDBAdapter.listDefinitions`), so both groupings are blocked on the same identity move, and whatever unblocks one unblocks the other. Noticed 2026-08-14 when the pack sketches and the Add Surface spec were read against each other.
 
 **Forcing kinds** (surfaced by sketching the UI, 2026-08-14):
 
@@ -202,10 +202,10 @@ The Phase-1 model is "authoring is contributing": one global pool, all FieldDefi
 
 - **`componentVersion` field** on FieldDefinition (per-FieldComponent contract versioning) — only relevant once FieldComponent config schemas evolve.
 - **User-facing edit & delete of FieldDefinitions** with real ownership rules ("you can delete / edit your own"). Phase-1 edit semantics are "edit = fork → mint new FieldDefinition"; delete is admin-only via direct Firestore writes.
-- **Label uniqueness, dedup, merge flows** — Phase 1 allows duplicate labels; the Composer's live-preview row is the disambiguation affordance.
-- **Composer discovery UX**: typeahead filter, `category` grouping into collapsible sections, dropdown-flip behaviour, popularity ranking, "recently added" sort.
+- **Label uniqueness, dedup, merge flows** — Phase 1 allows duplicate labels; the picker's expandable config peek is the disambiguation affordance.
+- **Picker discovery UX**: typeahead filter, popularity ranking, "recently added" sort. `category` grouping is **blocked, not merely deferred** — `parentId === null` is the storage layer's test for "is a Definition" (`IDBAdapter.listDefinitions`), so a Definition cannot sit under a category node until that identity test moves. Observed 2026-08-14 while speccing the Add Surface.
 - **Moderation / promotion to canonical** for crowdsourced entries — flagged-content workflow, dev curation.
-- **Dedicated Library view** (a TreeNode stack under the app's main menu) for browsing / managing FieldDefinitions outside the Composer.
+- **Dedicated Library view** (a TreeNode stack under the app's main menu) for browsing / managing FieldDefinitions outside the picker — and the only place a Definition ever becomes *editable*, since the picker only ever adds.
 - **Templates (composite sets of FieldDefinitions)** — e.g. "HPU with Accumulator". The reserved word "Template" is mortgaged for this future feature; distinct, larger scope than the FieldDefinition Library itself. Note the adjacency to *Definition Packs*: same data shape, different verb — a pack **populates the Library**, a Template **applies to a node**. Keep the word free, and keep the pack file format clean enough that Templates can reuse it.
 - **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md).
 - **Orphaned-blob GC** — needed once blobs are in play.
@@ -221,10 +221,6 @@ Media upload, preview, storage, and caching are out of scope for Phase 1. All fi
 ### DataField Reordering UI
 
 Spec calls for user-driven reordering within a DataCard (SPECIFICATION.md §DataField Reordering). UX TBD — drag handle, up/down buttons, or long-press + drag. Writes go through the adapter. This is the point at which persisted gaps from deletions get compacted. Algorithm note (a `computeCardOrderUpdates` helper existed at `src/data/utils/cardOrder.ts` until 2026-06-10, deleted as speculative): sort fields by current order, walk the run assigning sequential orders, and emit `{id, cardOrder}` updates only for rows whose order actually changes — minimal writes, stable for already-ordered input.
-
-### ComposerRow check/uncheck slide-in animation
-
-Spec (`§Field Composer → Layout`) calls for a ~200ms transition on the body when a row is checked/unchecked. The DataCard grid-template-rows trick doesn't compose with the existing kvField renderers (they wrap with `display: contents` so they can position into the FieldList subgrid, which can't be animated). Either flatten the kvField output for the composer (extra wrapper component per kind), or split the body into an animatable container that the kvField writes into. Until then the row's body appears/disappears immediately; the checkbox is still anchored in view via `scrollIntoView({ block: 'nearest' })` after toggle.
 
 ### cardOrder Compaction on Delete
 
@@ -242,20 +238,13 @@ Phase 1 creation is minimal (Name + Subtitle); fields added post-creation from t
 
 **`typeOf` → suggested-fields service** — the behaviour-free domain typology (SPECIFICATION.md §584; ELEMENT-MODEL.md → What is *not* a kind) ships as forkable seed `typeOf` data (tag + default field bundle), read by **one generic service** that suggests fields from a node's `typeOf` during construction. The tag half exists (seeded `fd_type_of`, added at node mint); unbuilt are the seed bundles and the suggestion service itself. This is the mechanism that would populate the Rich Construction UI's default rows. (Node-*kind* choice in the create surface is separate and already shipped — the picker reads `reRootCreateKindsFor`.)
 
-### Add-Field Surface A/B
-
-Both add-field surfaces (FieldComposer and the legacy `CreateDataField` single-pick dropdown) ship side by side as a deliberate A/B experiment, coordinated by the `ActiveSurface` mutex and the `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts` (audit item 2.7, resolved as keep-both). Deferred:
-
-- **More surface variants** — follow the contract in `src/components/FieldList/addFieldSurfaces.ts` (add id to `AddFieldSurfaceId`, build to contract, add to roster, render in FieldList).
-- **Winner picking** — eventually decide which surface(s) earn their keep and delete the losers (component + CSS + roster entry + union member).
-
 ### Config-tree UI (the tree *is* the settings screen)
 
 Decided in discussion 2026-08-14, alongside Data Model → *Definition Packs*. `config` is already a `treeType`, and the cascade already models config layers as "prefs being Fields on a Node" (SPECIFICATION.md §609). So the config UI is the existing TreeNode / DataCard / FieldList renderers pointed at a different tree — one FSM state parameterised by `treeType`, not a new view layer. The same switcher also delivers the long-deferred **dedicated Library view** (above) as a side effect.
 
 - **Tree switcher on the ROOT view** — Assets / Config / Library.
 - **`App Defaults` as an ordinary node** whose fields are the bindings. `New Node Fields` is a container whose children are references to Definitions, so dragging to reorder *is* reordering the fields every new node is born with — `siblingOrder` already means that. No new interaction primitives.
-- **The lock is a link.** Construction defaults render as locked checked rows (SPECIFICATION.md §298) with no explanation. Make the lock tappable and it navigates to the config node that set it: locked *here*, editable *there*. Worth more than the explanation — it **defers permissions**, because "who may change this" becomes a property of the place you land rather than a role check at the lock. The authoring side eventually picks among options (Default / Locked Default / Manager-Locked Default / …).
+- **Provenance is a link.** A default field arrives with no account of why it is there. Give it a tappable source and it navigates to the config node that set it: set *there*, used *here*. Worth more than an explanation — it **defers permissions**, because "who may change this" becomes a property of the place you land rather than a role check at the field. The authoring side eventually picks among options (Default / Locked Default / Manager-Locked Default / …). (Reframed 2026-08-14: the old version hung this on the composer's *locked checked rows*, which no longer exist — the defaults are now ordinary fields, so the affordance is provenance rather than a lock. Same destination, and it now serves the Field Details config rows too.)
 - **Lens policy overrides on the lens's own DataCard** — see *Definition-binding seam → Re-root Definition authoring UI*, whose open UX question this answers.
 - **Inherited-value chrome** — ghosted value + source chip + tap-to-override + revert-to-inherited. One widget serves all three cascade jobs (business inheritance, Definition specificity, config). Needs the arbiter, and needs "this value is delegated" to be *manifest-readable* rather than inferred, since chrome entailment runs one way (SPECIFICATION.md §626).
 

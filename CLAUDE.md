@@ -28,6 +28,10 @@ and offer to defer it to `docs/LATER.md` rather than building it.
    future reader asks "why is it like this?" and the answer isn't in the code.
 4. **docs/ISSUES.md** — the active work queue; everything that needs doing now.
 5. **docs/LATER.md** — whole ideas not yet begun, and Phase 2+ work.
+6. **docs/SUPERSEDED.md** — spec text **removed** from SPEC or LATER, kept
+   verbatim because its reasoning was real. **Nothing here is current**: never
+   cite it as what the app does or should do, and never resolve a question from
+   it. Read-only history; append newest at the bottom.
 
 **ISSUES vs LATER**: unfinished business, deferred *parts* of work already
 begun, and observed refactor needs go in **ISSUES**. **LATER** is for whole
