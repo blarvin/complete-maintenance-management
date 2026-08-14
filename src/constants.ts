@@ -25,7 +25,7 @@ export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
  * side in the running app, which is why the new surface shipped as a roster
  * entry rather than a replacement.
  *
- * They are deleted, along with this roster, once the new surface is settled
+ * They can be deleted, along with this roster, once the new surface is settled
  * (ISSUES → Tech Debt). Until then this line is the whole switch.
  */
 export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [

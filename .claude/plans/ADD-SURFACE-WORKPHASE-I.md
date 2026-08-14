@@ -217,9 +217,13 @@ is a stated quality bar (SPEC → Keyboard & Accessibility).
 
 ## Out of scope
 
-Authoring a Definition, Field Details as History/Config/Tools, reordering, the
-`mintVia: 'composer'` rename (ISSUES #8), and deleting the composer stack
-(ISSUES #10) — Phases II and III.
+Authoring a Definition, Field Details as History/Config/Tools, reordering, and
+the `mintVia: 'composer'` rename (ISSUES #8) — Phase II.
+
+**There is no Phase III.** The plan originally ended by deleting the composer
+stack; that is now a standing option rather than a scheduled step (ISSUES #11).
+The surfaces are dormant and restorable, and nothing about Phase I obliges
+removing them.
 
 ## Project Context Management
 

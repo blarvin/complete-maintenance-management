@@ -530,9 +530,29 @@ The `save$` flow: parse → validate (if provided) → `getCommandBus().execute(
 
 ### Add-Field Surfaces: A/B Roster + Mutex
 
-**Pattern**: FieldList hosts multiple "add field" UX surfaces side by side as a deliberate A/B comparison (currently `FieldComposerSlot` and the legacy `CreateDataField` dropdown; more variants planned). Which surfaces render in display mode is controlled by the `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts` — adding/removing a surface is a roster edit, not new conditional logic.
+**Pattern**: FieldList hosts multiple "add field" UX surfaces side by side, controlled by the `ENABLED_ADD_FIELD_SURFACES` roster in `src/constants.ts` — adding or removing a surface is a roster edit, not new conditional logic.
 
-Coordination is a single parent-owned mutex signal: `useSignal<ActiveSurface>('none')` in FieldList. Each surface is open iff `activeSurface.value === <its own id>`, opens by writing its own id, closes by writing `'none'` — last writer wins, so opening any surface implicitly closes the rest, and that property holds for any number of surfaces. The `ActiveSurface` / `AddFieldSurfaceId` types and the full surface contract (including the post-persist reload callback) live in `src/components/FieldList/addFieldSurfaces.ts`, deliberately neutral ground so no surface imports from a competitor. Construction mode bypasses the roster: the composer is always rendered there (locked-defaults flow requires it) and ignores the mutex.
+Coordination is a single parent-owned mutex signal in FieldList. Each surface is open iff `activeSurface() === <its own id>`, opens by writing its own id, closes by writing `'none'` — last writer wins, so opening any surface implicitly closes the rest, and that property holds for any number of surfaces. The `ActiveSurface` / `AddFieldSurfaceId` types and the surface contract live in `src/components/FieldList/addFieldSurfaces.ts`, deliberately neutral ground so no surface imports from a competitor.
+
+**The roster outlived the experiment it was built for.** The original A/B (composer vs. the legacy dropdown) was resolved by retiring both, but the mechanism is what let the tree-native `AddFieldSurface` ship *alongside* them and be compared in the running app before either was deleted — a live comparison being worth considerably more than reading the old code afterwards. The roster and both losers go together once the new surface is settled.
+
+---
+
+### The Add Surface (2026-08-14)
+
+**Entailed, not declared.** It renders iff `allowedChildKinds(kind) ∩ FIELD_KINDS` is non-empty — the first real consumer of the allowlist for *inline* children (the node-create picker was the first for re-root ones). A kind with no `children` capability yields `[]` and gets no create affordance, which is the same rule that leaves a content-free lens with no "Add". Construction is excluded separately: the node has no row in storage yet, so nothing can be parented to it, and its defaults ride the creation transaction instead.
+
+**Picking is the commit.** `CREATE_ELEMENT_FROM_DEFINITION` fires on pick and the row is the field — no pending draft, no preview. The preview a picker would otherwise need is a second rendering path obliged to imitate the first, which is where the two drift; deleting it is most of what makes this surface smaller than the composer it replaces.
+
+**`siblingOrder` is counted locally, not re-derived.** The counter is seeded from the max when the picker opens and incremented per pick. Re-reading `fields()` each time looks equivalent but isn't: it reloads asynchronously off the storage bus, so two quick picks both read the same max and collide.
+
+**The config peek uses `displayPreview`, not each kind's `Renderer`.** A Renderer *is* the editable surface — mounting `TextKvField` for a Definition's `placeholder` would make it double-tap editable inside a picker. `displayPreview` is read-only by construction. Note the same hole exists in SPEC's Field Details section, which still says the Config region draws rows "by their own kinds' Renderers" (ISSUES).
+
+**`pick()` deliberately bypasses `commitWithUndo`.** That helper models one action with one inverse; here the inverse accumulates across a coalesced run, so the batch has to be extended *before* the message and action are built. Routing it through anyway would mean mutating state inside a message builder. The error branch still goes through `describeForUser(toStorageError(err))`, so it matches every other command site.
+
+**Focus roves on the row, not the controls.** The row is the `treeitem` and the tab stop; the chevron and name stay clickable at `tabIndex={-1}`. Otherwise Tab walks two controls per Definition. Rows are located with `querySelectorAll('[role="treeitem"]')` rather than a ref array, because `<For>` recycles nodes and a ref array needs invalidation the query doesn't.
+
+**`Snackbar.coalesceKey` exists because the Snackbar is single-slot.** A `show()` whose key matches the visible toast extends it — same toast id, new message and action, timer restarted — instead of replacing it; without it, three picks would leave only the third undoable. Keeping the *id* is the load-bearing part rather than a detail: `SnackbarHost` renders `<Show keyed>`, so accumulating caller-side and re-`show()`ing would work but would remount and re-animate the toast on every pick. Two `undefined` keys deliberately never match. `onExpire` ends the run (its first consumer in the app); an unrelated toast replacing the run's toast leaves the batch standing, which is commented in place and costs at most an Undo that reverses more than the last toast showed.
 
 ---
 
