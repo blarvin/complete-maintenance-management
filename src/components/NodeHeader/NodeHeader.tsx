@@ -96,8 +96,8 @@ export const NodeHeader = (props: NodeHeaderProps) => {
                         when={props.isConstruction}
                         fallback={
                             <>
-                                <NodeTitle nodeName={props.name} id={props.titleId} />
-                                <NodeSubtitle nodeSubtitle={props.subtitle} />
+                                <NodeTitle name={props.name} id={props.titleId} />
+                                <NodeSubtitle subtitle={props.subtitle} />
                                 {/* Manifest-driven meta in the subtitle slot: org count / jobs rollup (#6b). */}
                                 <KindAdornment id={props.id} isParent={!!props.isParent} />
                             </>
