@@ -323,23 +323,25 @@ Orchestrator picks sub-component based on state.
 
 ### CQRS: Command/Query Responsibility Segregation
 
-**Status:** Accepted, but the **examples below use pre-Element vocabulary that no longer exists in `src/`** — `getNodeQueries()`, `getFieldQueries()`, `listRootNodes()`, `DELETE_NODE` all return zero hits. Read them as shape-only; the live names are `getElementQueries()` / `getDefinitionQueries()` and the element-shaped command types. Worth a rewrite pass.
+**Status:** Accepted.
 
-**Pattern**: Thin CommandBus dispatcher + separate query interfaces. Not a full mediator — no middleware, no logging pipeline (yet).
+**Pattern**: Thin CommandBus dispatcher + two query interfaces. Not a full mediator — no middleware, no logging pipeline (yet).
 
-**Write path**: UI hooks call `getCommandBus().execute({ type: 'DELETE_NODE', payload: { id } })`. The CommandBus routes to a handler registered in `src/data/commands/handlers.ts`. Handlers call `StorageAdapter` methods directly.
+**Write path**: UI calls `getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id } })`. The bus routes to a handler registered in `src/data/commands/handlers.ts`, which calls `StorageAdapter` methods directly. The command set is one union in `commands/types.ts`: `CREATE_DEFINITION`, `CREATE_ELEMENT`, `CREATE_ELEMENT_FROM_DEFINITION`, three `UPDATE_ELEMENT_*` (name / subtitle / value), `MOVE_ELEMENT`, `DELETE_ELEMENT`, `RESTORE_ELEMENT`. There is deliberately **no `UPDATE_ELEMENT` catch-all**: name, subtitle and value are separate commands because each maps to a distinct `ElementHistory.property`, so the audit entry falls out of the command type instead of a diff.
 
-**Read path**: UI hooks call `getNodeQueries().getRootNodes()` or `getFieldQueries().getFieldsForNode(id)`. Query implementations in `src/data/queries/index.ts` unwrap `StorageResult<T>` from adapter methods.
+**Commands return typed results, so the bus is not void.** `CommandResultMap` pairs each type with its result — `Element` for `CREATE_ELEMENT` / `CREATE_ELEMENT_FROM_DEFINITION`, `Definition` for `CREATE_DEFINITION`, `void` for the rest — because `useDefinitionDraft` needs the minted Definition back to pre-check its composer row. That pairing is why `CommandBus.handlers` is a `Map<string, unknown>`: the map is heterogeneous, one cmd/result pair per entry, and no single parameterization is assignable to all of them (parameters are contravariant, results covariant — the two pull opposite ways). `register` is the typed gate on the way in; `execute` restores the type with the one cast on the way out.
 
-**Event emission stays in IDBAdapter**: The adapter emits `StorageEvent` after writes. The CommandBus doesn't emit events — it delegates to the adapter which handles events + sync queue. This means `applyRemoteUpdate` (sync pull path) still keeps the node index current without extra work.
+**Two handlers do more than delegate.** `CREATE_ELEMENT` calls `ensureProvisionedLenses` after the write — that is where a new node gets its Jobs and Logbook containers. `CREATE_ELEMENT_FROM_DEFINITION` resolves the Definition first and **snapshots `def.label` into the element's `name`**, so an instance keeps the label it was minted with and renaming a Definition never rewrites existing instances (the same fork-not-mutate rule `definitionId` encodes).
 
-**Node Index as Event Subscriber**: The in-memory `nodeIndex` (read model used by `getAncestorPath`) is updated exclusively via `nodeIndexSubscriber.ts`, which subscribes to `StorageEventBus`. Adapters no longer call `upsertNodeSummary`/`removeNodeSummary` directly. Local writes and remote sync updates both flow through the same event → subscriber path, so the index stays consistent without the write path "knowing" about the read model.
+**Read path**: `getElementQueries()` — `getRootElements`, `getElementById`, `getChildren`, `getChildrenByKind`, `getElementHistory`, `nextSiblingOrder`; and `getDefinitionQueries()` — `listDefinitions`, `getDefinitionById`, `getDefinitionByLabel`. Both are built from the adapter in `src/data/queries/index.ts`, and each method unwraps `StorageResult<T>` so callers see plain values. Definitions keep their own object even though a Definition *is* a `library`-tree Element, because the read shape differs: `Definition` is a projection carrying `label` + an assembled `config`. `getDefinitionByLabel` filters `listDefinitions()` in memory — there is no label index, which is fine while the Library is small.
 
-**Query layer reads from adapter directly**: No materialized views yet (beyond the existing `nodeIndex`). Queries delegate to `StorageAdapter.listRootNodes()`, etc., same as the old service layer did.
+**Event emission stays in IDBAdapter**: the adapter emits `StorageEvent` after writes. The bus emits nothing — it delegates to the adapter, which owns events *and* the sync queue. So `applyRemoteElement` (the sync pull path) keeps the node index current with the command layer not involved at all.
 
-**Initialization**: `initStorage.ts` calls `initializeCommandBus(idbAdapter)` and `initializeQueries(idbAdapter)` after creating the adapter, ensuring the command bus and queries share the same adapter instance that SyncManager uses.
+**Node Index as Event Subscriber**: the in-memory `nodeIndex` (the read model behind `getAncestorPath`) is updated exclusively via `nodeIndexSubscriber.ts`, which subscribes to `StorageEventBus`. Adapters never call `upsertNodeSummary` / `removeNodeSummary` themselves. Local writes and remote applies flow through the same event → subscriber path, so the index stays consistent without the write path knowing the read model exists.
 
-**Legacy service layer removed**: the old `INodeService` / `IFieldService` interfaces and `getNodeService()` / `getFieldService()` registry are gone — all reads/writes now flow through the command bus and query objects above. `CreateNodeInput` lives in `commands/types.ts`.
+**No materialized views** beyond `nodeIndex` — queries delegate straight to the adapter.
+
+**Initialization**: `initStorage.ts` calls `initializeCommandBus(idbAdapter)` then `initializeQueries(idbAdapter)`, so bus, queries and `SyncManager` share one adapter instance. Both getters throw when called before init rather than returning null — a null would surface as a confusing read failure much later instead of at the boot bug. `setCommandBus` / `setElementQueries` / `setDefinitionQueries` are the test seam for swapping in mocks, with `resetCommandBus` / `resetQueries` to tear them down.
 
 ---
 
