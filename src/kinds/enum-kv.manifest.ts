@@ -9,7 +9,7 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const enumKvManifest: KindManifest = {
     kind: 'enum-kv',
     pickerLabel: 'Enum',
-    mintVia: 'composer',
+    mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['enum-kv'], // capability subset — structural seam, not read yet
     Renderer: EnumKvField as unknown as Component<FieldRendererProps>,

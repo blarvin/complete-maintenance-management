@@ -111,7 +111,7 @@ export function getKindManifest(kind: Kind): KindManifest {
 
 /**
  * Narrowing accessor for the inline (field-like) consumers — DataField, the
- * composer, history, authoring — which only ever handle field kinds. Centralises
+ * the Add Surface, history, authoring — which only ever handle field kinds. Centralises
  * the placement assertion so callers see the full inline manifest surface
  * (Renderer / ConfigForm / defaultConfig / displayPreview / flags) without
  * hand-narrowing the union at every call site.
@@ -150,12 +150,12 @@ export function getDefinitionAuthoring(kind: Kind): DefinitionAuthoring | null {
 
 /**
  * Ordered kind list for the authoring-form segmented picker — the user-mintable
- * field kinds. Filters on `mintVia === 'composer'` so the config-only sub-field
+ * field kinds. Filters on `mintVia === 'add-surface'` so the config-only sub-field
  * kinds (`flag`/`compound`/`string-list`), though inline, never appear as a
  * choice for a new Definition.
  */
 export const FIELD_KINDS: Kind[] = Object.values(KIND_REGISTRY)
-    .filter((manifest) => manifest.mintVia === 'composer')
+    .filter((manifest) => manifest.mintVia === 'add-surface')
     .map((manifest) => manifest.kind);
 
 /**

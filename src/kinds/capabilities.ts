@@ -31,8 +31,8 @@ import { kindsMintedVia } from './mintVia';
  * `registry.ts` would be a cycle: registry → manifest → capabilities).
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/** Field kinds a user can author in the composer — what any container admits inline. */
-const FIELD_CHILD_KINDS: Kind[] = kindsMintedVia('composer');
+/** Field kinds a user can author in the Add Surface — what any container admits inline. */
+const FIELD_CHILD_KINDS: Kind[] = kindsMintedVia('add-surface');
 
 /** Everything an open physical container admits: creatable node kinds, then fields. */
 const CONTAINER_CHILD_KINDS: Kind[] = [...kindsMintedVia('node-create'), ...FIELD_CHILD_KINDS];

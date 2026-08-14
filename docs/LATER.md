@@ -41,7 +41,7 @@ The blob is retired and config lives as a `library`-tree sub-field subtree (done
 - **Disposition honoring (cascade arbiter)** — `owned`/`delegated`/`pinned` is **encoded** on each `ConfigSubField` but nothing acts on it; everything reads live from the Definition. Copy-at-mint for `owned` and override-disable for `pinned` are the cascade arbiter's job (ISSUES Architecture Migration #4). Until then, edit-is-fork (new `definitionId`) already prevents a Definition change from rewriting existing instances.
 - **Per-sub-field reactive signals** — renderers assemble the whole config object on read via `getDefinitionById` (a `useResource$` keyed on `definitionId`). Live propagation of an individual Definition sub-field edit into mounted instances is unneeded in Phase 1 (no Definition-edit UI; fork-not-mutate). Revisit if/when Definitions become live-editable.
 - **enum-kv `options` as repeatable child Elements** — modeled as one `string-list` value for now. The SPEC's "repeatable data = many children" (ChildrenSpec cardinality `many`) is the eventual shape; deferred until cardinality machinery exists.
-- **Config-only kinds excluded from the picker via `mintVia`** — `FIELD_KINDS` filters on the add-surface `mintVia` value. If a richer authoring surface ever needs to offer a config-only kind directly, revisit. (Note the value itself is renamed `'composer'` → `'add-surface'` with the Add Surface build — ISSUES.)
+- **Config-only kinds excluded from the picker via `mintVia`** — `FIELD_KINDS` filters on `mintVia === 'add-surface'`. If a richer authoring surface ever needs to offer a config-only kind directly, revisit.
 
 ### Definition-binding seam — remaining items
 

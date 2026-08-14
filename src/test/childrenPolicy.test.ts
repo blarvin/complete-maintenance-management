@@ -36,7 +36,7 @@ describe('allowedChildKinds', () => {
     // literal arrays, and a miss was silent. This fails instead.
     for (const parent of ['node', 'org'] as const) {
       const allowed = allowedChildKinds(parent);
-      for (const k of [...kindsMintedVia('node-create'), ...kindsMintedVia('composer')]) {
+      for (const k of [...kindsMintedVia('node-create'), ...kindsMintedVia('add-surface')]) {
         expect(allowed).toContain(k);
       }
     }

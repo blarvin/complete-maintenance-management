@@ -126,11 +126,15 @@ export type ValueSpec = {
  * Which create affordance offers this kind (SPEC §registry & manifest).
  * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
  * renderable but exist solely inside config subtrees — never offered as a new
- * Definition in the composer picker (which lists `composer` kinds only).
+ * Definition in the Add Surface's picker (which lists `add-surface` kinds only).
  * `provision` kinds (`jobs`/`logbook`) are materialized by the framework (the lens
  * provisioned per node), never offered in any user create affordance.
+ *
+ * `add-surface` was named `composer` until 2026-08-14, after the surface it
+ * described was retired. Not to be confused with `AddFieldSurfaceId` — that is
+ * *which* surface renders; this is *which affordance may mint this kind*.
  */
-export type MintVia = 'composer' | 'node-create' | 'config-only' | 'provision';
+export type MintVia = 'add-surface' | 'node-create' | 'config-only' | 'provision';
 
 /** `template` = fixed core; `open` = user-grown (always allowlist-constrained). */
 export type ChildrenMode = 'template' | 'open';
@@ -252,7 +256,7 @@ type ManifestIdentity = {
 } & CapabilitySet;
 
 /**
- * Inline (field-like) kinds: drawn as a DataField row, authored via the composer.
+ * Inline (field-like) kinds: drawn as a DataField row, authored via the Add Surface.
  * Carries everything the framework needs to render and author one field kind.
  * The Definition-authoring contract lives on ManifestIdentity (placement-
  * agnostic); it is re-asserted required here — every field kind is authorable.

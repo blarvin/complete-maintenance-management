@@ -21,7 +21,7 @@ import type { KindManifest } from './types';
 export const externalLinkManifest: KindManifest = {
     kind: 'external-link',
     pickerLabel: 'External Link',
-    mintVia: 'composer',
+    mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['external-link'],
     Renderer: ExternalLinkField,

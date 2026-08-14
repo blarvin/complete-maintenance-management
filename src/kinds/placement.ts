@@ -48,5 +48,5 @@ export const KIND_PLACEMENT = {
 /** A kind drawn as a navigable view (node-like): node, org, job, jobs, … */
 export const isReRoot = (kind: Kind): boolean => KIND_PLACEMENT[kind] === 're-root';
 
-/** A kind drawn as a DataField row (field-like), authored via the composer. */
+/** A kind drawn as a DataField row (field-like), authored via the Add Surface. */
 export const isInline = (kind: Kind): boolean => KIND_PLACEMENT[kind] === 'inline';
