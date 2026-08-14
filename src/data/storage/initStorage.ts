@@ -35,7 +35,7 @@ import { backfillProvisionedLenses } from '../services/provisionLenses';
  * Pinned on globalThis so it survives dev-server (Vite) module re-evaluation:
  * a re-instanced copy of this module would otherwise see `initPromise: null`
  * and re-run the full init — new SyncManager, duplicate bus subscriptions,
- * another startup syncFull — per edit-triggered reload (ISSUES Bugs #2).
+ * another startup syncFull — per edit-triggered reload.
  * Client-only state — the app is a client-only SPA with no server render.
  */
 type InitState = { initialized: boolean; initPromise: Promise<void> | null };
@@ -116,7 +116,8 @@ async function doInitializeStorage(): Promise<void> {
     initializeDevTools();
 
     // Trigger immediate full sync on startup if online. Purely a catch-up pull
-    // now — the full sync no longer purges local rows (ISSUES Bugs #4), so the
+    // now — the full sync no longer purges local rows (IMPLEMENTATION.md →
+    // *Retention over reconciliation*), so the
     // requeueFailed() above is an ordinary fresh-retry-budget call rather than
     // the load-bearing ordering it used to be.
     if (typeof navigator !== 'undefined' && navigator.onLine) {

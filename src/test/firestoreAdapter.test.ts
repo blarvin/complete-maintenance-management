@@ -16,7 +16,8 @@
  *    `import { db } from "../firebase"` binds to that and has no path to
  *    production.
  * 2. RUNNER HANG. The SDK opens a session it never closes, which wedged the
- *    runner after a green suite (ISSUES Tech Debt #1). `afterAll` terminates
+ *    runner after a green suite (IMPLEMENTATION.md → *No `globalSetup` —
+ *    deliberately*, 2026-08-11). `afterAll` terminates
  *    the instance and deletes the app.
  *
  * The emulator is wiped before each test: `pullAll*` reads whole collections,

@@ -20,7 +20,8 @@ import type { Definition, Element } from './models';
  * emits at all. But a remote apply is not a local change to push, and treating it
  * as one made every non-empty pull schedule another delta sync — an echo costing
  * a spare round-trip and, worse, a second unearned advance of the delta cursor
- * (which is local `now()` against server-stamped rows — see ISSUES Bugs).
+ * (which was local `now()` against server-stamped rows — IMPLEMENTATION.md →
+ * *The delta cursor is a high-water mark, not the clock*).
  *
  * Required, not optional: absence would default to `local` silently, and a new
  * remote-apply path that forgot the tag would quietly restore the echo. This way
@@ -31,7 +32,8 @@ export type EventOrigin = 'local' | 'remote';
 /**
  * Deletion is a soft delete throughout: it arrives as an ELEMENT_WRITTEN whose
  * element carries a non-null `deletedAt`. There is deliberately no hard-delete
- * event — no code path removes an element row (ISSUES Bugs #4, 2026-08-13).
+ * event — no code path removes an element row (IMPLEMENTATION.md → *Retention
+ * over reconciliation*, 2026-08-13).
  */
 export type StorageEvent =
   | { type: 'DEFINITION_WRITTEN'; origin: EventOrigin; definition: Pick<Definition, 'id' | 'deletedAt'> }

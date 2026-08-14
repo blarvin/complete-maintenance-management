@@ -100,7 +100,8 @@ export interface SyncableStorageAdapter extends StorageAdapter {
   applyRemoteElement(element: Element): Promise<void>;
   applyRemoteElementHistory(history: ElementHistory): Promise<void>;
   // No local hard-delete member, deliberately: sync pulls are additive and
-  // deletion is soft-delete only (ISSUES Bugs #4). See FullCollectionSync.
+  // deletion is soft-delete only (IMPLEMENTATION.md → *Retention over
+  // reconciliation*). See FullCollectionSync.
 }
 
 /**

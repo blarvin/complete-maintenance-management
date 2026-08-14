@@ -1,5 +1,5 @@
 /**
- * The history log converges (ISSUES Tech Debt #4).
+ * The history log converges (IMPLEMENTATION.md → *History ID Scheme*).
  *
  * `rev` is minted by reading *local* history for its max, which cannot see
  * another client. Two clients editing the same element offline both reached

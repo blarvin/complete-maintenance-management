@@ -2,8 +2,9 @@
  * Unit tests for FullCollectionSync retention.
  *
  * This file used to assert the *opposite* — that a full sync purges local rows
- * absent from the server, with an exemption carved out for the dev seeds (Bug
- * #1). The purge is gone (ISSUES Bugs #4): server absence could never
+ * absent from the server, with an exemption carved out for the dev seeds. The
+ * purge is gone (IMPLEMENTATION.md → *Retention over reconciliation*,
+ * 2026-08-13): server absence could never
  * distinguish "deleted on the server" from "never got there", so it could drop
  * the row whose push had permanently failed. Retention is the default now, and
  * these tests pin that: a full sync applies what the server has and removes

@@ -2,7 +2,8 @@
  * SyncTargetBadge — floating marker shown only when this session syncs against
  * the Firestore emulator.
  *
- * Scoping the Dexie database by sync target (ISSUES Bugs #1) stopped mode flips
+ * Scoping the Dexie database by sync target (IMPLEMENTATION.md → *One database
+ * per sync target*, 2026-08-11) stopped mode flips
  * from wiping data, but traded a loud symptom for a quiet one: each target now
  * has its own database, so the wrong target looks like a working app holding
  * unfamiliar data. This badge is what makes that state legible.

@@ -218,7 +218,8 @@ export class SyncManager {
    * It used to be `now()`, the local clock, compared by the next pull against
    * `updatedAt` values stamped by `serverTimestamp()` — a client running ahead
    * of the server wrote a cursor past rows it had never seen, and those rows
-   * stayed invisible until the next startup `syncFull()` (ISSUES Bugs #3).
+   * stayed invisible until the next startup `syncFull()` (IMPLEMENTATION.md →
+   * *The delta cursor is a high-water mark, not the clock*).
    *
    * A pull that returned nothing leaves the cursor alone. Advancing on an empty
    * window is what created the gap in the first place; re-querying it next
@@ -274,7 +275,7 @@ export class SyncManager {
  * Pinned on globalThis so it survives dev-server (Vite) module re-evaluation:
  * initializeSyncManager must stop the *live* manager, not a fresh module
  * copy's null — a leaked previous instance keeps its sync timer and online
- * listener running forever, giving concurrent sync loops (ISSUES Bugs #2).
+ * listener running forever, giving concurrent sync loops.
  */
 const holder = globalThis as typeof globalThis & { __cmmSyncManager?: SyncManager | null };
 

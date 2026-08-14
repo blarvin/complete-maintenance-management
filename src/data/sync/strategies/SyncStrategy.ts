@@ -15,7 +15,8 @@ export type SyncResult = {
    * lanes — `null` when it received none. The sync cursor is set from this, not
    * from the local clock: rows are stamped with `serverTimestamp()`, so a
    * client running ahead of the server used to write a cursor past rows it had
-   * never pulled (ISSUES Bugs #3). Elements and history share the one cursor,
+   * never pulled (IMPLEMENTATION.md → *The delta cursor is a high-water mark,
+   * not the clock*). Elements and history share the one cursor,
    * hence one mark spanning both.
    */
   highWaterMark: number | null;

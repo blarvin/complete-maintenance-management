@@ -22,7 +22,7 @@ function resolveSyncTarget(): SyncTarget {
     try {
         // localStorage — set by Cypress before page load, and the only way into
         // emulator mode in an installed PWA, whose `start_url` carries no query
-        // string (ISSUES Bugs #1).
+        // string (IMPLEMENTATION.md → *One database per sync target*).
         if (localStorage.getItem('USE_FIRESTORE_EMULATOR') === 'true') return 'emulator';
         // URL param — the manual-testing hatch on the dev server.
         if (new URLSearchParams(window.location.search).get('emulator') === 'true') return 'emulator';

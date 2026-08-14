@@ -85,7 +85,8 @@ export function initializeDevTools(): void {
    * This is the replacement for a workflow the sync layer used to provide by
    * accident: wipe the server, restart, and the full sync's purge would clear
    * the client to match. That purge is gone (retention is the default now —
-   * ISSUES Bugs #4), so resetting the client is an explicit local act. It never
+   * IMPLEMENTATION.md → *Retention over reconciliation*), so resetting the
+   * client is an explicit local act. It never
    * touches the server, which is the point: a local reset and a remote wipe are
    * different intentions and should be different commands.
    *

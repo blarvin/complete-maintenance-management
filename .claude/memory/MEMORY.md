@@ -8,3 +8,4 @@
 - [Two machines, git bash](two-machines-git-bash.md) — never hardcode absolute paths in checked-in config; CLAUDE_PROJECT_DIR arrives empty
 - [jCodeMunch watcher setup](jcodemunch-watcher-setup.md) — Startup .cmd runs the watcher at logon; needs --with watchfiles, schtasks is denied
 - [Next branch: tree-native Field UI](next-branch-tree-native-field-ui.md) — composer + legacy add-field get replaced; [Fields UI]-tagged issues are parked
+- [Fix obvious doc prose errors](fix-obvious-doc-prose-errors.md) — repair mangled pastes and stale claims directly; report, don't ask

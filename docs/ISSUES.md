@@ -21,8 +21,14 @@ parked until it lands rather than fixed twice.
 `[auto]` marks items the agent may take end-to-end without checking in — each is
 self-contained and verifiable by typecheck/lint/test. One commit per item, which
 also deletes the item from here. Agreed 2026-08-11; `git push` stays manual.
-Second batch tagged 2026-08-12 — Architecture #9, #10, #13–#16, #18, #19, each
-carrying the decision it was blocked on.
+Nothing carries the tag right now.
+
+**Don't cite item numbers from outside this file.** Items are deleted when done
+and the rest renumber, so an ordinal in a code comment or another doc rots the
+moment the work lands. Cite the stable bolded phrase in IMPLEMENTATION.md
+instead (`IMPLEMENTATION.md → *Retention over reconciliation*`), or the plain
+mechanism. Swept across `src/` 2026-08-14, when all 24 in-code pointers had gone
+stale or dangling.
 
 ---
 
@@ -36,7 +42,7 @@ carrying the decision it was blocked on.
 
 1.) **Node metadata in TreeNodeDetails** — show `createdAt`, last `updatedAt`, last `updatedBy`.
 
-2.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like
+2.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like DataFields? edit button?), then wire up. Nodes are rename-less after creation.
 
 3.) **[Fields UI] DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't.
 
@@ -78,7 +84,9 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 5.) **Element-vocabulary leaf-prop name polish** — `NodeTitle`/`NodeSubtitle` take `nodeName`/`nodeSubtitle`; the composer's `currentMaxCardOrder` keeps the `cardOrder` name (that half is `[Fields UI]`). Pure renames; do only if they bother someone.
 
-6.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky. DataFields? edit button?), then wire up. Nodes are rename-less after creation.
+6.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky. Untouched deliberately — code-splitting is a real decision, not a mop-up nicety: this is a route-less FSM app, so the natural seams are the kind renderers and the Firebase SDK. (Consolidated 2026-08-14 from a duplicate LATER entry under *PWA & Build*.)
 
-7.) **Dev seeds are scaffolding but boot like product** — `seedDefinitions` calls itself "dev-seeded" and `__wipeDefinitions` calls restoring them a "factory-default reset", yet three of the seven (Type Of, Description, Tags) are the construction defaults every new node gets, so seeding cannot simply move behind the dev gate without changing what a production node is born with. Decide whether those three are product content (and rename away from "dev seed") or whether construction defaults should come from somewhere else. Surfaced 2026-08-13 when the `appDeveloper` author id stopped serving sync policy — it now marks authorship only.
+7.) **Seed naming describes scaffolding, but the set is the app's default pack** — `seedDefinitions` says "dev-seeded" and `__wipeDefinitions` calls restoring them a "factory-default reset"; both read as throwaway, while the set is what every production node is born with. The underlying question ("are these product content?") was answered in discussion 2026-08-14 — neither, the *bindings* are the load-bearing part (LATER → *Definition Packs*). What's left here is comments plus the `__wipeDefinitions` console message; no behaviour change. Replaces the original TD #7 as posed.
+
+8.) **SPEC starter-Library table has drifted from `SEEDS`** — SPECIFICATION.md §456 lists 14 starter Definitions, `seedDefinitions.ts` ships 9, and neither is a subset of the other (spec-only: Location, Serial Number, Part Number, Manufacturer, Model, Installed Date, Note; code-only: Linked Doc, Logbook Policy). Reconcile when the default pack is authored — the specced 14 is the better demo set. Observed 2026-08-14.
 

@@ -1,12 +1,13 @@
 /**
- * SyncManager exercised against the Firestore emulator (ISSUES Tech Debt #12).
+ * SyncManager exercised against the Firestore emulator.
  *
  * `firestoreAdapter.test.ts` covers the *adapter* lane — one `applySyncItem`
  * or one pull at a time. Nothing covered the *sync* lane: a real push→pull
  * cycle, server-authority resolution against a row genuinely sitting in the
  * queue, or the cursor advancing across cycles off server-stamped rows. Both
  * 2026-08-13 fixes live exactly there and were mock-only until this file — the
- * high-water cursor (Bugs #3) and history convergence (Tech Debt #4), whose
+ * high-water cursor and history convergence (IMPLEMENTATION.md → *The delta
+ * cursor is a high-water mark, not the clock* / *History ID Scheme*), whose
  * real proof is two appends surviving a round trip *through Firestore*, which
  * is where the collision happened, rather than through two local `put` calls.
  *

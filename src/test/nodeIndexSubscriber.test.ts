@@ -66,7 +66,8 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     });
 
     // Soft delete is the only removal channel — a written element carrying
-    // `deletedAt` is what drops a node out of the index (ISSUES Bugs #4).
+    // `deletedAt` is what drops a node out of the index (IMPLEMENTATION.md →
+    // *Retention over reconciliation*).
     it('a soft-deleted node is removed from the index', () => {
         initializeNodeIndex([{ id: 'n1', parentId: null, name: 'Root' }]);
 

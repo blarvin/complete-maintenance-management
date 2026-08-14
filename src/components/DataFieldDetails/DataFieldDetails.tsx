@@ -38,7 +38,8 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     // siblingOrder edits are not). Sorted ascending (oldest first) so the
     // history viewer can drop the last entry as the live-duplicate.
     // `compareHistory` is the shared order — `rev` alone stopped being a total
-    // order once two clients could both mint rev 5 (Tech Debt #4).
+    // order once two clients could both mint rev 5 (IMPLEMENTATION.md →
+    // *History ID Scheme*).
     const fetchHistory = async (): Promise<ElementHistory[]> => {
         const rows = await getElementQueries().getElementHistory(props.fieldId);
         return rows.filter(r => r.property === 'value').sort(compareHistory);

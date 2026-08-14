@@ -9,11 +9,12 @@
  * irreducibly ambiguous — never-pushed, push-failed, admin-deleted, or
  * never-pushed *by design* (the dev seeds) all look identical from here — so the
  * purge could drop the one row you least want to lose, the one whose push
- * permanently failed (ISSUES Bugs #4). Retention is now the default: deletion
+ * permanently failed (IMPLEMENTATION.md → *Retention over reconciliation*,
+ * 2026-08-13). Retention is now the default: deletion
  * travels one way only, as a soft delete (`deletedAt`), which syncs as an
  * ordinary field update and so arrives through the apply loop below like any
  * other change. Removing the purge also retired the seed exemption that used to
- * live here (ISSUES Bugs #1) — seeds are safe now because nothing purges.
+ * live here — seeds are safe now because nothing purges.
  */
 
 import type { SyncableStorageAdapter, RemoteSyncAdapter } from '../../storage/storageAdapter';
@@ -44,7 +45,8 @@ export class FullCollectionSync implements SyncStrategy {
     // server. It is also the repair path for a cursor left in the future by the
     // old clock-stamped code: the next full sync writes the real value, which
     // may move the cursor *backwards*, and should — the window it re-opens is
-    // exactly the one that was being skipped (ISSUES Bugs #3).
+    // exactly the one that was being skipped (IMPLEMENTATION.md → *The delta
+    // cursor is a high-water mark, not the clock*).
     const highWaterMark = highestStamp([elements.mark, history.mark]);
 
     return {

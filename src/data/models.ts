@@ -269,7 +269,8 @@ export type Element = {
  *
  * Primary key: `${elementId}:${rev}:${random}`. Append-only and never updated
  * in place, so unique ids make the log a grow-only set — two clients merge by
- * union, with no coordination and nothing overwritten (ISSUES Tech Debt #4).
+ * union, with no coordination and nothing overwritten (IMPLEMENTATION.md →
+ * *History ID Scheme*).
  * Order for display is `compareHistory` in `storage/historyHelpers.ts`; `rev`
  * on its own is only a per-client sequence.
  */

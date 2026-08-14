@@ -38,7 +38,8 @@ export function diffElementChanges(
  * Create an ElementHistory entry. Generic over property — supports
  * `value | name | subtitle | parentId | siblingOrder` per the unified model.
  *
- * **The id ends in a random token so the log converges** (ISSUES Tech Debt #4).
+ * **The id ends in a random token so the log converges**
+ * (IMPLEMENTATION.md → *History ID Scheme*).
  * It used to be exactly `${elementId}:${rev}`, and `rev` is minted by reading
  * *local* history for its max — a read that cannot see another client. Two
  * clients editing the same element offline both minted rev 5, both produced

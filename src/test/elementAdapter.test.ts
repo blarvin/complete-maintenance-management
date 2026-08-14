@@ -168,7 +168,8 @@ describe('IDBAdapter — element operations', () => {
   /**
    * `rev` is still a clean sequence within one client — that is what this
    * asserts. It is no longer unique *across* clients, so the id carries a
-   * random tail and is only prefixed by `${elementId}:${rev}` (Tech Debt #4);
+   * random tail and is only prefixed by `${elementId}:${rev}`
+   * (IMPLEMENTATION.md → *History ID Scheme*);
    * uniqueness and convergence are pinned in historyConvergence.test.ts.
    */
   it('history rev increments monotonically per element', async () => {
