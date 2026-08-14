@@ -1,11 +1,17 @@
 /**
- * Unit tests for FullCollectionSync deletion detection.
+ * Unit tests for FullCollectionSync retention.
  *
- * Focus: ISSUES Bug #1 — seeded Library rows (treeType 'library', authored by
- * AUTHOR_ID_APP_DEVELOPER) never reach the server (seedDefinitions enqueues no
- * sync ops), so their absence from remote must not delete them locally. An
- * empty remote (fresh emulator, wiped server) previously wiped every seed on
- * the first full sync.
+ * This file used to assert the *opposite* — that a full sync purges local rows
+ * absent from the server, with an exemption carved out for the dev seeds. The
+ * purge is gone (IMPLEMENTATION.md → *Retention over reconciliation*,
+ * 2026-08-13): server absence could never
+ * distinguish "deleted on the server" from "never got there", so it could drop
+ * the row whose push had permanently failed. Retention is the default now, and
+ * these tests pin that: a full sync applies what the server has and removes
+ * nothing, whatever the local row's provenance.
+ *
+ * The seed exemption is gone too — not because seeds stopped being special, but
+ * because nothing purges, so nothing needs exempting.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -55,7 +61,7 @@ const userBusinessNode = makeElement({
   kind: 'node',
 });
 
-describe('FullCollectionSync deletion detection', () => {
+describe('FullCollectionSync retention', () => {
   let mockLocal: SyncableStorageAdapter;
   let mockRemote: RemoteSyncAdapter;
   let mockSyncQueue: SyncQueueManager;
@@ -64,7 +70,6 @@ describe('FullCollectionSync deletion detection', () => {
   beforeEach(() => {
     mockLocal = {
       getAllElements: vi.fn().mockResolvedValue([]),
-      deleteElementLocal: vi.fn().mockResolvedValue(undefined),
       applyRemoteElement: vi.fn().mockResolvedValue(undefined),
       applyRemoteElementHistory: vi.fn().mockResolvedValue(undefined),
     } as unknown as SyncableStorageAdapter;
@@ -83,18 +88,16 @@ describe('FullCollectionSync deletion detection', () => {
     };
 
     const resolver = new ServerAuthorityResolver(mockLocal, mockSyncQueue);
-    strategy = new FullCollectionSync(mockLocal, mockRemote, resolver, mockSyncQueue);
+    strategy = new FullCollectionSync(mockLocal, mockRemote, resolver);
   });
 
-  it('empty remote does NOT delete seeded Library rows (Bug #1)', async () => {
-    vi.mocked(mockLocal.getAllElements).mockResolvedValue([seededDef, seededCfgChild]);
-
-    await strategy.sync();
-
-    expect(mockLocal.deleteElementLocal).not.toHaveBeenCalled();
-  });
-
-  it('empty remote still deletes synced rows (user business + user library)', async () => {
+  /**
+   * The adapter has no local-delete method at all any more, so "did it delete?"
+   * can only be asked of the surface the strategy actually holds. This asserts
+   * the strategy never reaches for one — a re-added purge would have to add a
+   * method back, and this guard would name it.
+   */
+  it('never calls any delete-shaped method on the local adapter', async () => {
     vi.mocked(mockLocal.getAllElements).mockResolvedValue([
       seededDef,
       seededCfgChild,
@@ -104,39 +107,55 @@ describe('FullCollectionSync deletion detection', () => {
 
     await strategy.sync();
 
-    const deleted = vi.mocked(mockLocal.deleteElementLocal).mock.calls.map(([id]) => id);
-    expect(deleted.sort()).toEqual(['fd_user_abc', 'node_1']);
+    const deleteish = Object.keys(mockLocal).filter(k => /delete|remove|purge/i.test(k));
+    expect(deleteish).toEqual([]);
   });
 
-  it('sparse remote keeps seeds exempt while server authority applies remote rows', async () => {
+  it('empty remote keeps every local row — seeds included (Bug #1)', async () => {
+    vi.mocked(mockLocal.getAllElements).mockResolvedValue([seededDef, seededCfgChild]);
+
+    await strategy.sync();
+
+    expect(mockLocal.applyRemoteElement).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The Bugs #4 case, stated directly: a row whose push permanently failed has
+   * dropped out of the sync queue and is not on the server. It used to be
+   * indistinguishable from a server-side deletion, and got purged. Now it just
+   * stays.
+   */
+  it('keeps a row that is absent from remote AND absent from the queue', async () => {
+    vi.mocked(mockLocal.getAllElements).mockResolvedValue([userBusinessNode]);
+    vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([]);
+
+    const result = await strategy.sync();
+
+    expect(result.elementsApplied).toBe(0);
+    expect(mockLocal.applyRemoteElement).not.toHaveBeenCalled();
+  });
+
+  it('applies remote rows under server authority while keeping local-only ones', async () => {
     const remoteNode = makeElement({ id: 'node_remote', kind: 'node' });
     vi.mocked(mockRemote.pullAllElements).mockResolvedValue([remoteNode]);
     vi.mocked(mockLocal.getAllElements).mockResolvedValue([seededDef, seededCfgChild, userBusinessNode]);
 
-    await strategy.sync();
+    const result = await strategy.sync();
 
-    const deleted = vi.mocked(mockLocal.deleteElementLocal).mock.calls.map(([id]) => id);
-    expect(deleted).toEqual(['node_1']);
     expect(mockLocal.applyRemoteElement).toHaveBeenCalledWith(remoteNode);
+    expect(mockLocal.applyRemoteElement).toHaveBeenCalledTimes(1);
+    expect(result.elementsApplied).toBe(1);
   });
 
-  it('rows pending push are never deleted', async () => {
+  it('a remote soft delete still arrives — deletion travels as an ordinary update', async () => {
+    const tombstoned = makeElement({ id: 'node_1', kind: 'node', deletedAt: 5000 });
+    vi.mocked(mockRemote.pullAllElements).mockResolvedValue([tombstoned]);
     vi.mocked(mockLocal.getAllElements).mockResolvedValue([userBusinessNode]);
-    vi.mocked(mockSyncQueue.getSyncQueue).mockResolvedValue([
-      {
-        id: 'q1',
-        entityType: 'element',
-        entityId: 'node_1',
-        operation: 'create-element',
-        payload: {},
-        timestamp: 1000,
-        status: 'pending',
-        retryCount: 0,
-      },
-    ]);
 
     await strategy.sync();
 
-    expect(mockLocal.deleteElementLocal).not.toHaveBeenCalled();
+    expect(mockLocal.applyRemoteElement).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'node_1', deletedAt: 5000 })
+    );
   });
 });

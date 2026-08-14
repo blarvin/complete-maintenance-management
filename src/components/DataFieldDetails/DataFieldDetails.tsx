@@ -16,6 +16,7 @@ import { Show, createSignal, onCleanup } from 'solid-js';
 import { getElementQueries, getDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
+import { compareHistory } from '../../data/storage/historyHelpers';
 import type { Kind, Definition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import styles from './DataFieldDetails.module.css';
@@ -36,9 +37,12 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     // Only value-edit rows are field-value history (name/subtitle/parentId/
     // siblingOrder edits are not). Sorted ascending (oldest first) so the
     // history viewer can drop the last entry as the live-duplicate.
+    // `compareHistory` is the shared order — `rev` alone stopped being a total
+    // order once two clients could both mint rev 5 (IMPLEMENTATION.md →
+    // *History ID Scheme*).
     const fetchHistory = async (): Promise<ElementHistory[]> => {
         const rows = await getElementQueries().getElementHistory(props.fieldId);
-        return rows.filter(r => r.property === 'value').sort((a, b) => a.rev - b.rev);
+        return rows.filter(r => r.property === 'value').sort(compareHistory);
     };
 
     // Shared stale-async guard for the subscription callback and initial load.

@@ -33,7 +33,16 @@ export default [
       },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'warn',
+      // A leading underscore is this repo's "deliberately unused" marker —
+      // signature placeholders for a parameter the body does not need yet
+      // (`effectiveChildren(canonical, _viewer)`, `getTreeNodeState(…,
+      // _nodeParentId)`). Without this the marker and the linter disagree, and
+      // the only way to quiet it is to delete the parameter the signature owes.
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      }],
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },

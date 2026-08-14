@@ -38,7 +38,8 @@ Issues live in `docs/ISSUES.md` — never GitHub. See `docs/agents/issue-tracker
 
 ## Never
 
-- **Never `git commit` or `git push`.** Suggest the message; the user commits.
+- **Never `git push`.** What reaches the remote is the user's call, always.
+  Committing is allowed only on `[auto]`-marked issues — see Working with me.
 - **Never `gh issue`** — this repo's tracker is `docs/ISSUES.md`.
 - **Never `&&` or `||`** in a command — see Shell below.
 - **Never bulk-rewrite a file** via `Get-Content`/`Set-Content`; it mangles
@@ -66,7 +67,7 @@ which shell Claude Code was launched from. So:
 npm run dev          # Vite dev server, :5173 (registers no service worker)
 npm run build        # Typecheck + prod build to dist/ (compiles SW, injects precache manifest)
 npm run preview:pwa  # Serve dist/ on :4173 — the only way to exercise the PWA
-npm run test         # Vitest (known: hangs after passing — ISSUES → Tech Debt)
+npm run test         # Vitest (exits cleanly since the globalSetup removal)
 npm run typecheck
 npm run lint
 npm run emulator     # Firebase emulator, :8080
@@ -76,6 +77,11 @@ npm run cypress      # Needs emulator + dev server up; every spec's cy.freshVisi
 
 Emulator mode in the browser: `?emulator=true`, or
 `localStorage.setItem('USE_FIRESTORE_EMULATOR','true')`.
+
+**`docs/DEVELOPING.md`** covers the choices these scripts don't show: the three
+run modes and which one the dev gate is open in, which reset to reach for
+(`__wipeLocal()` vs `wipe:emulator` vs the production wipes), and what each test
+layer owns. Read it before resetting anything.
 
 ## Code style
 
@@ -117,6 +123,13 @@ One line, outcome-shaped, with provenance ("surfaced in the Phase IV hand-test",
 "same in the Qwik original"). Append to the **bottom** of the section; ordering
 is the user's call, not yours.
 
+**Autonomous issues.** An item tagged `[auto]` in `docs/ISSUES.md` may be taken
+end-to-end without checking in: implement, verify with typecheck/lint/test, then
+**one commit per issue** and delete the item from ISSUES.md in that same commit
+(house rule: completion lives in git history). Everything else still comes back
+for a decision first. Untagged work never gets committed. `git push` is never
+the agent's, tagged or not — the user reviews the local commits and pushes.
+
 **Settings hygiene.** `.claude/settings.json` is committed and must work on both
 machines. `.claude/settings.local.json` is gitignored scratch that Claude Code
 appends to on every approval. When local has visibly accumulated, sweep it: drop
@@ -125,6 +138,12 @@ before** promoting anything into `settings.json` — widening the committed
 allowlist changes the security posture on both machines.
 
 **Memory is repo content.** The auto-memory store is committed at
-`.claude/memory/`, reached through a directory junction. Treat a new or edited
-file there as an ordinary working-tree change and mention it when summarising.
-New clone: run `scripts/link-memory.ps1` once.
+`.claude/memory/` — that is the **real directory**; the canonical store
+(`~/.claude/projects/<slug>/memory`) is a junction pointing *into* it. Treat a
+new or edited file there as an ordinary working-tree change and mention it when
+summarising. New clone: run `scripts/link-memory.ps1` once.
+
+**Write memories via the repo path** (`<repo>/.claude/memory/…`), not the
+`~/.claude/projects/<slug>/…` path the auto-memory prompt names. Same files
+either way, but only the repo path is machine-independent, so it's the one the
+`Read`/`Edit(.claude/memory/**)` allowlist entries can match on both machines.

@@ -11,9 +11,12 @@ describe('useSyncTrigger', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Only `syncDelta` is exercised here; cast through `unknown` to the real
+    // return type rather than `any`, so a change to getSyncManager's signature
+    // still surfaces at this call site.
     vi.spyOn(syncManagerModule, 'getSyncManager').mockReturnValue({
       syncDelta: mockSyncDelta,
-    } as any);
+    } as unknown as ReturnType<typeof syncManagerModule.getSyncManager>);
   });
 
   afterEach(() => {

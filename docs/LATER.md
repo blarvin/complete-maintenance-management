@@ -48,12 +48,52 @@ The blob is retired and config lives as a `library`-tree sub-field subtree (done
 
 The seam landed 2026-07-01 (full `fieldDefinitionId → definitionId` type-family rename, placement-agnostic authoring contract, logbook's seeded policy Definition stamped at mint — IMPLEMENTATION.md → *Definition-binding seam*). Deliberately out of scope that cluster:
 
-- **Re-root Definition authoring UI** — `LogbookConfigForm` exists (the lifted contract's first re-root instance) but nothing mounts it; the only logbook policy is the seed. The composer's authoring form is a *field* surface — where policy-container authoring lives (node details? a Library view? per-lens settings?) is an open UX decision; decide it when a second policy Definition (org staleness, jobs priority scheme) makes the shape visible.
-- **`definitionId` → internal revision-pinned Edge (the #7 end-state)** — the column stays the binding + version pointer for now; the principled retirement models the instance→Definition link with the `asset-doc` Edge machinery (internal scope, revision pin) once the Edges family (#6c) and the arbiter (#7) exist.
+- **Re-root Definition authoring UI** — `LogbookConfigForm` exists (the lifted contract's first re-root instance) but nothing mounts it; the only logbook policy is the seed. The composer's authoring form is a *field* surface. **Where it mounts is now decided** (2026-08-14): on the lens's own DataCard, which already renders (`TreeNodeDisplay.tsx` — `ownsChildren() || isLens()`) — not in node details, not in a Library view, and deliberately *not* as a step in node creation, since lenses are created rarely and a nag step in the common path is the wrong trade. See UI/UX → *Config-tree UI*.
+- **`definitionId` → internal revision-pinned Edge (the #7 end-state)** — the column stays the binding + version pointer for now; the principled retirement models the instance→Definition link with the `internal-link` Edge machinery (internal scope, revision pin) once the Edges family (#6c) and the arbiter (#7) exist.
 - **A `jobs` policy Definition** — jobs deliberately ships unbound (proving re-root binding is optional). When jobs wants config (child label, priority scheme, job-subtype vocabulary), it binds through the identical seam: a `JOBS_CONFIG_SCHEMA`, a seed row, one `LENS_POLICY_DEFINITIONS` entry.
 - **Per-node policy variation + the config tree** — every `::logbook` lens binds the same seeded Definition today. Per-org/per-node policy (a different staleness on one subtree) is the cascade arbiter's job (#4), resolved through the `config` tree; the stamp-at-mint seam already supports pointing different lenses at different Definitions.
 - **Wall-clock-reactive staleness** — the rollup's stale badge evaluates `Date.now()` at render, so it updates on writes/regathers, not by timer. Add a slow tick (or visibility-change check) only if the lag ever matters.
 - **Legacy `fieldDefinitions` Firestore collection cleanup** — `COLLECTIONS.FIELD_DEFINITIONS`, `scripts/wipe-field-definitions.ts`, `npm run wipe:fielddefs`, and the test-cleanup sweep still name the pre-config-as-Elements collection. Retire them once remote data is confirmed clean.
+
+### Definition Packs — seeds and bindings as data
+
+Decided in discussion 2026-08-14; supersedes the old ISSUES Tech Debt #7 ("are the dev seeds product content?"), which could not be answered as posed. The seeded Definitions were never the load-bearing thing — the **bindings** are. Three populations sit in one `SEEDS` array and differ only in what selects them: *nothing* selects `Status` / `Weight` / `Power Rating` (the user picks them); `DEFAULT_DEFINITION_IDS` (`TreeNodeConstruction.tsx`) selects the three construction defaults; `LENS_POLICY_DEFINITIONS` (`provisionPolicy.ts`) selects the logbook policy. Both selectors are `const`s in code. Once they are data, "dev seed" vs "product content" stops being a distinction — there is one population of Definitions and a separate question of what points at them.
+
+**Destination:** bindings live in the `config` tree (SPECIFICATION.md → *Populations are typed trees*; the cascade's job #3, app→org→role→user), resolved by the arbiter (ISSUES Architecture #4). A **pack** is the app-layer end of that cascade, shipped as a file:
+
+```json
+{ "definitions": [ /* SeedRow[] */ ],
+  "constructionDefaults": ["fd_type_of", "fd_description", "fd_tags"],
+  "lensPolicies": { "logbook": "fd_logbook_policy" },
+  "lensNames":    { "logbook": "Daybook" } }
+```
+
+The format is the existing `SeedRow[]` plus three binding maps — `serializeConfig()` already turns each row's config into its child subtree, so there is no import format to invent.
+
+**Why it's wanted:** a client demo is unconvincing against a Library of generic fields. A pack makes a prospect's own vocabulary appear on every new asset in seconds, precisely because it carries bindings and not just a longer field list. It runs backwards too — configure a client's Library in a workshop, export the pack, use it as the starter for their next site.
+
+**Staged, cheapest first:**
+
+- **The resolver seam** — replace the two `const` selectors with `constructionDefaults()` / `lensPolicyFor(kind)`. Backed by the pack now, by the `config` tree later, without touching call sites. The only piece that must come first, and the only one that constrains anything.
+- **Pack file + first-run picker** — `public/packs/*.json`, bundled default as the offline fallback. Buys the entire demo story with no cascade.
+- **Config-tree UI** — see UI/UX → *Config-tree UI*.
+- **Org / user layers, per-node override, source chips** — need the arbiter (#4).
+
+**Constraints found while scoping (2026-08-14):**
+
+- **Additive (put-if-absent), not upsert.** `seedDefinitions` upserts on a `SEED_VERSION` bump. That contradicts forked-never-mutated (SPECIFICATION.md §611) the moment Definitions become user-editable *or* packs become swappable: reloading a pack would rewrite a Definition that live instances are bound to.
+- **Shipped packs bypass sync; imported packs are authoring.** Bypass-sync is only legitimate because seeds are byte-identical per client. A user-supplied pack is not, so import must go through `CREATE_DEFINITION` and sync as ordinary authored content — a path that already exists (`useDefinitionDraft.ts`).
+- **Pack ids need a namespace** so two packs cannot collide. Author ids in the file; never generate them.
+- **Boot ordering.** `provisionPolicy.ts` must stay component-free and sync-readable (`handlers.ts` imports it and cannot pull the registry), so a fetched pack must be fully loaded before the first mint. `initStorage.ts` currently seeds *after* the command bus initialises.
+- **A failed fetch must not degrade silently.** `handlers.ts` stamps lens policy only if resolvable; with a fetched pack, that guard becomes the path a fetch failure takes, minting unbound lenses. Bundled fallback; never boot packless.
+
+**Forcing kinds** (surfaced by sketching the UI, 2026-08-14):
+
+- A **constrained reference kind** — `internal-link` restricted to the `library` tree with a kind filter — is needed twice over (every construction-default row, every policy row). ISSUES Architecture #11 already asks for exactly this picker.
+- A **duration kind.** `staleness: 7 * 24 * 60 * 60` renders as `604800` the moment it is user-facing. Either a `duration` kind or `number-kv` with unit scaling.
+- Nothing new for the container — `New Node Fields` is `Children` on a config node, existing machinery.
+
+**Exemplary seed lenses.** Most users will not craft or customise a lens, so a pack's lens policies (and any starter lens content) carry far more weight than their volume suggests. They want deliberate authoring, not defaults-by-accident.
 
 ### Capability descriptors — remaining items
 
@@ -67,7 +107,7 @@ The six-capability vocabulary + `coherence` landed as a component-free seam (202
 
 The node-like kind that *also* carries its own value — `Children + OwnValue` (flagged), re-root: a tank holding child fields *and* a primary reading or a cheap rollup. It was the cheapest entry in the minimal kind set (§6b — node shell + an inline value display) and the only one that would have *exercised* the `Children + OwnValue` coherence warning path.
 
-**Parked because** its value/utility looks dubious (2026-06-28): a node that bears a scalar can already be modeled as a node with a single own-value field child, so the kind may not earn its registry slot. Pulled from the active minimal kind set — that set now builds `org` / `job` / `jobs` / `asset-doc` (ISSUES Architecture Migration #3) and hands four-not-five distinct re-root shells to chrome entailment (#5).
+**Parked because** its value/utility looks dubious (2026-06-28): a node that bears a scalar can already be modeled as a node with a single own-value field child, so the kind may not earn its registry slot. Pulled from the active minimal kind set — that set now builds `org` / `job` / `jobs` / `internal-link` (ISSUES Architecture Migration #3) and hands four-not-five distinct re-root shells to chrome entailment (#5).
 
 **Framework left intact.** The `Children + OwnValue` = *valid-but-flagged* rule is framework-level (SPECIFICATION.md §589) and stays put: `checkCoherence` (`src/kinds/coherence.ts`) still warns on the co-occurrence and `kindCoherence.test.ts` still runs it over `KIND_CAPABILITIES`. No built or planned kind composes that subset, so the warning path is a **dormant guard** — already dormant before this park, and it greets the first `Children + OwnValue` kind that ever lands (this one revived, or another). Nothing to remove; the rule defends the invariant whether or not a kind exercises it.
 
@@ -75,12 +115,12 @@ The node-like kind that *also* carries its own value — `Children + OwnValue` (
 
 ### §6b minimal kind set — deferred follow-ups
 
-The four kinds (`org`/`job`/`jobs`/`asset-doc`) + the rudimentary engine landed stub-grade (2026-06-28, IMPLEMENTATION.md → *#6b*). Deliberately out of scope:
+The four kinds (`org`/`job`/`jobs`/`internal-link`) + the rudimentary engine landed stub-grade (2026-06-28, IMPLEMENTATION.md → *#6b*). Deliberately out of scope:
 
 - **`jobs` as container + the inline-yet-navigable placement** — ✅ **done (#5 container half, 2026-06-30):** `jobs` is now a **hybrid** — it owns its own DataFields *and* rolls up jobs. Each `job` is authored inside the container (parented to the owning node) and renders field-like (compact `NavigableRow` under a node; Node-like CHILD card when re-rooted into). The both-rollup-and-container shape (once parked for `logbook`) is proven here, so `logbook` (#6c) inherits it (IMPLEMENTATION.md → *#5 container half*). **Remaining sub-item:** *pick which descendant a job lands under* — Phase-1 parents every job created in a node's container to that node (the lens owner N); a UI to target a specific descendant is deferred.
 - **Restrict/hide the create surface by `childrenSpec`** — ✅ **done (2026-06-29, #5 slice 1).** The node-create picker now reads `reRootCreateKindsFor(parent.kind)` (`job`→node/job, not org) and a content-free lens (`jobs`) offers no "Add"; the lens-aware shell drops the DataCard/chevron for content-free kinds (IMPLEMENTATION.md → *#5 slice 1*).
 - **`jobs`/`logbook` lens lifecycle → moved to ISSUES.** Backfill onto pre-existing nodes, de-provision/GC when the last entry is removed, and hide-empty-lens are leftovers of in-flight lens work, so they now live in ISSUES (Architecture Migration #11), generic across all `PROVISIONED_LENSES`. The canonical **upward ancestor-walk provisioning** (ELEMENT-MODEL §lens) stays superseded by the per-node v1. Still genuinely deferred *here* (a not-yet-begun UI idea): a **collapsed lens-row count badge** — the rollup count lives inside the expanded card, and `KindAdornment` no longer chips the lens (it keeps only `org`'s descendant count).
-- **Remaining §6b/§6c lens follow-ups → moved to ISSUES.** `capabilityEngine` ancestors/edges traversal, `asset-doc` target picker + editing, field-composer restriction by `childrenSpec`, and the `job`-admits-`job` (sub-tasks vs subtypes) decision now live in ISSUES (Architecture Migration). Rich lens rows / the "primary line" are already tracked in ISSUES #2 (chrome entailment remaining).
+- **Remaining §6b/§6c lens follow-ups → moved to ISSUES.** `capabilityEngine` ancestors/edges traversal, `internal-link` target picker + editing, field-composer restriction by `childrenSpec`, and the `job`-admits-`job` (sub-tasks vs subtypes) decision now live in ISSUES (Architecture Migration). Rich lens rows / the "primary line" are already tracked in ISSUES #2 (chrome entailment remaining).
 
 ### `subtitle` → optional `nodeSubtitle` child element
 
@@ -121,7 +161,7 @@ Superseded by **typed trees** (SPECIFICATION.md → Data Model → Populations a
 - **Per-viewer overlay merge** — replace the pass-through `effectiveChildren` body so a viewer's `config`/`view-state` layers sparsely onto canonical children. Needs viewer/auth + the cascade arbiter (ISSUES #4).
 - **Personal `siblingOrder` overlay** — the canonical order is the column; a per-viewer reorder is a sparse overlay resolved in `effectiveChildren`.
 - **view-state as Elements** — migrate expansion/ordering out of `uiPrefs` localStorage into `view-state`-tree Elements (currently the only `view-state` "store").
-- **The `config` tree** — org/role/user prefs as `config`-tree Elements + the arbiter that reads them (app→org→role→user cascade).
+- **The `config` tree** — org/role/user prefs as `config`-tree Elements + the arbiter that reads them (app→org→role→user cascade). Its first two concrete tenants are the construction-default and lens-policy bindings — see Data Model → *Definition Packs* and UI/UX → *Config-tree UI*.
 - **Viewer/auth plumbing** — replace the constant `localUser` (`getCurrentUserId()`) with real identity so `effectiveChildren`/`config` have a viewer to resolve against.
 - Cross-tree references and moves
 - Per-tree settings and field libraries
@@ -166,7 +206,7 @@ The Phase-1 model is "authoring is contributing": one global pool, all FieldDefi
 - **Composer discovery UX**: typeahead filter, `category` grouping into collapsible sections, dropdown-flip behaviour, popularity ranking, "recently added" sort.
 - **Moderation / promotion to canonical** for crowdsourced entries — flagged-content workflow, dev curation.
 - **Dedicated Library view** (a TreeNode stack under the app's main menu) for browsing / managing FieldDefinitions outside the Composer.
-- **Templates (composite sets of FieldDefinitions)** — e.g. "HPU with Accumulator". The reserved word "Template" is mortgaged for this future feature; distinct, larger scope than the FieldDefinition Library itself.
+- **Templates (composite sets of FieldDefinitions)** — e.g. "HPU with Accumulator". The reserved word "Template" is mortgaged for this future feature; distinct, larger scope than the FieldDefinition Library itself. Note the adjacency to *Definition Packs*: same data shape, different verb — a pack **populates the Library**, a Template **applies to a node**. Keep the word free, and keep the pack file format clean enough that Templates can reuse it.
 - **Firestore blob sync** — needed once real `single-image` lands (Phase-1 single-image is a display-only stub; see ISSUES.md).
 - **Orphaned-blob GC** — needed once blobs are in play.
 
@@ -208,6 +248,16 @@ Both add-field surfaces (FieldComposer and the legacy `CreateDataField` single-p
 
 - **More surface variants** — follow the contract in `src/components/FieldList/addFieldSurfaces.ts` (add id to `AddFieldSurfaceId`, build to contract, add to roster, render in FieldList).
 - **Winner picking** — eventually decide which surface(s) earn their keep and delete the losers (component + CSS + roster entry + union member).
+
+### Config-tree UI (the tree *is* the settings screen)
+
+Decided in discussion 2026-08-14, alongside Data Model → *Definition Packs*. `config` is already a `treeType`, and the cascade already models config layers as "prefs being Fields on a Node" (SPECIFICATION.md §609). So the config UI is the existing TreeNode / DataCard / FieldList renderers pointed at a different tree — one FSM state parameterised by `treeType`, not a new view layer. The same switcher also delivers the long-deferred **dedicated Library view** (above) as a side effect.
+
+- **Tree switcher on the ROOT view** — Assets / Config / Library.
+- **`App Defaults` as an ordinary node** whose fields are the bindings. `New Node Fields` is a container whose children are references to Definitions, so dragging to reorder *is* reordering the fields every new node is born with — `siblingOrder` already means that. No new interaction primitives.
+- **The lock is a link.** Construction defaults render as locked checked rows (SPECIFICATION.md §298) with no explanation. Make the lock tappable and it navigates to the config node that set it: locked *here*, editable *there*. Worth more than the explanation — it **defers permissions**, because "who may change this" becomes a property of the place you land rather than a role check at the lock. The authoring side eventually picks among options (Default / Locked Default / Manager-Locked Default / …).
+- **Lens policy overrides on the lens's own DataCard** — see *Definition-binding seam → Re-root Definition authoring UI*, whose open UX question this answers.
+- **Inherited-value chrome** — ghosted value + source chip + tap-to-override + revert-to-inherited. One widget serves all three cascade jobs (business inheritance, Definition specificity, config). Needs the arbiter, and needs "this value is delegated" to be *manifest-readable* rather than inferred, since chrome entailment runs one way (SPECIFICATION.md §626).
 
 ### Tree Decorations
 
@@ -263,6 +313,22 @@ Spec: "Deleting a node must handle or cascade to all children." Phase 1 allows l
 - Toast notification after delete (Snackbar)
 - Undo / restore within a window
 - Clarify: does Undo survive navigation? Are deletes soft until the timer elapses, or applied immediately with a restore snapshot?
+
+### Admin hard delete
+
+No code path removes an element row any more (2026-08-13): retention is the
+default and soft delete is the only delete channel. The one legitimate reason to
+purge is an admin forcing a row out — a GDPR-style erasure request, or clearing
+content that must not persist even as a tombstone. Deferred until there is an
+admin role to hang it on; there is no auth or viewer identity in Phase 1, so
+there is nobody to authorise it.
+
+When it lands it needs to be a *distinct* operation, not a flag on the existing
+delete — different authority, different audit expectation, and no undo window.
+Note the hard part is not the local delete: it is propagating a purge to clients
+that already hold the row, which soft delete gets for free (a tombstone syncs;
+an absence does not). That likely means an explicit purge tombstone rather than
+simply removing the document — i.e. the erasure itself has to sync.
 
 ### Recycle Bin / Audit-Preserving Delete
 
@@ -323,14 +389,6 @@ Phase 1 loads eagerly; background progressive loading deferred.
 
 - "Export Collection (JSON)" and "Import Collection" actions
 - Per-collection export before destructive ops (see Destructive Operations)
-
-### Emulator Round-Trip Sync Coverage
-
-The Element refactor traded the live-emulator adapter/sync suite for mock-based unit tests (`fieldDefinitionSync.test.ts` / `SyncPusher.test.ts` mock `RemoteSyncAdapter`). The whole unit suite passes without the Firebase emulator, but nothing automatically verifies real Firestore push/pull against the Element model. Reinstate a round-trip suite (Vitest against the emulator, or Cypress E2E) covering `elements` + `elementHistory` + `fieldDefinitions`.
-
-**Wiring needed before this is possible:** emulator connect in `src/data/firebase.ts` is gated on `isBrowser`, so Node/Vitest never connects — a round-trip Vitest run needs a Node connect path (e.g. honor `FIRESTORE_EMULATOR_HOST`) plus a separate vitest config + opt-in script so the default `npm test` stays emulator-free. Also: the `test:firestore` npm script currently points at a non-existent `src/test/firestoreAdapter.test.ts` — remove or repoint it as part of this work.
-
-**Note (2026-06-11):** one Cypress E2E spec now exists again — `cypress/e2e/repro-create-node.cy.ts` (regression for the UC-TreeNode key collision, audit §2.3) plus a stub `cypress/support/e2e.ts`. It currently runs against the *live* Firestore config and writes real nodes; gate it to the emulator (`?emulator=true` / `USE_FIRESTORE_EMULATOR`) before wiring into any automated run.
 
 ### Extract Sync System as Standalone Package (Refactoring Audit 8.3)
 
@@ -428,7 +486,6 @@ Limit to `@apply` within component CSS to keep markup uncluttered. Defer heavy u
 - **`preview:pwa` depends on an undeclared `npx serve`.** Works, and is what the PWA has always been smoke-tested on, but it fetches a package that isn't in `devDependencies`. Drop-in replacement if that ever bites: `vite preview --port 4173 --strictPort` (already installed, and it honours `vite.config.ts`'s `preview.headers`).
 - **HTML is network-first.** Every online launch waits on the network for `index.html` before the cached shell renders; on a flaky connection that's a slow start where stale-while-revalidate would be instant. Only worth changing if it's felt.
 - **Desktop layout is a single centred column at `--container-max` (650px).** That's the whole responsive story since the `#app` width fix — fills a phone, caps on desktop, no breakpoints. Widening the token (720–768px reads more tablet-like) is a one-line change; anything richer on a wide screen — a two-pane tree/detail split, using the empty margins for lens rollups — is a real layout decision, not a token tweak.
-- **Single 600 KB JS chunk.** The build warns about it. Untouched deliberately — code-splitting is a real decision (route-less FSM app, so the natural seams are the kind renderers and the Firebase SDK), not a mop-up nicety.
 
 ---
 

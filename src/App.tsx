@@ -10,8 +10,10 @@ import { onMount, Show } from 'solid-js';
 import { createAppState, AppStateContext, selectors } from './state/appState';
 import { initializeStorage } from './data/storage/initStorage';
 import { SnackbarHost } from './components/Snackbar/SnackbarHost';
+import { SyncTargetBadge } from './components/SyncTargetBadge/SyncTargetBadge';
 import { RootView } from './components/views/RootView';
 import { BranchView } from './components/views/BranchView';
+import { devLog } from './utils/devMode';
 
 export const App = () => {
     const appState = createAppState();
@@ -22,28 +24,20 @@ export const App = () => {
 
         // Log service worker registration status. Not awaited: `ready` only
         // resolves once a SW activates, and dev never registers one (the SW is
-        // PROD-gated in entry.client.tsx) — an inline await would block the
-        // logs below.
+        // PROD-gated in entry.client.tsx) — an inline await would block.
+        //
+        // This is the one trace worth keeping here: the SW is the app's update
+        // mechanism, and `preview:pwa` is the only place it runs. Network-state
+        // logging used to live alongside it as two listeners with console.log
+        // bodies; SyncLifecycle already logs the `online` transition it acts on,
+        // which is the one that has consequences.
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(
-                (registration) => console.log('[App] ServiceWorker registered:', registration.scope),
+                (registration) => devLog('[App] ServiceWorker registered:', registration.scope),
                 (err) => console.error('[App] ServiceWorker registration check failed:', err),
             );
         } else {
             console.warn('[App] ServiceWorker not supported in this browser');
-        }
-
-        // Log initial network state and set up listeners
-        if (typeof navigator !== 'undefined') {
-            console.log('[App] Initial network state:', navigator.onLine ? 'ONLINE' : 'OFFLINE');
-
-            window.addEventListener('online', () => {
-                console.log('[App] Network: ONLINE');
-            });
-
-            window.addEventListener('offline', () => {
-                console.log('[App] Network: OFFLINE');
-            });
         }
     });
 
@@ -55,6 +49,9 @@ export const App = () => {
             >
                 <RootView />
             </Show>
+            {/* Before SnackbarHost on purpose — equal z-index, so the later
+                element paints on top and a toast is never hidden. */}
+            <SyncTargetBadge />
             <SnackbarHost />
         </AppStateContext.Provider>
     );

@@ -1,5 +1,6 @@
 /**
  * Unit tests for the `number-kv` pure functions:
+ *  - `parseNumber`: edit-buffer parsing, incl. trailing-garbage rejection.
  *  - `computeNumberKvState`: state precedence, stale-vs-value, range vs discrete.
  *  - `validateNumberKvConfig`: invariant chain in both modes; currency/format
  *    rules; decimals / refresh-seconds bounds.
@@ -9,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
     computeNumberKvState,
     formatNumberKvDisplay,
+    parseNumber,
     validateNumberKvConfig,
 } from '../components/DataField/numberKvState';
 import type { NumberKvConfig } from '../data/models';
@@ -22,6 +24,47 @@ const baseRange: NumberKvConfig = {
     high: 30,
     highHigh: 40,
 };
+
+describe('parseNumber', () => {
+    it('rejects trailing garbage instead of taking the numeric prefix', () => {
+        // The Phase III hand-test case: parseFloat used to save this as 120.
+        expect(() => parseNumber('120nnnnn')).toThrow(/not a valid number/);
+    });
+
+    it('rejects a thousands separator rather than truncating at it', () => {
+        // parseFloat('1,200') === 1 — the same prefix bug, quieter.
+        expect(() => parseNumber('1,200')).toThrow(/not a valid number/);
+    });
+
+    it('rejects wholly non-numeric input', () => {
+        expect(() => parseNumber('abc')).toThrow(/not a valid number/);
+    });
+
+    it('rejects Infinity', () => {
+        expect(() => parseNumber('Infinity')).toThrow(/not a valid number/);
+    });
+
+    it('returns null for empty / whitespace-only input', () => {
+        expect(parseNumber('')).toBeNull();
+        expect(parseNumber('   ')).toBeNull();
+    });
+
+    it('parses plain, signed, and fractional decimals', () => {
+        expect(parseNumber('1200.00')).toBe(1200);
+        expect(parseNumber('-4.5')).toBe(-4.5);
+        expect(parseNumber('+5')).toBe(5);
+        expect(parseNumber('.5')).toBe(0.5);
+    });
+
+    it('parses scientific notation (the `scientific` displayFormat round-trips)', () => {
+        expect(parseNumber('1e5')).toBe(100000);
+        expect(parseNumber('1.5e-3')).toBe(0.0015);
+    });
+
+    it('tolerates surrounding whitespace', () => {
+        expect(parseNumber('  42  ')).toBe(42);
+    });
+});
 
 describe('computeNumberKvState - precedence', () => {
     it('returns none for null value with no thresholds configured', () => {

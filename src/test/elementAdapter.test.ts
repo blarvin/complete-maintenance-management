@@ -165,6 +165,13 @@ describe('IDBAdapter — element operations', () => {
     expect(fields.data.map(e => e.id)).toEqual(['f1']);
   });
 
+  /**
+   * `rev` is still a clean sequence within one client — that is what this
+   * asserts. It is no longer unique *across* clients, so the id carries a
+   * random tail and is only prefixed by `${elementId}:${rev}`
+   * (IMPLEMENTATION.md → *History ID Scheme*);
+   * uniqueness and convergence are pinned in historyConvergence.test.ts.
+   */
   it('history rev increments monotonically per element', async () => {
     await adapter.createElement({ id: 'r', kind: 'node', parentId: null, name: 'r0' });
     await adapter.updateElement('r', { name: 'r1' });
@@ -172,6 +179,7 @@ describe('IDBAdapter — element operations', () => {
     const hist = await adapter.getElementHistory('r');
     const revs = hist.data.map(h => h.rev);
     expect(revs).toEqual([0, 1, 2]);
-    expect(hist.data.every(h => h.id === `r:${h.rev}`)).toBe(true);
+    expect(hist.data.every(h => h.id.startsWith(`r:${h.rev}:`))).toBe(true);
+    expect(new Set(hist.data.map(h => h.id)).size).toBe(3);
   });
 });

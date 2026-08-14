@@ -1,6 +1,7 @@
 import type { Element, ElementHistory, ElementHistoryProperty } from '../models';
 import type { StorageElementUpdate } from './storageAdapter';
 import { getCurrentUserId } from '../../context/userContext';
+import { generateId } from '../../utils/id';
 import { now } from '../../utils/time';
 
 /**
@@ -36,6 +37,24 @@ export function diffElementChanges(
 /**
  * Create an ElementHistory entry. Generic over property — supports
  * `value | name | subtitle | parentId | siblingOrder` per the unified model.
+ *
+ * **The id ends in a random token so the log converges**
+ * (IMPLEMENTATION.md → *History ID Scheme*).
+ * It used to be exactly `${elementId}:${rev}`, and `rev` is minted by reading
+ * *local* history for its max — a read that cannot see another client. Two
+ * clients editing the same element offline both minted rev 5, both produced
+ * `el:5`, and the push (`setDoc`, no merge) plus the pull (`put`, keyed) turned
+ * two distinct appends into one row. Silent loss of an audit entry.
+ *
+ * Uniqueness makes the log a grow-only set: appends are immutable, ids never
+ * collide, so merging two clients is union and needs no coordination. That is
+ * the whole of the convergence story — `put` becomes idempotent rather than
+ * destructive, and a full sync can re-apply everything safely.
+ *
+ * `elementId` and `rev` stay in the key as a readable prefix (the random tail
+ * alone would already be unique). Nothing parses the id — it is an opaque
+ * primary key in Dexie and a document id in Firestore — so the shape is for
+ * humans reading a row, and older two-part ids remain valid alongside new ones.
  */
 export function createElementHistoryEntry(params: {
   elementId: string;
@@ -47,7 +66,7 @@ export function createElementHistoryEntry(params: {
 }): ElementHistory {
   const { elementId, rev, action, property, prevValue, newValue } = params;
   return {
-    id: `${elementId}:${rev}`,
+    id: `${elementId}:${rev}:${generateId()}`,
     elementId,
     rev,
     action,
@@ -57,4 +76,25 @@ export function createElementHistoryEntry(params: {
     updatedBy: getCurrentUserId(),
     updatedAt: now(),
   };
+}
+
+/**
+ * Total order for displaying an element's history. Defined once here because
+ * two readers need it (`IDBAdapter.getElementHistory` and `DataFieldDetails`),
+ * and they must agree — worse than a wrong order is two surfaces disagreeing.
+ *
+ * `rev` first: within one client it is a true sequence, which is the everyday
+ * case and the order the author expects to see. It is *not* a total order
+ * across clients — two offline clients can both mint rev 5 — so two more keys
+ * follow. `updatedAt` next: server-stamped once pushed (`serverTimestamp()` in
+ * FirestoreAdapter), so concurrent same-rev appends fall into the order the
+ * server accepted them. Then `id`, which never ties, so every client sorts an
+ * identical set identically. Deterministic beats notionally-true here: nothing
+ * can recover the real authoring order of two offline edits, but all clients
+ * agreeing is achievable and is what convergence actually needs.
+ */
+export function compareHistory(a: ElementHistory, b: ElementHistory): number {
+  if (a.rev !== b.rev) return a.rev - b.rev;
+  if (a.updatedAt !== b.updatedAt) return a.updatedAt - b.updatedAt;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }

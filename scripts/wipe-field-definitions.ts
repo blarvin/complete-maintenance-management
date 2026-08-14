@@ -1,7 +1,7 @@
 /**
- * Wipe all FieldDefinitions from Firestore.
+ * Wipe all FieldDefinitions from PRODUCTION Firestore.
  *
- * Run with: npx tsx scripts/wipe-field-definitions.ts   (or: npm run wipe:fielddefs)
+ * Run with: npm run wipe:fielddefs -- --yes
  *
  * Since Config-as-Elements, a FieldDefinition is a `library`-tree Element (plus
  * its config sub-field children) in the `elements` collection — there is no
@@ -12,13 +12,13 @@
  * untouched (use wipe-elements.ts for those).
  *
  * NOTE: A Node script cannot reach the browser's IndexedDB, where the app keeps
- * its working copy of FieldDefinitions. This script clears the Firestore side;
- * to clear the local IDB side, open the app and run in the browser console:
+ * its working copy. This script clears the Firestore side; to clear the local
+ * IDB side, open the app and run in the browser console:
  *
- *     await window.__wipeFieldDefinitions()
+ *     await window.__wipeDefinitions()
  *
- * That helper clears the local copy and resets the seed-version key, so the 7
- * dev seeds re-seed on the next reload (a factory-default reset).
+ * That helper clears the local copy and resets the seed-version key, so the dev
+ * seeds re-seed on the next reload (a factory-default reset).
  */
 
 import { initializeApp } from 'firebase/app';
@@ -29,15 +29,9 @@ import {
     writeBatch,
     doc,
 } from 'firebase/firestore';
+import { PRODUCTION_FIREBASE_CONFIG, requireConfirmation } from './wipeShared';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBgVGwmf8o6eP7XRW-Jv8AwScIrIDPertA",
-    authDomain: "treeview-blarapp.firebaseapp.com",
-    projectId: "treeview-blarapp",
-    storageBucket: "treeview-blarapp.firebasestorage.app",
-    messagingSenderId: "1041054928276",
-    appId: "1:1041054928276:web:f4804c9c7b35c66cd4d381",
-};
+const firebaseConfig = PRODUCTION_FIREBASE_CONFIG;
 
 const ELEMENTS = 'elements';
 
@@ -68,6 +62,8 @@ async function deleteLibraryDefinitions(db: ReturnType<typeof getFirestore>): Pr
 }
 
 async function main() {
+    requireConfirmation('delete every library Definition from production');
+
     console.log('⚠️  WIPE FIELD DEFINITIONS - This deletes all FieldDefinitions from Firestore!\n');
     console.log(`Project: ${firebaseConfig.projectId}`);
     console.log('');
@@ -80,7 +76,7 @@ async function main() {
     console.log(`\n✅ Firestore FieldDefinitions wiped! Deleted ${totalDeleted} library documents.`);
     console.log('\n👉 To also clear the local IndexedDB copy, open the app and run in the');
     console.log('   browser console:');
-    console.log('\n       await window.__wipeFieldDefinitions()\n');
+    console.log('\n       await window.__wipeDefinitions()\n');
     process.exit(0);
 }
 

@@ -1,7 +1,7 @@
 /**
- * Pure functions for `number-kv`: state classification + config invariant
- * validation. Exported separately so unit tests can hit them without
- * mounting the renderer.
+ * Pure functions for `number-kv`: edit-buffer parsing, state classification +
+ * config invariant validation. Exported separately so unit tests can hit them
+ * without mounting the renderer.
  *
  * State precedence (per SPEC §FieldComponent: number-kv):
  *   stale > alarm > warn > ok > none
@@ -14,6 +14,26 @@
 import type { CompoundValue, NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
 
 export type NumberKvState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
+
+/**
+ * Parse the raw edit buffer to a number. Empty (or whitespace) → null; anything
+ * that isn't a complete number throws, and `useFieldEdit.save` turns the message
+ * into the error Snackbar.
+ *
+ * `Number`, not `parseFloat`, on purpose: parseFloat consumes the numeric prefix
+ * and silently discards the rest, so "120nnn" saved as 120 and "1,200" as 1.
+ * Scientific input ("1e5") still parses — `scientific` is a supported
+ * displayFormat, so the edit buffer has to accept what the display can produce.
+ */
+export function parseNumber(raw: string): number | null {
+    const trimmed = raw.trim();
+    if (trimmed === '') return null;
+    const n = Number(trimmed);
+    if (!Number.isFinite(n)) {
+        throw new Error(`"${raw}" is not a valid number`);
+    }
+    return n;
+}
 
 /**
  * Format a numeric value per its config's `decimals` / `displayFormat`, before

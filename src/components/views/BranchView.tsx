@@ -15,7 +15,7 @@ import { useLensPolicy } from '../../hooks/useLensPolicy';
 import { isReRoot } from '../../kinds/placement';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
 import { reRootCreateKindsFor } from '../../kinds/registry';
-import { nodeRenderMode } from '../../kinds/renderMode';
+import { derivationOf, nodeRenderMode } from '../../kinds/renderMode';
 import type { Kind } from '../../data/models';
 
 export type BranchViewProps = {
@@ -48,7 +48,11 @@ export const BranchView = (props: BranchViewProps) => {
         return mode.mode === 'lens' ? mode.targetKind : null;
     };
     const ownerId = () => parentEl()?.parentId ?? '';
-    const derivedJobs = useLensGather(ownerId, lensTargetKind);
+    // The lens kind's own descriptor drives the gather. Gated on `lensTargetKind` so
+    // an `org` (Derivation without Provision) doesn't run a subtree walk it never
+    // renders — its rollup is a header chip, not this view.
+    const lensDerivation = () => (lensTargetKind() ? derivationOf(parentEl()?.kind) : null);
+    const derivedJobs = useLensGather(ownerId, lensDerivation);
     // Re-rooted into a lens, `parentEl` IS the lens Element (carries the bound
     // policy Definition). No-ops to the pickerLabel fallback for plain nodes.
     const lensPolicy = useLensPolicy(parentEl, lensTargetKind);

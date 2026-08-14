@@ -7,7 +7,14 @@
  * aria-labels and visible text ONLY, which the port keeps stable.
  */
 
-const DB_NAME = 'complete-maintenance-management';
+// The app scopes its Dexie database by sync target (src/data/storage/db.ts).
+// Specs visit `?emulator=true`, so the emulator-scoped database is the live one
+// — but delete both, so a spec can never inherit state from a manual
+// production-mode session on the same origin.
+const DB_NAMES = [
+    'complete-maintenance-management',
+    'complete-maintenance-management-emulator',
+];
 const EMULATOR_HOST = 'http://localhost:8080';
 const PROJECT_ID = 'treeview-blarapp';
 
@@ -48,10 +55,10 @@ Cypress.Commands.add('freshVisit', (options: { offline?: boolean } = {}) => {
     cy.clearEmulator();
     cy.visit('/?emulator=true', {
         onBeforeLoad(win) {
-            // Delete the app DB before any app script runs. The app's own
+            // Delete the app DBs before any app script runs. The app's own
             // open() queues behind this deletion (per-database IDB request
             // ordering), so it always boots against a fresh store.
-            win.indexedDB.deleteDatabase(DB_NAME);
+            DB_NAMES.forEach((name) => win.indexedDB.deleteDatabase(name));
             if (options.offline) {
                 let onLine = false;
                 Object.defineProperty(win.navigator, 'onLine', {

@@ -648,12 +648,14 @@ Chrome is always **derived**, **device-local view state**, or **the rendered exp
 
 **Purpose:** Immutable append-only audit log of Element changes, spanning every tracked property: value edits, renames, re-subtitling, re-parenting (a *move* is a `parentId` change), reordering, and structural create/delete. Typed as a discriminated union over `kind` so value `prevValue` / `newValue` carry the element's value shape.
 
+**Append-only means it must converge.** Rows are never updated in place, so the log is a grow-only set: every append gets a unique id and two clients merge by union, with nothing overwritten and no coordination needed. This is why `id` carries a random tail and why `rev` is only a per-client sequence — `rev` is minted from a local read, which cannot see another client, so two offline edits to the same element legitimately share a `rev` and must not share an id. Display order is therefore `(rev, updatedAt, id)`, not `rev` alone.
+
 **Shared fields**:
 
 
 | Field     | Type          | Required | Description                        | Constraints                                      |
 | --------- | ------------- | -------- | ---------------------------------- | ------------------------------------------------ |
-| id        | string        | Yes      | Primary key                        | Composite key `${elementId}:${rev}`              |
+| id        | string        | Yes      | Primary key                        | `${elementId}:${rev}:${random}` — unique per append |
 | elementId | string (UUID) | Yes      | Reference to `Element.id`          | Must exist in `elements` table                   |
 | parentId  | string (UUID) | null     | Yes                                | Owning/canonical parent at time of change        |
 | kind      | string        | Yes      | Discriminator                      | Matches `Element.kind`                           |
@@ -663,7 +665,7 @@ Chrome is always **derived**, **device-local view state**, or **the rendered exp
 | newValue  | JSON          | null     | Cond.                              | New value of the changed property                |
 | updatedBy | string        | Yes      | Editor identifier                  | Constant `"localUser"`; real user IDs [Phase 2+] |
 | updatedAt | timestamp     | Yes      | When the change occurred (epoch)   | Client-assigned; server-assigned [Phase 2+]      |
-| rev       | number        | Yes      | Monotonic revision per `elementId` | Starts at 0 for create                           |
+| rev       | number        | Yes      | Per-client sequence per `elementId` | Starts at 0 for create; **not** unique across clients |
 
 
 `**prevValue` / `newValue` shapes**:
@@ -752,13 +754,28 @@ Storage operations are abstracted through a backend-agnostic interface, enabling
 
 ### Soft Deletion
 
+**Retention is the default. Deletion is soft delete, and soft delete is the only
+delete.** No client code path removes an element row — not a user action, not a
+sync reconcile, not a reset. An element leaves the user's view by acquiring a
+`deletedAt`, and the row itself stays.
+
+This is a guarantee about the sync layer as much as the UI: a pull is additive.
+Absence of a row on the server never means "delete it locally", because server
+absence cannot distinguish a deletion from a row that never arrived — including
+the row whose upload permanently failed, the one least safe to drop.
+
 Elements support soft deletion via `deletedAt` timestamps:
 
 - Active elements have `deletedAt: null`
 - Deleted elements have `deletedAt: <timestamp>`
 - Queries filter out soft-deleted elements by default
 - Children of soft-deleted elements are implicitly hidden (not cascade soft-deleted)
+- Soft deletes sync as ordinary field updates, so they propagate through the same lane as any other change
 - Restoration: see Snackbar & Undo for the 5s undo window; beyond that, restore is currently cloud-db-only. [Phase 2+]: in-app restore UI (a dedicated view for browsing and restoring deleted elements).
+
+Purging a row outright is an admin capability, deferred — see LATER.md →
+Destructive Operations. Resetting a *development* client is a separate, local
+act (`window.__wipeLocal()`), not a data-model feature.
 
 #### Element Example (a container — a Node)
 

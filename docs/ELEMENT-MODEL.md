@@ -21,8 +21,8 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 | node                          | `Children(open)`                                                 | `Pump P-101`                   | re-root          | current  |
 | image                         | `OwnValue(blob)`                                                 | a nameplate photo              | inline           | describe |
 | image-with-caption            | `Children(template: image + text-kv)`                            | photo + "south face"           | inline           | describe |
-| asset-doc                     | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | current  |
-| part-supplier-link            | `Edges(external)`                                                | → supplier's web page          | inline           | describe |
+| internal-link                 | `Edges(internal, live) + Reads.resolver`                         | → O&M Manual (live)            | inline           | current  |
+| external-link                 | `Edges(external)`                                                | → supplier's web page          | inline           | current  |
 | other-end                     | `Edges(internal, virtual) + Reads.resolver`                      | "also lives under Pump House"  | inline / re-root | describe |
 | approval                      | `Edges(internal, revision) + Reads.resolver`                     | "approved @ rev 4 (now rev 7)" | inline           | describe |
 | asset-gallery                 | `Derivation(children/transitive → image) + Reads.resolver`       | every photo below, one place   | inline           | describe |
@@ -206,7 +206,7 @@ Subtle background colour in Phase 1; no icons.
 
 **Status: describe.**
 
-## asset-doc
+## internal-link
 
 **Purpose**: A live link to another internal Element, resolved at read time — it shows the target's current state, never a copy.
 
@@ -214,15 +214,21 @@ Subtle background colour in Phase 1; no icons.
 
 **Value shape**: an Element `id` (the target). `pin: 'live'` — always resolves the target's current state.
 
+**Named for its composition, not its use** (renamed from `asset-doc`, 2026-08-12). "Linked Doc" is the *Definition* label in the seeded library; "O&M Manual", "Drawing", "Parent Assembly" are others of this same kind. Nothing about the behaviour is document-specific — it is a live internal reference, and that is the whole of it. The internal twin of `external-link`.
+
 **UX**: an inline reference row rendered from the resolved target. **Status: current** (v1 stub, #6b 2026-06-28 — the value is a raw element-id resolved live to the target's name; a real target picker, an allowed-target-kind config, and editing a saved link are tracked in ISSUES).
 
-## part-supplier-link
+## external-link
 
-**Purpose**: A link *out* of the app — a stored URL to a supplier page, datasheet PDF, or manufacturer's site. The external twin of `asset-doc`.
+**Purpose**: A link *out* of the app — a stored URL. The external twin of `internal-link`.
 
-**Composition**: `Edges(external)`. **Placement**: inline. The value is `{ url }`; it opens in a new tab; there is no resolver (nothing internal to resolve). Together `asset-doc` and `part-supplier-link` exercise both halves of `TargetSpec.scope`.
+**Composition**: `Edges(external)`. **Placement**: inline. The value is `{ url }`; it opens in a new tab; there is no resolver (nothing internal to resolve). Together `internal-link` and `external-link` exercise both halves of `TargetSpec.scope`.
 
-**Status: describe.**
+**Named for its composition, not its use** (renamed from `part-supplier-link`, 2026-08-12). "Part Supplier Link", "Datasheet" and "Manufacturer Page" are *Definitions* of this one kind, authored in the library and bound by `definitionId` — the same relationship "Linked Doc" has to `internal-link`. A supplier is domain typology, and by this file's own rule (→ *What is not a kind*) domain typology never becomes a kind. The behaviour is what earns the registry entry, and the behaviour here is "an external URL, opened, never resolved" — nothing about it is supplier-specific.
+
+**UX**: the row shows the link scheme-less (`supplier.example/part/9`) and opens in a new tab. The stored value is exactly what was typed; normalization happens at display, so a half-typed value survives a reload. A bare host is read as `https`. A value that isn't `http(s)` renders as plain text and never as an anchor — the guard that keeps a typed `javascript:` from becoming a live link (`safeHttpUrl`, `src/utils/url.ts`).
+
+**Status: current** (2026-08-12 — no config sub-fields; editing a saved link rides on the general field-edit surface).
 
 ## other-end
 
@@ -231,7 +237,7 @@ Subtle background colour in Phase 1; no icons.
 **Composition**: `Edges(internal, virtual) + Reads.resolver`. **Placement**: inline / re-root. Authored from either end — *adopt-here* on the host's card, or *appears-also-under* from the element itself — but it writes **one** overlay edge, never a duplicate.
 
 - `appearance: 'portal'` → a navigable child of the virtual parent (tap drills in; edits write through to the one canonical Element).
-- `appearance: 'citation'` → a plain inline reference row, like `asset-doc`.
+- `appearance: 'citation'` → a plain inline reference row, like `internal-link`.
 
 One canonical `parentId` with appearances layered on top, so **detach** (remove an appearance) ≠ **delete** (remove the Element everywhere).
 
@@ -303,7 +309,9 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 **v1 (#6b, 2026-06-28).** `jobs` is built as **a lens child on every node** (deterministic id `${nodeId}::jobs`), each gathering its *own* subtree — a **pure rollup**, reaching the same visible result as upward provisioning (a Jobs box at every ancestor level) without the write-time ancestor-walk. **Decision: pure rollup is right for `jobs` now.** Container behaviour landed with the #5 container half (2026-06-30): `jobs` is a **hybrid** — it owns its own DataFields *and* rolls up jobs; each `job` is authored inside the container (parented to the owning node) and renders field-like yet re-rootable — a compact `NavigableRow` under a node, a Node-like CHILD card when re-rooted into — the **inline-yet-navigable placement** made concrete. `logbook` inherits the same rollup-and-container shape; once job-subtypes (Task/Work Order/Project) arrive, a subtype may force its own kind.
 
-**Deferred:** **rich gathered rows** — a row's status/lifecycle "primary line" — wait on `Action` (ISSUES → chrome entailment); picking which *descendant* a new job lands under — Phase-1 parents every job to the lens owner (LATER); backfill onto pre-existing nodes, de-provision/GC, and hiding empty lenses (ISSUES → provisioned-lens lifecycle).
+**Deferred:** **rich gathered rows** — a row's status/lifecycle "primary line" — wait on `Action` (ISSUES → chrome entailment); picking which *descendant* a new job lands under — Phase-1 parents every job to the lens owner (LATER).
+
+**Lifecycle (settled 2026-08-12).** **Backfill** is built: `backfillProvisionedLenses` reconciles every declared lens onto already-stored container nodes at startup, so a node minted before a lens kind existed grows one (`logbook` arriving after `jobs` is the case that already happened). Idempotent, keyed on the same deterministic id. **An empty lens stays visible** — the only door to creating the first job is inside its own box, so hiding an empty one hides the door. **De-provision/GC** follows from that: a lens is not removed when its last entry goes, and in any case it owns its own DataFields, which a GC would take with it.
 
 **Status:** `jobs` **current** (v1 rollup #6b + the hybrid-container half of #5, 2026-06-30); `logbook` **current** (#6c + the Definition-binding seam, 2026-07-01: rollup-and-container with a bound policy Definition — entry label + staleness — stamped at mint from the seeded `fd_logbook_policy`).
 
@@ -312,6 +320,8 @@ The target kind is the only parameter — an org that works in "work orders," "t
 **Purpose**: A layered, asset-like task node — open children for its detail Fields, navigable like any asset.
 
 **Composition**: `Children(open)`. **Placement**: re-root. Status/priority/owner/due-dates are ordinary **Fields** (scoped by the `children` allowlist), *not* an OwnValue — so `Children + OwnValue` never arises (the parked `intrinsic-node-scalar` shape). `job` composes the same capability as `node`; it **earns its kind as the trigger the `jobs` lens provisions against** — the framework reacts to its existence, behaviour keyed on the kind, not a passive `typeOf` label (the SPEC §584-585 boundary, a deliberate call). Org variants — task, work-order, ticket — are soft labels on `job` for now; if any ever needs distinct behaviour it becomes its own kind (and `jobs` may then need container behaviour — see the lens note). First-class validated transitions wait on `Action` (built last).
+
+**Sub-jobs: no** (decided 2026-08-12). `job` admitted `job` in its `children` allowlist, but nothing ever minted one — `LensCreate` parents every new job to the lens's owning node — so the claim was untested, and a nested job would also have been counted in every ancestor's Jobs rollup. `job` is now absent from its own allowlist. Restoring it is one line; job-subtypes (Task / Work-Order / Project) remain the other fork.
 
 **Status: current** (v1 stub, #6b — node shell; status lives as a Field).
 
@@ -402,3 +412,4 @@ These are leaves, never new primitives.
 8. **Disposition & pin encoding** — is owned/delegated/pinned an authored flag on the Definition-side sub-field (and where), or entailed by template-vs-open plus a pin boolean? Plus the read-time cost of assembling a Definition's config subtree vs the old blob (memo / materialization — bounded, but measure).
 9. **Canonical classifier tag** — whether the soft layer gains one required, single-valued, controlled-but-user-grown tag per node (a firm handle for search / filter / target over domain typology), distinct from open multi-tags. Deferred; identity stays on `kind`.
 10. **Approval validity predicate** — is `ValiditySpec` only rev-staleness, or also target-*state* predicates (an `approval` valid only while its target Job is in state X)? Scoped to rev-staleness for now.
+11. **`approval` cannot pin by `rev`** — the value shape above (`{ targetId, rev }`, pinning `${targetId}:${rev}`) assumes `rev` names one revision globally. It does not: `rev` is minted from a local-only read, so two clients editing the same element offline both reach rev 5 (ISSUES Tech Debt #4, fixed 2026-08-13 by making the history *id* unique — which repaired convergence but confirmed `rev` is only a per-client sequence). "Approved @ rev 4" therefore promises a precision the storage layer cannot deliver. Two routes when this kind is built: pin the full history row id (unique, immutable, already a stable handle), or drop the pointer entirely and have the approval **snapshot** what it approved into its own child subtree, with staleness read from the target's server-stamped `updatedAt` rather than a revision counter. The second removes `approval`'s dependency on the history log altogether and would leave `rev` with no consumer.

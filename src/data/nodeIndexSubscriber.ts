@@ -1,10 +1,13 @@
 /**
  * Wires the in-memory node index to the StorageEventBus.
  *
- * After calling `subscribeNodeIndex()`, every ELEMENT_WRITTEN (re-root kind) /
- * ELEMENT_HARD_DELETED event keeps the index current — no caller needs to touch
- * the index directly. Inline elements (DataFields) are ignored: the index
- * only tracks the navigable node tree for breadcrumb/ancestry computation.
+ * After calling `subscribeNodeIndex()`, every ELEMENT_WRITTEN (re-root kind)
+ * event keeps the index current — no caller needs to touch the index directly.
+ * Inline elements (DataFields) are ignored: the index only tracks the navigable
+ * node tree for breadcrumb/ancestry computation.
+ *
+ * Removal is soft-delete only: a non-null `deletedAt` on the written element is
+ * what drops a node out of the index. No row is ever hard-deleted.
  */
 
 import type { StorageEvent } from './storageEventBus';
@@ -29,9 +32,6 @@ export function handleStorageEvent(event: StorageEvent): void {
       } else {
         removeNodeSummary(event.element.id);
       }
-      break;
-    case 'ELEMENT_HARD_DELETED':
-      removeNodeSummary(event.elementId);
       break;
     default:
       break;

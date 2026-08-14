@@ -41,7 +41,7 @@ export const NavigableRow = (props: NavigableRowProps) => {
                     }}
                     onClick={() => setExpanded(!expanded())}
                     aria-expanded={expanded()}
-                    aria-label={expanded() ? 'Collapse' : 'Expand'}
+                    aria-label={expanded() ? `Collapse ${props.name}` : `Expand ${props.name}`}
                 />
                 <span
                     class={styles.name}

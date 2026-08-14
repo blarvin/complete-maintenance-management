@@ -100,6 +100,8 @@
       "Edit(src/**)",
       "Edit(tests/**)",
       "Edit(cypress/**)",
+      "Edit(docs/**)",
+      "Write(docs/**)",
       "Bash(find:*)",
       "Bash(echo:*)",
       "Bash(cd:*)",
@@ -160,7 +162,9 @@
       "PowerShell(Receive-Job *)",
       "PowerShell(Out-Null *)",
       "PowerShell(claude mcp *)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(.claude/memory/**)",
+      "Edit(.claude/memory/**)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -179,11 +183,8 @@
       "PowerShell(Invoke-RestMethod *)",
       "PowerShell(iwr *)",
       "PowerShell(irm *)",
-      "PowerShell(git commit *)",
       "PowerShell(git push *)",
-      "PowerShell(git commit)",
       "PowerShell(git push)",
-      "Bash(git commit:*)",
       "Bash(git push:*)",
       "PowerShell(firebase deploy *)",
       "PowerShell(netlify deploy *)",

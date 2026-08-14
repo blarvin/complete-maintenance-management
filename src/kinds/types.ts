@@ -113,7 +113,7 @@ export type ValueShape = 'scalar' | 'block' | 'composite';
 
 /**
  * OwnValue descriptor (field-like core) — the value shape + a value-validation
- * hook. A kind with no OwnValue at all (asset-doc — its value is an Edge)
+ * hook. A kind with no OwnValue at all (internal-link — its value is an Edge)
  * defaults to `scalar` at the dispatcher: no own value → a scalar-shaped
  * resolved read.
  */
@@ -121,6 +121,16 @@ export type ValueSpec = {
     shape: ValueShape;
     validate?: (value: DataFieldValue | null) => string | null;
 };
+
+/**
+ * Which create affordance offers this kind (SPEC §registry & manifest).
+ * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
+ * renderable but exist solely inside config subtrees — never offered as a new
+ * Definition in the composer picker (which lists `composer` kinds only).
+ * `provision` kinds (`jobs`/`logbook`) are materialized by the framework (the lens
+ * provisioned per node), never offered in any user create affordance.
+ */
+export type MintVia = 'composer' | 'node-create' | 'config-only' | 'provision';
 
 /** `template` = fixed core; `open` = user-grown (always allowlist-constrained). */
 export type ChildrenMode = 'template' | 'open';
@@ -148,6 +158,20 @@ export type TargetSpec = {
 export type SourceSpec = {
     relation: 'children' | 'ancestors' | 'edges';
     reach: 'direct' | 'transitive';
+};
+
+/**
+ * A whole Derivation gather: where to look (`source`) and what to keep
+ * (`targetKind`). `targetKind` filters the gathered set to one kind — the lens's
+ * "→ job" / "→ log-entry" axis, which `SourceSpec` deliberately doesn't carry.
+ * Omitted = keep every gathered Element (e.g. `org`'s untyped rollup count).
+ *
+ * Executed by `gatherByDerivation` (capabilityEngine); consumers read it whole
+ * rather than picking a traversal themselves.
+ */
+export type DerivationSpec = {
+    source: SourceSpec;
+    targetKind?: Kind;
 };
 
 /**
@@ -184,12 +208,7 @@ export type CapabilitySet = {
     ownValue?: ValueSpec;
     children?: { spec: ChildrenSpec };
     edges?: { target: TargetSpec };
-    /**
-     * Derivation gather. `targetKind` filters the gathered set to one kind — the
-     * lens's "→ job" / "→ log-entry" axis (SourceSpec carries relation×reach only).
-     * Omitted = gather every descendant (e.g. `org`'s untyped rollup count).
-     */
-    derivation?: { source: SourceSpec; targetKind?: Kind };
+    derivation?: DerivationSpec;
     action?: { spec: ActionSpec };
     reads?: { resolver?: boolean; historyStream?: boolean };
     // node-oriented descriptors (ride on the six; not new capabilities)
@@ -208,23 +227,12 @@ type ManifestIdentity = {
     kind: Kind;
     /** Label for the authoring-form segmented picker. */
     pickerLabel: string;
-    /**
-     * Which create affordance offers this kind (SPEC §registry & manifest).
-     * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
-     * renderable but exist solely inside config subtrees — never offered as a new
-     * Definition in the composer picker (which lists `composer` kinds only).
-     * `provision` kinds (`jobs`) are materialized by the framework (the lens
-     * provisioned per node), never offered in any user create affordance.
-     */
-    mintVia: 'composer' | 'node-create' | 'config-only' | 'provision';
+    mintVia: MintVia;
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';
-    /**
-     * Reject incoherent capability subsets (SPEC §589). Optional per-kind override;
-     * the global cross-capability rules live in `checkCoherence` (coherence.ts) and
-     * run over every registry entry in the registry test. Empty array = coherent.
-     */
-    coherence?: (caps: CapabilitySet) => string[];
+    // Note: per-kind coherence rules are NOT declared here. They live in
+    // `KIND_COHERENCE` (coherence.ts), because the only thing that runs them is the
+    // registry coherence test, which may not import a manifest. See that module.
     // ── Definition-authoring contract (placement-agnostic) ──────────────────
     // A kind that can carry a bound Definition declares how one is authored.
     // Required for inline kinds (re-asserted on InlineManifest); optional for

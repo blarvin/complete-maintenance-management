@@ -13,6 +13,7 @@
 
 import { createMemo, For, Show } from 'solid-js';
 import { getKindManifest } from '../../kinds/registry';
+import { derivationOf } from '../../kinds/renderMode';
 import { useElementById } from '../../hooks/useElementChildren';
 import { useLensGather } from '../../hooks/useLensGather';
 import { useLensPolicy } from '../../hooks/useLensPolicy';
@@ -29,7 +30,9 @@ export const LensRollup = (props: LensRollupProps) => {
     const { element: lensEl } = useElementById(() => props.lensId);
     const ownerId = () => lensEl()?.parentId ?? '';
     const targetKind = (): Kind | null => props.targetKind;
-    const gathered = useLensGather(ownerId, targetKind);
+    // The gather runs the lens kind's own descriptor, not a hardcoded subtree walk.
+    // Both this and `ownerId` wait on `lensEl`, so they arrive on the same tick.
+    const gathered = useLensGather(ownerId, () => derivationOf(lensEl()?.kind));
 
     // The bound policy Definition (entry label, staleness); `|| pickerLabel`
     // covers the first-paint tick before the policy effect resolves.

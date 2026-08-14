@@ -111,8 +111,10 @@ export type DefinitionConfig =
 export type TextKvValue = string;
 export type EnumKvValue = string;
 export type NumberKvValue = number;
-/** asset-doc: an internal Edge — the value is the target Element's id (resolved live). */
-export type AssetDocValue = { targetId: string };
+/** internal-link: an internal Edge — the value is the target Element's id (resolved live). */
+export type InternalLinkValue = { targetId: string };
+/** external-link: an external Edge — the value is a stored URL, never resolved. */
+export type ExternalLinkValue = { url: string };
 export type SingleImageValue = {
   blobId: string;
   mimeType: string;
@@ -145,7 +147,8 @@ export type KindValueMap = {
   'enum-kv': EnumKvValue;
   'number-kv': NumberKvValue;
   'single-image': SingleImageValue;
-  'asset-doc': AssetDocValue;
+  'internal-link': InternalLinkValue;
+  'external-link': ExternalLinkValue;
   flag: FlagValue;
   compound: CompoundValue;
   'string-list': StringListValue;
@@ -264,7 +267,12 @@ export type Element = {
  * Unified history log replacing dataFieldHistory. Captures structural changes
  * (name, subtitle, parentId, siblingOrder) in addition to value edits.
  *
- * Primary key: `${elementId}:${rev}`.
+ * Primary key: `${elementId}:${rev}:${random}`. Append-only and never updated
+ * in place, so unique ids make the log a grow-only set — two clients merge by
+ * union, with no coordination and nothing overwritten (IMPLEMENTATION.md →
+ * *History ID Scheme*).
+ * Order for display is `compareHistory` in `storage/historyHelpers.ts`; `rev`
+ * on its own is only a per-client sequence.
  */
 export type ElementHistoryProperty =
   | "value"
@@ -274,9 +282,9 @@ export type ElementHistoryProperty =
   | "siblingOrder";
 
 export type ElementHistory = {
-  id: string; // `${elementId}:${rev}`
+  id: string; // `${elementId}:${rev}:${random}` — the tail is what makes appends converge
   elementId: ID;
-  rev: number; // monotonic per elementId, start 0 on create
+  rev: number; // per-client sequence, start 0 on create. NOT unique across clients
   action: "create" | "update" | "delete";
   property: ElementHistoryProperty;
   prevValue: unknown;

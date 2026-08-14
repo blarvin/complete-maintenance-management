@@ -16,7 +16,7 @@ import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { getDefinitionQueries } from '../../data/queries';
 import type { NumberKvConfig } from '../../data/models';
-import { computeNumberKvState, formatNumberKvDisplay } from './numberKvState';
+import { computeNumberKvState, formatNumberKvDisplay, parseNumber } from './numberKvState';
 import styles from './DataField.module.css';
 import numberStyles from './NumberKvField.module.css';
 
@@ -33,16 +33,6 @@ export type NumberKvFieldProps = {
     /** When set, edits are buffered (no IDB write) and forwarded via onChange. */
     pendingMode?: { onChange: (value: number | null) => void | Promise<void>; autoFocus?: boolean };
 };
-
-function parseNumber(raw: string): number | null {
-    const trimmed = raw.trim();
-    if (trimmed === '') return null;
-    const n = parseFloat(trimmed);
-    if (!Number.isFinite(n)) {
-        throw new Error(`"${raw}" is not a valid number`);
-    }
-    return n;
-}
 
 function makeValidate(config: NumberKvConfig) {
     return (value: number | null) => {

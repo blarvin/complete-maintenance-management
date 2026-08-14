@@ -23,6 +23,7 @@ import { storageEventBus } from '../data/storageEventBus';
 import { affectsChildrenOf, affectsElement } from '../data/storageEventRelevance';
 import { effectiveChildren } from '../data/effectiveChildren';
 import { isReRoot } from '../kinds/placement';
+import { devLog } from '../utils/devMode';
 import { getCurrentUserId } from '../context/userContext';
 import type { Element } from '../data/models';
 
@@ -58,7 +59,7 @@ export function useElementChildren(
                 if (!disposed) {
                     const next = effective.filter(e => (filter === 'nodes') === isReRoot(e.kind));
                     setChildren(next);
-                    console.log('[useElementChildren] Loaded', next.length, filter, 'under', pid ?? 'ROOT');
+                    devLog('[useElementChildren] Loaded', next.length, filter, 'under', pid ?? 'ROOT');
                 }
             } finally {
                 setIsLoading(false);

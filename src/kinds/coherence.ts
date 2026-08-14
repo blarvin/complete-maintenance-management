@@ -2,14 +2,22 @@
  * Capability coherence — the validity rules from SPEC §589 (and §584).
  *
  * Capabilities aren't fully orthogonal: some subsets are incoherent and must be
- * rejected; some co-occurrences are valid but worth flagging. This module is the
- * **global** rule table; a kind may add its own hard rules via its manifest's
- * optional `coherence(caps)` hook. Neither is read in the running app yet — they
+ * rejected; some co-occurrences are valid but worth flagging. This module holds
+ * both tiers of rule: the **global** table in `checkCoherence`, and the per-kind
+ * overrides in `KIND_COHERENCE`. Neither is read in the running app yet — they
  * are exercised by the registry coherence test (`src/test/kindCoherence.test.ts`),
  * which fails CI if any manifest composes an incoherent subset. The cascade
  * arbiter (#7) is the first runtime reader of the contend-pair rules below.
+ *
+ * Per-kind rules live **here, as data**, not on the manifest. They were declared as
+ * an optional `coherence(caps)` hook on `ManifestIdentity`, where nothing could ever
+ * call them: the only caller is the test, and a test may not import a manifest (the
+ * `.tsx` renderers, no Solid JSX transform in `vitest.config.ts`). A kind declaring
+ * a rule there would have been silently unchecked. Same component-free-mirror
+ * constraint as `placement.ts` / `capabilities.ts`.
  */
 
+import type { Kind } from '../data/models';
 import type { CapabilitySet } from './types';
 
 /** The six capability axes (node-oriented descriptors don't count as composed behaviour). */
@@ -29,11 +37,24 @@ export type CoherenceReport = {
 };
 
 /**
- * Validate a composed capability subset against the global rules. Empty `errors`
- * = coherent (the subset is admissible); `warnings` note knowingly-allowed
- * co-occurrences. Pure; no side effects.
+ * Hard rules a single kind adds beyond the global table (SPEC §589's per-kind
+ * override). Keyed by kind; a rule returns error strings, `[]` = coherent.
+ *
+ * **Empty on purpose.** No kind needs one yet — this is the wire, so that the first
+ * kind that does gets checked instead of ignored. Add an entry only when a kind's
+ * own composition can be wrong in a way the global rules can't see.
  */
-export function checkCoherence(caps: CapabilitySet): CoherenceReport {
+export const KIND_COHERENCE: Partial<Record<Kind, (caps: CapabilitySet) => string[]>> = {};
+
+/**
+ * Validate a composed capability subset against the global rules, plus this kind's
+ * own rule when it has one. Empty `errors` = coherent (the subset is admissible);
+ * `warnings` note knowingly-allowed co-occurrences. Pure; no side effects.
+ *
+ * `kind` is optional so a caller checking a hypothetical subset (not a registered
+ * kind) still gets the global rules.
+ */
+export function checkCoherence(caps: CapabilitySet, kind?: Kind): CoherenceReport {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -62,6 +83,10 @@ export function checkCoherence(caps: CapabilitySet): CoherenceReport {
     if (caps.children && caps.ownValue) {
         warnings.push('flagged: Children + OwnValue co-occur (intrinsic node scalar) — allowed knowingly (SPEC §281)');
     }
+
+    // Per-kind override, folded in last so a kind can only ever add rules.
+    const perKind = kind ? KIND_COHERENCE[kind] : undefined;
+    if (perKind) errors.push(...perKind(caps));
 
     return { errors, warnings };
 }

@@ -11,10 +11,33 @@ import type { Definition, Element } from './models';
 // Event types
 // ---------------------------------------------------------------------------
 
+/**
+ * Where a write came from. `local` = this client's own create/update/delete;
+ * `remote` = a row applied by a sync pull (`applyRemoteElement`).
+ *
+ * Read by the **sync subscriber only**. UI subscribers deliberately want both: a
+ * pulled row must repaint exactly like a local edit, which is why a remote apply
+ * emits at all. But a remote apply is not a local change to push, and treating it
+ * as one made every non-empty pull schedule another delta sync — an echo costing
+ * a spare round-trip and, worse, a second unearned advance of the delta cursor
+ * (which was local `now()` against server-stamped rows — IMPLEMENTATION.md →
+ * *The delta cursor is a high-water mark, not the clock*).
+ *
+ * Required, not optional: absence would default to `local` silently, and a new
+ * remote-apply path that forgot the tag would quietly restore the echo. This way
+ * the compiler names every emit site.
+ */
+export type EventOrigin = 'local' | 'remote';
+
+/**
+ * Deletion is a soft delete throughout: it arrives as an ELEMENT_WRITTEN whose
+ * element carries a non-null `deletedAt`. There is deliberately no hard-delete
+ * event — no code path removes an element row (IMPLEMENTATION.md → *Retention
+ * over reconciliation*, 2026-08-13).
+ */
 export type StorageEvent =
-  | { type: 'DEFINITION_WRITTEN'; definition: Pick<Definition, 'id' | 'deletedAt'> }
-  | { type: 'ELEMENT_WRITTEN'; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'treeType' | 'deletedAt'> }
-  | { type: 'ELEMENT_HARD_DELETED'; elementId: string };
+  | { type: 'DEFINITION_WRITTEN'; origin: EventOrigin; definition: Pick<Definition, 'id' | 'deletedAt'> }
+  | { type: 'ELEMENT_WRITTEN'; origin: EventOrigin; element: Pick<Element, 'id' | 'kind' | 'parentId' | 'name' | 'value' | 'treeType' | 'deletedAt'> };
 
 // ---------------------------------------------------------------------------
 // Bus implementation

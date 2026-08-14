@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { allowedChildKinds, canHaveChildren, isLensSurfaced } from '../kinds/childrenPolicy';
+import { kindsMintedVia } from '../kinds/mintVia';
 
 describe('allowedChildKinds', () => {
   it('admits node/org/job under the open containers (node, org)', () => {
@@ -20,11 +21,45 @@ describe('allowedChildKinds', () => {
     }
   });
 
-  it('admits node/job but NOT org under a job', () => {
+  it('admits node but NOT org, and NOT a sub-job, under a job', () => {
+    // Sub-jobs decided against 2026-08-12 (ELEMENT-MODEL §job): nothing ever minted
+    // one — LensCreate parents every job to the lens's owning node — and a nested job
+    // would have double-counted in every ancestor's Jobs rollup.
     const allowed = allowedChildKinds('job');
     expect(allowed).toContain('node');
-    expect(allowed).toContain('job');
     expect(allowed).not.toContain('org');
+    expect(allowed).not.toContain('job');
+  });
+
+  it('is derived, so a new user-creatable kind joins the open containers for free', () => {
+    // The point of deriving these lists: adding a kind used to mean editing four
+    // literal arrays, and a miss was silent. This fails instead.
+    for (const parent of ['node', 'org'] as const) {
+      const allowed = allowedChildKinds(parent);
+      for (const k of [...kindsMintedVia('node-create'), ...kindsMintedVia('composer')]) {
+        expect(allowed).toContain(k);
+      }
+    }
+  });
+
+  it('never admits a framework-provisioned or config-only kind anywhere', () => {
+    // `jobs`/`logbook` are materialized per node; flag/compound/string-list exist
+    // only inside config subtrees. Neither is user-pickable under any parent.
+    const neverPickable = [...kindsMintedVia('provision'), ...kindsMintedVia('config-only')];
+    for (const parent of ['node', 'org', 'job', 'log-entry', 'jobs', 'logbook'] as const) {
+      for (const k of neverPickable) {
+        expect(allowedChildKinds(parent)).not.toContain(k);
+      }
+    }
+  });
+
+  it('a record node (job, log-entry) admits assets and fields but never an org', () => {
+    for (const parent of ['job', 'log-entry'] as const) {
+      const allowed = allowedChildKinds(parent);
+      expect(allowed).toContain('node');
+      expect(allowed).toContain('text-kv');
+      expect(allowed).not.toContain('org');
+    }
   });
 
   it('admits field kinds but no re-root kinds under the hybrid Jobs container (jobs)', () => {
@@ -45,7 +80,7 @@ describe('canHaveChildren', () => {
   });
 
   it('is false for field-like kinds (no children capability)', () => {
-    for (const k of ['text-kv', 'asset-doc'] as const) {
+    for (const k of ['text-kv', 'internal-link'] as const) {
       expect(canHaveChildren(k)).toBe(false);
     }
   });

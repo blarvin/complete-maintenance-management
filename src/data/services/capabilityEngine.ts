@@ -7,15 +7,15 @@
  * it's callable from a renderer (via `getElementQueries()`) and unit-testable
  * with a mock. No new adapter method — built on `getChildren` / `getElementById`.
  *
- * **v1 scope:** the `children` relation only (`org`'s rollup, the `jobs` lens).
- * `ancestors` (inheritance) and `edges` (curated membership) traversal are
- * declared on the descriptors but not implemented yet — they land with the
- * cascade arbiter (#7) and the fuller Edges family (#6c).
+ * **Scope:** the `children` relation (`org`'s rollup, the `jobs` lens) and the
+ * `ancestors` relation (inheritance — what the cascade arbiter reads). `edges`
+ * (curated membership) is declared on the descriptors but has no consumer yet;
+ * it lands with the fuller Edges family (#6c).
  */
 
 import type { Element } from '../models';
 import type { IElementQueries } from '../queries/types';
-import type { SourceSpec } from '../../kinds/types';
+import type { DerivationSpec, SourceSpec } from '../../kinds/types';
 
 /**
  * Transitive children walk (`children/transitive`) — the single gather every
@@ -40,21 +40,75 @@ export async function gatherDescendants(rootId: string, q: IElementQueries): Pro
 }
 
 /**
+ * Ancestor walk (`ancestors/*`) — the parent chain above `startId`, **nearest
+ * first**. That order is the contract, not an accident: `inherit-unless-override`
+ * takes the first ancestor carrying a value, so the caller reads position 0 and
+ * stops. `direct` stops at the immediate parent; `transitive` continues to the root.
+ *
+ * Soft-deleted ancestors are skipped without ending the walk. `getElementById`
+ * (unlike `getChildren`) returns deleted rows, and a deleted ancestor is simply not
+ * a candidate to inherit from — it must not sever the live grandparent above it.
+ * The `seen` set guards against the (shouldn't-happen) cyclic parentId.
+ */
+export async function gatherAncestors(
+    startId: string,
+    reach: 'direct' | 'transitive',
+    q: IElementQueries,
+): Promise<Element[]> {
+    const out: Element[] = [];
+    const seen = new Set<string>([startId]);
+    const start = await q.getElementById(startId);
+    let parentId = start?.parentId ?? null;
+    while (parentId !== null && !seen.has(parentId)) {
+        seen.add(parentId);
+        const parent = await q.getElementById(parentId);
+        if (!parent) break;
+        if (parent.deletedAt === null) out.push(parent);
+        if (reach === 'direct') break;
+        parentId = parent.parentId;
+    }
+    return out;
+}
+
+/**
  * Resolve a `SourceSpec` gather against `rootId`. `children/direct` = immediate
- * children; `children/transitive` = the whole subtree. `ancestors`/`edges` throw
- * — declared, not yet built (see scope note above).
+ * children; `children/transitive` = the whole subtree; `ancestors/*` = the parent
+ * chain, nearest first. `edges` throws — declared, no consumer yet (scope note above).
  */
 export async function gatherBySource(
     rootId: string,
     source: SourceSpec,
     q: IElementQueries,
 ): Promise<Element[]> {
-    if (source.relation !== 'children') {
-        throw new Error(
-            `capabilityEngine: '${source.relation}' traversal not implemented (v1: children only)`,
-        );
+    switch (source.relation) {
+        case 'children':
+            return source.reach === 'direct' ? q.getChildren(rootId) : gatherDescendants(rootId, q);
+        case 'ancestors':
+            return gatherAncestors(rootId, source.reach, q);
+        default:
+            throw new Error(
+                `capabilityEngine: '${source.relation}' traversal not implemented (needs the Edges family)`,
+            );
     }
-    return source.reach === 'direct' ? q.getChildren(rootId) : gatherDescendants(rootId, q);
+}
+
+/**
+ * Execute a whole `derivation` descriptor against `rootId` — both halves, the
+ * `source` traversal and the optional `targetKind` filter.
+ *
+ * **This is the entry point a Derivation consumer should use.** Reaching past it to
+ * `gatherDescendants` hardcodes `children/transitive` (silently ignoring whatever
+ * the kind declared) and leaves each caller to re-implement the kind filter, which
+ * is exactly how the two lens surfaces drifted apart before.
+ */
+export async function gatherByDerivation(
+    rootId: string,
+    derivation: DerivationSpec,
+    q: IElementQueries,
+): Promise<Element[]> {
+    const gathered = await gatherBySource(rootId, derivation.source, q);
+    const target = derivation.targetKind;
+    return target ? gathered.filter((e) => e.kind === target) : gathered;
 }
 
 /**

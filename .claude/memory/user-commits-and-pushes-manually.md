@@ -1,6 +1,6 @@
 ---
 name: user-commits-and-pushes-manually
-description: Never run git commit or git push — the user does both by hand; supply a suggested commit message instead
+description: Never run git push — the user pushes by hand; git commit is allowed only on [auto]-tagged ISSUES items
 metadata: 
   node_type: memory
   type: feedback
@@ -8,8 +8,8 @@ metadata:
   modified: 2026-08-09T08:40:58.618Z
 ---
 
-The user commits and pushes manually. Never run `git commit` or `git push`. Staging (`git add`) and all read-only git is fine.
+**Never run `git push`** — the user pushes by hand, always. **`git commit` is allowed, but only on issues tagged `[auto]`** in `docs/ISSUES.md`; untagged work still ends with a suggested message and a stop. Staging and all read-only git is fine.
 
-**Why:** They want to review and own what lands in history and what goes to the remote. Stated 2026-08-09.
+**Why:** They want to own what reaches the remote. The commit half was relaxed on 2026-08-11 ("why am I holding you back?") so marked, self-contained issues can be taken end-to-end; local commits are reviewable and resettable, a push is not. Original stance stated 2026-08-09.
 
-**How to apply:** When work is complete, stage if useful, then hand them a suggested commit message in a fenced block and stop. Both commands are also denied in `.claude/settings.json` permissions, so attempting them just fails. Commit messages must avoid double quotes — see [[ps51-git-commit-quotes]]. Related: [[working-style-docs-and-smells]].
+**How to apply:** On an `[auto]` issue — implement, verify, then one commit per issue, deleting the item from ISSUES.md in the same commit. Otherwise hand them a message in a fenced block and stop. `git push` remains denied in `.claude/settings.json`, so attempting it just fails; the commit denies were removed there (deny beats allow, so it could not be relaxed from gitignored local settings). Commit messages must avoid double quotes — see [[ps51-git-commit-quotes]]. Related: [[working-style-docs-and-smells]].

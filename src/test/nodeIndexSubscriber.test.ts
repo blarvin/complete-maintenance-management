@@ -6,6 +6,9 @@ import { clearNodeIndex, getAncestorPath, initializeNodeIndex } from '../data/no
 function nodeWritten(id: string, parentId: string | null, name: string, deletedAt: number | null = null) {
     return {
         type: 'ELEMENT_WRITTEN' as const,
+        // The node index reacts to a write whatever its origin — a pulled node has
+        // to enter the index exactly like a locally created one.
+        origin: 'local' as const,
         element: { id, kind: 'node' as const, parentId, name, value: null, treeType: 'business' as const, deletedAt },
     };
 }
@@ -43,6 +46,7 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     it('ELEMENT_WRITTEN for a non-node kind is ignored', () => {
         handleStorageEvent({
             type: 'ELEMENT_WRITTEN',
+            origin: 'local',
             element: { id: 'f1', kind: 'text-kv', parentId: 'n1', name: 'VIN', value: 'X', treeType: 'business', deletedAt: null },
         });
 
@@ -53,6 +57,7 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
     it('ELEMENT_WRITTEN for a non-business tree is ignored (re-root policy Definition)', () => {
         handleStorageEvent({
             type: 'ELEMENT_WRITTEN',
+            origin: 'local',
             element: { id: 'fd_logbook_policy', kind: 'logbook', parentId: null, name: 'Logbook Policy', value: null, treeType: 'library', deletedAt: null },
         });
 
@@ -60,18 +65,28 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
         expect(getAncestorPath('fd_logbook_policy')).toEqual([]);
     });
 
-    it('ELEMENT_HARD_DELETED removes from the index', () => {
+    // Soft delete is the only removal channel — a written element carrying
+    // `deletedAt` is what drops a node out of the index (IMPLEMENTATION.md →
+    // *Retention over reconciliation*).
+    it('a soft-deleted node is removed from the index', () => {
         initializeNodeIndex([{ id: 'n1', parentId: null, name: 'Root' }]);
 
-        handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', elementId: 'n1' });
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            origin: 'remote',
+            element: { id: 'n1', kind: 'node', parentId: null, name: 'Root', value: null, treeType: 'business', deletedAt: 5000 },
+        });
 
-        const path = getAncestorPath('n1');
-        expect(path).toEqual([]);
+        expect(getAncestorPath('n1')).toEqual([]);
     });
 
-    it('ELEMENT_HARD_DELETED for unknown id does not throw', () => {
+    it('a soft delete for an unknown id does not throw', () => {
         expect(() => {
-            handleStorageEvent({ type: 'ELEMENT_HARD_DELETED', elementId: 'unknown' });
+            handleStorageEvent({
+                type: 'ELEMENT_WRITTEN',
+                origin: 'remote',
+                element: { id: 'unknown', kind: 'node', parentId: null, name: 'Gone', value: null, treeType: 'business', deletedAt: 5000 },
+            });
         }).not.toThrow();
     });
 

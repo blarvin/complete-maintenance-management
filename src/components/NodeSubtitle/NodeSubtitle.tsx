@@ -1,7 +1,8 @@
 import styles from '../TreeNode/TreeNode.module.css';
 
-export const NodeSubtitle = (props: { nodeSubtitle: string }) => {
+/** `subtitle` is `Element.subtitle`; the component name is a renderer identifier. */
+export const NodeSubtitle = (props: { subtitle: string }) => {
     return (
-        <div class={styles.nodeSubtitle}>{props.nodeSubtitle}</div>
+        <div class={styles.nodeSubtitle}>{props.subtitle}</div>
     );
 };

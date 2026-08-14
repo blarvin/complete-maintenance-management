@@ -1,7 +1,8 @@
 /**
  * nodeRenderMode — the one registry-side derivation of how a re-root kind's
  * content region renders, from its Derivation/Provision capability combination
- * (ISSUES Architecture Migration #9). The component-free mirror pattern of
+ * (IMPLEMENTATION.md → *`renderMode.ts` is a fifth component-free selector*).
+ * The component-free mirror pattern of
  * `placement.ts`/`childrenPolicy.ts`: reads `KIND_CAPABILITIES`, imports no
  * renderer components, so tests and the storage layer can branch on it.
  *
@@ -19,7 +20,7 @@
 
 import type { Kind } from '../data/models';
 import { KIND_CAPABILITIES } from './capabilities';
-import type { CapabilitySet } from './types';
+import type { CapabilitySet, DerivationSpec } from './types';
 
 export type NodeRenderMode =
     | { mode: 'plain' }
@@ -33,4 +34,21 @@ export function nodeRenderMode(kind: Kind): NodeRenderMode {
         return targetKind ? { mode: 'lens', targetKind } : { mode: 'plain' };
     }
     return caps.derivation ? { mode: 'derivation-chip' } : { mode: 'plain' };
+}
+
+/**
+ * The gather descriptor behind the mode — what a Derivation kind actually reads,
+ * handed whole to `gatherByDerivation`. `null` for a kind with no Derivation (and
+ * for a nullish kind, so a caller awaiting its Element can pass `el()?.kind`).
+ *
+ * The mode above says *how the region draws*; this says *what it gathers*. Both
+ * read the one capability, so a kind can't declare `children/transitive → job` and
+ * be gathered some other way.
+ */
+export function derivationOf(kind: Kind | null | undefined): DerivationSpec | null {
+    if (!kind) return null;
+    // Widened like `nodeRenderMode` above — the indexed access is a union of literal
+    // shapes, and only some arms carry `derivation`.
+    const caps: CapabilitySet = KIND_CAPABILITIES[kind];
+    return caps.derivation ?? null;
 }

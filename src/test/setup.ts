@@ -5,10 +5,9 @@
 
 import 'fake-indexeddb/auto';
 
-// Mock navigator for Node.js environment
+// Mock navigator for Node.js environment. Only `onLine` is read (the sync
+// layer's online checks), so the cast is through `unknown` rather than
+// pretending to implement Navigator.
 if (typeof navigator === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  global.navigator = {
-    onLine: true,
-  } as any;
+  global.navigator = { onLine: true } as unknown as Navigator;
 }

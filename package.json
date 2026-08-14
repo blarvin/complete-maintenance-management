@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cleanup": "npx tsx src/test/cleanup.ts",
+    "wipe:emulator": "npx tsx scripts/wipe-emulator.ts",
     "wipe:elements": "npx tsx scripts/wipe-elements.ts",
     "wipe:fielddefs": "npx tsx scripts/wipe-field-definitions.ts",
     "cypress": "cypress open",

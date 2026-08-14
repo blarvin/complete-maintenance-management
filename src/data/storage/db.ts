@@ -4,6 +4,25 @@
 
 import Dexie, { Table } from 'dexie';
 import type { Element, ElementHistory } from '../models';
+import { syncTarget } from '../syncTarget';
+
+/**
+ * The Dexie database name, scoped by sync target.
+ *
+ * The two targets must not share one database. `FullCollectionSync` deletes
+ * local elements absent from *its* remote, so on a shared database every flip
+ * between production and the emulator wipes the other target's data (observed:
+ * flipping to the emulator blanked the seeded tree).
+ *
+ * Production deliberately keeps the original unsuffixed name so existing local
+ * data survives this change; only the emulator moves.
+ */
+const DB_NAME_BY_TARGET: Record<typeof syncTarget, string> = {
+  production: 'complete-maintenance-management',
+  emulator: 'complete-maintenance-management-emulator',
+};
+
+export const DB_NAME = DB_NAME_BY_TARGET[syncTarget];
 
 export type SyncOperation =
   | 'create-element'
@@ -36,8 +55,8 @@ export class AppDatabase extends Dexie {
   syncQueue!: Table<SyncQueueItem, string>;
   syncMetadata!: Table<SyncMetadata, string>;
 
-  constructor() {
-    super('complete-maintenance-management');
+  constructor(name: string = DB_NAME) {
+    super(name);
 
     this.version(1).stores({
       nodes: 'id, parentId, updatedAt',
