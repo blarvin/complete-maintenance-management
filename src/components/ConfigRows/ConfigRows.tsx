@@ -18,7 +18,7 @@
  * flat member keys back into one object.
  */
 
-import { For, Show, createSignal } from 'solid-js';
+import { For, Index, Show, createEffect, createSignal } from 'solid-js';
 import { CONFIG_SCHEMAS, CONFIG_GROUPS, CONFIG_VALIDATORS } from '../../kinds/configSchema';
 import { getInlineManifest } from '../../kinds/registry';
 import type { ConfigSubField, ConfigSubFieldMember } from '../../kinds/types';
@@ -49,6 +49,15 @@ type LeafProps = {
 const LeafRow = (props: LeafProps) => {
     const [editing, setEditing] = createSignal(false);
     let rowEl: HTMLDivElement | undefined;
+    let editorEl: HTMLInputElement | HTMLSelectElement | undefined;
+
+    // Focus the editor explicitly rather than trusting `autofocus`: the HTML
+    // attribute is processed per *document*, so it is unreliable for a node
+    // inserted later — and this surface can insert many. Same explicit pattern
+    // as the lens create row.
+    createEffect(() => {
+        if (editing()) editorEl?.focus();
+    });
 
     const isFlag = () => props.kind === 'flag';
 
@@ -127,10 +136,10 @@ const LeafRow = (props: LeafProps) => {
                     when={props.kind === 'enum-kv'}
                     fallback={
                         <input
+                            ref={(el) => (editorEl = el)}
                             class={styles.input}
                             type={props.kind === 'number-kv' ? 'number' : 'text'}
                             value={props.value === undefined ? '' : String(props.value)}
-                            autofocus
                             onKeyDown={(e) => {
                                 e.stopPropagation();
                                 if (e.key === 'Enter') {
@@ -146,9 +155,9 @@ const LeafRow = (props: LeafProps) => {
                     }
                 >
                     <select
+                        ref={(el) => (editorEl = el)}
                         class={styles.input}
                         value={props.value === undefined ? '' : String(props.value)}
-                        autofocus
                         onKeyDown={(e) => {
                             e.stopPropagation();
                             if (e.key === 'Enter' || e.key === 'Escape') {
@@ -156,10 +165,11 @@ const LeafRow = (props: LeafProps) => {
                                 leaveEdit();
                             }
                         }}
-                        onChange={(e) => {
-                            props.onWrite(e.currentTarget.value || undefined);
-                            leaveEdit();
-                        }}
+                        // Writes but does NOT close. A native select fires
+                        // `change` on typeahead — every letter key you press to
+                        // find an option — so closing here read as "letters move
+                        // the focus". Enter, Escape or blur close it instead.
+                        onChange={(e) => props.onWrite(e.currentTarget.value || undefined)}
                         onBlur={leaveEdit}
                     >
                         <option value="">— none —</option>
@@ -245,28 +255,33 @@ const ListRow = (props: {
 
     return (
         <ParentRow label={`${props.sub.label} (${props.items.length})`} defaultOpen>
-            <For each={props.items}>
+            {/* <Index>, not <For>: For keys by value, so every keystroke made the
+                edited string a "new" item and remounted its row — which blurred
+                the input after one character. Index keys by position and patches
+                the value in place. Same fix, same reason, as EnumKvConfigForm. */}
+            <Index each={props.items}>
                 {(item, i) => (
                     <div class={styles.row}>
                         <span class={chevron.chevronSpacer} aria-hidden="true" />
                         <input
                             class={styles.input}
                             type="text"
-                            value={item}
+                            value={item()}
                             placeholder="Option label"
-                            onInput={(e) => setAt(i(), e.currentTarget.value)}
+                            onInput={(e) => setAt(i, e.currentTarget.value)}
+                            onKeyDown={(e) => e.stopPropagation()}
                         />
                         <button
                             type="button"
                             class={styles.remove}
-                            onClick={() => removeAt(i())}
-                            aria-label={`Remove option ${i() + 1}`}
+                            onClick={() => removeAt(i)}
+                            aria-label={`Remove option ${i + 1}`}
                         >
                             ×
                         </button>
                     </div>
                 )}
-            </For>
+            </Index>
             <div class={styles.row}>
                 <span class={chevron.chevronSpacer} aria-hidden="true" />
                 <button

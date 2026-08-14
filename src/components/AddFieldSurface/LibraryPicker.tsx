@@ -14,9 +14,10 @@
  * the tab order — so Tab doesn't walk two controls per Definition.
  */
 
-import { For, Show, createEffect, createResource, createSignal, type Accessor } from 'solid-js';
+import { For, Show, createEffect, createResource, createSignal } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
+import { DefinitionAuthoring } from './DefinitionAuthoring';
 import { isInline } from '../../kinds/placement';
 import type { Definition, Kind } from '../../data/models';
 import chevron from '../../styles/disclosure.module.css';
@@ -34,27 +35,16 @@ const FAILED = Symbol('failed');
 
 type DefinitionRowProps = {
     definition: Definition;
-    index: Accessor<number>;
-    activeIndex: Accessor<number>;
     onPick: (d: Definition) => void;
-    onMove: (delta: number) => void;
-    onActivate: (index: number) => void;
 };
 
 const DefinitionRow = (props: DefinitionRowProps) => {
     const [expanded, setExpanded] = createSignal(false);
-    const isActive = () => props.activeIndex() === props.index();
 
+    // Up/Down are deliberately not handled here — they bubble to the tree, which
+    // moves focus by DOM order. A row only knows how to open and close itself.
     const onKeyDown = (e: KeyboardEvent) => {
         switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                props.onMove(1);
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                props.onMove(-1);
-                break;
             case 'ArrowRight':
                 if (!expanded()) {
                     e.preventDefault();
@@ -70,6 +60,7 @@ const DefinitionRow = (props: DefinitionRowProps) => {
             case 'Enter':
             case ' ':
                 e.preventDefault();
+                e.stopPropagation();
                 props.onPick(props.definition);
                 break;
         }
@@ -81,11 +72,11 @@ const DefinitionRow = (props: DefinitionRowProps) => {
             role="treeitem"
             aria-expanded={expanded()}
             aria-label={props.definition.label}
-            // Roving tabindex: exactly one row is a tab stop, so Tab enters and
-            // leaves the tree once rather than walking every Definition.
-            tabIndex={isActive() ? 0 : -1}
+            // Static -1: the tree hands exactly one row a 0 imperatively, so Tab
+            // enters and leaves once. Static because Solid then never rewrites
+            // the attribute out from under that.
+            tabIndex={-1}
             onKeyDown={onKeyDown}
-            onFocus={() => props.onActivate(props.index())}
         >
             <div class={styles.rowHead}>
                 <button
@@ -126,7 +117,6 @@ export const LibraryPicker = (props: LibraryPickerProps) => {
         }
     });
 
-    const [activeIndex, setActiveIndex] = createSignal(0);
     let containerEl: HTMLDivElement | undefined;
 
     const failed = () => definitions() === FAILED;
@@ -142,17 +132,36 @@ export const LibraryPicker = (props: LibraryPickerProps) => {
             .sort((a, b) => a.label.localeCompare(b.label));
     };
 
-    /** Read the rendered rows from the DOM rather than tracking an array of refs:
-     *  `<For>` recycles nodes, so a ref array needs invalidation the query doesn't. */
+    /**
+     * Every visible row, in document order — which for a tree *is* visual order,
+     * and collapsed subtrees aren't in the DOM at all, so this needs no notion
+     * of depth. Read from the DOM rather than tracked: `<For>` recycles nodes,
+     * and rows now arrive from three different components at arbitrary nesting.
+     */
     const rowEls = (): HTMLElement[] =>
         containerEl ? Array.from(containerEl.querySelectorAll<HTMLElement>('[role="treeitem"]')) : [];
 
-    const move = (delta: number) => {
+    /**
+     * Roving tabindex, managed imperatively over the live DOM.
+     *
+     * The Phase I version compared a stored `activeIndex` against each row's
+     * `<For>` index, which silently desynced the moment any row that wasn't a
+     * Definition joined the tree. Deriving position from the node itself has no
+     * such failure mode and survives arbitrary depth.
+     */
+    const focusRow = (els: HTMLElement[], i: number) => {
+        els.forEach((el, n) => { el.tabIndex = n === i ? 0 : -1; });
+        els[i]?.focus();
+    };
+
+    const onTreeKeyDown = (e: KeyboardEvent) => {
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
         const els = rowEls();
-        if (els.length === 0) return;
-        const next = Math.max(0, Math.min(els.length - 1, activeIndex() + delta));
-        setActiveIndex(next);
-        els[next]?.focus();
+        const current = els.indexOf(document.activeElement as HTMLElement);
+        if (current === -1) return; // focus is inside an open editor — leave it be
+        e.preventDefault();
+        const delta = e.key === 'ArrowDown' ? 1 : -1;
+        focusRow(els, Math.max(0, Math.min(els.length - 1, current + delta)));
     };
 
     // Move focus into the tree once the rows arrive. The user opened this
@@ -162,28 +171,33 @@ export const LibraryPicker = (props: LibraryPickerProps) => {
     createEffect(() => {
         if (hasFocused || rows().length === 0) return;
         hasFocused = true;
-        rowEls()[0]?.focus();
+        focusRow(rowEls(), 0);
     });
 
     return (
-        <div ref={containerEl} class={styles.picker} role="tree" aria-label="Field definitions">
+        <div
+            ref={containerEl}
+            class={styles.picker}
+            role="tree"
+            aria-label="Field definitions"
+            onKeyDown={onTreeKeyDown}
+        >
+            {/* Authoring leads the list: it is what you reach for after failing
+                to find what you wanted, and a fixed home beats a position that
+                moves as the Library grows. */}
+            <DefinitionAuthoring
+                admittedKinds={props.admittedKinds}
+                onCreated={props.onPick}
+            />
+
             <Show when={!definitions.loading} fallback={<div class={styles.notice}>Loading…</div>}>
                 <Show when={!failed()} fallback={<div class={styles.notice}>Could not load the Library</div>}>
                     <Show
                         when={rows().length > 0}
-                        fallback={<div class={styles.notice}>No field definitions available</div>}
+                        fallback={<div class={styles.notice}>Nothing in the Library yet — start one above</div>}
                     >
                         <For each={rows()}>
-                            {(def, i) => (
-                                <DefinitionRow
-                                    definition={def}
-                                    index={i}
-                                    activeIndex={activeIndex}
-                                    onPick={props.onPick}
-                                    onMove={move}
-                                    onActivate={setActiveIndex}
-                                />
-                            )}
+                            {(def) => <DefinitionRow definition={def} onPick={props.onPick} />}
                         </For>
                     </Show>
                 </Show>
