@@ -126,7 +126,11 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
                 onClick={toggle}
                 aria-expanded={isOpen()}
             >
-                + Add Field
+                {/* The + rides in its own chevron-width box, so the words start
+                    on the label column of the rows above instead of wherever the
+                    glyph happens to end. */}
+                <span class={styles.addGlyph} aria-hidden="true">+</span>
+                Add Field
             </button>
             <Show when={isOpen()}>
                 <LibraryPicker admittedKinds={props.admittedKinds} onPick={(d) => void pick(d)} />

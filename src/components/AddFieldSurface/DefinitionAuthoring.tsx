@@ -1,7 +1,7 @@
 /**
  * DefinitionAuthoring — coining a FieldDefinition, as rows in the picker's tree.
  *
- * `+ New Field Definition` expands into one row per admitted kind; expanding a
+ * `＋ New Field Definition` expands into one row per admitted kind; expanding a
  * kind row reveals its name, its config (`ConfigRows`), and a Create row. The
  * kind choice **is which row you expand** — there is no picker control, because
  * the tree already is one.
@@ -189,16 +189,21 @@ export const DefinitionAuthoring = (props: DefinitionAuthoringProps) => {
                 tabIndex={-1}
                 onKeyDown={onKeyDown}
             >
+                {/* A plus, not a triangle: this row makes something rather than
+                    revealing what is already there. It still expands, so it
+                    keeps the chevron's column width and gets an open state —
+                    the glyph turns into an × on the same 45°. */}
                 <span
                     classList={{
-                        [chevron.chevron]: true,
-                        [chevron.chevronDown]: open(),
-                        [chevron.chevronRight]: !open(),
+                        [styles.plusToggle]: true,
+                        [styles.plusToggleOpen]: open(),
                     }}
                     aria-hidden="true"
                     onClick={toggle}
-                />
-                <span class={styles.rowName} onClick={toggle}>+ New Field Definition</span>
+                >
+                    +
+                </span>
+                <span class={styles.rowName} onClick={toggle}>New Field Definition</span>
             </div>
             <Show when={open()}>
                 <div class={styles.nested} role="group">

@@ -13,6 +13,9 @@
    than the typography. */
 .addButton {
     align-self: flex-start;
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
     font-family: inherit;
     font-size: var(--text-sm);
     font-weight: 600;
@@ -26,6 +29,15 @@
 
 .addButton:hover {
     text-decoration: underline;
+}
+
+/* The + occupies the field rows' chevron column and the button sits at the same
+   left edge as those rows, so `chevron-col + column-gap` puts "Add Field" exactly
+   on the label column — the alignment holds at any font size, which padding or
+   extra spaces in the string would not. */
+.addGlyph {
+    flex: none;
+    width: var(--chevron-col-width);
 }
 
 .addButton:focus-visible {
@@ -58,6 +70,34 @@
 
 /* The disclosure triangle now lives in styles/disclosure.module.css — shared
    with the config rows so the same gesture cannot drift across depths. */
+
+/* The create row's affordance: a plus where the sibling rows have a triangle.
+   Same `--chevron-col-width` box and baseline nudge as `disclosure`'s chevron so
+   the names stay aligned down the column; rotating 45° when open turns it into
+   an × rather than losing the state the triangle used to carry. */
+.plusToggle {
+    flex: none;
+    align-self: baseline;
+    width: var(--chevron-col-width);
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xl);
+    line-height: 1;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transform: translateY(0.15em);
+    transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.plusToggleOpen {
+    transform: translateY(0.15em) rotate(45deg);
+}
+
+.plusToggle:hover {
+    color: var(--accent);
+}
 
 .rowName {
     flex: 1 1 auto;

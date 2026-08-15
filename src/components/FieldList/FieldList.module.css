@@ -14,6 +14,8 @@
      so timestamps right-align across every row.
    - `metadata` is `auto` so it sizes to the widest metadata content.
    - `details-chevron` and `history-chevron` are fixed `--chevron-col-width`.
+     The leading one holds its triangle flush left, so the add surface below can
+     line its own glyph and words up with the rows above.
 
    History entries (DataFieldHistory) are direct subgrid children of
    `datafieldWrapper`. Each entry spans `value / history-chevron`, picking

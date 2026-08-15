@@ -121,7 +121,10 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
 
     type Section = {
         id: string;
-        title: string;
+        /** Heading text, or `null` for a section that shows none. Only a
+         *  non-collapsible section may omit it — for a collapsible one the
+         *  heading *is* the toggle. */
+        title: string | null;
         present: boolean;
         /** Working default; the one line to edit when experimenting with stacking. */
         collapsible: boolean;
@@ -132,7 +135,10 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     const sections = (): Section[] => [
         {
             id: 'history',
-            title: 'History',
+            // No heading: the entries are self-evidently the value over time,
+            // and the section is always open, so a label only adds noise above
+            // the field's own name.
+            title: null,
             present: storesOwnValue(props.kind),
             collapsible: false,
             defaultOpen: true,
@@ -202,7 +208,11 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
                     <>
                         <Show
                             when={section.collapsible}
-                            fallback={<div class={styles.sectionHeading}>{section.title}</div>}
+                            fallback={
+                                <Show when={section.title}>
+                                    <div class={styles.sectionHeading}>{section.title}</div>
+                                </Show>
+                            }
                         >
                             <button
                                 type="button"

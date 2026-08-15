@@ -42,49 +42,47 @@ stale or dangling.
 
 4.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
 
-5.) **text-kv ("Description") changes flow when toggling Field Details of an urelated Field** - Causing a very annoying jump or lurch. Yhis is an older bug, present in the Qwik original and the current deployed production version on Netlify as well as dev.
+5.) **text-kv ("Description") changes flow when toggling Field Details of an urelated Field** - Causing a very annoying jump or lurch. Yhis is an older bug, present in the Qwik original and the current deployed production version on Netlify as well as dev. Tru for multiline and single line text-kv. Also noticed that the active entry field for the string is only about half the width (maybe constrained to a column?) while entering a value, which may be related.
 
 ## UI, styling, layout
 
-1.) **Remove "HISTORY" label from the history section** 
-
-2.) **New Field Definition should have "+" instead of chevron for visual affordance.** - Even though it expands just like a chevron, it would look better.
-
-3.) **Left or Right chevrons??** - A/B testing is the only real way to know. Earlier iterations attempted to follow the informational tiers... but who knows?
+1.) **Left or Right chevrons??** - A/B testing is the only real way to know. Earlier iterations attempted to follow the informational tiers... but who knows?
 
 ## Features
 
 1.) **Field Adding and Authoring is still not quite "full preview"** - True WYSIWYG in-situ UI is a significant change and the next step. 
 
-2.) **Node metadata in TreeNodeDetails/Config** — show `createdAt`, last `updatedAt`, last `updatedBy`, 'id', 'version', and description/byline. It already shows "from <libraryField>".
+2.) **Field list in picker must be organised into colapsed groups by category.** - This will not be trivial; HOW should they be categorised? 
 
-3.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like DataFields? edit button?), then wire up. Nodes are rename-less after creation.
+3.) **Node metadata in TreeNodeDetails/Config** — show `createdAt`, last `updatedAt`, last `updatedBy`, 'id', 'version', and description/byline. It already shows "from <libraryField>".
 
-4.) **[Fields UI] DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't. This feature belongs to the NodeDetails section.
+4.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like DataFields? edit button?), then wire up. Nodes are rename-less after creation.
 
-5.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
+5.) **[Fields UI] DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't. This feature belongs to the NodeDetails section.
 
-6.) **Decide namespace collision scheme for libraryFields with same display name to coexist** — when two libraryFields have the same display name, they will need to coexist in the library. We need to decide how to handle this. They each already have a unique id and version, but that is not UX friendly. They may need byline or description like a subtitle (displayed in Tools section).
+6.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
-7.) **Active link to FieldLibrary from Config section of a Field** - 
+7.) **Decide namespace collision scheme for libraryFields with same display name to coexist** — when two libraryFields have the same display name, they will need to coexist in the library. We need to decide how to handle this. They each already have a unique id and version, but that is not UX friendly. They may need byline or description like a subtitle (displayed in Tools section).
 
-8.) **Decide Field "re-configure" UX** - Propogate to all similar Fields accross the app? Create new (fork) libraryField? Do nothing and WARN? Divert user to the library so they can edit the source?
+8.) **Active link to FieldLibrary from Config section of a Field** - 
 
-9.) **Should TreeNodeDetails/History always be expanded default?** - Or a config of the Field? One of [always, toggleable]. Or A/B test to determine the best UX. 1+2 or flat 3, or something else?
+9.) **Decide Field "re-configure" UX** - Propogate to all similar Fields accross the app? Create new (fork) libraryField? Do nothing and WARN? Divert user to the library so they can edit the source?
 
-10.) **Should TreeNodeDetails' subsections be reorderable?** - It could easily be part of the authoring config. But should it?
+10.) **Should TreeNodeDetails/History always be expanded default?** - Or a config of the Field? One of [always, toggleable]. Or A/B test to determine the best UX. 1+2 or flat 3, or something else?
 
-11.) **Change TreeNodeDetails/Config to /"Settings"?** - Decide what, if anything, can be edited from there. If nothing, then why show it? Even though it shows info from config, user-facing idea is "settings".
+11.) **Should TreeNodeDetails' subsections be reorderable?** - It could easily be part of the authoring config. But should it?
 
-12.) **Decide Field value entry at mint-time UX** - Can it not conflict with instant mint? Instant mint means all fileds are minted naked and require one more step. For enum-kv it would be fairly easy. 
+12.) **Change TreeNodeDetails/Config to /"Settings"?** - Decide what, if anything, can be edited from there. If nothing, then why show it? Even though it shows info from config, user-facing idea is "settings".
 
-13.) **Add Field Picker / Option / Expand Chevron should show metadata like id, version, createdAt, createdBy, description/byline.** - Right now it shows the configured configs with their values, which is great. But it could say more.
+13.) **Decide Field value entry at mint-time UX** - Can it not conflict with instant mint? Instant mint means all fileds are minted naked and require one more step. For enum-kv it would be fairly easy. 
 
-14.) **New Field Definition / Config / Booleans should have checkbox instead of "--".** - 
+14.) **Add Field Picker / Option / Expand Chevron should show metadata like id, version, createdAt, createdBy, description/byline.** - Right now it shows the configured configs with their values, which is great. But it could say more.
 
-15.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
+15.) **New Field Definition / Config / Booleans should have checkbox instead of "--".** - 
 
-16.) **Field list in picker must be organised into colapsed groups by category.** - This will not be trivial; HOW should they be categorised? 
+16.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
+
+
 
 
 
