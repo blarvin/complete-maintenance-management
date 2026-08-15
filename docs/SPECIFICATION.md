@@ -93,9 +93,8 @@ So `Element.kind` is `node` or any other kind; "Field-like" is the inline region
 - **NodeSubtitle**: Simple description or location string
 - **DataCard**: Every TreeNode has exactly one DataCard. Contains DataFields (user values) + the AddFieldSurface + node metadata section. Expands/collapses with an animated slide-down, triggered by a chevron button on the TreeNode body to the right of NodeSubtitle. Animation must be content-aware (no fixed heights). See IMPLEMENTATION.md → DataCard Animation for technique.
 - **DataField**: Row item with Label:Value pairs, which users add to a node. Most values can be edited afterwards with a simple double-tap interaction. When isEditing=true, the Value is replaced with an input field (Label remains static). No separate input sub-component needed.
-- **DataFieldDetails**: Expandable section (simple chevron) — the Field's own Data Card. Holds up to three sections — History, Config, Tools — each present only if the kind entails it. See DataField Management → Field Details below.
-- **AddFieldSurface**: The DataCard's create affordance, at the bottom of the FieldList. Collapsed it is one quiet "+ Add Field" row; expanded it is the LibraryPicker. Rendered only when the node's kind admits a field-like child. See The Add Surface.
-- **LibraryPicker**: The `library` tree rendered for picking — one row per active FieldDefinition, each expandable in place to peek at its config, each pickable to mint a DataField. Hosts the "+ New Field Definition" authoring row.
+- **DataFieldDetails**: Expandable section (simple chevron) — the Field's own Data Card. Holds up to three bands: History, Config, Tools for a persisted Field; Config, Kind, Tools for the Add Surface. Which bands exist follows from what the row is. See DataField Management → Field Details below.
+- **AddFieldSurface**: The DataCard's create affordance, at the bottom of the FieldList — a Field row that has not decided what it is yet, drawn by the same row shell as a persisted Field. Rendered only when the node's kind admits a field-like child. See The Add Surface.
 - **UpButton**: On the left end of isParent nodes (node at top of BRANCH view). Navigates up the tree using parentId to find the parent node. If parentId is null, navigates to ROOT view.
 - **CreateNodeButton**: Create new TreeNodes. One component with contextual variants for ROOT and BRANCH views.
 - **TreeNodeDetails**: Expandable section (simple chevron and label "Tree Node Details") containing details, actions, and settings pertaining to the whole TreeNode. DELETE button only for now; Rename and Move [Phase 2+].
@@ -161,7 +160,7 @@ So `Element.kind` is `node` or any other kind; "Field-like" is the inline region
 ***Intent:*** *facts about a thing are captured and corrected right where they sit, and every change is kept — so the record can always be trusted and walked back.*
 
 - **Double-Tap to edit**: Double-tap on a DataField row (Label or Value) to edit the Value. The Value becomes an active input field. Save by double-tapping again. Cancel by tapping outside. If another DataField is already editing, it is cancelled. Save confirmation shown via Snackbar (see Snackbar & Undo).
-- **Create Data Fields**: One **AddFieldSurface** sits at the bottom of the DataCard. Expanding it browses the Library; picking a FieldDefinition mints the DataField immediately, in its final place on the card, focused for value entry. There is no batch and no Save — a mis-pick is reversed by Undo. See The Add Surface below.
+- **Create Data Fields**: One **AddFieldSurface** sits at the bottom of the DataCard — a Field row awaiting a name. Typing a name authors a new FieldDefinition; the Kind band beneath it reaches the Library for an existing one. Create commits, Cancel discards. See The Add Surface below.
 - **Field Details**: Expanding a DataField's chevron reveals the Field's own card — History, Config, Tools, in whichever of those the kind entails. See Field Details below.
 - **Delete Data Field**: Expand the DataFieldDetails and use "Delete" in the Tools section. Snackbar with Undo follows (see Snackbar & Undo).
   - **Soft Delete**: DataField deletion sets `deletedAt` timestamp. The field is filtered from normal UI queries but can be restored. DataFieldHistory entries remain linked but are implicitly hidden when the field is soft-deleted.
@@ -188,6 +187,8 @@ Details holds up to three sections, and **which of them exist follows from the k
 The trio is not an arbitrary grouping: it is **one section per source of content a Field has** — its children (data), its own value over time (a read), and things done to it (chrome now, `Action` later). A fourth section must earn its place the way a kind earns the registry: by drawing on a capability the existing three don't.
 
 So the count varies by kind. `external-link` carries no config sub-fields at all, so it has **no** Config section rather than an empty one; a `Derivation` kind like `asset-gallery` stores nothing and is never in history, so it has no History section.
+
+The band region belongs to the row shell rather than to persisted Fields, and it has a second consumer: the Add Surface fills it with **Config, Kind, Tools** (see The Add Surface). Which bands a row shows follows from what the row is, which is why they are a list rather than three nested components.
 
 #### Stacking is open
 
@@ -285,7 +286,7 @@ interface ToastInput {
 - **Immediate apply**: Deletes (soft-delete via `deletedAt`) and saves are written to storage immediately — the UI does not wait for the undo window to elapse.
 - **Closure-based undo, not record snapshot**: The Snackbar holds only the reversal closure the caller passed in (`action.handler`) plus the minimum data the caller captured for that closure (e.g. the previous `value` for a value edit, or just the entity id for a delete). There is no snapshot service and no whole-record copy.
 - **Scope**: Undo is available across in-app navigation but not across page reloads. Only the latest action can be undone (new toasts replace older ones).
-- **Coalescing**: a repeated same-kind action extends the current toast instead of replacing it, accumulating into one reversal closure ("3 fields added" undoes all three). This exists because single-slot replacement would otherwise make every action but the last irreversible — which is exactly wrong for a surface built around picking several things in a row. Coalescing is per action-kind and ends when the toast expires or any other action fires.
+- **Coalescing**: a repeated same-kind action extends the current toast instead of replacing it, accumulating into one reversal closure ("3 fields added" undoes all three). This exists because single-slot replacement would otherwise make every action but the last irreversible. Coalescing is per action-kind and ends when the toast expires or any other action fires. It is generic; the Add Surface no longer commits in runs (see The Add Surface → *Picking is committing* under Deferred), so today a Create raises a single "Field added" and coalescing waits for its next consumer.
 - **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written via `onExpire` — only after the undo window elapses without undo — so that undone deletes leave no audit trace.
 
 ### Placement & animation
@@ -334,7 +335,7 @@ All interactive elements are keyboard-accessible. This is a core quality bar, no
 - **Keyboard interactions**:
   - DataField value: Enter/Space to begin editing, Enter to save, Escape to cancel
   - Node header: Enter/Space to navigate (body) or expand (chevron)
-  - AddFieldSurface: Enter/Space to expand; within the picker, ArrowUp/ArrowDown to move between Definition rows, Enter to pick, ArrowRight/ArrowLeft to expand/collapse a row's config peek, Escape to dismiss
+  - AddFieldSurface: type to name; ArrowUp/ArrowDown to move between rows within a band, Enter to select, ArrowRight/ArrowLeft to expand/collapse a row, Escape to dismiss. **Deliberately unbuilt for now** — the row's two text inputs sit inside a tree that owns the arrow keys, and settling that conflict is postponed until the surface's shape stops moving.
   - TreeNodeConstruction: Enter to create, Escape to cancel
 - **Focus management**: `:focus-visible` ring on all focusable elements; `:focus:not(:focus-visible)` suppresses the ring for mouse users.
 
@@ -346,70 +347,100 @@ Reordering matters more than it looks, and for a reason outside this card: `sibl
 
 **The gesture is undecided, and is not part of the Add Surface branch.** One constraint is already known: it cannot hang off the row's chevron, which is spoken for as the Details toggle — a drag handle there would need drag-versus-tap disambiguation on touch, and the two actions are too different to share a target.
 
-Since fields now mint at the bottom in pick order (see The Add Surface), arranging becomes the natural companion to adding rather than a separate chore — so the sequence is deliberate: the Add Surface lands first, and reorder is designed afterwards, against a card that has fields worth arranging.
+Since fields mint at the bottom in the order they were created (see The Add Surface), arranging becomes the natural companion to adding rather than a separate chore — so the sequence is deliberate: the Add Surface lands first, and reorder is designed afterwards, against a card that has fields worth arranging.
 
 ## The Add Surface
 
-***Intent:*** *adding a fact to a thing is the same act as adding a part to it — pick what it is and it exists; fill it in whenever you know.*
+***Intent:*** *adding a fact to a thing starts by naming it — everything else is a refinement you are free to leave alone.*
 
 The Add Surface is the DataCard's create affordance — the inline-region twin of the CreateNodeButton, which does the same job in the children gutter. It is **entailed, not declared**: it renders iff the node's kind composes `Children(open)` *and* its `allowedKinds` admit at least one field-like kind (`allowedChildKinds(kind) ∩ FIELD_KINDS`). A kind admitting no field-like child offers no Add Surface at all, exactly as a content-free lens offers no create button. (See *Data Model → Manifest → chrome*: an add surface is the rendered expression of a capability, never a component someone remembered to mount.)
 
-Collapsed, it is one quiet row — **+ Add Field** — beneath the persisted fields. Expanded, it is the LibraryPicker. It follows the lens create row's idiom: a button that becomes its own working surface in place, dismissed by Escape or by tapping the row again.
+**It is a Field row that has not decided what it is yet.** It is drawn by the same row shell as a persisted Field — the same grid tracks, the same chevron column, the same expandable band region beneath — differing only in what fills each slot:
 
-### Picking is committing
 
-Choosing a FieldDefinition mints the DataField **immediately** — a real Element parented to the node, bound by `definitionId`, with `siblingOrder` one greater than the last persisted field and `value: null`. It appears in its final position on the card, drawn by its kind's real Renderer, unfilled.
+|                 | glyph | name slot    | value slot                | bands                    |
+| --------------- | ----- | ------------ | ------------------------- | ------------------------ |
+| **persisted**   | ▸     | static label | the kind's Renderer       | History · Config · Tools |
+| **Add Surface** | ＋    | name input   | the draft kind's Renderer | Config · Kind · Tools    |
 
-**It does not take focus.** Autofocusing the new row would fight the picker staying open, and on a phone would raise the keyboard and shove the user's place mid-pick. The deeper reason is that focus-on-mint contradicts the state itself: an unfilled field is a resting state, not a form waiting to be completed. Pick now, fill when you know.
 
-**There is no preview, because there is nothing to preview**: the row *is* the field. That is the whole of the simplification — a preview is a second rendering path obliged to imitate the first, and imitation is where the two drift.
+The shell is shared code, not an imitation of one. That is what makes this surface a true preview rather than a second rendering path obliged to resemble the first.
 
-- **Multi-pick is picking twice.** The picker stays open across picks; each pick is its own write. Fields commit in **pick order** — the order the user expressed, not alphabetical.
-- **Undo, not Cancel, is the reversal.** A pick raises `"Field added"` with Undo. Consecutive picks **coalesce into one toast** (`"3 fields added"`) whose Undo removes all of them: the Snackbar is single-slot (see Snackbar & Undo), so a toast per pick would leave only the last pick reversible — the opposite of what a multi-picking user wants.
-- **An undone pick leaves a tombstone, and that is the accepted price.** Retention is absolute (see Soft Deletion), so undoing a mis-pick soft-deletes rather than erases: the Element row keeps its `deletedAt`, and its `create` history row stays. A pending draft left no trace when cancelled, so this is the one thing immediate-commit genuinely costs. It is accepted because the alternative costs the whole pending apparatus, and because a stray tombstone is invisible to the user and harmless to the tree.
-- **Nothing is pending.** Navigating away, reloading, or dismissing the picker leaves exactly what was picked, because what was picked was written. The only thing still losable is keystrokes sitting in an open value editor, and that is the ordinary edit path's behaviour, not this surface's.
-- **An unfilled field is the expected outcome, not a failure.** Picking says *this thing has one of these*; entering the value is a later, ordinary act (see Core Principles → *Minting Records Identity*). A card of unfilled fields is a work list.
+**The Add Surface is not a kind.** Nothing about it is ever stored, so it earns no registry entry (see *Data Model → Earning a kind*); the varying slots above are a **role** on the shared row, not a manifest.
 
-### The LibraryPicker
+### The row
 
-The picker is the `library` tree, rendered with the tree's own patterns rather than a bespoke list:
+- **The ＋ rides in the chevron column**, where a persisted Field carries its disclosure triangle. It expands and collapses the bands like any other row.
+- **The name is an input at rest** in the label column, with no box chrome — it reads as a label, not a form control. Its placeholder is `Add Field`, darker than an ordinary placeholder, so the row is legible as an affordance rather than as an empty field. Max 50 chars; required non-empty trimmed; becomes the Definition Element's `name`.
+- **The name input sizes to its content** inside the card's shared label track, so the column grows as the name is typed — to exactly the width the finished row will have. The row previews its own final geometry, and the card reflows to the truth rather than to a placeholder.
+- **The value slot is the draft kind's real Renderer**, buffering its edits instead of writing them. What is on screen while drafting is what the Field becomes.
 
-- **One row per active FieldDefinition**, sorted alphabetically by `name`. No scope filters, no categories, no search box — a flat list is fine while the Library is small.
-- **The chevron expands the row in place** to peek at that Definition's config sub-fields, rendered read-only by their own kinds' Renderers — the same disclosure a lens gives its children. This is the disambiguation affordance: two Definitions may share a label (uniqueness is not enforced), and their config is what tells them apart.
-- **The name picks it**, minting the field and leaving the picker open.
-- **The first row is "+ New Field Definition"** — authoring, below.
+**The draft starts as `text-kv`.** A name and nothing else, then Create, mints a text Field with an empty value — the shortest complete path through the surface. A value may be entered on the same row first.
 
-Typeahead filtering, popularity ranking and "recently added" sort remain deferred. [Phase 2+] **Category grouping is blocked rather than merely deferred**: `parentId === null` is currently how the storage layer identifies a Definition, so a Definition cannot sit beneath a category node until that identity test moves off the null parent.
+### The bands
+
+**Config** — the current kind's config rows (see *Authoring a Definition* below), editable while authoring. Its first row is a **memo**: prose naming the kind being created and pointing at the Kind band below. A memo has nothing to enter and nothing to store; it is authoring chrome declared per kind, never a config sub-field.
+
+**Kind** — one row per admitted kind.
+
+- **Selecting a kind** sets the draft's kind, and the Config band above re-renders for it. The name and the entered value survive the change; the config does not — a number's thresholds mean nothing to an enum. Reconsidering the kind mid-draft is a supported move, not a mistake to guard against.
+- **The selected kind stays marked as selected.** That is state on the draft, not browser focus, which is transient and would be lost to the next tap.
+- **Expanding a kind** lists that kind's Library Definitions beneath it. This is the Library's whole presence in the surface, and it is a **view over the `library` tree, not a re-parenting** — nothing about how a Definition is stored changes in order for it to appear under its kind.
+- **Picking a Definition** loads it into the row: the name fills from the Definition, and the Config band shows that Definition's config **read-only**. Config is `delegated` (see Field Details), so altering what an existing Definition means is not this surface's job.
+
+**Tools** — `Create` and `Cancel`.
+
+### Committing
+
+**Create** does one of two things. In both, whatever sits in the value slot rides along as the new Field's initial value:
+
+- **Authoring** — a name was typed and no Definition picked. Writes the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`), then mints one DataField instance from it. Authoring and using are one continuous motion.
+- **Picking** — a Definition was chosen. Mints the instance only.
+
+The Field lands at the bottom of the card with `siblingOrder` one greater than the last persisted Field, and the surface returns to rest.
+
+**Cancel** discards the draft and returns the surface to rest. **Collapsing the row does not.** The draft survives collapse, and a collapsed row still shows the name and value entered so far. The row wears the **under-construction tint** whenever it holds a draft, open or closed, so an unfinished Field can neither be mistaken for a real one nor lost among them. The draft is in memory: it does not survive a reload.
+
+**Proliferation is intended.** Authoring a Definition is deliberately no harder than picking one, and the only brake on coining a duplicate is that picking an existing one is fewer taps. Curation, merging and gating are later concerns, and they are not authoring-time ones.
+
+### Preview fidelity
+
+The row is the Field, with one unavoidable exception: a kind that suppresses its own label once persisted (a composite, e.g. `single-image`) still shows the name input while drafting, because the Definition being named needs one. The name disappears on mint. A Field that shows no name still *has* one.
+
+### Deferred
+
+- **Search.** Typing into the name slot should first search the Library, so an existing Definition is found by name rather than by walking to its kind. Until that lands, the Kind band is the only route to the Library. [Phase 2+]
+- **Editing a picked Definition's config**, whether by fork or otherwise (see Edit / Delete Semantics). [Phase 2+]
+- **Picking is committing.** An earlier design for this surface minted on pick with no Create step, reversing by Undo rather than Cancel, on the grounds that the row *is* the field so there is nothing to preview. It is **suspended, not discarded**: an explicit Create/Cancel pair is what a draft row needs while its shape is being settled, and the surface may return to immediate commit once it is.
+- **Groups beyond the kinds themselves.** Grouping by kind is free because it is a view; arbitrary user-authored groups need a Definition's identity to stop being `parentId === null`. [Phase 2+]
+- Typeahead ranking, popularity, "recently added" sort. [Phase 2+]
 
 ### Authoring a Definition
 
-Authoring is a distinct act from picking, and it is the app's other deliberate exception to *Minting Records Identity*: a Definition holds an **ephemeral draft** until committed, because unlike a Node or a DataField it must be coherent at birth — a `number-kv` with no units, or an `enum-kv` with no options, is not incomplete but meaningless. The draft lives in memory only; dismissing the picker discards it and nothing is written.
+Authoring is the app's one deliberate exception to *Minting Records Identity*: a Definition holds an **ephemeral draft** until Create, because unlike a Node or a DataField it must be coherent at birth — a `number-kv` with no units, or an `enum-kv` with no options, is not incomplete but meaningless.
 
-**Authoring is the tree, not a form inside it.** `+ New Field Definition` is a row; expanding it lists **one row per admitted kind**; expanding a kind row reveals that kind's authoring surface. The kind choice *is* which row you expand — there is no picker control, because the tree already is one.
+**Config is rows, never a form.** One row per config sub-field, at the depth its schema puts it. **Nesting comes from data, never from a per-kind component**: `group` places a sub-field inside a collapsible group row, `members` expands an atomic compound into its parts one level deeper, and `visibleWhen` reveals a row only when another value calls for it. This is how `number-kv`'s progressive-disclosure tiers become tree depth rather than a form's sections.
 
 ```
-▾ + New Field Definition
-   ▸ Text
-   ▾ Number
-       [ name ]
+＋ [ Discharge Pressure ]   [ 145 ] psi
+   ▾ CONFIG
+       Creating a Number field — pick a different Kind below to change that
        Units symbol      psi
        ▾ Display & nominal
        ▸ Alarms & freshness
-       Create Number Definition
-   ▸ Enum …
+   ▾ KIND
+       ▸ Text
+       ▾ Number  ●
+           Pressure
+           Hours Run
+       ▸ Enum   ▸ Image
+   ▾ TOOLS
+       Create   Cancel
 ```
-
-An expanded kind row holds three things and no more:
-
-1. **Name** — text input, max 50 chars, required non-empty trimmed; becomes the Definition Element's `name`. Unlike every other row it is an input *at rest* rather than something to activate: naming is the act, not a knob, and it takes focus when the row opens.
-2. **Config** — one row per config sub-field, at the depth its schema puts it. **Nesting comes from data, never from a per-kind component**: `group` places a sub-field inside a collapsible group row, `members` expands an atomic compound into its parts one level deeper, and `visibleWhen` reveals a row only when another value calls for it. This is how `number-kv`'s progressive-disclosure tiers become tree depth rather than a form's sections.
-3. **Create** — commits, disabled while anything blocks it.
 
 **Cross-field invariants are validation, not components.** A rule that spans sub-fields — `default ∈ options`, `currency ⇒ currencyCode`, the threshold chain — belongs to the kind rather than to any one row, and is enforced on every write. A rule that concerns one sub-field alone stays that sub-field's own guard. **No kind needs a bespoke authoring form**; the rows plus these two validation layers are the whole of it.
 
-Required config is enforced before commit; everything else takes the kind's defaults and may be left alone.
-
-**Commit** writes the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`), then **mints a DataField instance from it on the node** — the same act as picking it, so authoring and using are one continuous motion.
+Required config is enforced before Create, which is disabled while anything blocks it; everything else takes the kind's defaults and may be left alone.
 
 Authoring is the only Phase-1 entry point to the Library, and it only ever *adds*: editing an existing Definition remains absent (see Edit / Delete Semantics). A dedicated Library view — the same tree renderers pointed at the `library` tree — is where editing will eventually live. [Phase 2+]
 
@@ -422,7 +453,7 @@ Authoring is the only Phase-1 entry point to the Library, and it only ever *adds
 Three layers — each is the precondition for the next:
 
 1. **kind manifest** — dev-authored code: a `Renderer` + capability subset + descriptors, keyed by `kind` (e.g. `"text-kv"`, `"number-kv"`) in the registry. The closed set is owned by the dev team; users cannot author kinds (see *Data Model → Earning a kind*).
-2. **FieldDefinition** — a Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose **config is its child sub-field Elements** (units, thresholds, flags — not a config blob). Definitions are what users pick from in the LibraryPicker. Both dev-seeded and user-authored entries are Library-tree Elements — there is no other species.
+2. **FieldDefinition** — a Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose **config is its child sub-field Elements** (units, thresholds, flags — not a config blob). Definitions are what users pick from in the Add Surface's Kind band. Both dev-seeded and user-authored entries are Library-tree Elements — there is no other species.
 3. **DataField** (instance) — an Element minted from a Definition, attached to a Node, holding one typed `value` and bound to its Definition by `definitionId`. It **copies** its meaning-defining config (owned sub-fields: units, thresholds) at mint and **delegates** the rest (read live from the Definition); `name` is snapshotted at creation, so a forked Definition never rewrites user data.
 
 ```
@@ -446,16 +477,16 @@ Additional field kinds (`date-kv`, `composite-kv`, `image-carousel`, `image-grid
 
 ### The Library
 
-The Library is the set of all active FieldDefinitions, surfaced to users as the row list inside the **LibraryPicker** (see The Add Surface).
+The Library is the set of all active FieldDefinitions, surfaced to users under the Add Surface's **Kind band** — each kind expanding to the Definitions of that kind (see The Add Surface).
 
 #### One global, shared Library
 
-There is exactly **one** Library — the `library` typed tree (see *Data Model → Populations are typed trees*) — shared across all users via sync. **Authoring is contributing**: every user-authored Definition becomes visible in every other user's picker the next time their client syncs. There is no private/public toggle, no per-workspace scope, no opt-in import step, no moderation, no "personal vs. community" tabs in Phase 1. The picker is the discovery surface.
+There is exactly **one** Library — the `library` typed tree (see *Data Model → Populations are typed trees*) — shared across all users via sync. **Authoring is contributing**: every user-authored Definition becomes visible in every other user's Kind band the next time their client syncs. There is no private/public toggle, no per-workspace scope, no opt-in import step, no moderation, no "personal vs. community" tabs in Phase 1. The Add Surface is the discovery surface.
 
 Consequences worth being explicit about:
 
 - A user's authored Definitions are visible to all other users immediately.
-- Two users can independently author entries with the same `name` — both will appear in the Library. Label uniqueness is not enforced. The picker's expandable config peek is the disambiguation affordance. Deduplication / merging is a future concern.
+- Two users can independently author entries with the same `name` — both will appear in the Library. Label uniqueness is not enforced, and cheap authoring means duplicates are expected rather than exceptional (see The Add Surface → *Proliferation is intended*). Deduplication / merging is a future concern.
 - Once authored and synced, a Definition cannot be removed by any end user (see Edit / Delete below).
 
 Privacy implication for the user: labels may carry proprietary information (e.g. a specific manufacturer's serial-format field name). Users should know that what they author is shared. Surfacing this expectation in the authoring UI is a UX concern tracked in ISSUES.md, not a SPEC-level toggle.
@@ -467,16 +498,17 @@ Privacy implication for the user: labels may carry proprietary information (e.g.
 - **Seed entries** (the starter set): written client-side on first run, idempotent via a seed version. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable deterministic ids let the UI reference defaults by constant (`DEFINITION_IDS`), not by label.
 - **User-authored entries**: enqueue through the sync queue like any other user write; appear on other clients on next pull.
 
-#### Listing in the picker
+#### Listing under the Kind band
 
-See *The Add Surface → The LibraryPicker* for the listing, the config peek, and what is deferred. Two consequences belong here rather than there:
+See *The Add Surface → The bands* for the listing and what is deferred. Three consequences belong here rather than there:
 
-- **The Library has no order of its own.** Every Definition is minted at `siblingOrder: 0`, so the picker sorts by `name`. Once the Library gains structure, `siblingOrder` should mean in the `library` tree what it means everywhere else.
-- **A newly authored entry needs no special placement.** It mints its instance directly, so it never has to be found in the list it just joined; on the next opening it simply takes its alphabetical place. (The retired Composer needed a mint-position rule because authoring only produced a *row*.)
+- **The Library has no order of its own.** Every Definition is minted at `siblingOrder: 0`, so the listing sorts by `name` within its kind. Once the Library gains structure, `siblingOrder` should mean in the `library` tree what it means everywhere else.
+- **Grouping by kind costs nothing structural.** The Kind band is a view over the `library` tree — Definitions are gathered by their `kind` and rendered beneath it, never re-parented. A Definition's identity test (`parentId === null`) is untouched, which is exactly why arbitrary user-authored groups are the deferred case and this one is not.
+- **A newly authored entry needs no special placement.** It mints its instance directly, so it never has to be found in the list it just joined; on the next opening it simply takes its alphabetical place under its kind.
 
 ### FieldDefinition Authoring
 
-The authoring surface is specced with the picker that hosts it — see *The Add Surface → Authoring a Definition*. What belongs here is the data side:
+The authoring surface is specced with the row that hosts it — see *The Add Surface → Authoring a Definition*. What belongs here is the data side:
 
 - The kind's **config schema** is its manifest `ChildrenSpec` over config sub-field kinds (template core + open tail); authoring fills those sub-field Elements (see *Data Model → Config is Elements*, and ELEMENT-MODEL.md for each kind's config).
 - **Required config is enforced before commit** — `enum-kv.options` non-empty, `number-kv` units. `number-kv`'s threshold invariants (`LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` in range mode; the equivalent chain across `(nominalValue ± tolerance)` in discrete mode) are validated at authoring time as a **cross-field rule on the kind**, which is what a per-kind authoring component used to exist for.
@@ -487,7 +519,7 @@ The authoring surface is specced with the picker that hosts it — see *The Add 
 **Phase 1 ships with no user-facing edit or delete of FieldDefinitions.** This is a deliberate simplification, not an oversight — multi-user identity and permissions don't exist yet, so any edit/delete UX is premature.
 
 - **Edit is conceptually "fork"**: any future UI affordance that looks like "edit this FieldDefinition" (whether the change is to label, config, or both) **mints a new FieldDefinition** rather than mutating the existing one. The original is untouched; downstream DataField instances remain bound to it. This sidesteps cascading config changes (e.g. unit changes on a `number-kv` field) and avoids the question of which user is authorised to edit a given entry.
-- **Delete is admin-only**: end users cannot delete FieldDefinitions — not their own, not others'. Bad or duplicate entries are removed by the dev team directly in Firestore. The `deletedAt` column exists on the entity for forward compatibility (and for the rare admin tombstone), but no client write path sets it in Phase 1. Soft-deleted FieldDefinitions are filtered out of the picker listing.
+- **Delete is admin-only**: end users cannot delete FieldDefinitions — not their own, not others'. Bad or duplicate entries are removed by the dev team directly in Firestore. The `deletedAt` column exists on the entity for forward compatibility (and for the rare admin tombstone), but no client write path sets it in Phase 1. Soft-deleted FieldDefinitions are filtered out of the Kind band's listing.
 
 Per-user delete UX, ownership-based permissions ("you can delete your own"), config-edit-creates-fork affordances, and label-uniqueness / dedup logic are all deferred to LATER.md and revisited once real multi-user identity lands.
 
@@ -499,7 +531,7 @@ Every new node is born with three DataFields, minted unfilled by the constructio
 - **Description** (`text-kv`, `multiline: true`)
 - **Tags** (`text-kv`)
 
-They are **node-creation policy, not a rendering side effect** — they arrive whether or not any picker was ever mounted. Once the node exists they are ordinary DataFields: editable, deletable, reorderable like any other. Nothing locks them, because there is no longer a checkbox to lock; a user who deletes "Tags" from one pump has simply decided that pump doesn't need it.
+They are **node-creation policy, not a rendering side effect** — they arrive whether or not any add surface was ever mounted. Once the node exists they are ordinary DataFields: editable, deletable, reorderable like any other. Nothing locks them, because there is no longer a checkbox to lock; a user who deletes "Tags" from one pump has simply decided that pump doesn't need it.
 
 Which three is a binding, and bindings are destined for the `config` tree (see LATER.md → *Definition Packs*). The eventual affordance is provenance rather than prohibition: a default field can say *where it came from* and let the user navigate there, which defers permissions to the place they land instead of a role check at the field.
 
@@ -508,7 +540,7 @@ UI code references these three by stable ID via the `DEFINITION_IDS` constant, n
 ### What stays in LATER.md (Phase-2+)
 
 - **Templates** (composite sets of FieldDefinitions, e.g. "HPU with Accumulator") — distinct, larger feature.
-- **Picker discovery UX**: typeahead filter, category grouping (blocked on Definition identity — see The LibraryPicker), popularity ranking, "recently added" sort.
+- **Library discovery UX**: typeahead filter (see The Add Surface → Deferred → *Search*), user-authored groups beyond the kinds (needs Definition identity off the null parent), popularity ranking, "recently added" sort.
 - **Moderation / promotion to canonical** for crowdsourced entries.
 - **Versioning by identity, not a field** — `definitionId` answers "which version"; a Definition is forked (new id), never mutated, so no `componentVersion` column is needed (value/config shapes are widen-only).
 - **User-facing edit/delete** of Definitions with real ownership rules.
@@ -964,6 +996,7 @@ Wireframe reference: [ROOT View wireframe](assets/root-view-wireframe.html) (ope
 
 - Borders are solid black (`--border-default`), uniform weight (`--border-width: 1.5px`)
 - Backgrounds are white or near-white; colour is reserved for interactive affordances (accent blue for focus/links, red for destructive actions). The **unfilled** field state (see DataField States) is drawn by de-emphasis — a muted **label**, with the value column left to whatever empty affordance its renderer already draws — not by a colour, because it marks an absence rather than an action. Dimming the label is what makes it scannable: the label column reads as a work list down the card, uniformly across every kind
+- **Under construction is the one background hue.** A row holding an uncommitted draft (the Add Surface, see The Add Surface → Committing) is tinted by its own semantic token — a hue, not another grey, because it must not be read as the expanded-field shade it sits inside. It says *this does not exist yet*, which is a different claim from unfilled (*exists, holds nothing*) and must not look like it. The tint is worn whenever a draft is held, including while the row is collapsed
 - Typography is a single family (Inter) at a compact size scale (9–18px), with weight doing the work of visual hierarchy (bold titles, regular body)
 - Interactive elements are stripped to bare structure: `.btn-reset` and `.input-reset` remove all browser chrome; inline editing uses a minimal underline, not a boxed input
 - Animations are fast and functional (100–150ms), not decorative

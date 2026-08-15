@@ -391,12 +391,15 @@ The leaves of config subtrees (see `SPECIFICATION.md → Config is Elements`). M
 
 These are leaves, never new primitives.
 
+**A `memo` is not a leaf.** A kind may declare one line of prose to lead its config rows while authoring — naming the kind being created, pointing at where to change it (see `SPECIFICATION.md → The Add Surface → The bands`). It has nothing to enter, nothing to validate and nothing to store: it is authoring chrome on the kind, never a config sub-field Element.
+
 ---
 
 # What is *not* a kind
 
 - **Domain typology stays soft.** Pump, vessel, relay, road-bridge — and org variants like task or work-order — are user-grown `typeOf` tags on the relevant kind, never kinds and never a schema column. Identity and lens-matching key on `kind` (the one hard discriminant); the soft layer (tags, position, field-presence) feeds search / filter / sort / facet. The behaviour-free domain typology ships as **forkable seed `typeOf` data** (tag + default field bundle), read by one generic service that suggests fields from a node's `typeOf`.
 - **A field Definition is not its own kind.** It is an Element of the very kind it defines, living in the `library` tree and bound to instances by `definitionId`. The Library is a population, not a kind. (This holds for re-root policy Definitions too: `fd_logbook_policy` is a `library`-tree Element of kind `logbook`.)
+- **The Add Surface is not a kind.** It renders as a Field row and shares that row's shell, but nothing about it is ever stored, so it has no manifest, no placement and no entry in `FIELD_KINDS` — a phantom kind would need excluding from `allowedChildKinds`, sibling ordering and every storage query in turn. What varies between it and a persisted row (glyph, name slot, value slot, which bands) is a **role** on the shared shell. See `SPECIFICATION.md → The Add Surface`.
 
 ---
 

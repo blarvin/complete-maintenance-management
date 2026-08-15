@@ -150,6 +150,71 @@ transaction, not entered in it.)*
 
 *(Keyboard interactions.)*
 
+### From SPECIFICATION.md — The Add Surface: Picking is committing, and the LibraryPicker
+
+*Removed 2026-08-15 when the Add Surface was respecced as a Field row holding a
+draft, with an explicit Create/Cancel pair. The immediate-commit reasoning is
+not retracted, and the SPEC records it as **suspended** rather than discarded:
+its central argument — that the row IS the field, so a preview is a second
+rendering path obliged to imitate the first — is exactly what the shared row
+shell now delivers by other means. The multi-pick coalescing it justified is
+built and generic; only its first consumer went away. The one claim that was
+simply wrong is the category-grouping blocker: grouping by kind is a view over
+the `library` tree and needs no re-parenting, so `parentId === null` never stood
+in its way.*
+
+> ### Picking is committing
+>
+> Choosing a FieldDefinition mints the DataField **immediately** — a real Element parented to the node, bound by `definitionId`, with `siblingOrder` one greater than the last persisted field and `value: null`. It appears in its final position on the card, drawn by its kind's real Renderer, unfilled.
+>
+> **It does not take focus.** Autofocusing the new row would fight the picker staying open, and on a phone would raise the keyboard and shove the user's place mid-pick. The deeper reason is that focus-on-mint contradicts the state itself: an unfilled field is a resting state, not a form waiting to be completed. Pick now, fill when you know.
+>
+> **There is no preview, because there is nothing to preview**: the row *is* the field. That is the whole of the simplification — a preview is a second rendering path obliged to imitate the first, and imitation is where the two drift.
+>
+> - **Multi-pick is picking twice.** The picker stays open across picks; each pick is its own write. Fields commit in **pick order** — the order the user expressed, not alphabetical.
+> - **Undo, not Cancel, is the reversal.** A pick raises `"Field added"` with Undo. Consecutive picks **coalesce into one toast** (`"3 fields added"`) whose Undo removes all of them: the Snackbar is single-slot (see Snackbar & Undo), so a toast per pick would leave only the last pick reversible — the opposite of what a multi-picking user wants.
+> - **An undone pick leaves a tombstone, and that is the accepted price.** Retention is absolute (see Soft Deletion), so undoing a mis-pick soft-deletes rather than erases: the Element row keeps its `deletedAt`, and its `create` history row stays. A pending draft left no trace when cancelled, so this is the one thing immediate-commit genuinely costs. It is accepted because the alternative costs the whole pending apparatus, and because a stray tombstone is invisible to the user and harmless to the tree.
+> - **Nothing is pending.** Navigating away, reloading, or dismissing the picker leaves exactly what was picked, because what was picked was written. The only thing still losable is keystrokes sitting in an open value editor, and that is the ordinary edit path's behaviour, not this surface's.
+> - **An unfilled field is the expected outcome, not a failure.** Picking says *this thing has one of these*; entering the value is a later, ordinary act (see Core Principles → *Minting Records Identity*). A card of unfilled fields is a work list.
+>
+> ### The LibraryPicker
+>
+> The picker is the `library` tree, rendered with the tree's own patterns rather than a bespoke list:
+>
+> - **One row per active FieldDefinition**, sorted alphabetically by `name`. No scope filters, no categories, no search box — a flat list is fine while the Library is small.
+> - **The chevron expands the row in place** to peek at that Definition's config sub-fields, rendered read-only by their own kinds' Renderers — the same disclosure a lens gives its children. This is the disambiguation affordance: two Definitions may share a label (uniqueness is not enforced), and their config is what tells them apart.
+> - **The name picks it**, minting the field and leaving the picker open.
+> - **The first row is "+ New Field Definition"** — authoring, below.
+>
+> Typeahead filtering, popularity ranking and "recently added" sort remain deferred. [Phase 2+] **Category grouping is blocked rather than merely deferred**: `parentId === null` is currently how the storage layer identifies a Definition, so a Definition cannot sit beneath a category node until that identity test moves off the null parent.
+
+*(Authoring's tree-row form below. The rows, the data-driven nesting and the
+validation layers all survive verbatim in the current spec — what went is the
+`+ New Field Definition` row that hosted them, since typing a name in the Add
+Surface's own name slot is now the authoring act.)*
+
+> **Authoring is the tree, not a form inside it.** `+ New Field Definition` is a row; expanding it lists **one row per admitted kind**; expanding a kind row reveals that kind's authoring surface. The kind choice *is* which row you expand — there is no picker control, because the tree already is one.
+>
+> ```
+> ▾ + New Field Definition
+>    ▸ Text
+>    ▾ Number
+>        [ name ]
+>        Units symbol      psi
+>        ▾ Display & nominal
+>        ▸ Alarms & freshness
+>        Create Number Definition
+>    ▸ Enum …
+> ```
+>
+> An expanded kind row holds three things and no more:
+>
+> 1. **Name** — text input, max 50 chars, required non-empty trimmed; becomes the Definition Element's `name`. Unlike every other row it is an input *at rest* rather than something to activate: naming is the act, not a knob, and it takes focus when the row opens.
+> 2. **Config** — one row per config sub-field, at the depth its schema puts it.
+> 3. **Create** — commits, disabled while anything blocks it.
+>
+> **Commit** writes the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`), then **mints a DataField instance from it on the node** — the same act as picking it, so authoring and using are one continuous motion.
+
 ### From LATER.md — Add-Field Surface A/B
 
 *The A/B **framing** is retired: the question is no longer which of these two
