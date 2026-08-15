@@ -10,6 +10,7 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const numberKvManifest: KindManifest = {
     kind: 'number-kv',
     pickerLabel: 'Number',
+    authoringMemo: 'Creating a Number field — pick a different Kind below to change that',
     mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['number-kv'], // capability subset — structural seam, not read yet

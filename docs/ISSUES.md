@@ -12,11 +12,12 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Bugs first**, then Features, then Tech Debt.
 - For deferred ideas see LATER.md. For product scope see SPECIFICATION.md.
 
-**This pass's tag:** `[Fields UI]` marks work bound to the *current* Field
-authoring/picking surfaces — the composer (`FieldComposer/`, `pendingMode`,
-`pendingFields:` drafts) and the legacy "+ Add Field" (`CreateDataField`). The
-next branch replaces both with a tree-native inline picker, so tagged items are
-parked until it lands rather than fixed twice.
+**This pass's tag:** `[Fields UI]` marks work bound to the composer
+(`FieldComposer/`, `pendingFields:` drafts) and the legacy "+ Add Field"
+(`CreateDataField`). Both are now **dormant** — the tree-native Add Surface
+landed 2026-08-15 and runs alone — so tagged items describe surfaces nothing
+mounts. Whether they are fixed or deleted follows Tech Debt #9, not this tag.
+(`pendingMode` is no longer in that set: the Add Surface's value slot uses it.)
 
 `[auto]` marks items the agent may take end-to-end without checking in — each is
 self-contained and verifiable by typecheck/lint/test. One commit per item, which
@@ -38,9 +39,7 @@ stale or dangling.
 
 2.) **number-kv accepts radix literals** — `parseNumber` (numberKvState.ts) uses `Number`, which parses `0x1A` as 26, `0b101` as 5, `0o17` as 15 (verified at a node prompt). Harmless in practice — nobody types hex into a temperature field — and strictly better than the `parseFloat` it replaced, which read `0x1A` as 0. Rejecting them needs a full-string decimal/scientific regex. Left in deliberately when Bugs #1 was fixed; raise only if it ever bites.
 
-3.) **Text caret not showing in New Field Definition / Internal Link / Field Name entry fields** — cause found 2026-08-15: `.no-caret` (`global.css:86`) sets `caret-color: transparent` *and* `user-select: none`, both inherited, and `DataCard.tsx:26` wears it — so every input inside every card is born caretless unless it opts back out. Only `input.datafieldValue` and `textarea.datafieldTextarea` do; `.authoringNameInput` and the `ConfigRows` inputs never did. One global descendant rule fixes all of them at once: `.no-caret :is(input, textarea, [contenteditable]) { caret-color: auto; user-select: text; cursor: text; }`, after which the two existing per-input overrides are redundant. Worth landing before the Add Surface rework, whose name input inherits the same suppression.
-
-4.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
+3.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
 
 
 ## UI, styling, layout
@@ -74,19 +73,17 @@ stale or dangling.
 
 12.) **Change TreeNodeDetails/Config to /"Settings"?** - Decide what, if anything, can be edited from there. If nothing, then why show it? Even though it shows info from config, user-facing idea is "settings".
 
-13.) **Decide Field value entry at mint-time UX** - Can it not conflict with instant mint? Instant mint means all fileds are minted naked and require one more step. For enum-kv it would be fairly easy. 
+11.) **A Definition row in the Kind band shows nothing but its label** — the old picker let you expand a Definition to peek at its config before picking; the Kind band drops that, because picking now loads the config into the Config band read-only. Cheaper to compare two same-named Definitions if the row itself carried id, version, createdAt, createdBy, description/byline. Reframed 2026-08-15 when the peek went away (was "Add Field Picker / Option / Expand Chevron should show metadata…").
 
-14.) **Add Field Picker / Option / Expand Chevron should show metadata like id, version, createdAt, createdBy, description/byline.** - Right now it shows the configured configs with their values, which is great. But it could say more.
+12.) **Config band / Booleans show "--" instead of a checkbox** — a `flag` sub-field in `ConfigRows` renders through `displayPreview` and reads as unset either way. Was filed against the "New Field Definition" row, which no longer exists; the rows are the same ones.
 
-15.) **New Field Definition / Config / Booleans should have checkbox instead of "--".** - 
-
-16.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
+13.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
 
 
 
 
 
-## Architecture Migration (ELEMENT-MODEL → code)
+## Architecture
 
 The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kind specs in ELEMENT-MODEL.md). Each item below is a widening, not a rewrite. What already landed is recorded in IMPLEMENTATION.md, not here.
 
@@ -110,6 +107,8 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 17.) **`stream` shape member + arrangement law** — named in the SPEC value-shape vocabulary but carries no arrangement law yet; joins `ValueShape` with its first consumer (e.g. a logbook feed).
 
+18.) **DetailBands, what are they and do we really need them?** - Investigate with Claude.
+
 ## Tech Debt
 
 1.) **[Fields UI] `pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.
@@ -118,7 +117,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 3.) **[Fields UI] Cypress: construction commit captures last keystroke** — needs a spec that types a field value, immediately clicks Create, and asserts the value persisted (the write-through flush timing can't be reproduced in a unit test).
 
-4.) **[Fields UI] `cardOrder` vocabulary survives in the composer props** — `currentMaxCardOrder` threads through `FieldList`, `FieldComposerSlot`, `FieldComposer`, `CreateDataField` and `usePendingForms`, though the column has been `siblingOrder` since the Element refactor. All five are surfaces the tree-native picker replaces, so this rides that branch rather than being renamed twice. Beware: `db.ts` also names `cardOrder` in frozen historical schema versions, which must not change. (The `NodeTitle`/`NodeSubtitle` half of this item was done 2026-08-14.)
+4.) **[Fields UI] `cardOrder` vocabulary survives in the composer props** — `currentMaxCardOrder` threads through `FieldList`, `FieldComposerSlot`, `FieldComposer`, `CreateDataField` and `usePendingForms`, though the column has been `siblingOrder` since the Element refactor. The tree-native surface took the honest name (`baseOrder`) when it landed 2026-08-15, so what is left is the dormant composer path only — it renames with #9's decision rather than separately. Beware: `db.ts` also names `cardOrder` in frozen historical schema versions, which must not change. (The `NodeTitle`/`NodeSubtitle` half of this item was done 2026-08-14.)
 
 5.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky. Untouched deliberately — code-splitting is a real decision, not a mop-up nicety: this is a route-less FSM app, so the natural seams are the kind renderers and the Firebase SDK. (Consolidated 2026-08-14 from a duplicate LATER entry under *PWA & Build*.)
 
@@ -126,13 +125,17 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 7.) **SPEC starter-Library table has drifted from `SEEDS`** — SPECIFICATION.md §456 lists 14 starter Definitions, `seedDefinitions.ts` ships 9, and neither is a subset of the other (spec-only: Location, Serial Number, Part Number, Manufacturer, Model, Installed Date, Note; code-only: Linked Doc, Logbook Policy). Reconcile when the default pack is authored — the specced 14 is the better demo set. Observed 2026-08-14.
 
-8.) **SPEC promises a deferred delete-history write that isn't built** — SPECIFICATION.md → Undo semantics §233 says a DataField delete's history entry is written via `onExpire`, "only after the undo window elapses without undo — so that undone deletes leave no audit trace". Neither half holds: `onExpire` had no callers at all until the Add Surface used it for something else, and `IDBAdapter.softDeleteElement` writes the `action: 'delete'` row inline (`IDBAdapter.ts:402`). So an **undone delete leaves a delete history row today**, the opposite of the promise. Decide which side is right — building the deferral means `commitWithUndo` passing an `onExpire` and the adapter splitting the write, so it is a decision, not a mop-up. Observed 2026-08-14 while implementing coalescing.
+8.) **SPEC promises a deferred delete-history write that isn't built** — SPECIFICATION.md → Undo semantics §233 says a DataField delete's history entry is written via `onExpire`, "only after the undo window elapses without undo — so that undone deletes leave no audit trace". Neither half holds: `onExpire` has no caller (it briefly had one — the Add Surface's pick-runs, gone since 2026-08-15; see #14), and `IDBAdapter.softDeleteElement` writes the `action: 'delete'` row inline (`IDBAdapter.ts:402`). So an **undone delete leaves a delete history row today**, the opposite of the promise. Decide which side is right — building the deferral means `commitWithUndo` passing an `onExpire` and the adapter splitting the write, so it is a decision, not a mop-up. Observed 2026-08-14 while implementing coalescing.
 
 9.) **The composer stack is dormant, and retiring it is a decision — not a scheduled mop-up** — the Add Surface landed 2026-08-14 and `ENABLED_ADD_FIELD_SURFACES` now runs it alone, so `FieldComposer/`, `CreateDataField/`, `usePendingForms`, the `pendingFields:` localStorage and `pendingMode` across the four kv renderers are unreachable but intact. **Restoring either id brings its surface back verbatim**, which is the point: they stay until deleting them is deliberately chosen, and nothing about the current state obliges it. Costs of keeping them: they are indexed and typechecked, so a search for "how does adding a field work" returns more than one answer, and `pendingMode` has to keep compiling through any `useFieldEdit` change. If retirement is ever chosen, **tag the parent commit** so the composer stays reachable by name rather than by hash. Reframed 2026-08-14. Amended 2026-08-15: retirement no longer takes `pendingMode` or the four kv renderers' pending wiring with it — the Add Surface's value slot uses exactly that path (SPEC → The Add Surface → The row), so `pendingMode` is load-bearing again and only `FieldComposer/`, `CreateDataField/` and `usePendingForms` are candidates. Tech Debt #2 no longer resolves here.
 
 10.) **Four `ConfigForm`s are now unread by any live surface** — `TextKv`/`EnumKv`/`NumberKv`/`SingleImage` config forms, plus `LogbookConfigForm` and the required `ConfigForm` field on `InlineManifest`. Definition authoring is tree rows driven by `configSchema`, and cross-field invariants moved to `CONFIG_VALIDATORS`, so nothing reads them except the dormant composer's `DefinitionAuthoringForm`. They live and die with #9 rather than separately — retiring them alone would break the composer's restorability, which is the whole reason it is kept. Observed 2026-08-15 finishing Phase II.
 
-11.) **Authoring nests four levels deep inside an already-indented card** — a `number-kv` goes picker → kind → group → compound → member, each indent one `--chevron-col-width`, inside a Data Card that is itself indented under a node. Hand-tested 2026-08-15: **width is fine**, the nested config reads as cosy rather than cramped. Downgraded to a watch item — the Add Surface rework drops the picker's `border-left` rule and its extra `space-4 + space-2` indent, so depth should get better, not worse. Cheapest fixes if it ever does bite: drop the indent for the innermost level, or let a group row's children align with the group label rather than past it.
+11.) **Config nesting depth, at phone width** — a `number-kv` goes band → group → compound → member, each indent one `--chevron-col-width`, inside a Data Card already indented under a node. Re-checked 2026-08-15 after the rework, at a 638px card (≈ `--container-max`): it reads comfortably, and the retired picker's `border-left` plus its `space-4 + space-2` indent are gone, so a level came off. **Actual phone width is still unverified** — Chrome would not shrink below ~674px inner width, so this stayed a hand-test on a real device. Cheapest fixes if it ever bites: drop the indent for the innermost level, or let a group row's children align with the group label rather than past it.
 
-12.) **No Cypress coverage of the Add Surface at all** — the whole tree-native surface (pick, multi-pick coalescing, config peek, Definition authoring, roving focus) is verified only by hand. `core-loop.cy.ts` runs on `Description`, a construction default, so it never touches an add surface and stayed green through every commit of Phases I and II — it is **not** a canary for any of this. The keyboard model is the part that most wants a spec: unit tests structurally cannot reach it (`vitest.config.ts` has no Solid transform, and nothing test-reachable may import a `.tsx`), and it is where three separate focus bugs already hid. Observed 2026-08-15 finishing Phase II.
+12.) **Cypress reaches the Add Surface's click path but not its keyboard model** — `add-surface.cy.ts` (added 2026-08-15) covers authoring a Definition and minting from it, picking a seeded Definition out of the Kind band, and a draft surviving collapse. Untested: Cancel, the enum options → value-slot preview (the highest-value case, hand-tested only), kind change mid-draft, and Undo on the "Field added" toast. **The keyboard model is untested by explicit decision**, not omission — SPEC puts it out of scope for this pass, and there is no keyboard model in the surface yet to test. Unit tests structurally cannot reach any of this: `vitest.config.ts` has no Solid transform, and nothing test-reachable may import a `.tsx`.
+
+13.) **`core-loop.cy.ts` looks for a history chevron that no longer exists** — it fails at `[aria-label="Open field history"]`, which is present nowhere in `src/`: the chevron went away when History became an always-open band, and the spec was never updated. Confirmed pre-existing by stashing the Add Surface work and re-running against HEAD — identical failure, so it is not a regression from that branch. `lens-loop`, `offline-sync` and `retention` pass. Fix is to drop the click and assert the entries directly (they render already-expanded). Observed 2026-08-15.
+
+14.) **`Snackbar.coalesceKey` and `onExpire` have no production caller** — both existed for the retired pick-runs (a coalesced "N fields added" toast whose Undo reversed the whole run). Create is one action with one inverse now, so it routes through `commitWithUndo` and neither is passed anywhere outside `snackbar/` and its own tests. The mechanism is sound and tested; the call is whether an unused seam earns its keep, and note Tech Debt #8 wants `onExpire` for the deferred delete-history write. Observed 2026-08-15.
 

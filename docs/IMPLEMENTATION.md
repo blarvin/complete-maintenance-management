@@ -538,19 +538,29 @@ Coordination is a single parent-owned mutex signal in FieldList. Each surface is
 
 ---
 
-### The Add Surface (2026-08-14)
+### The Add Surface (2026-08-14; rebuilt as a Field row 2026-08-15)
+
+Written against the first version (a `+ Add Field` button opening a `LibraryPicker`) and corrected in place when SPEC → *The Add Surface* was rewritten and the surface became a Field row. Paragraphs describing the retired picker are gone rather than annotated; the SPEC text it was built to is archived in SUPERSEDED.md.
 
 **Entailed, not declared.** It renders iff `allowedChildKinds(kind) ∩ FIELD_KINDS` is non-empty — the first real consumer of the allowlist for *inline* children (the node-create picker was the first for re-root ones). A kind with no `children` capability yields `[]` and gets no create affordance, which is the same rule that leaves a content-free lens with no "Add". Construction is excluded separately: the node has no row in storage yet, so nothing can be parented to it, and its defaults ride the creation transaction instead.
 
-**Picking is the commit.** `CREATE_ELEMENT_FROM_DEFINITION` fires on pick and the row is the field — no pending draft, no preview. The preview a picker would otherwise need is a second rendering path obliged to imitate the first, which is where the two drift; deleting it is most of what makes this surface smaller than the composer it replaces.
+**The row *is* the shared Field row, not an imitation of one.** `AddFieldSurface` wears `DataField.module.css`'s `.datafieldWrapper` directly — same subgrid, same named tracks, same expanded treatment — and swaps only what fills each slot. That is what makes the surface a true preview: there is no second rendering path obliged to resemble the first, so the two cannot drift. Watch one consequence: `.datafieldWrapper` and `.fieldList > * { grid-column: 1 / -1 }` have equal specificity, so CSS source order decides. It is the standoff `DataField` already wins, and the first thing to check if the row ever spans the full width instead of its tracks.
 
-**`siblingOrder` is counted locally, not re-derived.** The counter is seeded from the max when the picker opens and incremented per pick. Re-reading `fields()` each time looks equivalent but isn't: it reloads asynchronously off the storage bus, so two quick picks both read the same max and collide.
+**A Renderer accepts a `config` override because a draft has no Definition to fetch from.** `TextKvField`, `NumberKvField` and `EnumKvField` resolve config by `createResource(() => props.definitionId, …getDefinitionById)`. The Add Surface's value slot is a real Renderer over an *unsaved* draft, so that fetch has nothing to read — `enum-kv` would preview with no options at all, which is exactly where fidelity matters most. `FieldRendererProps.config` replaces the fetch when present, and the resource is gated (`() => (props.config ? null : props.definitionId)`) so a null source skips the fetcher entirely rather than fetching and discarding. The consequence is deliberate: `<Show keyed>` on the config object remounts the renderer body whenever the Config band edits it, discarding an in-progress value edit. For `enum-kv` that is required — the options just changed.
 
-**The config peek uses `displayPreview`, not each kind's `Renderer`.** A Renderer *is* the editable surface — mounting `TextKvField` for a Definition's `placeholder` would make it double-tap editable inside a picker. `displayPreview` is read-only by construction. Note the same hole exists in SPEC's Field Details section, which still says the Config region draws rows "by their own kinds' Renderers" (ISSUES).
+**One draft per row, and it survives collapse.** `useDefinitionDraft` is called once in `AddFieldSurface`, not per kind row as the retired authoring tree did. Collapsing the row keeps everything typed (SPEC → Committing); only `Cancel` and a successful `Create` reset it. The tint (`--bg-construction`) follows `isDirty()` — name, value, a picked Definition, or config differing from the kind's fresh default. Selecting a *kind* alone does not tint, because nothing has been entered that a collapse could lose.
 
-**`pick()` deliberately bypasses `commitWithUndo`.** That helper models one action with one inverse; here the inverse accumulates across a coalesced run, so the batch has to be extended *before* the message and action are built. Routing it through anyway would mean mutating state inside a message builder. The error branch still goes through `describeForUser(toStorageError(err))`, so it matches every other command site.
+**Expanded and construction tints are exclusive in the JSX, not stacked in CSS.** `datafieldWrapperExpanded` is applied only when `isOpen() && !isDirty()`. Both classes set `background` at equal specificity from different CSS modules, so leaving them to fight would make the winner a function of bundle order.
 
-**Focus roves on the row, not the controls.** The row is the `treeitem` and the tab stop; the chevron and name stay clickable at `tabIndex={-1}`. Otherwise Tab walks two controls per Definition. Rows are located with `querySelectorAll('[role="treeitem"]')` rather than a ref array, because `<For>` recycles nodes and a ref array needs invalidation the query doesn't.
+**The value slot is keyed on `${draftId}:${kind}`.** `useFieldEdit` captures `fieldId` at setup and seeds its buffer at mount, so changing the `id` prop does nothing — a committed or cancelled draft would leave the previous value sitting in `EnumKvField`'s or `SingleImageField`'s top-level signal. A fresh `generateId()` per draft, keyed, is what retires the old slot. (`TextKvField`/`NumberKvField` would remount anyway on the config identity change; the other two would not.)
+
+**`valueForKind` guards the value across a kind change.** SPEC says the name and the entered value both survive selecting a different kind. Passed literally, a text value reaching `NumberKvField` makes `formatEdit` call `.toFixed` on a string and throw mid-render. The guard passes the value through when its runtime shape fits the kind and drops it when it doesn't, so compatible moves (text → enum) still carry it.
+
+**`commit()` holds both Create branches** — authoring calls `save()` then mints, picking mints only; both pass `initialValue`, so creation writes one history row carrying the value instead of a null create followed by an update. It lives on `useDefinitionDraft` rather than in the component because it is the only place that knows whether a Definition was picked. `create()` reads the drafted value *before* `save()`, which clears the authoring half of the draft on success.
+
+**Success is tested by `!isDirty()`, not by a captured local.** `commit` resets on success and leaves the draft standing otherwise, so a gated or failed Create keeps the row open with everything the user typed still in it. `commitWithUndo` threads the created Element to the message builder and the inverse, and a null result suppresses the toast.
+
+**`ConfigSummary` uses `displayPreview`, not each kind's `Renderer`.** A Renderer *is* the editable surface — mounting `TextKvField` for a Definition's `placeholder` would make it double-tap editable inside a read-only summary. `displayPreview` is read-only by construction. This is what the Config band shows once a Definition is picked, and what a Field's Details → Config shows; they are the same component so the two cannot drift. (SPEC's Field Details section used to contradict this by saying the Config region draws rows through their kinds' Renderers; that wording is gone as of the 2026-08-15 rewrite.)
 
 **Nesting in the authoring tree comes from data, never from a component.** Three fields on `ConfigSubField` carry it: `group` (a collapsible group row, declared per kind in `CONFIG_GROUPS` so order and open-by-default are stated once rather than repeated on every member), `members` (an atomic compound's authorable parts), and `visibleWhen` (value-driven reveal). None touch storage — `serializeConfig`/`assembleConfig` ignore all three, which is what the round-trip test in `configAuthoringSchema.test.ts` guards.
 
@@ -558,17 +568,13 @@ Coordination is a single parent-owned mutex signal in FieldList. Each surface is
 
 **Cross-field invariants are `CONFIG_VALIDATORS`, not per-kind components.** A rule spanning sub-fields belongs to the kind; a rule about one sub-field stays its own `validate`. Only the kind-level validator runs on write, because `validateNumberKvConfig` already calls `validateThresholds(packThresholds(config))` and running both reports one violation twice. This is what retired the "a `ConfigForm` is an override earned by cross-field invariants" rule: no kind needs a bespoke form.
 
-**One draft per expanded kind row.** `useDefinitionDraft` is called inside `KindRow`, not once above it, so expanding Number and then Text cannot carry units across — and collapsing unmounts the draft, which is how abandoning authoring writes nothing without any explicit discard.
-
-**Roving focus is derived from the DOM, not from a `<For>` index.** The Phase I picker compared a stored `activeIndex` against each row's `<For>` index, which was only correct while every `treeitem` was a Definition; the first authoring row desynced it silently and put `tabindex=0` on the wrong row. Position now comes from `document.activeElement`'s place in the live `[role="treeitem"]` query, with tabindex set imperatively. Document order *is* visual order for a tree and collapsed subtrees aren't in the DOM, so this needs no notion of depth. Rows own their own expand/collapse and activation; only Up/Down bubble to the tree.
-
 **`<For>` keys by value — use `<Index>` for an editable list.** Every keystroke in an `enum-kv` options row made the edited string a "new" item, so Solid recreated the row and blurred the input after one character. `<Index>` keys by position and patches in place. `EnumKvConfigForm` carries the same note; this is the second time it has bitten.
 
 **Editors get focus explicitly, never via `autofocus`.** The attribute is processed per *document*, so it is unreliable for a node inserted later — and these surfaces insert many. A ref plus an effect, matching `LensCreate`. (`useFieldEdit` still relies on the attribute for DataField editing; it works because it is usually the only such element, but the fragility is the same.)
 
 **A native `<select>` fires `change` on typeahead.** Closing the editor there made every letter pressed to find an option read as "letters move the focus". It writes on change and closes only on Enter, Escape or blur.
 
-**`Snackbar.coalesceKey` exists because the Snackbar is single-slot.** A `show()` whose key matches the visible toast extends it — same toast id, new message and action, timer restarted — instead of replacing it; without it, three picks would leave only the third undoable. Keeping the *id* is the load-bearing part rather than a detail: `SnackbarHost` renders `<Show keyed>`, so accumulating caller-side and re-`show()`ing would work but would remount and re-animate the toast on every pick. Two `undefined` keys deliberately never match. `onExpire` ends the run (its first consumer in the app); an unrelated toast replacing the run's toast leaves the batch standing, which is commented in place and costs at most an Undo that reverses more than the last toast showed.
+**`Snackbar.coalesceKey` exists because the Snackbar is single-slot — and it has no caller today.** A `show()` whose key matches the visible toast extends it (same toast id, new message and action, timer restarted) instead of replacing it; without it, three consecutive adds would leave only the third undoable. Keeping the *id* is the load-bearing part rather than a detail: `SnackbarHost` renders `<Show keyed>`, so accumulating caller-side and re-`show()`ing would work but would remount and re-animate the toast each time. Two `undefined` keys deliberately never match. **Both `coalesceKey` and `onExpire` lost their only production caller when pick-runs went away** (Create is one action with one inverse, so it routes through `commitWithUndo`) — the mechanism and its tests stand, unused, and ISSUES carries the call on whether to keep them.
 
 ---
 
@@ -674,6 +680,21 @@ forced overflow below 240px and bought nothing the content didn't already enforc
 token lives on in `TreeNode` / `CreateNodeButton`), and `body` took `env(safe-area-inset-*)`
 padding, paired with `viewport-fit=cover` in `index.html`, so an installed PWA clears the
 notch. The insets resolve to 0 in a normal browser.
+
+**`display: contents` is the card's subgrid contract, not a styling shortcut** (2026-08-15):
+
+A Field row (`.datafieldWrapper`) is `grid-template-columns: subgrid` over `FieldList`'s
+named tracks, and everything drawn beneath it — the metadata line, each band heading, each
+band body, and every `DataFieldHistory` entry — is positioned by those track names
+(`grid-column: label / end`, `value / history-chevron`). That only works while those
+elements are *direct* grid items of the row. So every wrapper on the path is
+`display: contents`: `DataFieldDetails.inlineWrapper`, and now `DetailBands.bands` as well.
+
+**A real wrapper element anywhere on that path silently breaks the History layout** — the
+entries stop resolving the named lines and fall back to auto-placement. It is why the
+History band deliberately renders `DataFieldHistory` with no `<div>` around it, and why
+`DetailBands` had to be `display: contents` to be extractable at all. Nested
+`display: contents` chains fine, so the two layers cost nothing.
 
 **Deliberate Non-Abstractions**: Evaluated and skipped these components:
 

@@ -121,8 +121,8 @@
    metadata moved to its own row (DataFieldDetails.module.css → `.metadata`).
 
    `.datafieldValue` is also worn by the read-only config renderers, but those
-   draw inside `.sectionBody` / the picker peek — plain blocks, not grid items —
-   where these two properties are simply ignored. */
+   draw inside a band body (`DetailBands.module.css` → `.sectionBody`) — a plain
+   block, not a grid item — where these two properties are simply ignored. */
 .datafieldValue {
     grid-column: value / history-chevron;
     grid-row: 1;

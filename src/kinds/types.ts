@@ -119,6 +119,13 @@ export type FieldRendererProps = {
     id: string;
     definitionId: string;
     value: DataFieldValue | null;
+    /**
+     * Draft config for a Field that has no Definition yet — the Add Surface's
+     * value slot (SPEC → The Add Surface → The row). Replaces the `definitionId`
+     * fetch when present, which is what lets an `enum-kv` draft preview the
+     * options being typed in the Config band rather than rendering with none.
+     */
+    config?: DefinitionConfig;
     /** Read accessor to the owning DataField row element (the dispatcher owns the
      *  ref) — renderers read it for outside-click containment covering the whole
      *  row (chevron, label, value), not just the value column. */
@@ -281,6 +288,13 @@ type ManifestIdentity = {
     kind: Kind;
     /** Label for the authoring-form segmented picker. */
     pickerLabel: string;
+    /**
+     * Prose leading the Add Surface's Config band: what is being created, and
+     * that the Kind band below changes it (SPEC → The Add Surface → The bands).
+     * Authoring chrome, never stored — deliberately NOT a `ConfigSubField`,
+     * because `CONFIG_SCHEMAS` drives `serializeConfig`.
+     */
+    authoringMemo?: string;
     mintVia: MintVia;
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';

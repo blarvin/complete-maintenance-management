@@ -9,15 +9,17 @@
  * and later `Action`). A fourth must earn its place the way a kind earns the
  * registry.
  *
- * **Stacking is deliberately unsettled** (SPEC → *Stacking is open*), which is
- * why the sections are a list rather than three nested components: changing
- * which ones collapse is editing `collapsible` in one place. The working default
+ * The band chrome itself (headings, chevrons, open/closed state) lives in
+ * `DetailBands`, shared with the Add Surface's draft row — SPEC says the two are
+ * the same row shell, so the bands are the same code. This module owns only
+ * *which* bands a persisted Field has and what goes in them. The working default
  * is History open and uncollapsible, Config and Tools behind their own chevrons.
  *
  * Layout note: `.inlineWrapper` is `display: contents`, so everything here lands
- * as a grid item of the parent DataField's subgrid. `DataFieldHistory` entries
- * depend on being *direct* subgrid children, so the History section deliberately
- * has no wrapper element — a div around it would break that contract.
+ * as a grid item of the parent DataField's subgrid — and `DetailBands` is
+ * `display: contents` for the same reason. `DataFieldHistory` entries depend on
+ * being *direct* subgrid children, so the History band deliberately has no
+ * wrapper element — a div around it would break that contract.
  *
  * Lifecycle lives in component setup (fieldId is a mount-time constant; the
  * panel remounts per expand). Subscribe-before-first-load: the bus subscription
@@ -25,7 +27,7 @@
  * and the first fetch can't be missed.
  */
 
-import { For, Show, createSignal, onCleanup } from 'solid-js';
+import { Show, createSignal, onCleanup } from 'solid-js';
 import { getElementQueries, getDefinitionQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
@@ -35,6 +37,8 @@ import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
 import type { Kind, Definition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
+import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
+import bands from '../DetailBands/DetailBands.module.css';
 import styles from './DataFieldDetails.module.css';
 
 export type DataFieldDetailsProps = {
@@ -53,7 +57,6 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     const [history, setHistory] = createSignal<ElementHistory[]>([]);
     const [definition, setDefinition] = createSignal<Definition | null>(null);
     const [isLoaded, setIsLoaded] = createSignal(false);
-    const [openSections, setOpenSections] = createSignal<Record<string, boolean>>({});
 
     // Only value-edit rows are field-value history (name/subtitle/parentId/
     // siblingOrder edits are not). Sorted ascending (oldest first) so the
@@ -115,24 +118,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     // DataFieldHistory, so a single entry means nothing to show.
     const hasHistoryEntries = () => history().length > 1;
 
-    const isOpen = (id: string, fallback: boolean) => openSections()[id] ?? fallback;
-    const toggle = (id: string, fallback: boolean) =>
-        setOpenSections({ ...openSections(), [id]: !isOpen(id, fallback) });
-
-    type Section = {
-        id: string;
-        /** Heading text, or `null` for a section that shows none. Only a
-         *  non-collapsible section may omit it — for a collapsible one the
-         *  heading *is* the toggle. */
-        title: string | null;
-        present: boolean;
-        /** Working default; the one line to edit when experimenting with stacking. */
-        collapsible: boolean;
-        defaultOpen: boolean;
-        body: () => unknown;
-    };
-
-    const sections = (): Section[] => [
+    const sections = (): DetailBand[] => [
         {
             id: 'history',
             // No heading: the entries are self-evidently the value over time,
@@ -145,7 +131,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
             body: () => (
                 <Show
                     when={hasHistoryEntries()}
-                    fallback={<div class={styles.sectionNote}>No changes yet</div>}
+                    fallback={<div class={bands.sectionNote}>No changes yet</div>}
                 >
                     {/* No wrapper: entries must stay direct subgrid children. */}
                     <DataFieldHistory
@@ -170,7 +156,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
             // job (SPEC → Field Details). Do not "fix" this into editable rows
             // without the arbiter — an edit here would mutate shared meaning.
             body: () => (
-                <div class={styles.sectionBody}>
+                <div class={bands.sectionBody}>
                     <ConfigSummary
                         definitionId={props.definitionId}
                         source={definition()?.label}
@@ -203,43 +189,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
         <div classList={{ [styles.inlineWrapper]: true, 'no-caret': true }}>
             <span classList={{ [styles.metadata]: true, 'no-caret': true }}>{metadataText()}</span>
 
-            <For each={sections().filter((s) => s.present)}>
-                {(section) => (
-                    <>
-                        <Show
-                            when={section.collapsible}
-                            fallback={
-                                <Show when={section.title}>
-                                    <div class={styles.sectionHeading}>{section.title}</div>
-                                </Show>
-                            }
-                        >
-                            <button
-                                type="button"
-                                classList={{
-                                    [styles.sectionHeading]: true,
-                                    [styles.sectionToggle]: true,
-                                }}
-                                aria-expanded={isOpen(section.id, section.defaultOpen)}
-                                onClick={() => toggle(section.id, section.defaultOpen)}
-                            >
-                                <span
-                                    classList={{
-                                        [styles.sectionChevron]: true,
-                                        [styles.sectionChevronDown]: isOpen(section.id, section.defaultOpen),
-                                        [styles.sectionChevronRight]: !isOpen(section.id, section.defaultOpen),
-                                    }}
-                                    aria-hidden="true"
-                                />
-                                {section.title}
-                            </button>
-                        </Show>
-                        <Show when={!section.collapsible || isOpen(section.id, section.defaultOpen)}>
-                            {section.body() as never}
-                        </Show>
-                    </>
-                )}
-            </For>
+            <DetailBands bands={sections()} />
         </div>
     );
 };

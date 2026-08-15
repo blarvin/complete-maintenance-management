@@ -13,7 +13,7 @@
  * prevents focus theft on re-runs.
  */
 
-import { Show, For, createSignal, createEffect, createResource, onMount, onCleanup, type Accessor } from 'solid-js';
+import { Show, For, createSignal, createEffect, createMemo, createResource, onMount, onCleanup, type Accessor } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
@@ -30,6 +30,10 @@ export type EnumKvFieldProps = {
     definitionId: string;
     value: string | null;
     rootRef: Accessor<HTMLElement | undefined>;
+    /** Draft config, for a row with no Definition to fetch from (the Add Surface).
+     *  This is the kind where preview fidelity matters most — without it a draft
+     *  enum would offer no options at all. */
+    config?: EnumKvConfig;
     /** When set, edits are buffered (no IDB write) and forwarded via onChange.
      *  `autoFocus` flags the row as just-ticked-by-user so the popover should
      *  auto-open and focus its first option; seeded rows leave it false. */
@@ -80,8 +84,10 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
     };
 
     // Error-catching fetcher: never enters the throwing state (no ErrorBoundary).
-    const [options] = createResource(
-        () => props.definitionId,
+    // A null source skips the fetch entirely — a draft row carries its config on
+    // the prop and has no Definition to read.
+    const [fetchedOptions] = createResource(
+        () => (props.config ? null : props.definitionId),
         async (definitionId): Promise<{ options: string[]; allowOther: boolean }> => {
             try {
                 const def = await getDefinitionQueries().getDefinitionById(definitionId);
@@ -93,6 +99,14 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
             }
         },
     );
+
+    // A memo, not a plain accessor: the draft branch builds a fresh object, and
+    // `<Show keyed>` below would otherwise remount the option list on every read.
+    const options = createMemo(() => {
+        const draft = props.config;
+        if (!draft) return fetchedOptions();
+        return { options: draft.options ?? [], allowOther: draft.allowOther ?? false };
+    });
 
     const open = () => {
         if (appState.editingElementId === props.id) return;

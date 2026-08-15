@@ -45,6 +45,10 @@
   --bg-selected: var(--color-blue-100);
   --bg-selected-hover: var(--color-blue-200);
   --bg-expanded: var(--color-gray-300);
+  /* A row holding an uncommitted draft — the Add Surface's under-construction
+     tint. A hue rather than another grey (SPEC → Style Guide): it sits inside
+     the expanded-field shade and must not read as it. */
+  --bg-construction: var(--color-yellow-100);
 
   --border-default: var(--color-black);
   --border-muted: var(--color-gray-400);

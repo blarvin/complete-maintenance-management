@@ -1,8 +1,9 @@
 /* ConfigRows — a kind's config as tree rows.
 
-   Rows lay out in flex rather than the card's subgrid: these sit inside the
-   picker, not on a DataCard, and the picker deliberately declines that grid
-   (see AddFieldSurface.module.css). Labels align by a fixed column instead. */
+   Rows lay out in flex rather than the card's subgrid: they draw inside a band
+   body (`DetailBands.module.css` → `.sectionBody`), which is one grid item
+   spanning `label / end` — a plain block as far as its own children are
+   concerned. Labels align by a fixed column instead. */
 
 .rows {
     display: flex;

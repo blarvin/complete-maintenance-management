@@ -9,6 +9,7 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const singleImageManifest: KindManifest = {
     kind: 'single-image',
     pickerLabel: 'Image',
+    authoringMemo: 'Creating an Image field — pick a different Kind below to change that',
     mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['single-image'], // capability subset — structural seam, not read yet

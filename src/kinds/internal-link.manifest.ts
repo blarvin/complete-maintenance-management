@@ -22,6 +22,7 @@ import type { KindManifest } from './types';
 export const internalLinkManifest: KindManifest = {
     kind: 'internal-link',
     pickerLabel: 'Internal Link',
+    authoringMemo: 'Creating an Internal Link field — pick a different Kind below to change that',
     mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['internal-link'],

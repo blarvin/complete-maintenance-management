@@ -30,6 +30,8 @@ export type NumberKvFieldProps = {
      *  written, never stale). */
     updatedAt?: number;
     rootRef: Accessor<HTMLElement | undefined>;
+    /** Draft config, for a row with no Definition to fetch from (the Add Surface). */
+    config?: NumberKvConfig;
     /** When set, edits are buffered (no IDB write) and forwarded via onChange. */
     pendingMode?: { onChange: (value: number | null) => void | Promise<void>; autoFocus?: boolean };
 };
@@ -73,9 +75,11 @@ function buildHelperText(config: NumberKvConfig): string {
 
 export const NumberKvField = (props: NumberKvFieldProps) => {
     // Error-catching fetcher: never enters the throwing state (no ErrorBoundary);
-    // missing/wrong-kind/failed def degrades to null → the "—" fallback.
-    const [config] = createResource(
-        () => props.definitionId,
+    // missing/wrong-kind/failed def degrades to null → the "—" fallback. A null
+    // source skips the fetch entirely — a draft row carries its config on the
+    // prop and has no Definition to read.
+    const [fetched] = createResource(
+        () => (props.config ? null : props.definitionId),
         async (definitionId): Promise<NumberKvConfig | null> => {
             try {
                 const def = await getDefinitionQueries().getDefinitionById(definitionId);
@@ -87,8 +91,13 @@ export const NumberKvField = (props: NumberKvFieldProps) => {
         },
     );
 
+    const config = () => props.config ?? fetched();
+    const loading = () => !props.config && fetched.loading;
+
     return (
-        <Show when={!config.loading} fallback={<span class={styles.datafieldValue}>…</span>}>
+        <Show when={!loading()} fallback={<span class={styles.datafieldValue}>…</span>}>
+            {/* `keyed`: the body captures config as a mount-time constant, so a
+                draft's config edits must remount it. */}
             <Show when={config()} keyed fallback={<span class={styles.datafieldValue}>—</span>}>
                 {(cfg) => <NumberKvBody {...props} config={cfg} />}
             </Show>
