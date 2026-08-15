@@ -62,10 +62,22 @@
     outline-offset: var(--focus-offset);
 }
 
-/* Metadata (date/time/user) — pinned to its named column so it stays right
-   of the value regardless of how wide the value cell is. */
+/* Metadata (date/time/user) — right-aligned to the `history-chevron` line, the
+   same edge the `metadata` track ends at, so timestamps still line up down the
+   card.
+
+   Spans `spacer / history-chevron` rather than sitting in `metadata`, for the
+   same reason `.deleteButton` spans: the span crosses a flexible track, so this
+   item contributes nothing to the intrinsic size of the shared `metadata`
+   track. Placed *in* that track it grew it from 0 to the width of a formatted
+   timestamp the moment any one field was expanded — and since every row of the
+   card shares these tracks, every other field's value column shrank by half of
+   that and its text re-wrapped. That was the lurch on toggling an unrelated
+   field's details. The metadata now paints over the elastic `spacer`, which is
+   dead space in this row anyway. */
 .metadata {
-    grid-column: metadata;
+    grid-column: spacer / history-chevron;
+    justify-self: end;
     font-size: var(--text-sm);
     color: var(--text-metadata);
     align-self: baseline;
