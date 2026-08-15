@@ -62,22 +62,22 @@
     outline-offset: var(--focus-offset);
 }
 
-/* Metadata (date/time/user) — right-aligned to the `history-chevron` line, the
-   same edge the `metadata` track ends at, so timestamps still line up down the
-   card.
+/* Metadata (date/time/user) — its own row beneath the value, right-aligned to
+   the `history-chevron` line so timestamps still line up down the card. This was
+   the mobile-only arrangement; it is now the only arrangement, because sharing
+   row 1 with the value is what made the value column narrow (ISSUES → UI).
 
-   Spans `spacer / history-chevron` rather than sitting in `metadata`, for the
-   same reason `.deleteButton` spans: the span crosses a flexible track, so this
-   item contributes nothing to the intrinsic size of the shared `metadata`
-   track. Placed *in* that track it grew it from 0 to the width of a formatted
-   timestamp the moment any one field was expanded — and since every row of the
-   card shares these tracks, every other field's value column shrank by half of
-   that and its text re-wrapped. That was the lurch on toggling an unrelated
-   field's details. The metadata now paints over the elastic `spacer`, which is
-   dead space in this row anyway. */
+   Two properties follow from the span, both load-bearing. The value can take the
+   whole run on row 1, since nothing competes for the right of that row any more.
+   And spanning flexible tracks (`value` and `spacer` are both 1fr) means this
+   item contributes nothing to the intrinsic size of the shared `metadata` track
+   — placed *in* that track, as it was, it grew the track from 0 to the width of
+   a formatted timestamp the moment any one field was expanded, and since every
+   row of the card shares these tracks, every other field's value shrank and
+   re-wrapped. That was the lurch on toggling an unrelated field's details. */
 .metadata {
-    grid-column: spacer / history-chevron;
-    justify-self: end;
+    grid-column: value / history-chevron;
+    grid-row: 2;
     font-size: var(--text-sm);
     color: var(--text-metadata);
     align-self: baseline;
@@ -257,16 +257,8 @@
    subgrid children of `datafieldWrapper`. See DataFieldHistory.module.css
    for entry-row styling. */
 
-/* Mobile: metadata drops to its own row beneath the value, still
-   right-aligned to the original metadata column edge (the
-   `history-chevron` line). historyChevron stays pinned to row 1 next
-   to the value. Spanning `value / history-chevron` keeps the right
-   edge of the text at the same x as the desktop layout, so the
-   metadata column alignment contract still holds visually. */
+/* Mobile: only the history chevron needs pinning now — the metadata's own-row
+   placement above is unconditional, so the two widths no longer disagree. */
 @media (max-width: 600px) {
-    .metadata {
-        grid-column: value / history-chevron;
-        grid-row: 2;
-    }
     .historyChevron { grid-row: 1; }
 }

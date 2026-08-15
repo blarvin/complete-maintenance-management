@@ -114,7 +114,18 @@
     color: var(--text-muted);
 }
 
+/* The value takes the whole run from `value` to the trailing chevron, at every
+   width. It used to auto-place into `value` alone, which is one of two equal
+   `1fr` tracks — so a Description wrapped inside half the card while the other
+   half sat empty. Nothing competes for the right of row 1 any more: the
+   metadata moved to its own row (DataFieldDetails.module.css → `.metadata`).
+
+   `.datafieldValue` is also worn by the read-only config renderers, but those
+   draw inside `.sectionBody` / the picker peek — plain blocks, not grid items —
+   where these two properties are simply ignored. */
 .datafieldValue {
+    grid-column: value / history-chevron;
+    grid-row: 1;
     color: var(--text-secondary);
 }
 
@@ -189,16 +200,10 @@ textarea.datafieldTextarea {
     font-style: italic;
 }
 
-/* Mobile: metadata wraps to its own row beneath the value (see
-   DataFieldDetails.module.css and DataFieldHistory.module.css for the
-   matching overrides). Value spans through the metadata column so it
-   gets the full horizontal budget; chevrons and label stay pinned to
-   row 1 so the disclosure controls remain adjacent to the value. */
-@media (max-width: 600px) {
-    .datafieldChevron { grid-row: 1; }
-    .datafieldLabel { grid-row: 1; }
-    .datafieldValue {
-        grid-column: value / history-chevron;
-        grid-row: 1;
-    }
-}
+/* Chevron and label stay pinned to row 1 so the disclosure control remains
+   adjacent to the value, which now claims that row's full width at every size.
+   This was a mobile-only block; the two widths no longer disagree, and
+   DataFieldHistory keeps the one media query that still earns its keep — its
+   entries stay a compact one-line table on desktop. */
+.datafieldChevron { grid-row: 1; }
+.datafieldLabel { grid-row: 1; }
