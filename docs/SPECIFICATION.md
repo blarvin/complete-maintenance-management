@@ -385,15 +385,27 @@ Typeahead filtering, popularity ranking and "recently added" sort remain deferre
 
 Authoring is a distinct act from picking, and it is the app's other deliberate exception to *Minting Records Identity*: a Definition holds an **ephemeral draft** until committed, because unlike a Node or a DataField it must be coherent at birth — a `number-kv` with no units, or an `enum-kv` with no options, is not incomplete but meaningless. The draft lives in memory only; dismissing the picker discards it and nothing is written.
 
-The authoring row expands into three things and no more:
+**Authoring is the tree, not a form inside it.** `+ New Field Definition` is a row; expanding it lists **one row per admitted kind**; expanding a kind row reveals that kind's authoring surface. The kind choice *is* which row you expand — there is no picker control, because the tree already is one.
 
-1. **Kind** — a picker over the user-mintable field kinds (`mintVia: 'add-surface'`), defaulting to `text-kv`.
-2. **Label** — text input, max 50 chars, required non-empty trimmed; becomes the Definition Element's `name`.
-3. **Config sub-fields** — rendered as rows, each by its own kind's Renderer. **The generic tree view is the default authoring UI**; a per-kind `ConfigForm` is an override, and it earns that override only by carrying **cross-field invariants a row list cannot express**. In Phase 1 exactly two kinds qualify:
-  - **`number-kv`** — the `LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` chain plus the value-driven conditional reveals (see ELEMENT-MODEL.md → number-kv).
-  - **`enum-kv`** — `default` must be one of `options`, which means the two cannot be authored as independent rows: the default's vocabulary *is* the options list, and removing an option has to clear a default that named it.
+```
+▾ + New Field Definition
+   ▸ Text
+   ▾ Number
+       [ name ]
+       Units symbol      psi
+       ▾ Display & nominal
+       ▸ Alarms & freshness
+       Create Number Definition
+   ▸ Enum …
+```
 
-  A kind whose config is a set of independent knobs gets rows, not a form — `text-kv` and the image kinds are the cases that do.
+An expanded kind row holds three things and no more:
+
+1. **Name** — text input, max 50 chars, required non-empty trimmed; becomes the Definition Element's `name`. Unlike every other row it is an input *at rest* rather than something to activate: naming is the act, not a knob, and it takes focus when the row opens.
+2. **Config** — one row per config sub-field, at the depth its schema puts it. **Nesting comes from data, never from a per-kind component**: `group` places a sub-field inside a collapsible group row, `members` expands an atomic compound into its parts one level deeper, and `visibleWhen` reveals a row only when another value calls for it. This is how `number-kv`'s progressive-disclosure tiers become tree depth rather than a form's sections.
+3. **Create** — commits, disabled while anything blocks it.
+
+**Cross-field invariants are validation, not components.** A rule that spans sub-fields — `default ∈ options`, `currency ⇒ currencyCode`, the threshold chain — belongs to the kind rather than to any one row, and is enforced on every write. A rule that concerns one sub-field alone stays that sub-field's own guard. **No kind needs a bespoke authoring form**; the rows plus these two validation layers are the whole of it.
 
 Required config is enforced before commit; everything else takes the kind's defaults and may be left alone.
 
@@ -467,7 +479,7 @@ See *The Add Surface → The LibraryPicker* for the listing, the config peek, an
 The authoring surface is specced with the picker that hosts it — see *The Add Surface → Authoring a Definition*. What belongs here is the data side:
 
 - The kind's **config schema** is its manifest `ChildrenSpec` over config sub-field kinds (template core + open tail); authoring fills those sub-field Elements (see *Data Model → Config is Elements*, and ELEMENT-MODEL.md for each kind's config).
-- **Required config is enforced before commit** — `enum-kv.options` non-empty, `number-kv` units. `number-kv`'s threshold invariants (`LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` in range mode; the equivalent chain across `(nominalValue ± tolerance)` in discrete mode) are validated at authoring time, and are the reason that kind keeps a `ConfigForm` override.
+- **Required config is enforced before commit** — `enum-kv.options` non-empty, `number-kv` units. `number-kv`'s threshold invariants (`LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH` in range mode; the equivalent chain across `(nominalValue ± tolerance)` in discrete mode) are validated at authoring time as a **cross-field rule on the kind**, which is what a per-kind authoring component used to exist for.
 - The draft carries **its own ephemeral state shape**, distinct from anything a DataField uses: no DataField exists yet, so there is nothing for a value draft to attach to. It is not persisted — dismissing discards it.
 
 ### Edit / Delete Semantics for FieldDefinitions

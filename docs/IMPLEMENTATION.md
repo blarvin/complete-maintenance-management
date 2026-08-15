@@ -552,6 +552,22 @@ Coordination is a single parent-owned mutex signal in FieldList. Each surface is
 
 **Focus roves on the row, not the controls.** The row is the `treeitem` and the tab stop; the chevron and name stay clickable at `tabIndex={-1}`. Otherwise Tab walks two controls per Definition. Rows are located with `querySelectorAll('[role="treeitem"]')` rather than a ref array, because `<For>` recycles nodes and a ref array needs invalidation the query doesn't.
 
+**Nesting in the authoring tree comes from data, never from a component.** Three fields on `ConfigSubField` carry it: `group` (a collapsible group row, declared per kind in `CONFIG_GROUPS` so order and open-by-default are stated once rather than repeated on every member), `members` (an atomic compound's authorable parts), and `visibleWhen` (value-driven reveal). None touch storage — `serializeConfig`/`assembleConfig` ignore all three, which is what the round-trip test in `configAuthoringSchema.test.ts` guards.
+
+**A compound's `members` are the *flat* draft keys, not a second shape.** `thresholds` stores one `{lowLow, low, high, highHigh}` object, but the draft config carries those four flat because `packThresholds` reads them off the flat object; the compound only exists at serialize time. A test asserts the member keys are exactly what `pack` reads — drift there would mean authoring edits keys that never reach storage, silently.
+
+**Cross-field invariants are `CONFIG_VALIDATORS`, not per-kind components.** A rule spanning sub-fields belongs to the kind; a rule about one sub-field stays its own `validate`. Only the kind-level validator runs on write, because `validateNumberKvConfig` already calls `validateThresholds(packThresholds(config))` and running both reports one violation twice. This is what retired the "a `ConfigForm` is an override earned by cross-field invariants" rule: no kind needs a bespoke form.
+
+**One draft per expanded kind row.** `useDefinitionDraft` is called inside `KindRow`, not once above it, so expanding Number and then Text cannot carry units across — and collapsing unmounts the draft, which is how abandoning authoring writes nothing without any explicit discard.
+
+**Roving focus is derived from the DOM, not from a `<For>` index.** The Phase I picker compared a stored `activeIndex` against each row's `<For>` index, which was only correct while every `treeitem` was a Definition; the first authoring row desynced it silently and put `tabindex=0` on the wrong row. Position now comes from `document.activeElement`'s place in the live `[role="treeitem"]` query, with tabindex set imperatively. Document order *is* visual order for a tree and collapsed subtrees aren't in the DOM, so this needs no notion of depth. Rows own their own expand/collapse and activation; only Up/Down bubble to the tree.
+
+**`<For>` keys by value — use `<Index>` for an editable list.** Every keystroke in an `enum-kv` options row made the edited string a "new" item, so Solid recreated the row and blurred the input after one character. `<Index>` keys by position and patches in place. `EnumKvConfigForm` carries the same note; this is the second time it has bitten.
+
+**Editors get focus explicitly, never via `autofocus`.** The attribute is processed per *document*, so it is unreliable for a node inserted later — and these surfaces insert many. A ref plus an effect, matching `LensCreate`. (`useFieldEdit` still relies on the attribute for DataField editing; it works because it is usually the only such element, but the fragility is the same.)
+
+**A native `<select>` fires `change` on typeahead.** Closing the editor there made every letter pressed to find an option read as "letters move the focus". It writes on change and closes only on Enter, Escape or blur.
+
 **`Snackbar.coalesceKey` exists because the Snackbar is single-slot.** A `show()` whose key matches the visible toast extends it — same toast id, new message and action, timer restarted — instead of replacing it; without it, three picks would leave only the third undoable. Keeping the *id* is the load-bearing part rather than a detail: `SnackbarHost` renders `<Show keyed>`, so accumulating caller-side and re-`show()`ing would work but would remount and re-animate the toast on every pick. Two `undefined` keys deliberately never match. `onExpire` ends the run (its first consumer in the app); an unrelated toast replacing the run's toast leaves the batch standing, which is commented in place and costs at most an Undo that reverses more than the last toast showed.
 
 ---

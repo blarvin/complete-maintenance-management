@@ -4,6 +4,12 @@ Spec text that has been **removed** from `SPECIFICATION.md` (or `LATER.md`),
 kept because the reasoning in it was real even though the design it describes is
 no longer what the app owes.
 
+**What belongs here is narrow**: the spec for a surface that **shipped and was
+retired**, held so its thinking isn't lost the moment the code goes. It is not
+an edit log. Spec for something that was never built — a plan superseded before
+it landed, a section rewritten a day later — is just a wrong draft, and git has
+it. Adding those would bury the few blocks worth keeping.
+
 **House rules:**
 
 - **Nothing here is current.** No document, code comment, issue, or agent may
