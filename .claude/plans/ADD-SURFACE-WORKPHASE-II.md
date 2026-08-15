@@ -1,5 +1,11 @@
 # ADD-SURFACE-WORKPHASE-II — Authoring, tree-native
 
+> **Landed 2026-08-15** (`ce92142` → `8143fc7` → `3ee4fcd`, doc-sync `7f3d08b`).
+> Step 4's focus work was folded into step 3 rather than done separately —
+> adding rows to the tree desynced the old index-based roving, and committing a
+> knowingly-broken keyboard between two commits wasn't worth it. What the phase
+> deferred is in ISSUES, not here. Kept for the reasoning, not as a work list.
+
 > Supersedes the first Phase II plan (`54f72e2`), which specced authoring as a
 > segmented kind control plus a config form. That was a form wearing the tree's
 > clothes, and the whole branch exists to not do that. Reverted in `bad3f75`.
