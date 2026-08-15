@@ -160,11 +160,9 @@ input.datafieldValue {
     margin: 0;
     font: inherit;
     color: inherit;
-    user-select: text;
-    cursor: text;
-    /* Override inherited `caret-color: transparent` from .no-caret ancestors —
-       we need a visible caret while actively inputting a value. */
-    caret-color: auto;
+    /* Caret / selection / cursor come from the global `.no-caret :is(input,
+       textarea)` opt-out (global.css) — every input here has a .no-caret
+       ancestor, so opting out per input is redundant. */
     touch-action: manipulation;
 }
 
@@ -182,9 +180,6 @@ textarea.datafieldTextarea {
     margin: 0;
     font: inherit;
     color: inherit;
-    user-select: text;
-    cursor: text;
-    caret-color: auto;
     touch-action: manipulation;
     width: 100%;
     resize: vertical;
