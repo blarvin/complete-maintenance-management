@@ -40,24 +40,6 @@ support is deliberately out of scope this pass.
 
 ### 1. Prerequisites (independent, land first)
 
-**Caret fix** — closes ISSUES → Bugs #3. `.no-caret` (`src/styles/global.css:86`)
-sets `caret-color: transparent` *and* `user-select: none`, both inherited, and
-`DataCard.tsx:26` wears it — so every input in every card is born caretless.
-Only `input.datafieldValue` and `textarea.datafieldTextarea` opt back out. Add
-one descendant rule beneath `.no-caret`:
-
-```css
-.no-caret :is(input, textarea, [contenteditable]) {
-    caret-color: auto;
-    user-select: text;
-    -webkit-user-select: text;
-    cursor: text;
-}
-```
-
-The two existing per-input overrides become redundant but are harmless; leave
-them. Do this first — the new name input would otherwise inherit the same bug.
-
 **Construction token** — `src/styles/tokens.css`. `--color-yellow-100: #fff8dc`
 already exists as a primitive, so this is one semantic line next to
 `--bg-expanded`: `--bg-construction: var(--color-yellow-100);`. A hue, not
