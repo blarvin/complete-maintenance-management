@@ -11,6 +11,7 @@ import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
+import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { getCommandBus } from '../../data/commands';
@@ -92,6 +93,9 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
 
                         {/* Future: Breadcrumb hierarchy */}
                         {/* Path: Root > Parent > Current */}
+                    </div>
+                    <div class={detailsStyles.idRow}>
+                        <ElementIdRow id={props.id} />
                     </div>
                     <div class={detailsStyles.actionsRow}>
                         <button

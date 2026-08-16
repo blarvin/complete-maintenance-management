@@ -146,6 +146,13 @@
    DetailBands.module.css when the Add Surface became a Field row and needed the
    same bands. This file keeps only what a *persisted* Field's details own. */
 
+/* The id line. Spans `label → end` as one cell rather than subgridding: it is a
+   line of text that should use the full width, not an action pinned to a track. */
+.idRow {
+    grid-column: label / end;
+    padding-top: var(--space-1);
+}
+
 /* Actions row - subgrids the parent's columns from `label` onward so each
    action button can pin to a specific column (currently delete in `label`,
    future buttons in `value`/`metadata`/etc.). */

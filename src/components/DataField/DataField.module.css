@@ -163,6 +163,10 @@
     background: none;
     border: none;
     font: inherit;
+    /* Deliberately larger and heavier than the row's text: it is a target, not a
+       word, and at `--text-sm` regular weight the glyph read as punctuation. */
+    font-size: var(--text-base);
+    font-weight: 700;
     cursor: pointer;
 }
 

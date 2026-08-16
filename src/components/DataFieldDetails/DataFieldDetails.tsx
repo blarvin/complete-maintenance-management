@@ -37,6 +37,7 @@ import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
 import type { Kind, Definition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
+import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
 import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
 import bands from '../DetailBands/DetailBands.module.css';
 import styles from './DataFieldDetails.module.css';
@@ -171,16 +172,24 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
             collapsible: true,
             defaultOpen: false,
             body: () => (
-                <div classList={{ [styles.actionsRow]: true, 'no-caret': true }}>
-                    <button
-                        type="button"
-                        class={styles.deleteButton}
-                        onClick={() => props.onDelete()}
-                        aria-label="Delete this field"
-                    >
-                        Delete Field
-                    </button>
-                </div>
+                <>
+                    {/* The id spans the same tracks the actions row does, rather
+                        than sitting in one column: it is a line of text, not an
+                        action pinned to a track. */}
+                    <div classList={{ [styles.idRow]: true, 'no-caret': true }}>
+                        <ElementIdRow id={props.fieldId} />
+                    </div>
+                    <div classList={{ [styles.actionsRow]: true, 'no-caret': true }}>
+                        <button
+                            type="button"
+                            class={styles.deleteButton}
+                            onClick={() => props.onDelete()}
+                            aria-label="Delete this field"
+                        >
+                            Delete Field
+                        </button>
+                    </div>
+                </>
             ),
         },
     ];
