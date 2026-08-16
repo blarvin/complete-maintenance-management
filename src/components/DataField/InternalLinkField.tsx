@@ -33,6 +33,8 @@ import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import type { InternalLinkValue } from '../../data/models';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
+import { storageEventBus } from '../../data/storageEventBus';
+import { affectsElement } from '../../data/storageEventRelevance';
 import { resolveEdge } from '../../data/services/capabilityEngine';
 import styles from './DataField.module.css';
 
@@ -85,8 +87,15 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
     /**
      * Live resolution, keyed off the *edit state's* current id rather than
      * `props.value`, so the name follows an edit as soon as it commits. Runs in
-     * `pendingMode` too: a draft row previewing `→ Pump P-101` is the row being
+     * `pendingMode` too: a draft row previewing `Pump P-101` is the row being
      * the Field, where the bare id it was typed from is not.
+     *
+     * **Subscribed, not sampled.** `TargetSpec.pin: 'live'` is a claim about the
+     * *target*, so re-reading only when this link's own value changes was not it:
+     * renaming or deleting the target left a stale name on screen until the row
+     * happened to remount. Writes emit and readers subscribe here as everywhere
+     * else (`useElementById` is the same shape) — a deleted target resolves to
+     * null and the row falls back to `(unresolved: …)` on the spot.
      *
      * Stale-async guard: an in-flight resolve must not land after the tracked id
      * changed (effects capture their values at run time).
@@ -94,16 +103,24 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
     createEffect(() => {
         const id = displayValue();
         let disposed = false;
-        onCleanup(() => { disposed = true; });
         if (!id) {
             setResolvedName(null);
             return;
         }
-        void (async () => {
+        const resolve = async () => {
             await initializeStorage();
             const target = await resolveEdge(id, getElementQueries());
             if (!disposed) setResolvedName(target ? target.name : null);
-        })();
+        };
+        const unsubscribe = storageEventBus.subscribe((event) => {
+            if (!affectsElement(event, id)) return;
+            void resolve();
+        });
+        onCleanup(() => {
+            disposed = true;
+            unsubscribe();
+        });
+        void resolve();
     });
 
     const labelId = () => `field-label-${props.id}`;

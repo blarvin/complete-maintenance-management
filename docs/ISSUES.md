@@ -48,6 +48,8 @@ stale or dangling.
 
 2.) **Text entry in Add Field/Name longer than current column width widens the columnn across the app**
 
+3.) **Field Value no longer aligns with current value's metadata string.**
+
 
 ## Features
 
