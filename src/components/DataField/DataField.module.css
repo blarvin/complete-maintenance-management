@@ -21,6 +21,45 @@
     border-radius: var(--radius-sm);
 }
 
+/* Reveal-on-arrival: this row is what an `internal-link`'s `→` was pointing at.
+   One pulse, then gone — `useRevealOnArrival` drops the class on a timeout, so
+   nothing here loops or needs an end state. The outline is drawn rather than the
+   border so the row's grid geometry doesn't shift as it fires. */
+.datafieldWrapperRevealed {
+    border-radius: var(--radius-sm);
+    animation: datafieldReveal 1.4s ease-out;
+}
+
+@keyframes datafieldReveal {
+    0% {
+        background: var(--bg-expanded);
+        outline: var(--border-width) solid var(--accent);
+        outline-offset: 2px;
+    }
+    70% {
+        background: var(--bg-expanded);
+        outline: var(--border-width) solid var(--accent);
+        outline-offset: 2px;
+    }
+    100% {
+        background: transparent;
+        outline: var(--border-width) solid transparent;
+        outline-offset: 2px;
+    }
+}
+
+/* Reduced motion: the reveal still has to be *visible* — it is the whole point
+   of the trip — so it degrades to a static outline that the same timeout clears,
+   not to nothing. */
+@media (prefers-reduced-motion: reduce) {
+    .datafieldWrapperRevealed {
+        animation: none;
+        background: var(--bg-expanded);
+        outline: var(--border-width) solid var(--accent);
+        outline-offset: 2px;
+    }
+}
+
 /* Construction mode field - same as datafield but without the chevron column */
 .constructionField {
     display: grid;
@@ -151,9 +190,9 @@
 }
 
 /* The travel affordance, worn by both link kinds: `external-link`'s `↗` (an
-   anchor, opens a tab) and `internal-link`'s `→` (a button, re-roots the FSM).
-   One class because it is one role — the only thing in the row that leaves it —
-   so the resets cover both element types. */
+   anchor, opens a tab) and `internal-link`'s `→` (a button, reveals the target
+   where it lives). One class because it is one role — the only thing in the row
+   that leaves it — so the resets cover both element types. */
 .datafieldLinkOpen {
     flex: none;
     color: var(--accent);

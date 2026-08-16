@@ -103,6 +103,14 @@ export const selectors = {
     },
 
     /**
+     * Is this the element a `revealElement` is currently pointing at? True for
+     * exactly one element at a time, and only until the arriving row clears it.
+     */
+    isRevealed: (appState: AppState, elementId: string): boolean => {
+        return appState.revealedElementId === elementId;
+    },
+
+    /**
      * Check if we're in ROOT view
      */
     isRootView: (appState: AppState): boolean => {

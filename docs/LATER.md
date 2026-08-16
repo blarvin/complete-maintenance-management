@@ -120,6 +120,7 @@ The four kinds (`org`/`job`/`jobs`/`internal-link`) + the rudimentary engine lan
 - **`jobs` as container + the inline-yet-navigable placement** — ✅ **done (#5 container half, 2026-06-30):** `jobs` is now a **hybrid** — it owns its own DataFields *and* rolls up jobs. Each `job` is authored inside the container (parented to the owning node) and renders field-like (compact `NavigableRow` under a node; Node-like CHILD card when re-rooted into). The both-rollup-and-container shape (once parked for `logbook`) is proven here, so `logbook` (#6c) inherits it (IMPLEMENTATION.md → *#5 container half*). **Remaining sub-item:** *pick which descendant a job lands under* — Phase-1 parents every job created in a node's container to that node (the lens owner N); a UI to target a specific descendant is deferred.
 - **Restrict/hide the create surface by `childrenSpec`** — ✅ **done (2026-06-29, #5 slice 1).** The node-create picker now reads `reRootCreateKindsFor(parent.kind)` (`job`→node/job, not org) and a content-free lens (`jobs`) offers no "Add"; the lens-aware shell drops the DataCard/chevron for content-free kinds (IMPLEMENTATION.md → *#5 slice 1*).
 - **`jobs`/`logbook` lens lifecycle → moved to ISSUES.** Backfill onto pre-existing nodes, de-provision/GC when the last entry is removed, and hide-empty-lens are leftovers of in-flight lens work, so they now live in ISSUES (Architecture Migration #11), generic across all `PROVISIONED_LENSES`. The canonical **upward ancestor-walk provisioning** (ELEMENT-MODEL §lens) stays superseded by the per-node v1. Still genuinely deferred *here* (a not-yet-begun UI idea): a **collapsed lens-row count badge** — the rollup count lives inside the expanded card, and `KindAdornment` no longer chips the lens (it keeps only `org`'s descendant count).
+- **Is a Field a legal `internal-link` target? — and enforcing `TargetSpec.allowedKinds` at all.** `allowedKinds` is declared (`['node','org','job']`) and read by nobody, so a Field id pastes in and resolves happily. Reveal (2026-08-16) made that case *work* rather than dead-end, which removes the urgency but not the question: the spec decision comes first (ELEMENT-MODEL → `internal-link`), and only then is there something to enforce — in the editor, in the eventual target picker, or both. Enforcing today's declared list would break links the app now travels to perfectly well.
 - **Remaining §6b/§6c lens follow-ups → moved to ISSUES.** `capabilityEngine` ancestors/edges traversal, `internal-link` target picker + editing, field-composer restriction by `childrenSpec`, and the `job`-admits-`job` (sub-tasks vs subtypes) decision now live in ISSUES (Architecture Migration). Rich lens rows / the "primary line" are already tracked in ISSUES #2 (chrome entailment remaining).
 
 ### `subtitle` → optional `nodeSubtitle` child element
@@ -176,6 +177,8 @@ Spec called for a breadcrumb in `TreeNodeDetails` (`"Ancestor1 / Ancestor2 / Par
 - Root nodes: empty array; children inherit and append on create; recompute for descendants on reparent
 - Rendering: join with `" / "` and append current `nodeName`
 
+**Parsing the canonical element address.** The grammar is fixed (SPEC → *Canonical element address*) and the `A / B / C` join is rendered, but nothing reads one back: no `parseAddress`, and the `.value` / `/config` / `[]` terminals are reserved vocabulary only. Parsing is what a command layer, a downloads/pack format, or an address bar would need, and each of those brings the hard half with it — names are not unique, so resolution needs a disambiguation rule (nearest match? error on ambiguity? ids in the address?) that display never had to answer. Deferred 2026-08-16 with reveal.
+
 ---
 
 ## DataField Components & FieldDefinition Library
@@ -189,6 +192,7 @@ The FieldComponent / FieldDefinition / DataField spine plus the 4 Phase-1 FieldC
 - `image-grid` — multiple images, grid UI
 - `image-aggregator` — derived gallery across descendants
 - `composite-kv` — recursive FieldDefinition configs (fields containing fields)
+- **`mirror` — the transclusion twin of `internal-link`** — where `internal-link` renders the target's *name* and offers a way to go there, a mirror renders the target's **value** in place, here. Same Edge, opposite reading: a pointer versus a transclusion. Explicitly out of scope when reveal landed (2026-08-16) because it is not a variation on the link renderer — it needs staleness/pin semantics, a live-vs-snapshot decision, and a cycle guard, which is cascade-arbiter territory (SPEC → *The cascade*).
 
 ### Phase-2 FieldComponent features
 

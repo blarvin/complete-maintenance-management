@@ -218,7 +218,12 @@ Subtle background colour in Phase 1; no icons.
 
 **Named for its composition, not its use** (renamed from `asset-doc`, 2026-08-12). "Linked Doc" is the *Definition* label in the seeded library; "O&M Manual", "Drawing", "Parent Assembly" are others of this same kind. Nothing about the behaviour is document-specific — it is a live internal reference, and that is the whole of it. The internal twin of `external-link`.
 
-**UX**: an inline reference row rendered from the resolved target. **Status: current** (v1 stub, #6b 2026-06-28 — the value is a raw element-id resolved live to the target's name; a real target picker, an allowed-target-kind config, and editing a saved link are tracked in ISSUES).
+**UX**: an inline reference row rendered from the resolved target, **two targets and two acts** (the same split as `external-link`): the value surface double-taps into the editor, and a `→` beside it is the only thing that travels. The `→` appears only once the target resolves — there is nowhere to go otherwise — and never while drafting, because leaving would discard an uncommitted draft.
+
+- **The value carries an address, not a bare name** — nearest ancestor plus name (`Tony / Colour`), full address in the tooltip. A name alone is not an identity; see `SPECIFICATION.md → Canonical element address`.
+- **`→` reveals, it does not re-root** — it brings the *owner* into view, opens that card, and the target row centres and flashes itself. One behaviour for every target kind, which is also what makes a Field target work at all (`SPECIFICATION.md → Navigation Logic → Reveal`).
+
+**Status: current** (#6b 2026-06-28; edit path + travel affordance 2026-08-16; address + reveal 2026-08-16). Still open: the value is typed as a **raw element id**, so a real target picker is the missing half — and with it, whether `TargetSpec.allowedKinds` (declared `['node','org','job']`, enforced nowhere, so a Field resolves happily) should be enforced or widened. See LATER → *§6b minimal kind set*.
 
 ## external-link
 

@@ -5,6 +5,39 @@
     /* Block element groups article + DataCard so parent's gap doesn't separate them */
 }
 
+/* Reveal-on-arrival: this card is what an `internal-link`'s `→` was pointing at.
+   Outlined rather than re-rooted — the node is shown where it lives, and the tap
+   that makes it the branch root stays the user's. Dropped on a timeout by
+   `useRevealOnArrival`, so there is no end state to hold. */
+.nodeWrapperRevealed {
+    animation: nodeReveal 1.4s ease-out;
+}
+
+@keyframes nodeReveal {
+    0% {
+        outline: calc(var(--border-width) * 2) solid var(--accent);
+        outline-offset: 2px;
+    }
+    70% {
+        outline: calc(var(--border-width) * 2) solid var(--accent);
+        outline-offset: 2px;
+    }
+    100% {
+        outline: calc(var(--border-width) * 2) solid transparent;
+        outline-offset: 2px;
+    }
+}
+
+/* See DataField.module.css — the reveal degrades to a static outline the same
+   timeout clears, never to nothing. */
+@media (prefers-reduced-motion: reduce) {
+    .nodeWrapperRevealed {
+        animation: none;
+        outline: calc(var(--border-width) * 2) solid var(--accent);
+        outline-offset: 2px;
+    }
+}
+
 .nodeHeader {
     position: relative;
     width: 100%;

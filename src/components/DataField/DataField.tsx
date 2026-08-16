@@ -9,6 +9,7 @@ import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
+import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import { getInlineManifest } from '../../kinds/registry';
 import { isUnfilled } from '../../data/models';
 import type { Kind, DataFieldValue } from '../../data/models';
@@ -32,6 +33,10 @@ export const DataField = (props: DataFieldProps) => {
     // The row ref is owned here so outside-click detection inside each renderer
     // covers the entire row (chevron, label, value), not just the value column.
     const [rootEl, setRootEl] = createSignal<HTMLElement>();
+
+    // The same row ref doubles as the reveal target: an `internal-link` pointing
+    // at this Field centres and flashes it here rather than re-rooting to it.
+    const isRevealed = useRevealOnArrival(() => props.id, rootEl);
 
     const isDetailsExpanded = () =>
         selectors.getDataFieldDetailsState(appState, props.id) === 'EXPANDED';
@@ -66,6 +71,7 @@ export const DataField = (props: DataFieldProps) => {
                 // Derived, not stored — a card shows at a glance which facts are
                 // still owed (SPEC → DataField States → isUnfilled).
                 [styles.datafieldWrapperUnfilled]: isUnfilled(props.value),
+                [styles.datafieldWrapperRevealed]: isRevealed(),
                 'no-caret': true,
             }}
         >

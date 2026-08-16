@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { transitions, selectors, type AppState } from '../state/appState';
+import { saveUIPrefs } from '../state/uiPrefs';
 
 // Mock uiPrefs to avoid localStorage in tests
 vi.mock('../state/uiPrefs', () => ({
@@ -32,6 +33,7 @@ function createTestState(overrides?: Partial<AppState>): AppState {
             toggledBands: new Set<string>(),
         },
         editingElementId: null,
+        revealedElementId: null,
         ...overrides,
     };
 }
@@ -413,6 +415,101 @@ describe('State Transitions', () => {
         });
     });
 
+    describe('revealElement', () => {
+        it('lands on ROOT view when the target has no owner', () => {
+            const state = createTestState({ view: { state: 'BRANCH', elementId: 'somewhere' } });
+            transitions.revealElement(state, { elementId: 'root-node', branchId: null });
+
+            expect(state.view).toEqual({ state: 'ROOT' });
+            expect(state.revealedElementId).toBe('root-node');
+        });
+
+        it('re-roots to the owner and opens its card for a Field target', () => {
+            // The case that used to be a dead view: `navigateToNode(fieldId)` left
+            // BranchView with no parent node, because a Field is not re-root.
+            const state = createTestState();
+            transitions.revealElement(state, { elementId: 'field-1', branchId: 'node-1' });
+
+            expect(state.view).toEqual({ state: 'BRANCH', elementId: 'node-1' });
+            expect(state.ui.expandedCards.has('node-1')).toBe(true);
+            expect(state.revealedElementId).toBe('field-1');
+        });
+
+        it('preserves cards already expanded', () => {
+            const state = createTestState({
+                ui: {
+                    expandedCards: new Set(['node-9']),
+                    expandedFieldDetails: new Set(),
+                    expandedNodeDetails: new Set(),
+                    toggledBands: new Set(),
+                },
+            });
+            transitions.revealElement(state, { elementId: 'field-1', branchId: 'node-1' });
+
+            expect(state.ui.expandedCards.has('node-9')).toBe(true);
+            expect(state.ui.expandedCards.has('node-1')).toBe(true);
+        });
+
+        it('clears editing state, like every other navigation', () => {
+            const state = createTestState({ editingElementId: 'field-7' });
+            transitions.revealElement(state, { elementId: 'field-1', branchId: 'node-1' });
+
+            expect(state.editingElementId).toBeNull();
+        });
+
+        it('GUARD: blocks the reveal while under construction', () => {
+            const state = createTestState({
+                underConstruction: {
+                    id: 'new-node',
+                    parentId: null,
+                    kind: 'node',
+                    name: '',
+                    subtitle: '',
+                },
+            });
+            transitions.revealElement(state, { elementId: 'field-1', branchId: 'node-1' });
+
+            expect(state.view).toEqual({ state: 'ROOT' });
+            expect(state.revealedElementId).toBeNull();
+        });
+
+        it('persists the card set but never the reveal itself', () => {
+            // The ephemeral-state contract: a flash that survived a reload would
+            // be a bug, which is why revealedElementId sits outside `ui`.
+            vi.mocked(saveUIPrefs).mockClear();
+            const state = createTestState();
+            transitions.revealElement(state, { elementId: 'field-1', branchId: 'node-1' });
+
+            const saved = vi.mocked(saveUIPrefs).mock.calls[0][0];
+            expect([...saved.expandedCards]).toEqual(['node-1']);
+            expect(Object.keys(saved)).not.toContain('revealedElementId');
+            expect(JSON.stringify(saved)).not.toContain('field-1');
+        });
+    });
+
+    describe('clearReveal', () => {
+        it('drops the pending reveal', () => {
+            const state = createTestState({ revealedElementId: 'field-1' });
+            transitions.clearReveal(state);
+
+            expect(state.revealedElementId).toBeNull();
+        });
+
+        it.each([
+            ['navigateToNode', (s: AppState) => transitions.navigateToNode(s, 'node-2')],
+            ['navigateUp', (s: AppState) => transitions.navigateUp(s, null)],
+            ['navigateToRoot', (s: AppState) => transitions.navigateToRoot(s)],
+        ])('%s clears it too, so a stale flash cannot outlive its view', (_name, navigate) => {
+            const state = createTestState({
+                view: { state: 'BRANCH', elementId: 'node-1' },
+                revealedElementId: 'field-1',
+            });
+            navigate(state);
+
+            expect(state.revealedElementId).toBeNull();
+        });
+    });
+
     describe('startFieldEdit', () => {
         it('sets editingElementId', () => {
             const state = createTestState();
@@ -581,6 +678,22 @@ describe('State Selectors', () => {
             // descriptor, so an untouched band follows whatever it currently says.
             expect(selectors.isBandToggled(state, 'field-1:config')).toBe(true);
             expect(selectors.isBandToggled(state, 'field-1:history')).toBe(false);
+        });
+    });
+
+    describe('isRevealed', () => {
+        it('is false when nothing is revealed', () => {
+            const state = createTestState();
+
+            expect(selectors.isRevealed(state, 'field-1')).toBe(false);
+        });
+
+        it('picks out exactly the revealed element', () => {
+            const state = createTestState();
+            transitions.revealElement(state, { elementId: 'field-1', branchId: 'node-1' });
+
+            expect(selectors.isRevealed(state, 'field-1')).toBe(true);
+            expect(selectors.isRevealed(state, 'node-1')).toBe(false);
         });
     });
 

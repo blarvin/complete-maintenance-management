@@ -634,6 +634,20 @@ That is not merely a way to fit the existing shape; it is the behaviour we want 
 
 ---
 
+### Reveal — ephemeral state, and an effect that lives in the row (2026-08-16)
+
+`revealElement` is the third navigation act (SPEC → Navigation Logic): show an element where it already lives rather than making it the view. Three choices are worth recording.
+
+**`revealedElementId` sits on `AppState`, not inside `ui`.** `ui` is the *persisted* half by definition — every field in it round-trips through `uiPrefs.ts`, and `persistUIPrefs` enumerates it explicitly. A flash that survived a reload would be a bug, so the marker is deliberately outside that boundary. The card expansion the same transition causes *is* device-local view state and does go in `ui.expandedCards` — the two halves of one act land on opposite sides of the persistence line, which is the whole reason to be explicit about it.
+
+**The scroll-and-flash effect lives in the row, not in the transition.** Navigation, card expansion and `FieldList`'s async load together mean the target row is almost never mounted at the moment the state is set; a scroll driven from the transition would aim at nothing. A row that checks on mount fires whenever it appears, however late. This is also why `useRevealOnArrival` takes an element accessor instead of the transition taking a ref: DOM handles cannot be serialised, and keeping them out of the payload is what leaves `revealElement` drivable by a command layer later. The payload stays two strings wide (`{ elementId, branchId }`).
+
+**The caller resolves `branchId`.** Transitions are synchronous and pure, and a Field is not in the node index (`getAncestorPath('field')` returns `[]`, asserted in `initStorage.test.ts`), so the owner cannot be derived inside the transition. `InternalLinkField` already holds the resolved target Element, so it hands over `target.parentId` — the same expression for a Field and a node, `null` meaning ROOT view.
+
+**Not the command bus.** That is the data write path (CREATE/UPDATE/DELETE). This is an `appState` transition; the "commandable someday" constraint is only about the *shape* of the payload, not about routing it through the bus now.
+
+---
+
 ## Hook Patterns
 
 **Status:** Accepted.
@@ -645,6 +659,8 @@ The house shape is **`Accessor<T>` in, accessors out** — call sites pass thunk
 **useDoubleTap**: Returns `{ checkDoubleTap }`, which takes `(x, y)` and returns a boolean. Caller decides what to do on double-tap. Tap state is plain closure state — synchronous, nothing tracks it.
 
 **usePendingForms**: Owns the composer's pending batch and its localStorage persistence. Returns `{ forms, lastToggledId, togglePending, setPendingValue, commitAll, discardAll }`. Mutators write through to localStorage immediately so a commit from another component reads the current batch. `nodeId` is a mount-time constant by contract — the composer remounts per session via a keyed `<Show>`.
+
+**useRevealOnArrival**: The receiving half of `revealElement` — takes `(Accessor<string>, Accessor<HTMLElement | undefined>)`, returns a `flashing` accessor the host wears as its own class. Worn by `DataField` (reusing the row ref it already owns for outside-click detection) and `TreeNodeDisplay`. Tracks the element accessor as well as the state, so a ref that lands after the first run still fires. `block: 'center'` degrades to `'start'` for an element taller than the viewport, where centring the *whole* wrapper pushes the header naming it off the top.
 
 **useFieldEdit**: All edit state/interaction logic for DataField — FSM integration, double-tap detection, focus management, outside-click cancellation, and the composer's `pendingMode` (where click-away *commits* instead of cancelling). Returns refs, accessors, and handlers.
 

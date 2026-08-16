@@ -12,30 +12,41 @@
  * withholding its `↗` from a value that is not a safe URL.
  *
  * The one deliberate asymmetry: **no `→` while drafting.** Opening an external
- * URL puts it in a new tab and leaves the draft standing; re-rooting the current
+ * URL puts it in a new tab and leaves the draft standing; leaving the current
  * view would discard an in-memory draft that has not been committed. Leaving is
  * safe, travelling is not.
  *
- * **The target is still a raw element id**, which is the honest limit of this
- * renderer: the id appears nowhere in the UI to copy, so the field is editable
- * but not yet usable. The real fix is a target picker constrained by
- * `TargetSpec.allowedKinds` (already declared here as `node`/`org`/`job` and read
- * by nobody) — see ISSUES, and LATER → *Forcing kinds*, which wants the same
- * constrained reference in two other places. What landed here is the half that
- * was missing entirely: an edit path at all. Before it this renderer had no
- * editor branch outside `pendingMode`, so a saved link could never be changed.
+ * **`→` reveals, it does not re-root** (2026-08-16). One glyph, one behaviour,
+ * whatever the target's kind: `revealElement` brings the *owner* into view, opens
+ * its card, and the arriving row centres and flashes itself. A node target is
+ * then one tap from being re-rooted, and a Field target works at all — travelling
+ * to a Field with `navigateToNode` rendered a branch with no parent node, because
+ * `TargetSpec.allowedKinds` is declared here (`node`/`org`/`job`) and enforced
+ * nowhere, so a Field id pastes in and resolves happily.
+ *
+ * **The value carries its nearest ancestor** (`Tony / Color`), full path in the
+ * `title`: a bare name is not unique — every pump has a Pressure. The whole
+ * breadcrumb does not fit the value cell, and any future target picker will need
+ * the same disambiguation for the same reason.
+ *
+ * **The target is still a raw element id** in the editor, which is the honest
+ * limit of this renderer. The real fix is a target picker constrained by
+ * `allowedKinds` — see ISSUES, and LATER → *Forcing kinds*, which wants the same
+ * constrained reference in two other places.
  */
 
 import { Show, createSignal, createEffect, onCleanup, type Accessor } from 'solid-js';
 import { useAppTransitions } from '../../state/appState';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import type { InternalLinkValue } from '../../data/models';
+import type { Element, InternalLinkValue } from '../../data/models';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { storageEventBus } from '../../data/storageEventBus';
 import { affectsElement } from '../../data/storageEventRelevance';
 import { resolveEdge } from '../../data/services/capabilityEngine';
+import { getAncestorPath } from '../../data/nodeIndex';
+import { isReRoot } from '../../kinds/placement';
 import styles from './DataField.module.css';
 
 export type InternalLinkFieldProps = {
@@ -53,7 +64,7 @@ const parseTarget = (raw: string): InternalLinkValue | null => {
 };
 
 export const InternalLinkField = (props: InternalLinkFieldProps) => {
-    const { navigateToNode } = useAppTransitions();
+    const { revealElement } = useAppTransitions();
 
     /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
@@ -82,7 +93,9 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
     // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
     useFieldValueSync<InternalLinkValue>(props.id, setCurrentValue);
 
-    const [resolvedName, setResolvedName] = createSignal<string | null>(null);
+    /** The whole resolved Element, not just its name: the path needs `parentId`
+     *  and `kind`, and `→` needs `parentId` to know where to stand. */
+    const [target, setTarget] = createSignal<Element | null>(null);
 
     /**
      * Live resolution, keyed off the *edit state's* current id rather than
@@ -104,13 +117,13 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
         const id = displayValue();
         let disposed = false;
         if (!id) {
-            setResolvedName(null);
+            setTarget(null);
             return;
         }
         const resolve = async () => {
             await initializeStorage();
-            const target = await resolveEdge(id, getElementQueries());
-            if (!disposed) setResolvedName(target ? target.name : null);
+            const resolved = await resolveEdge(id, getElementQueries());
+            if (!disposed) setTarget(resolved);
         };
         const unsubscribe = storageEventBus.subscribe((event) => {
             if (!affectsElement(event, id)) return;
@@ -125,9 +138,38 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
 
     const labelId = () => `field-label-${props.id}`;
 
-    /** Travel to the target. An FSM re-root, not a URL — hence a button, not an
-     *  anchor. Offered only for a resolved target on a persisted row. */
-    const canTravel = () => !props.pendingMode && !!resolvedName();
+    /**
+     * The target's canonical address, root first, as segments. Synchronous — the
+     * in-memory node index is what breadcrumbs already read. `getAncestorPath`
+     * is nodes-only, so a Field's path is its owner's path plus its own name.
+     *
+     * Rendered as nearest-ancestor-plus-name; the full join goes in the `title`.
+     * The whole breadcrumb does not fit the value cell, whose right end already
+     * belongs to the metadata column (ISSUES → UI #3). `TreeBreadcrumbs` is
+     * deliberately not reused: it renders navigable buttons and its own chrome.
+     */
+    const pathSegments = (): string[] => {
+        const t = target();
+        if (!t) return [];
+        return isReRoot(t.kind)
+            ? getAncestorPath(t.id).map((s) => s.name)
+            : [...getAncestorPath(t.parentId ?? '').map((s) => s.name), t.name];
+    };
+    const pathLabel = () => pathSegments().slice(-2).join(' / ');
+    const pathTitle = () => pathSegments().join(' / ');
+
+    /** Travel to the target — a reveal, not a re-root, so it costs you nothing
+     *  if it wasn't what you wanted. An FSM transition, not a URL, hence a
+     *  button. Offered only for a resolved target on a persisted row. */
+    const canTravel = () => !props.pendingMode && !!target();
+
+    const travel = () => {
+        const t = target();
+        if (!t) return;
+        // The owner either way: a Field's parent is the node that holds it, a
+        // node's parent is the branch it sits in. `null` lands on ROOT view.
+        revealElement({ elementId: t.id, branchId: t.parentId });
+    };
 
     return (
         <Show
@@ -147,13 +189,13 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
                         role="button"
                         aria-labelledby={labelId()}
                         aria-description="Press Enter to edit"
-                        title={displayValue()}
+                        title={target() ? pathTitle() : displayValue()}
                     >
                         <Show
                             when={hasValue()}
                             fallback={<span class={styles.datafieldPlaceholder}>No link</span>}
                         >
-                            {resolvedName() ?? `(unresolved: ${displayValue()})`}
+                            {target() ? pathLabel() : `(unresolved: ${displayValue()})`}
                         </Show>
                     </div>
 
@@ -161,12 +203,12 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
                         <button
                             type="button"
                             class={styles.datafieldLinkOpen}
-                            title={`Go to ${resolvedName()}`}
-                            aria-label={`Go to ${resolvedName()}`}
+                            title={`Show ${pathTitle()}`}
+                            aria-label={`Show ${pathTitle()}`}
                             onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                navigateToNode(displayValue());
+                                travel();
                             }}
                         >
                             →

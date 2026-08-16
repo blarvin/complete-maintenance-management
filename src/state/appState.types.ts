@@ -69,23 +69,43 @@ export type UIState = {
 };
 
 /**
+ * Where a reveal is going. Two strings wide and serializable — the payload a
+ * command layer would hand this transition later, with no DOM in it. The
+ * caller resolves `branchId` because transitions are synchronous and a Field
+ * is not in the node index (see IMPLEMENTATION.md → Reveal).
+ */
+export type RevealTarget = {
+    /** The element to centre and flash. May be a Field. */
+    elementId: string;
+    /** The node to re-root to so `elementId` is on screen. `null` → ROOT view. */
+    branchId: string | null;
+};
+
+/**
  * Root Application State
  */
 export type AppState = {
     // Current view (FSM state)
     view: ViewState;
-    
+
     // Navigation history for back navigation
     history: string[];
-    
+
     // Under-construction state (when creating a new node)
     underConstruction: UnderConstructionData;
-    
+
     // UI preferences (persisted)
     ui: UIState;
-    
+
     // Currently editing element (only one at a time per SPEC)
     editingElementId: string | null;
+
+    /**
+     * The element to centre and flash on arrival. Ephemeral: a flash that
+     * survived a reload would be a bug, which is why this sits beside `ui`
+     * rather than inside it — everything in `ui` round-trips through uiPrefs.
+     */
+    revealedElementId: string | null;
 };
 
 /**
@@ -104,5 +124,6 @@ export function createInitialState(): AppState {
             toggledBands: prefs.toggledBands,
         },
         editingElementId: null,
+        revealedElementId: null,
     };
 }

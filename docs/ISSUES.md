@@ -81,10 +81,6 @@ stale or dangling.
 
 13.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
 
-14.) **An `internal-link`'s value shows only the target's name, which is not unique** — two assets can each own a "Motor", so a resolved link reads identically whichever it points at. The obvious fix, showing the ancestor path, fights the row: a breadcrumb from the root is far too long for a value cell. Directions worth weighing, none chosen: nearest ancestor only (`Motor · HPU`); full path in `title` with a short label in the row; disambiguate *only when ambiguous*, which is honest but needs a name-uniqueness read per render; or lean on the `→` and accept that confirming which one it is costs a trip. Note this is the same problem any target picker will have — a search result list needs the path for exactly the same reason — so whatever is decided here should be what the picker reuses. Surfaced 2026-08-16 hand-testing the copy-id → paste-into-link workflow.
-
-15.) **Nothing can navigate *to* a Field, and it is a different act from re-rooting** — `navigateToNode` makes a node the BRANCH root; revealing a Field means showing it where it already lives: bring its parent into view, expand that card, scroll the row to centre, and flash it briefly on arrival. It decomposes into moves that already exist (`navigateToNode(parentId)` + `expandedCards` + a scroll) plus one genuinely new thing — transient `revealedElementId` state, which is ephemeral and must not join the persisted `uiPrefs` sets. **Not the command bus**: that is the data write path (CREATE/UPDATE/DELETE); this is an `appState` transition. Deliberately unbuilt for now — `internal-link`'s `TargetSpec.allowedKinds` is `['node','org','job']`, so no link can point at a Field and a reveal would ship with no caller. Its natural first consumer is a link that *can* target a Field, which is first a spec decision (ELEMENT-MODEL → internal-link) about whether a Field is a legal link target at all. Raised 2026-08-16.
-
 
 
 
@@ -107,7 +103,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
 
-11.) **[Fields UI] `internal-link` real target picker + editing** — the target is a raw element-id paste; wants a picker constrained by an allowed-target-kind config, plus editing a saved link.
+11.) **[Fields UI] `internal-link` real target picker** — the target is still a raw element-id paste. Editing a saved link landed 2026-08-16; the picker is the remaining half, and it needs the address (nearest ancestor + name) in its result rows for the same disambiguation reason the value cell does. Whether it should be *constrained* by `TargetSpec.allowedKinds` is a spec decision first — LATER → *§6b minimal kind set*.
 
 12.) **[Fields UI] Field-composer restriction by `childrenSpec`** — the composer still offers all `FIELD_KINDS`; wire `allowedChildKinds ∩ FIELD_KINDS` if a kind ever narrows admitted fields. No-op today.
 

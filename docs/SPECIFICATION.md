@@ -137,6 +137,24 @@ So `Element.kind` is `node` or any other kind; "Field-like" is the inline region
 
 - **Down-tree**: Move down the tree by tapping any child node. Takes user to isParent state for that node.
 - **Up-tree**: The "Up" button navigates to current node's parent's isParent state, or to ROOT view if no parent.
+- **Reveal**: A third act, distinct from both. *Re-rooting* makes a node the view; *revealing* shows an element **where it already lives** — bring its owner into view, open that card, centre the row, flash it once on arrival. It is the only way to navigate *to* a Field, which can never be a re-root.
+  - **The `→` on a link always reveals, whatever the target's kind.** One glyph, one behaviour: revealing a node still leaves it one tap from being re-rooted, and costs you nothing if that wasn't what you wanted. Giving one affordance two meanings depending on what sits behind it is the thing we removed from `external-link`.
+  - The reveal marker is **ephemeral state** — a flash that survived a reload would be a bug — so it never joins the persisted view-state sets. The card expansion it causes is ordinary device-local view state and does persist.
+
+#### Canonical element address
+
+One address form, used for breadcrumbs, reveal, and eventually commands, downloads and pack data. Segments are element names joined by ` / `, root first:
+
+```
+Node / sub-Node / sub-sub-Node / Field        the element
+Node / … / Field.value                        its value
+Node / … / Field/config.units                 a config sub-field's value
+Node / … / Field/config.options[]             an array-valued config sub-field
+```
+
+The `.value` / `/config` / `[]` terminals are **reserved vocabulary**: the grammar is fixed here so later work doesn't invent a second one, but only the `A / B / C` join is built, and only for display. Nothing parses an address.
+
+A name alone is not an identity — every pump has a "Pressure", every asset a "Colour" — so anywhere a link, a search result or a picker names a target, it must carry enough address to disambiguate. Where the room is one row (a link's value cell), that is the nearest ancestor plus the name, with the full address in the tooltip.
 
 ### Node Creation
 
