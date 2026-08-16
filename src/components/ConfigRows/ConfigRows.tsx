@@ -30,7 +30,7 @@
  */
 
 import { For, Index, Show, createUniqueId } from 'solid-js';
-import { CONFIG_SCHEMAS, CONFIG_VALIDATORS } from '../../kinds/configSchema';
+import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
 import type { ConfigSubField, ConfigSubFieldMember } from '../../kinds/types';
 import type { DefinitionConfig, Kind, StringListValue } from '../../data/models';
 import chevron from '../../styles/disclosure.module.css';
@@ -39,7 +39,7 @@ import styles from './ConfigRows.module.css';
 export type ConfigRowsProps = {
     kind: Kind;
     config: DefinitionConfig;
-    onChange: (cfg: DefinitionConfig, error?: string | null) => void;
+    onChange: (cfg: DefinitionConfig) => void;
 };
 
 type Flat = Record<string, unknown>;
@@ -221,19 +221,17 @@ export const ConfigRows = (props: ConfigRowsProps) => {
     const flat = () => props.config as Flat;
 
     /**
-     * Write one knob and revalidate the whole config.
-     *
-     * Only the kind's cross-field validator runs: a sub-field's own `validate`
-     * is subsumed by it today (`validateNumberKvConfig` already calls
-     * `validateThresholds(packThresholds(config))`), and running both would
-     * report the same violation twice.
+     * Write one knob. Validation is **not** run here and not handed back: the
+     * kind's cross-field violation is a pure function of `(kind, config)`, so
+     * the draft derives it (`useDefinitionDraft.configError`) rather than
+     * caching what this component computed. Two copies of one fact is one too
+     * many, and the cached one was always a write behind.
      */
     const write = (key: string, value: unknown) => {
         const next = { ...flat() };
         if (value === undefined || value === '') delete next[key];
         else next[key] = value;
-        const error = CONFIG_VALIDATORS[props.kind]?.(next as DefinitionConfig) ?? null;
-        props.onChange(next as DefinitionConfig, error);
+        props.onChange(next as DefinitionConfig);
     };
 
     const schema = (): ConfigSubField[] =>

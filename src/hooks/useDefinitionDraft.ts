@@ -20,7 +20,7 @@ import { batch, createSignal, type Accessor } from 'solid-js';
 import { getCommandBus } from '../data/commands';
 import { generateId } from '../utils/id';
 import { getDefinitionAuthoring } from '../kinds/registry';
-import { CONFIG_SCHEMAS } from '../kinds/configSchema';
+import { CONFIG_SCHEMAS, CONFIG_VALIDATORS } from '../kinds/configSchema';
 import type {
     DataFieldValue,
     Element,
@@ -57,7 +57,11 @@ export type UseDefinitionDraftResult = {
     kind: Accessor<Kind>;
     label: Accessor<string>;
     config: Accessor<DefinitionConfig>;
-    /** Error from the kind-specific config sub-form (e.g. invariant violations). */
+    /**
+     * The kind's cross-field config violation, or null. **Derived, not stored** —
+     * a pure function of `(kind, config)`, so it cannot drift out of step with
+     * the config the way a cached copy could.
+     */
     configError: Accessor<string | null>;
     /** The instance's initial value, buffered by the row's Renderer in pendingMode. */
     value: Accessor<DataFieldValue | null>;
@@ -71,8 +75,6 @@ export type UseDefinitionDraftResult = {
     pickDefinition: (definition: Definition) => void;
     setLabel: (value: string) => void;
     setConfig: (cfg: DefinitionConfig) => void;
-    /** Push a config-level error from the sub-form; null means valid. */
-    setConfigError: (error: string | null) => void;
     setValue: (value: DataFieldValue | null) => void;
     /** Whether anything has been entered — drives the under-construction tint. */
     isDirty: () => boolean;
@@ -99,7 +101,10 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
     const [kind, setKind] = createSignal<Kind>(DEFAULT_KIND);
     const [label, setLabelSignal] = createSignal<string>('');
     const [config, setConfigSignal] = createSignal<DefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
-    const [configError, setConfigErrorSignal] = createSignal<string | null>(null);
+    /** Derived: the same call `ConfigRows` used to make and hand back on every
+     *  write, which meant two copies of one fact and a stale window between them. */
+    const configError = (): string | null =>
+        CONFIG_VALIDATORS[kind()]?.(config()) ?? null;
     // `setValue` takes a function-shaped payload too (single-image values are
     // objects), so wrap the setter to stop Solid reading one as an updater.
     const [value, setValueSignal] = createSignal<DataFieldValue | null>(null);
@@ -134,7 +139,6 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
         batch(() => {
             setKind(next);
             setConfigSignal(defaultConfigFor(next));
-            setConfigErrorSignal(null);
             // Choosing a kind is choosing to author one, not to keep using the
             // Definition that was loaded.
             setPickedSignal(null);
@@ -147,7 +151,6 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
             setKind(definition.kind);
             setLabelSignal(definition.label);
             setConfigSignal(definition.config);
-            setConfigErrorSignal(null);
             setPickedSignal(definition);
             // The row is the Field (SPEC → Preview fidelity): if this Definition
             // says what a new instance starts as, the preview shows it rather
@@ -193,10 +196,6 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
         });
     };
 
-    const setConfigError = (error: string | null) => {
-        setConfigErrorSignal(error);
-    };
-
     const setValue = (next: DataFieldValue | null) => {
         batch(() => {
             setValueSignal(() => next);
@@ -223,7 +222,6 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
             setKind(DEFAULT_KIND);
             setLabelSignal('');
             setConfigSignal(defaultConfigFor(DEFAULT_KIND));
-            setConfigErrorSignal(null);
         });
     };
 
@@ -254,7 +252,6 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
                 setLabelSignal('');
                 setConfigSignal(defaultConfigFor(DEFAULT_KIND));
                 setKind(DEFAULT_KIND);
-                setConfigErrorSignal(null);
             });
             return result;
         } catch {
@@ -293,7 +290,6 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
         pickDefinition,
         setLabel,
         setConfig,
-        setConfigError,
         setValue,
         isDirty,
         cancel,

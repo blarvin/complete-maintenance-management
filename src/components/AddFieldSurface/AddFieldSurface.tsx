@@ -33,14 +33,14 @@ import { getDefinitionQueries } from '../../data/queries';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useDefinitionDraft } from '../../hooks/useDefinitionDraft';
 import { getInlineManifest, getKindManifest, FIELD_KINDS } from '../../kinds/registry';
-import { CONFIG_VALIDATORS } from '../../kinds/configSchema';
 import { isInline } from '../../kinds/placement';
+import { valueForKind } from '../../kinds/valueCompat';
 import { generateId } from '../../utils/id';
 import { ConfigRows } from '../ConfigRows/ConfigRows';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
 import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
 import type { ActiveSurface } from '../FieldList/addFieldSurfaces';
-import type { DataFieldValue, Definition, DefinitionConfig, Element, Kind } from '../../data/models';
+import type { Definition, Element, Kind } from '../../data/models';
 import type { Accessor } from 'solid-js';
 import chevron from '../../styles/disclosure.module.css';
 import bandStyles from '../DetailBands/DetailBands.module.css';
@@ -61,28 +61,16 @@ const SURFACE_ID = 'add-surface' as const;
 
 const NAME_MAX = 50;
 
-/** Sentinel for a failed fetch — `createResource` has no rejected branch, so the
- *  fetcher catches and the render distinguishes failure from an empty Library. */
-const FAILED = Symbol('failed');
-
 /**
- * The drafted value, but only when its runtime shape fits the kind. The name and
- * the value survive a kind change (SPEC → The bands), which across incompatible
- * kinds would otherwise hand `NumberKvField` a string and have `toFixed` throw
- * mid-render. Compatible moves (text → enum) still carry the value through.
+ * Sentinel for a failed fetch. Not because `createResource` lacks an error
+ * channel — Solid 1.x `Resource<T>` carries `.error` and `state: 'errored'` —
+ * but because *reading* an errored resource rethrows, so the `.error` route
+ * obliges every caller to guard before touching `definitions()` and wants an
+ * `<ErrorBoundary>` above it. Catching in the fetcher keeps failure a value the
+ * render can branch on, which is all this surface needs to tell a broken Library
+ * from an empty one.
  */
-const valueForKind = (value: DataFieldValue | null, kind: Kind): DataFieldValue | null => {
-    if (value === null) return null;
-    switch (kind) {
-        case 'number-kv':
-            return typeof value === 'number' ? value : null;
-        case 'text-kv':
-        case 'enum-kv':
-            return typeof value === 'string' ? value : null;
-        default:
-            return typeof value === 'object' ? value : null;
-    }
-};
+const FAILED = Symbol('failed');
 
 export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
     const isOpen = () => props.activeSurface() === SURFACE_ID;
@@ -115,13 +103,13 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
     const close = () => props.setActiveSurface('none');
     const toggle = () => (isOpen() ? close() : open());
 
-    /** Create is gated on the same rules the config rows enforce while typing, so
-     *  the button never promises a commit the validator would reject. A picked
+    /** Create is gated on the same rule the draft derives from the live config,
+     *  so the button never promises a commit the validator would reject. A picked
      *  Definition is already coherent — nothing here can block it. */
     const blocker = (): string | null => {
         if (draft.picked()) return null;
         if (!draft.label().trim()) return 'Needs a name';
-        return draft.configError() ?? CONFIG_VALIDATORS[draft.kind()]?.(draft.config()) ?? null;
+        return draft.configError();
     };
 
     const create = async () => {
@@ -188,10 +176,7 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
                                 <ConfigRows
                                     kind={draft.kind()}
                                     config={draft.config()}
-                                    onChange={(cfg: DefinitionConfig, error?: string | null) => {
-                                        draft.setConfig(cfg);
-                                        draft.setConfigError(error ?? null);
-                                    }}
+                                    onChange={draft.setConfig}
                                 />
                             </>
                         }

@@ -8,9 +8,8 @@
  * carry identity only — their rendering is framework-owned (TreeNode) until the
  * chrome-entailment cluster routes it through a manifest Renderer. Both arms share
  * the capability descriptors the SPEC catalogues (ownValue/children/edges/…,
- * SourceSpec, provision) via `CapabilitySet`; they are a **structural seam only**
- * — carried per kind but read by no consumer yet (the lens / node-like kinds are
- * the first readers, the cascade arbiter the second).
+ * SourceSpec, provision) via `CapabilitySet`, which **is** read by the running
+ * app — see `capabilities.ts` for the current readers.
  */
 
 import type { Accessor, Component } from 'solid-js';
@@ -168,6 +167,18 @@ export type ValueShape = 'scalar' | 'block' | 'composite';
  */
 export type ValueSpec = {
     shape: ValueShape;
+    /**
+     * The value's **runtime** type, which `shape` deliberately does not carry —
+     * `shape` is the arrangement law (text, enum and number are all `scalar`),
+     * and arrangement says nothing about whether a renderer will be handed a
+     * string or a number.
+     *
+     * Required, so a new value-bearing kind cannot be added without saying which:
+     * the Add Surface consults it (`valueCompat.acceptsValue`) before carrying a
+     * drafted value across a kind change, and a wrong answer means handing
+     * `NumberKvField` a string and watching `toFixed` throw mid-render.
+     */
+    runtime: 'string' | 'number' | 'boolean' | 'object';
     validate?: (value: DataFieldValue | null) => string | null;
 };
 
@@ -255,7 +266,10 @@ export type ValiditySpec = Record<string, never>;
  * The composed capability subset + node-oriented descriptors a kind draws from.
  * Each capability is optional; absence = origin in that axis (SPEC §527). Shared
  * by inline (field-like) and re-root (node-like) manifests alike — they are one
- * composition space, not two systems. **Not yet read by any consumer.**
+ * composition space, not two systems. **Read by the component-free predicate
+ * modules** (`childrenPolicy`, `provisionPolicy`, `valueCompat`) and through them
+ * by the create surfaces, the lens reconciler and the gathers; see
+ * `capabilities.ts`.
  */
 export type CapabilitySet = {
     ownValue?: ValueSpec;
