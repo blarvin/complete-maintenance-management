@@ -251,6 +251,52 @@ Decided in discussion 2026-08-14, alongside Data Model → *Definition Packs*. `
 - **Lens policy overrides on the lens's own DataCard** — see *Definition-binding seam → Re-root Definition authoring UI*, whose open UX question this answers.
 - **Inherited-value chrome** — ghosted value + source chip + tap-to-override + revert-to-inherited. One widget serves all three cascade jobs (business inheritance, Definition specificity, config). Needs the arbiter, and needs "this value is delegated" to be *manifest-readable* rather than inferred, since chrome entailment runs one way (SPECIFICATION.md §626).
 
+### Sections — the lightweight grouping primitive ("the Great Flattener")
+
+Named in a claude.ai design chat and reconciled against the code 2026-08-16, working through why `DetailBands` exists. The *conclusion* was already in the spec as a single table row — SPECIFICATION.md → *Manifest → chrome*: `Section header | a grouping tag on the items | nothing (a render grouping, not a node)` — and ISSUES Architecture #2 has it queued unbuilt as *grouping-tag → section header*. What was missing is the concept behind the row, and the fact that the app already implements something adjacent to it three times under three names.
+
+**A section is a labelled, collapsible, ordered container that is not an Element and earns no kind.** It is organisation on a display surface — nothing to do with what it draws or where that content lives. It has a label, a chevron, an open state, a position, and children it does not own. The *section* stores nothing: no id, no `treeType`, no `placement`, no sync row, no history, no LWW, no cascade-delete. Membership is a property of the **items**.
+
+**Naming, decided.** `section` in code — the platform-conventional term (iOS table sections, RecyclerView section headers). **No user-facing name**: the user sees the divider's label ("Electrical", "Activities"), never the word "section". If it ever must be named in help text, "sections" reads fine; if a flat-vs-nested toggle ever surfaces, name it *Flat view / Nested view*, not after the concept. "The Great Flattener" is the internal name — commit messages and war stories, never a tooltip.
+
+**Two orthogonal systems, same primitive.** Both are optional sugar; `siblingOrder` alone is often enough, and plenty of trees want no sections at all.
+
+- **Child-node sections** — grouping a node's children in the tree: `── Physical ──` / `── Activities ──` over the child rows.
+- **Card-field sections** — grouping a node's Fields inside its DataCard: `── Identity ──` / `── Electrical ──` over the field rows.
+
+**Membership is self-declared, and the unified Element makes it one column.** Each item owns its section via a `section: string` tag on itself; the section is a `groupBy` over that tag. Consequences that fall out for free: **empty sections vanish** (a section exists only because items declare it), and **drag-and-drop is a write to the item** — dragging across a divider sets the dragged item's tag, with section headers as drop targets, identically for child nodes and card fields. Nothing about the section itself is written, which is the clearest possible evidence it is not an Element.
+
+Two notes on translating this into the current model. The source discussion predates the unified Element and put `section` on `TreeNode` *and* `DataField`; today that is **one nullable column on `Element`** serving both systems at once — an unlooked-for dividend of the unification. And it proposed a `nodeKind` classifier to derive default sections from (`activity` → "Activities"); `kind` + `placement` already are that classifier, so the derivation is "default the tag from `kind`, explicit tag overrides".
+
+**Housekeeping the mechanism needs**: normalise the tag on save (lowercase, trim) so typos don't mint near-duplicate sections; ship a hardcoded default section order (Physical → Activities → Documents → Other) before any user-ordering exists.
+
+**Two flavours, one render contract** — the part the spec row under-states:
+
+- **Grouping by tag**, over homogeneous items. Membership is *derived*: the items carry a tag and the section is a `groupBy` over it. This is the spec row's "a grouping tag on the items", and it is what both systems above want. **Not yet built** — the nearest thing is `ConfigSubField.group` + `CONFIG_GROUPS[kind]` + `ConfigRows.ParentRow`, which renders the same way but takes membership from a per-kind *schema* rather than a stored tag on the item, so it has no drag-to-reassign and no empty-vanishing.
+- **Declared slots**, over heterogeneous sources. Membership is *declared*: History draws `ElementHistory`, Config draws the Definition's child subtree, Tools draws buttons. Nothing tags itself into a band.
+
+Same descriptor either way — `{ id, label, collapsible, defaultOpen, order }` — differing only in whether it names **a tag to group by** or **a source to draw**. One descriptor carrying either absorbs both, and collapse / order / persistence then get written once instead of per surface.
+
+**Already implemented three times**, each a label + chevron + local open signal + nested `<Show>`, with no shared code:
+
+- `ConfigRows.ParentRow` — the tag flavour, with a real grouping tag.
+- `DetailBands` — the slot flavour (History · Config · Tools for a persisted Field; Config · Kind · Tools for the Add Surface).
+- `AddFieldSurface.KindRow` — the tag flavour in disguise: Definitions grouped by their `kind`, explicitly a view and never a re-parenting (SPECIFICATION.md → *Listing under the Kind band*).
+
+Collapsing these is **modelling, not DRY** — they are one concept, and naming it is what makes the extraction obviously right rather than opportunistic. The chevron CSS is duplicated on the same seam: `styles/disclosure.module.css` and `DetailBands.module.css`'s `.sectionChevron*` carry byte-identical border math.
+
+**Why it is not an Element, stated once.** `jobs` and `logbook` *are* regions that are Elements, and they earn it by composing `Derivation(children/transitive) + ProvisionSpec` (SPECIFICATION.md → *Earning a kind*). A section composes nothing from the six capabilities, so the same rule excludes it. The cost side is concrete: `placement` is a two-value vocabulary (`inline | re-root`) that `useElementChildren` binarises in one line — `(filter === 'nodes') === isReRoot(e.kind)` — so a third flavour of Element needs a decision at every site that enumerates children (`FieldList`, `ConfigSummary`, the derivation gathers, the create pickers, the provisioner). A section costs none of that.
+
+**Persistence without Elements is already specced.** Open state belongs where card and field expansion already live: `uiPrefs.ts` (`expandedCards` / `expandedFieldDetails`), matching SPECIFICATION.md → *Manifest → chrome*, which files expand/collapse as device-local view state. Per-user order and membership belong in the per-viewer overlay, which SPECIFICATION.md → *Populations are typed trees* already names for exactly this — "the canonical order is the column; a personal reorder is a sparse per-viewer overlay". So "saveable per user, with `siblingOrder` and the reordering UI" needs no new mechanism, only the overlay (ISSUES Architecture #1). **Phase 1 keeps sections as shared data** — one `section` tag per item, the same for everyone — and defers per-user overrides until there is a real User model to hang them on.
+
+**The discipline to hold.** Once sections are user-authorable, orderable, collapsible and drawn to look like tree rows, pressure to promote them to Elements returns from the other direction — nesting them, dragging items between them, sharing them. The answer is the same test: a grouping that composes no behaviour stays a grouping, and a behaviour-free kind is the CI-lintable degeneration anti-pattern (SPECIFICATION.md → *Earning a kind*). Worth stating explicitly for sections, because the resemblance will keep making the case.
+
+**Consequence worth checking — the Library pack-grouping blocker looks over-stated.** *Definition Packs* above says grouping the Library by pack provenance "hits the same blocker as categories", needing a Definition to sit *under* something while `parentId === null` is the storage layer's identity test. But *FieldDefinition Library → Phase-2 enhancements* says grouping **by kind** is explicitly not blocked, because it ships as a view. Pack provenance would be a tag on the Definition, so grouping by it is the tag flavour above — a view, needing no re-parenting, blocked by nothing. Only *arbitrary user-authored groups* need the identity move. Reconcile the two entries when this is picked up.
+
+**Build order, when it is picked up.** Build the **tag flavour first** — it is the one with a user-facing payoff and the one that defines the real shape (stored tag, drop targets, empty-vanishing, name normalisation). Only then ask whether `DetailBands` and `ConfigRows`' groups collapse into it. Extracting a shared component *before* that would abstract over two near-misses and miss the seam: neither existing implementation takes membership from a tag, which is the whole mechanism.
+
+**Open.** The declared-slot flavour is the newer half of this write-up — the source discussion is entirely about the tag flavour, and whether the two genuinely want one descriptor or merely look alike is unsettled until the tag flavour exists to compare against. Also unresolved: whether a section may nest (the source discussion assumes flat, and flat is the point of the name).
+
 ### Tree Decorations
 
 **Tree-line and branch-lines** — non-interactive CSS-only decorations inside the children container. Vertical guide slightly left of child nodes (per `ASSET_view.svg`), derived from `--child-indent` with a `--tree-line-offset`. Each child row shows a short horizontal branch. No layout impact, no pointer events.

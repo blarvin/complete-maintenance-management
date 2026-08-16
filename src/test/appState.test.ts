@@ -8,7 +8,12 @@ import { transitions, selectors, type AppState } from '../state/appState';
 
 // Mock uiPrefs to avoid localStorage in tests
 vi.mock('../state/uiPrefs', () => ({
-    loadUIPrefs: () => ({ expandedCards: new Set(), expandedFieldDetails: new Set() }),
+    loadUIPrefs: () => ({
+        expandedCards: new Set(),
+        expandedFieldDetails: new Set(),
+        expandedNodeDetails: new Set(),
+        toggledBands: new Set(),
+    }),
     saveUIPrefs: vi.fn(),
 }));
 
@@ -24,6 +29,7 @@ function createTestState(overrides?: Partial<AppState>): AppState {
             expandedCards: new Set<string>(),
             expandedFieldDetails: new Set<string>(),
             expandedNodeDetails: new Set<string>(),
+            toggledBands: new Set<string>(),
         },
         editingElementId: null,
         ...overrides,
@@ -314,6 +320,7 @@ describe('State Transitions', () => {
                     expandedCards: new Set(['node-1']),
                     expandedFieldDetails: new Set(),
                     expandedNodeDetails: new Set(),
+                    toggledBands: new Set(),
                 },
             });
             transitions.toggleCardExpanded(state, 'node-1');
@@ -327,6 +334,7 @@ describe('State Transitions', () => {
                     expandedCards: new Set(['node-1', 'node-2']),
                     expandedFieldDetails: new Set(),
                     expandedNodeDetails: new Set(),
+                    toggledBands: new Set(),
                 },
             });
             transitions.toggleCardExpanded(state, 'node-1');
@@ -350,11 +358,58 @@ describe('State Transitions', () => {
                     expandedCards: new Set(),
                     expandedFieldDetails: new Set(['field-1']),
                     expandedNodeDetails: new Set(),
+                    toggledBands: new Set(),
                 },
             });
             transitions.toggleFieldDetailsExpanded(state, 'field-1');
-            
+
             expect(state.ui.expandedFieldDetails.has('field-1')).toBe(false);
+        });
+    });
+
+    describe('toggleBandOpen', () => {
+        it('adds the band key when not present', () => {
+            const state = createTestState();
+            transitions.toggleBandOpen(state, 'field-1:config');
+
+            expect(state.ui.toggledBands.has('field-1:config')).toBe(true);
+        });
+
+        it('removes the band key when present (back to the default)', () => {
+            const state = createTestState({
+                ui: {
+                    expandedCards: new Set(),
+                    expandedFieldDetails: new Set(),
+                    expandedNodeDetails: new Set(),
+                    toggledBands: new Set(['field-1:config']),
+                },
+            });
+            transitions.toggleBandOpen(state, 'field-1:config');
+
+            expect(state.ui.toggledBands.has('field-1:config')).toBe(false);
+        });
+
+        it('scopes bands by their key, so two rows do not share one band', () => {
+            const state = createTestState();
+            transitions.toggleBandOpen(state, 'field-1:config');
+            transitions.toggleBandOpen(state, 'field-2:config');
+            transitions.toggleBandOpen(state, 'field-1:tools');
+
+            expect(state.ui.toggledBands.has('field-1:config')).toBe(true);
+            expect(state.ui.toggledBands.has('field-2:config')).toBe(true);
+            expect(state.ui.toggledBands.has('field-1:tools')).toBe(true);
+            expect(state.ui.toggledBands.size).toBe(3);
+        });
+
+        it('survives a details-region remount — state is not component-local', () => {
+            // The regression this exists for: DataFieldDetails unmounts on every
+            // collapse, so band state kept in the component died with it.
+            const state = createTestState();
+            transitions.toggleBandOpen(state, 'field-1:config');
+            transitions.toggleFieldDetailsExpanded(state, 'field-1'); // collapse
+            transitions.toggleFieldDetailsExpanded(state, 'field-1'); // re-expand
+
+            expect(state.ui.toggledBands.has('field-1:config')).toBe(true);
         });
     });
 
@@ -449,6 +504,7 @@ describe('State Selectors', () => {
                     expandedCards: new Set(['node-1']),
                     expandedFieldDetails: new Set(),
                     expandedNodeDetails: new Set(),
+                    toggledBands: new Set(),
                 },
             });
             
@@ -494,6 +550,7 @@ describe('State Selectors', () => {
                     expandedCards: new Set(),
                     expandedFieldDetails: new Set(['field-1']),
                     expandedNodeDetails: new Set(),
+                    toggledBands: new Set(),
                 },
             });
             
@@ -503,9 +560,27 @@ describe('State Selectors', () => {
 
         it('returns COLLAPSED when fieldId is not in expandedFieldDetails', () => {
             const state = createTestState();
-            
+
             const result = selectors.getDataFieldDetailsState(state, 'field-1');
             expect(result).toBe('COLLAPSED');
+        });
+    });
+
+    describe('isBandToggled', () => {
+        it('is false for a band the user has never touched', () => {
+            const state = createTestState();
+
+            expect(selectors.isBandToggled(state, 'field-1:config')).toBe(false);
+        });
+
+        it('is true once the band is toggled, whatever its default', () => {
+            const state = createTestState();
+            transitions.toggleBandOpen(state, 'field-1:config');
+
+            // The stored bit is the *override*; the default lives on the band
+            // descriptor, so an untouched band follows whatever it currently says.
+            expect(selectors.isBandToggled(state, 'field-1:config')).toBe(true);
+            expect(selectors.isBandToggled(state, 'field-1:history')).toBe(false);
         });
     });
 

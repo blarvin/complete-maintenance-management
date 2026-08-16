@@ -59,6 +59,13 @@ export type UIState = {
     expandedCards: Set<string>;        // container elementId -> card is expanded
     expandedFieldDetails: Set<string>; // field elementId -> details are expanded
     expandedNodeDetails: Set<string>;  // container elementId -> node details panel is expanded
+    /**
+     * `${persistKey}:${bandId}` -> this band's open state is flipped from its
+     * working default. Not keyed by elementId alone: one host row has several
+     * bands, and the Add Surface's key is per-node rather than per-element
+     * because its draft row has no persistent identity (see DetailBands).
+     */
+    toggledBands: Set<string>;
 };
 
 /**
@@ -94,6 +101,7 @@ export function createInitialState(): AppState {
             expandedCards: prefs.expandedCards,
             expandedFieldDetails: prefs.expandedFieldDetails,
             expandedNodeDetails: prefs.expandedNodeDetails,
+            toggledBands: prefs.toggledBands,
         },
         editingElementId: null,
     };

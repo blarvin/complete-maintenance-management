@@ -189,7 +189,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
         <div classList={{ [styles.inlineWrapper]: true, 'no-caret': true }}>
             <span classList={{ [styles.metadata]: true, 'no-caret': true }}>{metadataText()}</span>
 
-            <DetailBands bands={sections()} />
+            <DetailBands bands={sections()} persistKey={props.fieldId} />
         </div>
     );
 };

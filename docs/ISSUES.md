@@ -107,8 +107,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 17.) **`stream` shape member + arrangement law** — named in the SPEC value-shape vocabulary but carries no arrangement law yet; joins `ValueShape` with its first consumer (e.g. a logbook feed).
 
-18.) **DetailBands, what are they and do we really need them?** - Investigate with Claude.
-
 ## Tech Debt
 
 1.) **[Fields UI] `pendingMode` boilerplate across DataField components** — TextKv/EnumKv/NumberKv/SingleImage repeat near-identical `pendingMode` wiring into `useFieldEdit`. Don't abstract until a 5th component lands.
@@ -138,4 +136,12 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 13.) **`core-loop.cy.ts` looks for a history chevron that no longer exists** — it fails at `[aria-label="Open field history"]`, which is present nowhere in `src/`: the chevron went away when History became an always-open band, and the spec was never updated. Confirmed pre-existing by stashing the Add Surface work and re-running against HEAD — identical failure, so it is not a regression from that branch. `lens-loop`, `offline-sync` and `retention` pass. Fix is to drop the click and assert the entries directly (they render already-expanded). Observed 2026-08-15.
 
 14.) **`Snackbar.coalesceKey` and `onExpire` have no production caller** — both existed for the retired pick-runs (a coalesced "N fields added" toast whose Undo reversed the whole run). Create is one action with one inverse now, so it routes through `commitWithUndo` and neither is passed anywhere outside `snackbar/` and its own tests. The mechanism is sound and tested; the call is whether an unused seam earns its keep, and note Tech Debt #8 wants `onExpire` for the deferred delete-history write. Observed 2026-08-15.
+
+15.) **[Fields UI] `configError` is derived state kept in a signal** — it is a pure function of `(kind, config)`, computed twice: `ConfigRows.write` runs `CONFIG_VALIDATORS[kind](next)` and pushes the result up, then `AddFieldSurface.blocker` recomputes the same call as a fallback for the never-edited case. Dropping the signal, its setter and `ConfigRows.onChange`'s second parameter removes three members from `useDefinitionDraft`'s return and one prop, with `blocker()`/`save()` computing it directly. Observed 2026-08-16 reviewing the Field authoring surface.
+
+16.) **[Fields UI] `valueForKind` is a kind switch inside a component** — `AddFieldSurface` hardcodes each kind's runtime value shape to decide whether a drafted value survives a kind change, which the manifest's `ownValue.shape` already carries. A kind added without editing the switch falls through to `typeof value === 'object'`. The registry exists to replace exactly these. Observed 2026-08-16.
+
+17.) **`capabilities.ts` and `types.ts` both claim `CapabilitySet` has no consumers** — *Structural seam only — not read by any consumer in the running app yet* and *Not yet read by any consumer*. Both are false: `childrenPolicy.ts` and `provisionPolicy.ts` read `KIND_CAPABILITIES` directly, and `FieldList`'s Add Surface entailment runs through it. The comments make the seam look dormant to anyone deciding whether to hang new behaviour off a capability rather than add another predicate — which is the decision they most affect. Observed 2026-08-16.
+
+18.) **The Kind band's `FAILED` sentinel explains itself wrongly** — its comment says `createResource` has no rejected branch, but Solid 1.x `Resource<T>` carries `.error` and `state: 'errored'` (checked against the docs). The pattern is still defensible for a different reason: reading an errored resource rethrows, so the sentinel avoids requiring an ErrorBoundary. Comment fix, not a code fix. Observed 2026-08-16.
 

@@ -17,11 +17,21 @@
  * land as *direct* subgrid children of the row wrapper. A real wrapper element
  * here breaks the History layout.
  *
- * Open/closed state lives here, keyed by band id, so a host only declares its
- * bands' working defaults.
+ * **Open/closed state is device-local view state, not component state** — it
+ * lives in `uiPrefs` beside card and field-details expansion (SPEC → *Manifest →
+ * chrome*: expand/collapse is device-local view state). It has to: the details
+ * region remounts on every collapse (`<Show>` in DataField), so a signal here
+ * dropped the user's band choices every time they shut the field. What is stored
+ * is the **override**, not the value — a band nobody has touched follows
+ * whatever `defaultOpen` currently says, which is what keeps the working
+ * defaults editable while stacking is unsettled.
+ *
+ * A host declares its bands' defaults and a `persistKey` to scope them by.
  */
 
-import { For, Show, createSignal } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import chevron from '../../styles/disclosure.module.css';
 import styles from './DetailBands.module.css';
 
 export type DetailBand = {
@@ -39,14 +49,24 @@ export type DetailBand = {
 
 export type DetailBandsProps = {
     bands: DetailBand[];
+    /**
+     * Scopes this row's band state in `uiPrefs` (stored as `${persistKey}:${id}`).
+     * A persisted Field uses its own id; the Add Surface keys by *node* instead,
+     * because its draft row has no persistent identity and a per-draft key would
+     * strand an entry on every Create.
+     */
+    persistKey: string;
 };
 
 export const DetailBands = (props: DetailBandsProps) => {
-    const [openBands, setOpenBands] = createSignal<Record<string, boolean>>({});
+    const appState = useAppState();
+    const { toggleBandOpen } = useAppTransitions();
 
-    const isOpen = (id: string, fallback: boolean) => openBands()[id] ?? fallback;
-    const toggle = (id: string, fallback: boolean) =>
-        setOpenBands({ ...openBands(), [id]: !isOpen(id, fallback) });
+    const bandKey = (id: string) => `${props.persistKey}:${id}`;
+
+    const isOpen = (id: string, defaultOpen: boolean) =>
+        selectors.isBandToggled(appState, bandKey(id)) ? !defaultOpen : defaultOpen;
+    const toggle = (id: string) => toggleBandOpen(bandKey(id));
 
     return (
         <div class={styles.bands}>
@@ -68,13 +88,14 @@ export const DetailBands = (props: DetailBandsProps) => {
                                     [styles.sectionToggle]: true,
                                 }}
                                 aria-expanded={isOpen(band.id, band.defaultOpen)}
-                                onClick={() => toggle(band.id, band.defaultOpen)}
+                                onClick={() => toggle(band.id)}
                             >
                                 <span
                                     classList={{
                                         [styles.sectionChevron]: true,
-                                        [styles.sectionChevronDown]: isOpen(band.id, band.defaultOpen),
-                                        [styles.sectionChevronRight]: !isOpen(band.id, band.defaultOpen),
+                                        [chevron.glyph]: true,
+                                        [chevron.glyphDown]: isOpen(band.id, band.defaultOpen),
+                                        [chevron.glyphRight]: !isOpen(band.id, band.defaultOpen),
                                     }}
                                     aria-hidden="true"
                                 />

@@ -47,26 +47,12 @@
     border-radius: var(--radius-sm);
 }
 
-/* Same CSS-triangle disclosure as the field row, so expanding a band reads as
-   the same gesture as expanding the field itself. */
+/* Layout only. The triangle itself comes from `styles/disclosure.module.css`'s
+   glyph half (`.glyph` / `.glyphRight` / `.glyphDown`), so expanding a band is
+   drawn by the same rules as expanding a config row — this file used to carry a
+   byte-identical copy of the border math. */
 .sectionChevron {
     flex: none;
-    width: 0;
-    height: 0;
-    border-style: solid;
-    border-color: transparent;
-}
-
-.sectionChevronRight {
-    border-width: var(--field-chevron-size) 0 var(--field-chevron-size)
-        calc(var(--field-chevron-size) * 1.4);
-    border-left-color: currentColor;
-}
-
-.sectionChevronDown {
-    border-width: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
-        var(--field-chevron-size);
-    border-top-color: currentColor;
 }
 
 .sectionBody {

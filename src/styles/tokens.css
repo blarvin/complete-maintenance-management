@@ -93,6 +93,15 @@
   /* Field chevrons are CSS triangles (border-trick), sized in px so the
      visual size is independent of font scaling. */
   --field-chevron-size: 5px;
+  /* The triangle itself, as `border-width` shorthands. Tokens rather than a
+     shared rule because the glyph is drawn two ways — on a `::before`
+     (disclosure.module.css) and on a real element (DetailBands) — and a
+     pseudo-element cannot take a class, so the two forms cannot share one
+     selector. They carried byte-identical copies of this math until 2026-08-16. */
+  --chevron-glyph-right: var(--field-chevron-size) 0 var(--field-chevron-size)
+      calc(var(--field-chevron-size) * 1.4);
+  --chevron-glyph-down: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
+      var(--field-chevron-size);
   --label-width: 50px;
   --child-indent: 32px;
   --datacard-indent: 30px;

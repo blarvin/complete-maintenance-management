@@ -94,6 +94,15 @@ export const selectors = {
     },
 
     /**
+     * Whether this band's open state is flipped from its working default.
+     * The caller owns the default (it is declared per band, not stored), so
+     * this answers only "has the user expressed a preference here?".
+     */
+    isBandToggled: (appState: AppState, bandKey: string): boolean => {
+        return appState.ui.toggledBands.has(bandKey);
+    },
+
+    /**
      * Check if we're in ROOT view
      */
     isRootView: (appState: AppState): boolean => {

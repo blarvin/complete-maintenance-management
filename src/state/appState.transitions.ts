@@ -14,6 +14,7 @@ function persistUIPrefs(state: AppState): void {
         expandedCards: state.ui.expandedCards,
         expandedFieldDetails: state.ui.expandedFieldDetails,
         expandedNodeDetails: state.ui.expandedNodeDetails,
+        toggledBands: state.ui.toggledBands,
     });
 }
 
@@ -143,6 +144,26 @@ export const transitions = {
             newSet.add(nodeId);
         }
         state.ui.expandedNodeDetails = newSet;
+
+        persistUIPrefs(state);
+    },
+
+    /**
+     * Flip one band's open state away from (or back to) its working default.
+     *
+     * Stores the *override*, not the value — see `UIPrefs.toggledBands`. Lives
+     * here rather than in `DetailBands` because the details region remounts on
+     * every collapse (`<Show>` in DataField), which discarded component-local
+     * band state every time the field was closed.
+     */
+    toggleBandOpen: (state: AppState, bandKey: string): void => {
+        const newSet = new Set(state.ui.toggledBands);
+        if (newSet.has(bandKey)) {
+            newSet.delete(bandKey);
+        } else {
+            newSet.add(bandKey);
+        }
+        state.ui.toggledBands = newSet;
 
         persistUIPrefs(state);
     },

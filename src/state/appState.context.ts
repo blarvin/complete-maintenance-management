@@ -28,6 +28,7 @@ export type AppActions = {
     toggleCardExpanded: (nodeId: string) => void;
     toggleFieldDetailsExpanded: (fieldId: string) => void;
     toggleNodeDetailsExpanded: (nodeId: string) => void;
+    toggleBandOpen: (bandKey: string) => void;
     startFieldEdit: (fieldId: string) => void;
     stopFieldEdit: () => void;
 };
@@ -59,6 +60,8 @@ export function createAppState(): AppStateContextValue {
             setState(produce((s) => transitions.toggleFieldDetailsExpanded(s, fieldId))),
         toggleNodeDetailsExpanded: (nodeId) =>
             setState(produce((s) => transitions.toggleNodeDetailsExpanded(s, nodeId))),
+        toggleBandOpen: (bandKey) =>
+            setState(produce((s) => transitions.toggleBandOpen(s, bandKey))),
         startFieldEdit: (fieldId) =>
             setState(produce((s) => transitions.startFieldEdit(s, fieldId))),
         stopFieldEdit: () =>

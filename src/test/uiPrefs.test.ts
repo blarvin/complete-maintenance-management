@@ -99,6 +99,7 @@ describe('uiPrefs store', () => {
                 expandedCards: new Set(['node-1', 'node-2']),
                 expandedFieldDetails: new Set<string>(),
                 expandedNodeDetails: new Set<string>(),
+                toggledBands: new Set<string>(),
             };
 
             saveUIPrefs(prefs);
@@ -114,6 +115,7 @@ describe('uiPrefs store', () => {
                 expandedCards: new Set<string>(),
                 expandedFieldDetails: new Set(['field-a', 'field-b']),
                 expandedNodeDetails: new Set<string>(),
+                toggledBands: new Set<string>(),
             };
 
             saveUIPrefs(prefs);
@@ -129,6 +131,7 @@ describe('uiPrefs store', () => {
                 expandedCards: new Set(['node-x', 'node-y']),
                 expandedFieldDetails: new Set(['field-1', 'field-2', 'field-3']),
                 expandedNodeDetails: new Set<string>(),
+                toggledBands: new Set<string>(),
             };
 
             saveUIPrefs(original);
@@ -140,6 +143,32 @@ describe('uiPrefs store', () => {
             expect(loaded.expandedFieldDetails.has('field-2')).toBe(true);
             expect(loaded.expandedFieldDetails.has('field-3')).toBe(true);
         });
+
+        it('roundtrips band overrides', () => {
+            saveUIPrefs({
+                expandedCards: new Set<string>(),
+                expandedFieldDetails: new Set<string>(),
+                expandedNodeDetails: new Set<string>(),
+                toggledBands: new Set(['field-1:config', 'add-surface:node-1:kind']),
+            });
+
+            const loaded = loadUIPrefs();
+            expect(loaded.toggledBands.has('field-1:config')).toBe(true);
+            expect(loaded.toggledBands.has('add-surface:node-1:kind')).toBe(true);
+            expect(loaded.toggledBands.size).toBe(2);
+        });
+
+        it('tolerates prefs written before toggledBands existed', () => {
+            localStorageMock.setItem(STORAGE_KEY, JSON.stringify({
+                expandedCards: ['node-1'],
+                expandedFieldDetails: ['field-1'],
+                expandedNodeDetails: [],
+            }));
+
+            const loaded = loadUIPrefs();
+            expect(loaded.expandedCards.has('node-1')).toBe(true);
+            expect(loaded.toggledBands.size).toBe(0);
+        });
     });
 
     describe('clearUIPrefs', () => {
@@ -148,6 +177,7 @@ describe('uiPrefs store', () => {
                 expandedCards: new Set(['node-1']),
                 expandedFieldDetails: new Set(['field-1']),
                 expandedNodeDetails: new Set<string>(),
+                toggledBands: new Set<string>(),
             });
 
             clearUIPrefs();

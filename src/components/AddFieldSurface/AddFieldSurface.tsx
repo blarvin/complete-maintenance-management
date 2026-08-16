@@ -301,7 +301,10 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
             </Show>
 
             <Show when={isOpen()}>
-                <DetailBands bands={bands()} />
+                {/* Keyed by node, not by `draftId`: the draft row is a fresh id
+                    per draft, so a per-draft key would strand a `uiPrefs` entry
+                    on every Create and never restore the user's band choices. */}
+                <DetailBands bands={bands()} persistKey={`add-surface:${props.nodeId}`} />
             </Show>
         </div>
     );

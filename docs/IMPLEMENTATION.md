@@ -622,6 +622,16 @@ Because history rows are append-only and never updated in place, unique ids are 
 
 **Immediate Persistence**: Toggling always persists immediately—no debounce needed since localStorage writes are synchronous. No performance impact for this use case.
 
+**`toggledBands` stores the override, not the value** (2026-08-16):
+
+The other three sets mean *this thing is expanded*; absence means collapsed. Bands can't use that shape, because each band declares its own `defaultOpen` and some default to open — a set of open ids cannot express *the user closed a band that opens by default*. So `toggledBands` holds the keys whose state is **flipped from their working default**, and `DetailBands` reads `isBandToggled(key) ? !defaultOpen : defaultOpen`.
+
+That is not merely a way to fit the existing shape; it is the behaviour we want while stacking is unsettled (SPEC → Field Details → *Stacking is open*). **Changing a band's `defaultOpen` in code still reaches every user who never expressed a preference** — only the people who actually toggled that band keep their choice. Storing absolute values would have frozen the first default each user happened to see, which is exactly what makes the alternatives untestable.
+
+**Why it is here at all, rather than in the component**: `DataFieldDetails` mounts under `<Show when={isDetailsExpanded()}>`, so the entire details region — `DetailBands` included — unmounts every time a field is collapsed. Band state kept in a component signal was therefore discarded on every collapse, and Config/Tools were shut again on reopen. This is view state with a lifetime longer than its view, which is the definition of a `uiPrefs` entry.
+
+**Keying**: `${persistKey}:${bandId}`. A persisted Field passes its own `fieldId`. The Add Surface passes `add-surface:${nodeId}` — **not** its `draftId`, which is regenerated on every Create and Cancel, so a per-draft key would strand an entry on each commit and never restore anything. Per-node means band preferences belong to the card, which is the useful scope anyway.
+
 ---
 
 ## Hook Patterns
@@ -695,6 +705,14 @@ entries stop resolving the named lines and fall back to auto-placement. It is wh
 History band deliberately renders `DataFieldHistory` with no `<div>` around it, and why
 `DetailBands` had to be `display: contents` to be extractable at all. Nested
 `display: contents` chains fine, so the two layers cost nothing.
+
+**The disclosure triangle is split into a glyph and a box** (`disclosure.module.css`, 2026-08-16):
+
+Two kinds of host want the same triangle. `ConfigRows`' group rows and the Kind band's rows want the whole gesture — a flex disclosure column with the triangle inside it — and use `.chevron*`, which draws the glyph on a `::before`. `DetailBands` already has its own box (the chevron is a span inside the heading button) and wants the triangle alone, so it uses `.glyph` / `.glyphRight` / `.glyphDown`.
+
+**The border math lives in `--chevron-glyph-right` / `--chevron-glyph-down` (tokens.css) rather than in a shared rule, because a pseudo-element cannot take a class.** The two forms therefore cannot share a *selector*, only a *value*. That is the whole reason for the tokens; without the constraint they would be one rule. Until 2026-08-16 `DetailBands.module.css` carried a byte-identical copy of both `border-width` shorthands, which is precisely the drift the tokens now prevent.
+
+Still deliberately separate: `DataField.module.css`'s chevron, which is grid-positioned into a named subgrid column and pins differently for block-shaped values. Same triangle, different positioning contract — merging it would couple the card's grid to this file.
 
 **Deliberate Non-Abstractions**: Evaluated and skipped these components:
 
