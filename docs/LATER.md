@@ -251,6 +251,18 @@ Decided in discussion 2026-08-14, alongside Data Model → *Definition Packs*. `
 - **Lens policy overrides on the lens's own DataCard** — see *Definition-binding seam → Re-root Definition authoring UI*, whose open UX question this answers.
 - **Inherited-value chrome** — ghosted value + source chip + tap-to-override + revert-to-inherited. One widget serves all three cascade jobs (business inheritance, Definition specificity, config). Needs the arbiter, and needs "this value is delegated" to be *manifest-readable* rather than inferred, since chrome entailment runs one way (SPECIFICATION.md §626).
 
+### Config authoring: progressive disclosure
+
+Removed 2026-08-16 after shipping it — see SUPERSEDED → *number-kv progressive disclosure* for the original spec text and why it went. `ConfigSubField.group`, the `ConfigGroup` type, `CONFIG_GROUPS` and the collapsible group row in `ConfigRows` are all deleted; config authors as one flat list in schema order.
+
+**What would bring it back**, in rough order of how much it would take:
+
+- **A kind whose config is long enough to need it.** `number-kv` has ~12 knobs and reads fine flat; the tiers were solving a problem it did not have. A kind with 25+ would be a real trigger, and none is planned.
+- **A category that cannot be folded into the labels.** The rule that replaced grouping is that a load-bearing category belongs in the sub-field's own `label` (`Low low` → `Threshold LL`). That works while categories are shallow and few; a config with two orthogonal axes would defeat it, because the label would have to carry both.
+- **Sections landing first** (see *Sections — the lightweight grouping primitive* below). If it comes back it should come back as an instance of that primitive — a tag on the sub-field, grouped at render — not as a second bespoke grouping mechanism. That is most of why removing it now is cheap: the version worth having is not the version that was deleted.
+
+Note the interaction with **flat is also what makes the Add Surface's Config band and Field Details' Config band comparable** — `ConfigSummary` already drew the Definition's config flat, so the two surfaces now agree in shape for the first time. Reintroducing depth on the authoring side alone would re-open that divergence.
+
 ### Sections — the lightweight grouping primitive ("the Great Flattener")
 
 Named in a claude.ai design chat and reconciled against the code 2026-08-16, working through why `DetailBands` exists. The *conclusion* was already in the spec as a single table row — SPECIFICATION.md → *Manifest → chrome*: `Section header | a grouping tag on the items | nothing (a render grouping, not a node)` — and ISSUES Architecture #2 has it queued unbuilt as *grouping-tag → section header*. What was missing is the concept behind the row, and the fact that the app already implements something adjacent to it three times under three names.

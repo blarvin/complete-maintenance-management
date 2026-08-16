@@ -1,10 +1,20 @@
 /**
  * ConfigRows — a kind's config, authored as tree rows.
  *
- * The generic authoring UI (SPEC → Authoring a Definition). Every knob is a row
- * at the same depth its schema puts it: top level, inside a collapsible group,
- * or one deeper inside a compound. Nesting comes from `group` / `members` on
- * `ConfigSubField`, so a kind never declares layout.
+ * The generic authoring UI (SPEC → Authoring a Definition). **One flat list, one
+ * row per knob** — including a compound's members, which draw as ordinary
+ * sibling rows rather than one level deeper. Collapsible category groups were
+ * removed 2026-08-16 (see SUPERSEDED → *number-kv progressive disclosure*): every
+ * label stands on its own, so the group chevrons were a level of structure that
+ * hid knobs without telling the reader anything the labels didn't. Where a
+ * category label *was* load-bearing it moved into the labels themselves
+ * (`Low low` → `Threshold LL`).
+ *
+ * `visibleWhen` stays, and is a different thing: it hides a row that is
+ * *irrelevant* to the current config rather than merely filing it under a
+ * heading. The one remaining nested row is `string-list`'s option list, which is
+ * a variable-length collection under its own label, not a category of other
+ * knobs.
  *
  * **Rows behave like DataField value rows**, because that is the app's idiom for
  * editing in place: focus the row, Enter or Space opens the editor, Enter saves,
@@ -19,7 +29,7 @@
  */
 
 import { For, Index, Show, createEffect, createSignal } from 'solid-js';
-import { CONFIG_SCHEMAS, CONFIG_GROUPS, CONFIG_VALIDATORS } from '../../kinds/configSchema';
+import { CONFIG_SCHEMAS, CONFIG_VALIDATORS } from '../../kinds/configSchema';
 import { getInlineManifest } from '../../kinds/registry';
 import type { ConfigSubField, ConfigSubFieldMember } from '../../kinds/types';
 import type { DataFieldValue, DefinitionConfig, Kind, StringListValue } from '../../data/models';
@@ -317,26 +327,26 @@ export const ConfigRows = (props: ConfigRowsProps) => {
         props.onChange(next as DefinitionConfig, error);
     };
 
-    const schema = (): ConfigSubField[] => CONFIG_SCHEMAS[props.kind] ?? [];
-    const visible = (s: ConfigSubField) => !s.visibleWhen || s.visibleWhen(flat());
-    const inGroup = (label?: string) =>
-        schema().filter((s) => s.group === label && visible(s));
+    const schema = (): ConfigSubField[] =>
+        (CONFIG_SCHEMAS[props.kind] ?? []).filter(
+            (s) => !s.visibleWhen || s.visibleWhen(flat()),
+        );
 
     const renderSub = (sub: ConfigSubField) => {
+        // A compound stores one packed object but authors as its parts, so it
+        // contributes N sibling rows rather than a row of its own.
         if (sub.members) {
             return (
-                <ParentRow label={sub.label}>
-                    <For each={sub.members}>
-                        {(m: ConfigSubFieldMember) => (
-                            <LeafRow
-                                label={m.label}
-                                kind={m.kind}
-                                value={flat()[m.key]}
-                                onWrite={(v) => write(m.key, v)}
-                            />
-                        )}
-                    </For>
-                </ParentRow>
+                <For each={sub.members}>
+                    {(m: ConfigSubFieldMember) => (
+                        <LeafRow
+                            label={m.label}
+                            kind={m.kind}
+                            value={flat()[m.key]}
+                            onWrite={(v) => write(m.key, v)}
+                        />
+                    )}
+                </For>
             );
         }
         if (sub.kind === 'string-list') {
@@ -361,19 +371,9 @@ export const ConfigRows = (props: ConfigRowsProps) => {
 
     return (
         <div class={styles.rows}>
-            {/* Ungrouped knobs first — the required ones live here by convention
-                (number-kv's units symbol), so they are never behind a chevron. */}
-            <For each={inGroup(undefined)}>{renderSub}</For>
-
-            <For each={CONFIG_GROUPS[props.kind] ?? []}>
-                {(group) => (
-                    <Show when={inGroup(group.label).length > 0}>
-                        <ParentRow label={group.label} defaultOpen={group.defaultOpen}>
-                            <For each={inGroup(group.label)}>{renderSub}</For>
-                        </ParentRow>
-                    </Show>
-                )}
-            </For>
+            {/* Schema order is render order — no partitioning, no chevrons. The
+                required knobs lead by convention (number-kv's units symbol). */}
+            <For each={schema()}>{renderSub}</For>
         </div>
     );
 };

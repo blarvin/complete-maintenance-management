@@ -131,18 +131,16 @@ The `{LL,L,H,HH}` cluster is the one place an object-valued config survives (a s
 - `decimals ≥ 0`. `expectedRefreshSeconds > 0` if set.
 - `displayFormat === "currency"` ⇒ `currencyCode` non-empty.
 
-**Authoring form — progressive disclosure** (the canonical exercise for the conditional-reveal patterns the wider Library-authoring UI reuses). Three tiers:
+**Authoring form — one flat list** (the canonical exercise for the conditional-reveal patterns the wider Library-authoring UI reuses). Every knob is a sibling row in schema order, `unitsSymbol` first because it is the one required knob. The threshold compound contributes four rows of its own (`Threshold LL/L/H/HH`) rather than a parent row that expands.
 
-- **Required** (always visible): `unitsSymbol` (plus the surrounding `label` and `kind`).
-- **Common** (collapsible "Display & nominal", expanded by default): `unitsLongForm`, `affixPosition`, `decimals`, `displayFormat`, `nominalMode` and the inputs it reveals.
-- **Advanced** (collapsed "Alarms & freshness"): thresholds, `expectedRefreshSeconds`.
+The three collapsible tiers this kind used to specify — Required / Common (*Display & nominal*) / Advanced (*Alarms & freshness*) — were **built and then removed, 2026-08-16**; see SUPERSEDED for the original text and reasoning, and LATER → *Config authoring: progressive disclosure* for what would bring them back. This kind is still the exercise; what it exercises is now `visibleWhen` alone.
 
 **Value-driven conditional reveal**:
 
 - `displayFormat === "currency"` → reveal `currencyCode`; auto-default `affixPosition` to `"prefix"` (overridable).
 - `nominalMode === "range"` → show `nominalMin`/`nominalMax`; hide `nominalValue`/`tolerance`. `"discrete"` flips it.
 - `expectedRefreshSeconds` pairs a numeric field with a unit picker (`sec`/`min`/`hr`/`day`); resolves to canonical seconds on Save.
-- Threshold inputs render as one visual chain so the `LL ≤ … ≤ HH` invariant reads at a glance; a violating value marks the offending input and blocks Save with an inline message naming the broken link.
+- Threshold inputs are four sibling rows; a violating chain blocks Create with the kind's cross-field validator message. (The specced "one visual chain" rendering, where `LL ≤ … ≤ HH` reads at a glance and the offending input is marked, is **unbuilt** — the flat rows and a single error line are what ships.)
 
 **Edit UX**: Numeric input with the units affix shown statically. Helper text summarises the active nominal (`"Nominal 20–25 °C"` / `"Nominal 24 ±0.5 °C"`). For `percent`, the input accepts the underlying number (`0.42` displays `42%`); for `scientific`/`engineering`, decimal in, formatted on blur.
 

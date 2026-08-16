@@ -419,15 +419,23 @@ The row is the Field, with one unavoidable exception: a kind that suppresses its
 
 Authoring is the app's one deliberate exception to *Minting Records Identity*: a Definition holds an **ephemeral draft** until Create, because unlike a Node or a DataField it must be coherent at birth — a `number-kv` with no units, or an `enum-kv` with no options, is not incomplete but meaningless.
 
-**Config is rows, never a form.** One row per config sub-field, at the depth its schema puts it. **Nesting comes from data, never from a per-kind component**: `group` places a sub-field inside a collapsible group row, `members` expands an atomic compound into its parts one level deeper, and `visibleWhen` reveals a row only when another value calls for it. This is how `number-kv`'s progressive-disclosure tiers become tree depth rather than a form's sections.
+**Config is rows, never a form — one flat list, one row per knob.** No categories, no collapsible tiers, and a compound's `members` draw as ordinary sibling rows rather than one level deeper. **What varies comes from data, never from a per-kind component**: `members` expands an atomic compound into its parts, and `visibleWhen` shows a row only when another value calls for it.
+
+**Flatness is the decision, not the starting point.** Collapsible category groups were built and then removed (2026-08-16), because every config label already stands on its own: the group chevrons hid knobs behind a level of structure that told the reader nothing the labels didn't. **Where a category label is genuinely load-bearing it belongs in the sub-field's own label** — `Low low` became `Threshold LL` when the `Thresholds` parent row went away. Reintroducing depth is a spec change, not a styling one; the removed reasoning is in SUPERSEDED, and the terms for its return are in LATER → *Config authoring: progressive disclosure*.
+
+`visibleWhen` is not a category and survives: it hides a row that is *irrelevant* to the current config (`currencyCode` under a non-currency format), which is a different claim from filing one under a heading.
 
 ```
 ＋ [ Discharge Pressure ]   [ 145 ] psi
    ▾ CONFIG
        Creating a Number field — pick a different Kind below to change that
        Units symbol      psi
-       ▾ Display & nominal
-       ▸ Alarms & freshness
+       Decimals          1
+       Nominal min       120
+       Nominal max       160
+       Threshold LL      —
+       Threshold HH      —
+       Refresh seconds   —
    ▾ KIND
        ▸ Text
        ▾ Number  ●

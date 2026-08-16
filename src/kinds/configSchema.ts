@@ -9,17 +9,13 @@
  * reads `CONFIG_SCHEMAS` directly. Both reference the same arrays (single source).
  */
 
-import type { ConfigGroup, ConfigSubField } from './types';
+import type { ConfigSubField } from './types';
 import type { CompoundValue, DefinitionConfig, EnumKvConfig, Kind, NumberKvConfig } from '../data/models';
 import {
     packThresholds,
     validateThresholds,
     validateNumberKvConfig,
 } from '../components/DataField/numberKvState';
-
-/** Group labels, named once so the schema and the group list cannot drift. */
-const DISPLAY_AND_NOMINAL = 'Display & nominal';
-const ALARMS_AND_FRESHNESS = 'Alarms & freshness';
 
 const isCurrency = (c: Record<string, unknown>) => c.displayFormat === 'currency';
 /** `nominalMode` defaults to `range` when unset (ELEMENT-MODEL → number-kv). */
@@ -40,37 +36,42 @@ export const ENUM_KV_CONFIG_SCHEMA: ConfigSubField[] = [
 ];
 
 /**
- * `number-kv` is the deliberately rich kind, and its three authoring tiers
- * (ELEMENT-MODEL → number-kv → *progressive disclosure*) are expressed as tree
- * depth: `unitsSymbol` is required and sits at the top level, everything else
- * lives in one of the two groups below.
+ * `number-kv` is the deliberately rich kind. Its knobs are **one flat list** in
+ * render order: `unitsSymbol` is the required one and leads; the rest follow,
+ * with `visibleWhen` hiding the ones the current config makes irrelevant.
+ *
+ * The three collapsible authoring tiers this kind used to carry were removed
+ * 2026-08-16 — see SUPERSEDED → *number-kv progressive disclosure* for the
+ * reasoning, and LATER → *Config authoring: progressive disclosure* for what it
+ * would take to bring them back.
  */
 export const NUMBER_KV_CONFIG_SCHEMA: ConfigSubField[] = [
     { key: 'unitsSymbol', label: 'Units symbol', kind: 'text-kv', disposition: 'owned' },
-    { key: 'unitsLongForm', label: 'Units (long form)', kind: 'text-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL },
-    { key: 'affixPosition', label: 'Affix position', kind: 'enum-kv', disposition: 'delegated', options: ['prefix', 'suffix'], group: DISPLAY_AND_NOMINAL },
-    { key: 'decimals', label: 'Decimals', kind: 'number-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL },
-    { key: 'displayFormat', label: 'Display format', kind: 'enum-kv', disposition: 'delegated', options: ['decimal', 'scientific', 'engineering', 'percent', 'currency'], group: DISPLAY_AND_NOMINAL },
-    { key: 'currencyCode', label: 'Currency code', kind: 'text-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL, visibleWhen: isCurrency },
-    { key: 'nominalMode', label: 'Nominal mode', kind: 'enum-kv', disposition: 'owned', options: ['range', 'discrete'], group: DISPLAY_AND_NOMINAL },
+    { key: 'unitsLongForm', label: 'Units (long form)', kind: 'text-kv', disposition: 'owned' },
+    { key: 'affixPosition', label: 'Affix position', kind: 'enum-kv', disposition: 'delegated', options: ['prefix', 'suffix'] },
+    { key: 'decimals', label: 'Decimals', kind: 'number-kv', disposition: 'owned' },
+    { key: 'displayFormat', label: 'Display format', kind: 'enum-kv', disposition: 'delegated', options: ['decimal', 'scientific', 'engineering', 'percent', 'currency'] },
+    { key: 'currencyCode', label: 'Currency code', kind: 'text-kv', disposition: 'owned', visibleWhen: isCurrency },
+    { key: 'nominalMode', label: 'Nominal mode', kind: 'enum-kv', disposition: 'owned', options: ['range', 'discrete'] },
     // `nominalMode` selects which pair is authorable; the other is hidden rather
     // than disabled, so the form never shows two contradictory nominals at once.
-    { key: 'nominalMin', label: 'Nominal min', kind: 'number-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL, visibleWhen: isRangeMode },
-    { key: 'nominalMax', label: 'Nominal max', kind: 'number-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL, visibleWhen: isRangeMode },
-    { key: 'nominalValue', label: 'Nominal value', kind: 'number-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL, visibleWhen: isDiscreteMode },
-    { key: 'tolerance', label: 'Tolerance', kind: 'number-kv', disposition: 'owned', group: DISPLAY_AND_NOMINAL, visibleWhen: isDiscreteMode },
+    { key: 'nominalMin', label: 'Nominal min', kind: 'number-kv', disposition: 'owned', visibleWhen: isRangeMode },
+    { key: 'nominalMax', label: 'Nominal max', kind: 'number-kv', disposition: 'owned', visibleWhen: isRangeMode },
+    { key: 'nominalValue', label: 'Nominal value', kind: 'number-kv', disposition: 'owned', visibleWhen: isDiscreteMode },
+    { key: 'tolerance', label: 'Tolerance', kind: 'number-kv', disposition: 'owned', visibleWhen: isDiscreteMode },
     {
         // The one object-valued residue: {LL,L,H,HH} co-vary, so they bundle into
         // a single atomic compound sub-field with its own ordering guard.
-        // `members` are the same flat draft keys `pack` reads — authoring renders
-        // them one level deeper; storage still writes the single packed object.
+        // `members` are the same flat draft keys `pack` reads — authoring draws
+        // them as four sibling rows; storage still writes one packed object. The
+        // member labels carry `Threshold` because this sub-field's own label no
+        // longer renders above them (ISA-18.2 LL/L/H/HH, ELEMENT-MODEL → number-kv).
         key: 'thresholds', label: 'Thresholds', kind: 'compound', disposition: 'owned',
-        group: ALARMS_AND_FRESHNESS,
         members: [
-            { key: 'lowLow', label: 'Low low', kind: 'number-kv' },
-            { key: 'low', label: 'Low', kind: 'number-kv' },
-            { key: 'high', label: 'High', kind: 'number-kv' },
-            { key: 'highHigh', label: 'High high', kind: 'number-kv' },
+            { key: 'lowLow', label: 'Threshold LL', kind: 'number-kv' },
+            { key: 'low', label: 'Threshold L', kind: 'number-kv' },
+            { key: 'high', label: 'Threshold H', kind: 'number-kv' },
+            { key: 'highHigh', label: 'Threshold HH', kind: 'number-kv' },
         ],
         pack: (c) => {
             const t = packThresholds(c as unknown as NumberKvConfig);
@@ -79,7 +80,7 @@ export const NUMBER_KV_CONFIG_SCHEMA: ConfigSubField[] = [
         unpack: (v) => (v ? { ...(v as CompoundValue) } : {}),
         validate: (v) => validateThresholds(v as CompoundValue | null),
     },
-    { key: 'expectedRefreshSeconds', label: 'Refresh seconds', kind: 'number-kv', disposition: 'delegated', group: ALARMS_AND_FRESHNESS },
+    { key: 'expectedRefreshSeconds', label: 'Refresh seconds', kind: 'number-kv', disposition: 'delegated' },
 ];
 
 export const SINGLE_IMAGE_CONFIG_SCHEMA: ConfigSubField[] = [
@@ -102,19 +103,6 @@ export const CONFIG_SCHEMAS: Partial<Record<Kind, ConfigSubField[]>> = {
     'number-kv': NUMBER_KV_CONFIG_SCHEMA,
     'single-image': SINGLE_IMAGE_CONFIG_SCHEMA,
     logbook: LOGBOOK_CONFIG_SCHEMA,
-};
-
-/**
- * Collapsible groups per kind, in render order — the authoring tree's depth.
- * Declared here rather than inferred from the sub-fields so order and
- * open-by-default are each stated once instead of repeated on every member.
- * A kind with no entry renders every sub-field at its top level.
- */
-export const CONFIG_GROUPS: Partial<Record<Kind, ConfigGroup[]>> = {
-    'number-kv': [
-        { label: DISPLAY_AND_NOMINAL, defaultOpen: true },
-        { label: ALARMS_AND_FRESHNESS, defaultOpen: false },
-    ],
 };
 
 /**

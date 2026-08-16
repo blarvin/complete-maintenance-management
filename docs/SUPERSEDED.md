@@ -215,6 +215,50 @@ Surface's own name slot is now the authoring act.)*
 >
 > **Commit** writes the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`), then **mints a DataField instance from it on the node** — the same act as picking it, so authoring and using are one continuous motion.
 
+### From ELEMENT-MODEL.md and SPECIFICATION.md — number-kv progressive disclosure
+
+*Removed 2026-08-16 after using it. The tiers were built (`ConfigSubField.group`,
+`CONFIG_GROUPS`, and a collapsible group row in `ConfigRows`) and shipped, and the
+verdict on seeing them in the running app was that every config label already
+stands on its own — so the chevrons hid knobs behind a level of structure that
+told the reader nothing the labels didn't, on a surface where the whole point is
+that a knob you don't care about can simply be left alone.*
+
+*Two pieces of the reasoning are kept because they are still right. The first is
+the distinction the tiers were reaching for: `unitsSymbol` really is different in
+kind from `expectedRefreshSeconds`, and flatness answers that with **order**
+(required first) rather than with depth. The second is the naming rule the removal
+forced — where a category label was load-bearing it moves into the sub-field's own
+label, which is why `Low low` is now `Threshold LL`. Reintroducing depth is a spec
+change; the terms are in LATER → `Config authoring: progressive disclosure`.*
+
+*`visibleWhen` was never part of this and survives untouched — hiding an
+irrelevant row is a different claim from filing a relevant one under a heading.*
+
+> **Authoring form — progressive disclosure** (the canonical exercise for the conditional-reveal patterns the wider Library-authoring UI reuses). Three tiers:
+>
+> - **Required** (always visible): `unitsSymbol` (plus the surrounding `label` and `kind`).
+> - **Common** (collapsible "Display & nominal", expanded by default): `unitsLongForm`, `affixPosition`, `decimals`, `displayFormat`, `nominalMode` and the inputs it reveals.
+> - **Advanced** (collapsed "Alarms & freshness"): thresholds, `expectedRefreshSeconds`.
+
+> **Config is rows, never a form.** One row per config sub-field, at the depth its schema puts it. **Nesting comes from data, never from a per-kind component**: `group` places a sub-field inside a collapsible group row, `members` expands an atomic compound into its parts one level deeper, and `visibleWhen` reveals a row only when another value calls for it. This is how `number-kv`'s progressive-disclosure tiers become tree depth rather than a form's sections.
+>
+> ```
+> ＋ [ Discharge Pressure ]   [ 145 ] psi
+>    ▾ CONFIG
+>        Creating a Number field — pick a different Kind below to change that
+>        Units symbol      psi
+>        ▾ Display & nominal
+>        ▸ Alarms & freshness
+>    ▾ KIND
+> ```
+
+*Also removed with it, from ELEMENT-MODEL → number-kv → conditional reveal — a
+rendering that was specced but never built, and which the flat rows do not
+attempt:*
+
+> - Threshold inputs render as one visual chain so the `LL ≤ … ≤ HH` invariant reads at a glance; a violating value marks the offending input and blocks Save with an inline message naming the broken link.
+
 ### From LATER.md — Add-Field Surface A/B
 
 *The A/B **framing** is retired: the question is no longer which of these two

@@ -1,5 +1,5 @@
 /**
- * The authoring shape of the config schemas — groups, compound members,
+ * The authoring shape of the config schemas — flatness, compound members,
  * conditional reveal, and the cross-field validators that replaced the per-kind
  * ConfigForms.
  *
@@ -13,7 +13,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   CONFIG_SCHEMAS,
-  CONFIG_GROUPS,
   CONFIG_VALIDATORS,
   NUMBER_KV_CONFIG_SCHEMA,
 } from '../kinds/configSchema';
@@ -27,29 +26,23 @@ const sub = (key: string) => {
   return found;
 };
 
-describe('config groups', () => {
-  it('every group a sub-field names is declared for that kind', () => {
+describe('config authors flat', () => {
+  it('no schema carries a grouping field — the type has none, and none is faked', () => {
+    // Collapsible category groups were removed 2026-08-16 (SUPERSEDED →
+    // number-kv progressive disclosure). This is the guard against one being
+    // reintroduced as an ad-hoc key rather than as a considered spec change.
     for (const [kind, schema] of Object.entries(CONFIG_SCHEMAS)) {
-      const declared = new Set((CONFIG_GROUPS[kind as Kind] ?? []).map((g) => g.label));
       for (const s of schema ?? []) {
-        if (s.group) {
-          expect(declared, `${kind}.${s.key} names group '${s.group}'`).toContain(s.group);
-        }
+        expect(
+          Object.keys(s),
+          `${kind}.${s.key} carries a grouping key`,
+        ).not.toContain('group');
       }
     }
   });
 
-  it('number-kv opens the common tier and leaves the advanced one closed', () => {
-    // ELEMENT-MODEL → number-kv: "Common (collapsible, expanded by default)",
-    // "Advanced (collapsed)". Order is the render order.
-    const groups = CONFIG_GROUPS['number-kv']!;
-    expect(groups.map((g) => g.label)).toEqual(['Display & nominal', 'Alarms & freshness']);
-    expect(groups[0].defaultOpen).toBe(true);
-    expect(groups[1].defaultOpen).toBeFalsy();
-  });
-
-  it('leaves units symbol at the top level — it is the one required knob', () => {
-    expect(sub('unitsSymbol').group).toBeUndefined();
+  it('leads number-kv with its one required knob', () => {
+    expect(NUMBER_KV_CONFIG_SCHEMA[0].key).toBe('unitsSymbol');
   });
 });
 
@@ -91,6 +84,14 @@ describe('compound members', () => {
     );
     expect(members).toEqual(packed);
   });
+
+  it('member labels stand alone — the compound label no longer renders above them', () => {
+    // Flattening dropped the `Thresholds` parent row, so `Low low` beside
+    // `Nominal min` would have been ambiguous. The category moved into the label.
+    for (const m of sub('thresholds').members!) {
+      expect(m.label, `${m.key} leans on the compound label`).toMatch(/^Threshold /);
+    }
+  });
 });
 
 describe('cross-field validators', () => {
@@ -120,8 +121,8 @@ describe('cross-field validators', () => {
 });
 
 describe('storage is indifferent to the authoring fields', () => {
-  // The canary for step 1: groups, members and visibleWhen are rendering facts.
-  // If any of them leaked into serialize/assemble, this breaks.
+  // The canary: `members` and `visibleWhen` are rendering facts. If either
+  // leaked into serialize/assemble, this breaks.
   const roundTrip = (kind: Kind, config: DefinitionConfig): DefinitionConfig => {
     const children = serializeConfig('fd', kind, config);
     const byId = new Map(children.map((c) => [c.id, { value: c.value }]));
