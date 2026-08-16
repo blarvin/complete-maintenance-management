@@ -13,8 +13,10 @@
  * `external-link`: the two exercise both halves of `TargetSpec.scope`.
  */
 
+import type { Component } from 'solid-js';
 import { ConfigFieldStubConfigForm } from './configFieldStub';
 import { InternalLinkField } from '../components/DataField/InternalLinkField';
+import type { FieldRendererProps } from './types';
 import type { DataFieldValue, DefinitionConfig, InternalLinkValue } from '../data/models';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { KindManifest } from './types';
@@ -26,7 +28,8 @@ export const internalLinkManifest: KindManifest = {
     mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['internal-link'],
-    Renderer: InternalLinkField,
+    // Localized cast — see the note in `external-link.manifest.ts`.
+    Renderer: InternalLinkField as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>

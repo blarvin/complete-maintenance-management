@@ -46,6 +46,8 @@ stale or dangling.
 
 1.) **Left or Right chevrons??** - A/B testing is the only real way to know. Earlier iterations attempted to follow the informational tiers... but who knows?
 
+2.) **Text entry in Add Field/Name longer than current column width widens the columnn across the app**
+
 
 ## Features
 

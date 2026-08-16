@@ -129,6 +129,53 @@
     color: var(--text-secondary);
 }
 
+/* external-link at rest: the value surface and the open-link target side by side
+   in the one value cell (see ExternalLinkField — *two targets, two acts*). The
+   row takes the grid placement so the text inside it can be a plain flex child;
+   `.datafieldValue`'s own `grid-column` / `grid-row` are simply ignored there,
+   the same way they are inside a config band body. */
+.datafieldLinkRow {
+    grid-column: value / history-chevron;
+    grid-row: 1;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+/* A long URL must wrap inside the cell rather than widen the shared track. */
+.datafieldLinkRow .datafieldValue {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The travel affordance, worn by both link kinds: `external-link`'s `↗` (an
+   anchor, opens a tab) and `internal-link`'s `→` (a button, re-roots the FSM).
+   One class because it is one role — the only thing in the row that leaves it —
+   so the resets cover both element types. */
+.datafieldLinkOpen {
+    flex: none;
+    color: var(--accent);
+    text-decoration: none;
+    line-height: 1;
+    padding: 0 var(--space-1);
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.datafieldLinkOpen:hover {
+    text-decoration: underline;
+}
+
+.datafieldLinkOpen:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-sm);
+}
+
 /* Underline shows only while focused — both the focusable display element
    (Enter/Space to edit) and the active edit input. No at-rest affordance. */
 .datafieldValueEditable:focus,

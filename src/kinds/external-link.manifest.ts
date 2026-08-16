@@ -11,8 +11,10 @@
  * the domain word stays soft (ELEMENT-MODEL → What is *not* a kind).
  */
 
+import type { Component } from 'solid-js';
 import { ConfigFieldStubConfigForm } from './configFieldStub';
 import { ExternalLinkField } from '../components/DataField/ExternalLinkField';
+import type { FieldRendererProps } from './types';
 import type { DataFieldValue, DefinitionConfig, ExternalLinkValue } from '../data/models';
 import { displayUrl } from '../utils/url';
 import { KIND_CAPABILITIES } from './capabilities';
@@ -25,7 +27,11 @@ export const externalLinkManifest: KindManifest = {
     mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['external-link'],
-    Renderer: ExternalLinkField,
+    // Localized cast, the same bridge every value-bearing kind uses: the renderer
+    // declares its own narrow value/pendingMode types and the registry keys on
+    // the discriminant that makes them correct at runtime (types.ts →
+    // FieldRendererProps).
+    Renderer: ExternalLinkField as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) => {
