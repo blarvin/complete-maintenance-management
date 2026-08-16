@@ -82,11 +82,15 @@ The empty composition — `{}`, a bare titled row (just `name`). Every kind is t
 
 **Config sub-fields**:
 
-| Sub-field  | Kind     | Default | Notes                                     |
-| ---------- | -------- | ------- | ----------------------------------------- |
-| options    | list     | —       | **Required.** Selectable values.          |
-| allowOther | flag     | false   | If `true`, user may enter an ad-hoc value |
-| default    | text-kv? | —       | Pre-selected on new instance              |
+| Sub-field  | Kind     | Default    | Notes                                                  |
+| ---------- | -------- | ---------- | ------------------------------------------------------ |
+| options    | list     | two blanks | **Required, minimum two.** Selectable values.          |
+| allowOther | flag     | false      | If `true`, user may enter an ad-hoc value              |
+| default    | enum-kv  | —          | Pre-selected on new instance. Authored as a picker over `options`     |
+
+**Two options is the floor, not one** (decided 2026-08-16). An enum is a *choice*, and a one-option enum is a constant with nothing to select. Two is also meaningful rather than arbitrary: a two-option enum is how a user makes a yes/no field, because `flag` is `mintVia: 'config-only'` and is never offered as a Definition. So the authoring draft seeds **two blank option rows** — showing the minimum shape rather than an empty list whose `+ Add option` button has to be discovered — and the kind's cross-field validator holds Create until two are non-blank. Blank rows are stripped by the `options` sub-field's `pack` and never reach storage.
+
+**Authoring UX**: options are ordinary config rows (`Option 1`, `Option 2`, …), each with a remove control; `+ Add option` sits at the **bottom of the whole config band**, past the other knobs, because it grows the config rather than filling a knob in. `default` is a **picker over the options entered above it** (`ConfigSubField.dynamicOptions`), never a free text box — the cross-field rule is `default ∈ options`, so offering anything else would be offering a validation error. Removing an option that is currently the default leaves the picker blank and the validator naming the stale value; it is not silently cleared.
 
 **Edit UX**: Dropdown. If `allowOther`, the final item is "Other…" which reveals a text input.
 

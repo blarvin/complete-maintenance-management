@@ -12,9 +12,10 @@
  *
  * `visibleWhen` stays, and is a different thing: it hides a row that is
  * *irrelevant* to the current config rather than merely filing it under a
- * heading. The one remaining nested row is `string-list`'s option list, which is
- * a variable-length collection under its own label, not a category of other
- * knobs.
+ * heading. **Nothing nests at all** as of 2026-08-16: a `string-list` used to
+ * hang its items under an `Options (n)` parent row, which named a count, hid
+ * nothing worth hiding, and wore a chevron promising a structure the band has
+ * nowhere else. Its items are ordinary rows now.
  *
  * **Rows behave like DataField value rows**, because that is the app's idiom for
  * editing in place: focus the row, Enter or Space opens the editor, Enter saves,
@@ -28,11 +29,10 @@
  * flat member keys back into one object.
  */
 
-import { For, Index, Show, createEffect, createSignal } from 'solid-js';
+import { For, Index, Show, createUniqueId } from 'solid-js';
 import { CONFIG_SCHEMAS, CONFIG_VALIDATORS } from '../../kinds/configSchema';
-import { getInlineManifest } from '../../kinds/registry';
 import type { ConfigSubField, ConfigSubFieldMember } from '../../kinds/types';
-import type { DataFieldValue, DefinitionConfig, Kind, StringListValue } from '../../data/models';
+import type { DefinitionConfig, Kind, StringListValue } from '../../data/models';
 import chevron from '../../styles/disclosure.module.css';
 import styles from './ConfigRows.module.css';
 
@@ -45,7 +45,17 @@ export type ConfigRowsProps = {
 type Flat = Record<string, unknown>;
 
 /* ────────────────────────────────────────────────────────────────────────────
- * Leaf row — label + value, Enter to edit
+ * Leaf row — label + a control that is always there
+ *
+ * **There is no edit mode.** The control for a knob is rendered at rest, so the
+ * row says what it is before it is touched — which a `—` could not, and which
+ * matters most on exactly the knobs that are still empty. Single-click entry is
+ * not a feature added on top; it is what remains once there is no mode to enter.
+ *
+ * Each control is drawn as a **hole in the row's fill** rather than a bordered
+ * widget: the surface behind it is already tinted (the Add Surface wears the
+ * under-construction hue), so the page's own background showing through reads as
+ * somewhere to put something. See `.entry` in the stylesheet.
  * ──────────────────────────────────────────────────────────────────────────── */
 
 type LeafProps = {
@@ -57,198 +67,102 @@ type LeafProps = {
 };
 
 const LeafRow = (props: LeafProps) => {
-    const [editing, setEditing] = createSignal(false);
-    let rowEl: HTMLDivElement | undefined;
-    let editorEl: HTMLInputElement | HTMLSelectElement | undefined;
-
-    // Focus the editor explicitly rather than trusting `autofocus`: the HTML
-    // attribute is processed per *document*, so it is unreliable for a node
-    // inserted later — and this surface can insert many. Same explicit pattern
-    // as the lens create row.
-    createEffect(() => {
-        if (editing()) editorEl?.focus();
-    });
-
-    const isFlag = () => props.kind === 'flag';
-
-    /** Read back through the kind's own preview so a config row and the
-     *  read-only ConfigSummary of the same value always agree. */
-    const display = () =>
-        getInlineManifest(props.kind).displayPreview((props.value ?? null) as DataFieldValue | null)
-        ?? '—';
-
-    /** Leaving edit hands focus back to the row, so the tree keeps its place.
-     *  useFieldEdit does this for DataFields; here the row owns it. */
-    const leaveEdit = () => {
-        setEditing(false);
-        rowEl?.focus();
-    };
-
-    const activate = () => {
-        if (isFlag()) props.onWrite(!props.value || undefined);
-        else setEditing(true);
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-        if (editing()) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            activate();
-        }
-    };
+    // Ties the visible label to its control without inventing a DOM id scheme —
+    // several Add Surfaces can be mounted at once (one per card, plus each lens).
+    const controlId = createUniqueId();
 
     /**
-     * One commit for both editors. Split in two, the kind test had to live
-     * inside a callback handed to `editorKeyDown` — reactivity outside a tracked
-     * scope, which `solid/reactivity` rightly rejects. Branching in here keeps
-     * every `props` read on the event-handler path.
+     * Text and number commit on `change` (blur or Enter), not on every
+     * keystroke. Per-keystroke would fight the user on numbers: `Number('1.')`
+     * is `1`, so typing a decimal point would erase itself as the value round-
+     * tripped through the config.
      */
-    const commitValue = (raw: string) => {
+    const commitText = (raw: string) => {
         const trimmed = raw.trim();
         props.onWrite(
             trimmed === '' ? undefined : props.kind === 'number-kv' ? Number(raw) : raw,
         );
-        leaveEdit();
     };
 
-    /* Editor keys are handled inline rather than via a shared helper taking a
-       commit callback: `solid/reactivity` traces the identifier, so *passing* a
-       function that reads props counts as reactivity outside a tracked scope
-       even when it is only ever invoked from an event handler. Calling directly
-       keeps it honest, at the cost of four repeated lines. Both stop
-       propagation so the hosting tree never sees Enter/Escape as navigation. */
-
     return (
-        <div
-            ref={rowEl}
-            class={styles.row}
-            role="treeitem"
-            tabIndex={-1}
-            aria-label={props.label}
-            onKeyDown={onKeyDown}
-            onDblClick={() => !editing() && activate()}
-        >
+        <div class={styles.row}>
             <span class={chevron.chevronSpacer} aria-hidden="true" />
-            <span class={styles.label}>{props.label}</span>
+            <label class={styles.label} for={controlId}>{props.label}</label>
 
             <Show
-                when={editing()}
+                when={props.kind === 'flag'}
                 fallback={
-                    <span
-                        classList={{ [styles.value]: true, [styles.valueEmpty]: props.value === undefined }}
+                    <Show
+                        when={props.kind === 'enum-kv'}
+                        fallback={
+                            <input
+                                id={controlId}
+                                class={styles.entry}
+                                type={props.kind === 'number-kv' ? 'number' : 'text'}
+                                value={props.value === undefined ? '' : String(props.value)}
+                                // The hosting tree must never see these as navigation.
+                                onKeyDown={(e) => e.stopPropagation()}
+                                onChange={(e) => commitText(e.currentTarget.value)}
+                            />
+                        }
                     >
-                        {display()}
-                    </span>
+                        {/* The caret is ours, not the OS's: `appearance: none`
+                            strips the native chrome that would otherwise sit
+                            proud of a hole, and the glyph is the same disclosure
+                            triangle the rest of the tree uses. */}
+                        <span class={styles.selectWrap}>
+                            <select
+                                id={controlId}
+                                classList={{ [styles.entry]: true, [styles.entrySelect]: true }}
+                                value={props.value === undefined ? '' : String(props.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                onChange={(e) => props.onWrite(e.currentTarget.value || undefined)}
+                            >
+                                <option value="">—</option>
+                                <For each={props.options ?? []}>{(o) => <option value={o}>{o}</option>}</For>
+                            </select>
+                            <span
+                                classList={{
+                                    [chevron.glyph]: true,
+                                    [chevron.glyphDown]: true,
+                                    [styles.selectCaret]: true,
+                                }}
+                                aria-hidden="true"
+                            />
+                        </span>
+                    </Show>
                 }
             >
-                <Show
-                    when={props.kind === 'enum-kv'}
-                    fallback={
-                        <input
-                            ref={(el) => (editorEl = el)}
-                            class={styles.input}
-                            type={props.kind === 'number-kv' ? 'number' : 'text'}
-                            value={props.value === undefined ? '' : String(props.value)}
-                            onKeyDown={(e) => {
-                                e.stopPropagation();
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    commitValue(e.currentTarget.value);
-                                } else if (e.key === 'Escape') {
-                                    e.preventDefault();
-                                    leaveEdit();
-                                }
-                            }}
-                            onBlur={(e) => commitValue(e.currentTarget.value)}
-                        />
-                    }
-                >
-                    <select
-                        ref={(el) => (editorEl = el)}
-                        class={styles.input}
-                        value={props.value === undefined ? '' : String(props.value)}
-                        onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'Enter' || e.key === 'Escape') {
-                                e.preventDefault();
-                                leaveEdit();
-                            }
-                        }}
-                        // Writes but does NOT close. A native select fires
-                        // `change` on typeahead — every letter key you press to
-                        // find an option — so closing here read as "letters move
-                        // the focus". Enter, Escape or blur close it instead.
-                        onChange={(e) => props.onWrite(e.currentTarget.value || undefined)}
-                        onBlur={leaveEdit}
-                    >
-                        <option value="">— none —</option>
-                        <For each={props.options ?? []}>{(o) => <option value={o}>{o}</option>}</For>
-                    </select>
-                </Show>
-            </Show>
-        </div>
-    );
-};
-
-/* ────────────────────────────────────────────────────────────────────────────
- * Parent row — a group, a compound, or a list
- * ──────────────────────────────────────────────────────────────────────────── */
-
-const ParentRow = (props: {
-    label: string;
-    defaultOpen?: boolean;
-    children: unknown;
-}) => {
-    const [open, setOpen] = createSignal(!!props.defaultOpen);
-    let rowEl: HTMLDivElement | undefined;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen(!open());
-        }
-    };
-
-    return (
-        <div class={styles.group}>
-            <div
-                ref={rowEl}
-                class={styles.row}
-                role="treeitem"
-                aria-expanded={open()}
-                aria-label={props.label}
-                tabIndex={-1}
-                onKeyDown={onKeyDown}
-            >
-                <span
-                    classList={{
-                        [chevron.chevron]: true,
-                        [chevron.chevronDown]: open(),
-                        [chevron.chevronRight]: !open(),
-                    }}
-                    aria-hidden="true"
-                    onClick={() => setOpen(!open())}
+                {/* Unchecked writes `undefined`, not `false` — an unset flag must
+                    stay absent from the config so `serializeConfig` emits no
+                    child for it. */}
+                <input
+                    id={controlId}
+                    class={styles.entryCheck}
+                    type="checkbox"
+                    checked={props.value === true}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onChange={(e) => props.onWrite(e.currentTarget.checked || undefined)}
                 />
-                <span class={styles.groupLabel} onClick={() => setOpen(!open())}>
-                    {props.label}
-                </span>
-            </div>
-            <Show when={open()}>
-                <div class={styles.nested} role="group">
-                    {props.children as never}
-                </div>
             </Show>
         </div>
     );
 };
 
 /* ────────────────────────────────────────────────────────────────────────────
- * The list row — `string-list`, today only enum-kv's options
+ * The list rows — `string-list`, today only enum-kv's options
+ *
+ * A list contributes **one ordinary row per item**, at the same depth as every
+ * other knob. There is no parent row: `Options (0)` was a heading that named a
+ * count and hid nothing worth hiding, and the chevron beside it promised a
+ * structure the config band no longer has anywhere else.
+ *
+ * The `+ Add` control does *not* live here — it sits at the very bottom of the
+ * band, past the other knobs, because it is the one control that grows the list
+ * rather than filling it in. See `ConfigRows`.
  * ──────────────────────────────────────────────────────────────────────────── */
 
-const ListRow = (props: {
+const ListRows = (props: {
     sub: ConfigSubField;
     items: StringListValue;
     onWrite: (items: StringListValue | undefined) => void;
@@ -264,47 +178,42 @@ const ListRow = (props: {
     };
 
     return (
-        <ParentRow label={`${props.sub.label} (${props.items.length})`} defaultOpen>
-            {/* <Index>, not <For>: For keys by value, so every keystroke made the
-                edited string a "new" item and remounted its row — which blurred
-                the input after one character. Index keys by position and patches
-                the value in place. Same fix, same reason, as EnumKvConfigForm. */}
-            <Index each={props.items}>
-                {(item, i) => (
-                    <div class={styles.row}>
-                        <span class={chevron.chevronSpacer} aria-hidden="true" />
-                        <input
-                            class={styles.input}
-                            type="text"
-                            value={item()}
-                            placeholder="Option label"
-                            onInput={(e) => setAt(i, e.currentTarget.value)}
-                            onKeyDown={(e) => e.stopPropagation()}
-                        />
-                        <button
-                            type="button"
-                            class={styles.remove}
-                            onClick={() => removeAt(i)}
-                            aria-label={`Remove option ${i + 1}`}
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
-            </Index>
-            <div class={styles.row}>
-                <span class={chevron.chevronSpacer} aria-hidden="true" />
-                <button
-                    type="button"
-                    class={styles.addItem}
-                    onClick={() => props.onWrite([...props.items, ''])}
-                >
-                    + Add option
-                </button>
-            </div>
-        </ParentRow>
+        /* <Index>, not <For>: For keys by value, so every keystroke made the
+           edited string a "new" item and remounted its row — which blurred the
+           input after one character. Index keys by position and patches the
+           value in place. */
+        <Index each={props.items}>
+            {(item, i) => (
+                <div class={styles.row}>
+                    <span class={chevron.chevronSpacer} aria-hidden="true" />
+                    <span class={styles.label}>{`${singular(props.sub.label)} ${i + 1}`}</span>
+                    <input
+                        class={styles.entry}
+                        type="text"
+                        value={item()}
+                        // No placeholder: the row's own label already says
+                        // `Option 1`, and every other text hole in the band is
+                        // blank when empty.
+                        onInput={(e) => setAt(i, e.currentTarget.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                    />
+                    <button
+                        type="button"
+                        class={styles.remove}
+                        onClick={() => removeAt(i)}
+                        aria-label={`Remove option ${i + 1}`}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+        </Index>
     );
 };
+
+/** `Options` → `Option`. One list sub-field exists; this is the whole of the
+ *  pluralisation this surface will ever need. */
+const singular = (label: string) => label.replace(/s$/, '');
 
 /* ──────────────────────────────────────────────────────────────────────────── */
 
@@ -332,6 +241,12 @@ export const ConfigRows = (props: ConfigRowsProps) => {
             (s) => !s.visibleWhen || s.visibleWhen(flat()),
         );
 
+    const itemsOf = (sub: ConfigSubField): StringListValue =>
+        (flat()[sub.key] as StringListValue | undefined) ?? [];
+
+    /** The list sub-fields, whose `+ Add` controls trail the whole band. */
+    const listSubs = () => schema().filter((s) => s.kind === 'string-list');
+
     const renderSub = (sub: ConfigSubField) => {
         // A compound stores one packed object but authors as its parts, so it
         // contributes N sibling rows rather than a row of its own.
@@ -351,9 +266,9 @@ export const ConfigRows = (props: ConfigRowsProps) => {
         }
         if (sub.kind === 'string-list') {
             return (
-                <ListRow
+                <ListRows
                     sub={sub}
-                    items={(flat()[sub.key] as StringListValue | undefined) ?? []}
+                    items={itemsOf(sub)}
                     onWrite={(items) => write(sub.key, items)}
                 />
             );
@@ -363,7 +278,9 @@ export const ConfigRows = (props: ConfigRowsProps) => {
                 label={sub.label}
                 kind={sub.kind}
                 value={flat()[sub.key]}
-                options={sub.options}
+                // `dynamicOptions` wins where a sub-field's vocabulary is
+                // another knob's value (enum-kv's `default` over its `options`).
+                options={sub.dynamicOptions ? sub.dynamicOptions(flat()) : sub.options}
                 onWrite={(v) => write(sub.key, v)}
             />
         );
@@ -374,6 +291,25 @@ export const ConfigRows = (props: ConfigRowsProps) => {
             {/* Schema order is render order — no partitioning, no chevrons. The
                 required knobs lead by convention (number-kv's units symbol). */}
             <For each={schema()}>{renderSub}</For>
+
+            {/* `+ Add` trails every knob rather than sitting with its own list:
+                it is the one control that *grows* the config instead of filling
+                a knob in, so it belongs at the end of the band where the reader
+                has already seen what exists. */}
+            <For each={listSubs()}>
+                {(sub) => (
+                    <div class={styles.row}>
+                        <span class={chevron.chevronSpacer} aria-hidden="true" />
+                        <button
+                            type="button"
+                            class={styles.addItem}
+                            onClick={() => write(sub.key, [...itemsOf(sub), ''])}
+                        >
+                            {`+ Add ${singular(sub.label).toLowerCase()}`}
+                        </button>
+                    </div>
+                )}
+            </For>
         </div>
     );
 };

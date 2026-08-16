@@ -394,7 +394,7 @@ The shell is shared code, not an imitation of one. That is what makes this surfa
 
 ### Committing
 
-**Create** does one of two things. In both, whatever sits in the value slot rides along as the new Field's initial value:
+**Create** does one of two things. In both, whatever sits in the value slot rides along as the new Field's initial value — and where the slot is empty and the Definition carries a `default`, that fills in instead, so a Definition that already says what a new instance starts as mints a Field that is *filled* rather than owed. The slot wins where both speak: it is a statement about this instance, the default about every instance:
 
 - **Authoring** — a name was typed and no Definition picked. Writes the Definition Element and its config subtree (sync-queued, `updatedBy: <currentUserId>`), then mints one DataField instance from it. Authoring and using are one continuous motion.
 - **Picking** — a Definition was chosen. Mints the instance only.

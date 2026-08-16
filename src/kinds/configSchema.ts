@@ -30,9 +30,31 @@ export const TEXT_KV_CONFIG_SCHEMA: ConfigSubField[] = [
 ];
 
 export const ENUM_KV_CONFIG_SCHEMA: ConfigSubField[] = [
-    { key: 'options', label: 'Options', kind: 'string-list', disposition: 'owned' },
+    {
+        key: 'options', label: 'Options', kind: 'string-list', disposition: 'owned',
+        // The draft seeds two blank rows (see the manifest's `defaultConfig`), and
+        // a user adding a third may well leave it empty — so blanks are stripped
+        // on the way to storage rather than persisted as empty choices. This is
+        // what `pack` is for: authoring shape in, stored value out.
+        pack: (c) => {
+            const filled = ((c.options as string[] | undefined) ?? [])
+                .map((o) => o.trim())
+                .filter((o) => o !== '');
+            return filled.length ? filled : undefined;
+        },
+    },
     { key: 'allowOther', label: 'Allow other', kind: 'flag', disposition: 'delegated' },
-    { key: 'default', label: 'Default', kind: 'text-kv', disposition: 'delegated' },
+    {
+        // A picker over the options being typed above, not a free text box: the
+        // cross-field rule is `default ∈ options`, so offering anything else is
+        // offering a validation error. `enum-kv` rather than `text-kv` because
+        // that is what the value actually is.
+        key: 'default', label: 'Default', kind: 'enum-kv', disposition: 'delegated',
+        dynamicOptions: (c) =>
+            ((c.options as string[] | undefined) ?? [])
+                .map((o) => o.trim())
+                .filter((o) => o !== ''),
+    },
 ];
 
 /**
@@ -124,7 +146,13 @@ export const CONFIG_VALIDATORS: Partial<Record<Kind, (config: DefinitionConfig) 
     'enum-kv': (config) => {
         const { options, default: fallback } = config as EnumKvConfig;
         const filled = (options ?? []).filter((o) => o.trim() !== '');
-        if (filled.length === 0) return 'At least one option is required';
+        // Two, not one: an enum is a *choice*, and one option is a constant with
+        // nothing to select. Two is also the floor for a reason — a two-option
+        // enum is how this app makes a yes/no field, since `flag` is
+        // `mintVia: 'config-only'` and never offered as a Definition. The draft
+        // therefore seeds two blank rows and this is the matching gate, so the
+        // surface and the validator say the same thing.
+        if (filled.length < 2) return 'Needs at least two options';
         if (fallback !== undefined && fallback !== '' && !filled.includes(fallback)) {
             return `Default (${fallback}) must be one of the options`;
         }

@@ -75,6 +75,31 @@ describe('conditional reveal', () => {
   });
 });
 
+describe('dynamic option vocabularies', () => {
+  const enumSub = (key: string) => {
+    const found = CONFIG_SCHEMAS['enum-kv']!.find((s) => s.key === key);
+    if (!found) throw new Error(`no enum-kv sub-field '${key}'`);
+    return found;
+  };
+
+  it('offers `default` exactly the options entered above it', () => {
+    // The cross-field rule is `default ∈ options`, so the picker must not be
+    // able to produce a value the validator would then reject.
+    const opts = enumSub('default').dynamicOptions!;
+    expect(opts({ options: ['In Service', 'Down'] })).toEqual(['In Service', 'Down']);
+    expect(opts({})).toEqual([]);
+  });
+
+  it('hides the blank and whitespace-only rows from the `default` picker', () => {
+    const opts = enumSub('default').dynamicOptions!;
+    expect(opts({ options: ['In Service', '', '  ', 'Down'] })).toEqual(['In Service', 'Down']);
+  });
+
+  it('makes `default` an enum sub-field, not free text', () => {
+    expect(enumSub('default').kind).toBe('enum-kv');
+  });
+});
+
 describe('compound members', () => {
   it('thresholds members are exactly the flat keys pack reads', () => {
     // If these drift, authoring edits keys that never reach storage — silently.
@@ -95,11 +120,16 @@ describe('compound members', () => {
 });
 
 describe('cross-field validators', () => {
-  it('enum-kv requires at least one non-blank option', () => {
+  it('enum-kv requires two non-blank options, not one', () => {
+    // One option is a constant, not a choice; two is also the floor because a
+    // two-option enum is how this app makes a yes/no field (`flag` is
+    // config-only and never authorable). The draft seeds two blanks to match.
     const validate = CONFIG_VALIDATORS['enum-kv']!;
-    expect(validate({ options: [] } as DefinitionConfig)).toMatch(/at least one option/i);
-    expect(validate({ options: ['  '] } as DefinitionConfig)).toMatch(/at least one option/i);
-    expect(validate({ options: ['In Service'] } as DefinitionConfig)).toBeNull();
+    expect(validate({ options: [] } as DefinitionConfig)).toMatch(/at least two options/i);
+    expect(validate({ options: ['', ''] } as DefinitionConfig)).toMatch(/at least two options/i);
+    expect(validate({ options: ['In Service'] } as DefinitionConfig)).toMatch(/at least two options/i);
+    expect(validate({ options: ['In Service', '  '] } as DefinitionConfig)).toMatch(/at least two options/i);
+    expect(validate({ options: ['In Service', 'Down'] } as DefinitionConfig)).toBeNull();
   });
 
   it('enum-kv constrains default to the options entered', () => {
@@ -109,7 +139,7 @@ describe('cross-field validators', () => {
     ).toMatch(/must be one of the options/i);
     expect(validate({ options: ['A', 'B'], default: 'B' } as DefinitionConfig)).toBeNull();
     // Absent default is fine — it is optional, not required.
-    expect(validate({ options: ['A'] } as DefinitionConfig)).toBeNull();
+    expect(validate({ options: ['A', 'B'] } as DefinitionConfig)).toBeNull();
   });
 
   it('number-kv rejects a broken threshold chain and a currency with no code', () => {
@@ -142,6 +172,21 @@ describe('storage is indifferent to the authoring fields', () => {
       highHigh: 10,
     } as DefinitionConfig;
     expect(roundTrip('number-kv', config)).toEqual(config);
+  });
+
+  it('strips the blank options the draft seeds rather than storing them', () => {
+    // enum-kv opens with two empty rows, and a user adding a third may leave it
+    // empty; none of those should reach storage as an empty choice.
+    const children = serializeConfig('fd', 'enum-kv', {
+      options: ['In Service', '  ', 'Down', ''],
+    } as DefinitionConfig);
+    const options = children.find((c) => c.id === 'fd::cfg::options');
+    expect(options?.value).toEqual(['In Service', 'Down']);
+  });
+
+  it('emits no options child at all when every seeded row is still blank', () => {
+    const children = serializeConfig('fd', 'enum-kv', { options: ['', ''] } as DefinitionConfig);
+    expect(children.map((c) => c.id)).not.toContain('fd::cfg::options');
   });
 
   it('emits no child for a hidden sub-field that was never filled', () => {

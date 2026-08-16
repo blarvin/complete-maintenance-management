@@ -47,6 +47,13 @@ export type ConfigSubField = {
     default?: DataFieldValue | null;
     /** Fixed option vocabulary for `enum-kv` sub-fields (e.g. affixPosition prefix/suffix). */
     options?: string[];
+    /**
+     * Option vocabulary read from the draft config instead of fixed — for a
+     * sub-field whose choices *are* another knob's value (`default` must be one
+     * of `options`). Takes precedence over `options`. Authoring-only, like
+     * `visibleWhen`, and reads the same flat config.
+     */
+    dynamicOptions?: (config: Record<string, unknown>) => string[];
     /** Coherence guard for the sub-field's own value (e.g. threshold ordering). */
     validate?: (value: DataFieldValue | null) => string | null;
     /** config → stored value. Defaults to `config[key]`. Return `undefined` to omit. */

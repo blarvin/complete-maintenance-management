@@ -105,7 +105,11 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
     const manifest = createMemo(() => getInlineManifest(draft.kind()));
     const authoringMemo = () => getKindManifest(draft.kind()).authoringMemo;
 
-    const slotKey = () => `${draftId()}:${draft.kind()}`;
+    // Also keyed on `valueEpoch`: the slot's Renderer buffers its value from
+    // mount, so a value written behind its back — the Config band's `default`
+    // mirror, or seeding from a picked Definition — is only visible once the
+    // slot re-mounts. Edits made *in* the slot don't bump it.
+    const slotKey = () => `${draftId()}:${draft.kind()}:${draft.valueEpoch()}`;
 
     const open = () => props.setActiveSurface(SURFACE_ID);
     const close = () => props.setActiveSurface('none');

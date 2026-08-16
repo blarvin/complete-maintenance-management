@@ -228,11 +228,13 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
         otherInputEl?.focus();
     });
 
+    // One tap in pendingMode, double-tap once persisted — see the note on
+    // `useFieldEdit`'s `valuePointerDown`, which this mirrors for the popover.
     const handleTriggerPointerDown = (ev: PointerEvent | MouseEvent) => {
         if (isOpen()) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
-        if (checkDoubleTap(x, y)) {
+        if (props.pendingMode || checkDoubleTap(x, y)) {
             // Cancel the compatibility mousedown: its focus default action runs
             // after the open-transition effect focused the first option and
             // would otherwise steal focus back to the trigger.

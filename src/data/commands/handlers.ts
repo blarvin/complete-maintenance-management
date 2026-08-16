@@ -33,13 +33,22 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     if (!def) {
       throw new Error(`Definition not found: ${definitionId}`);
     }
+    // The Definition's `default` config sub-field is what a new instance starts
+    // with (ELEMENT-MODEL → enum-kv: *Pre-selected on new instance*). Read
+    // kind-agnostically: only `enum-kv` declares one today, and a kind that adds
+    // the key later means the same thing by it.
+    //
+    // An explicit `initialValue` wins — the create surface's value slot is the
+    // more specific statement, made about this instance rather than about every
+    // instance of the Definition.
+    const standingDefault = (def.config as Record<string, unknown> | undefined)?.default;
     const result = await adapter.createElement({
       id: id ?? generateId(),
       kind: def.kind,
       parentId,
       name: def.label, // snapshot at creation
       definitionId: def.id,
-      value: initialValue ?? null,
+      value: initialValue ?? (standingDefault as typeof initialValue) ?? null,
       siblingOrder,
     });
     return result.data;
