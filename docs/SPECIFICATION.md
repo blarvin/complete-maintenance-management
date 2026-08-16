@@ -379,6 +379,8 @@ The shell is shared code, not an imitation of one. That is what makes this surfa
 
 ### The bands
 
+**Config and Tools carry no heading and no chevron; only Kind does.** On a draft row Config and Tools are not one region among several to choose between — they are the row's whole reason to be open, and a disclosure over them is a toggle with only one useful position. Kind keeps both because it genuinely is optional: the draft starts as `text-kv`, and the shortest path through the surface never opens it. This is the *Stacking is open* latitude being spent, not a departure from it — a persisted Field's Details still stacks History · Config · Tools its own way.
+
 **Config** — the current kind's config rows (see *Authoring a Definition* below), editable while authoring. Its first row is a **memo**: prose naming the kind being created and pointing at the Kind band below. A memo has nothing to enter and nothing to store; it is authoring chrome declared per kind, never a config sub-field.
 
 **Kind** — one row per admitted kind.

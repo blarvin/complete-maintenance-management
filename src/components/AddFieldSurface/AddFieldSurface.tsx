@@ -150,12 +150,24 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
         close();
     };
 
+    /**
+     * Config and Tools carry **no heading and no chevron**: on a draft row they
+     * are not one region among several to be chosen between, they are the row's
+     * whole reason to be open. Hiding the knobs you came to set, or the button
+     * that commits them, behind a disclosure the user must find first is a
+     * toggle that only ever has one useful position. The Config band's memo
+     * ("Creating a Number field…") already says what the rows are, which is what
+     * a `CONFIG` heading would have been for.
+     *
+     * Kind keeps both, because it *is* optional: the draft starts as `text-kv`
+     * and the shortest path through the surface never opens it.
+     */
     const bands = (): DetailBand[] => [
         {
             id: 'config',
-            title: 'Config',
+            title: null,
             present: true,
-            collapsible: true,
+            collapsible: false,
             defaultOpen: true,
             body: () => (
                 <div class={bandStyles.sectionBody}>
@@ -208,9 +220,9 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
         },
         {
             id: 'tools',
-            title: 'Tools',
+            title: null,
             present: true,
-            collapsible: true,
+            collapsible: false,
             defaultOpen: true,
             body: () => (
                 <div classList={{ [bandStyles.sectionBody]: true, 'no-caret': true }}>
