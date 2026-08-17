@@ -293,3 +293,87 @@ recur; it is recorded in ISSUES if it bites the Add Surface.*
 > ### ComposerRow check/uncheck slide-in animation
 >
 > Spec (`§Field Composer → Layout`) calls for a ~200ms transition on the body when a row is checked/unchecked. The DataCard grid-template-rows trick doesn't compose with the existing kvField renderers (they wrap with `display: contents` so they can position into the FieldList subgrid, which can't be animated). Either flatten the kvField output for the composer (extra wrapper component per kind), or split the body into an animatable container that the kvField writes into. Until then the row's body appears/disappears immediately; the checkbox is still anchored in view via `scrollIntoView({ block: 'nearest' })` after toggle.
+
+### From SPECIFICATION.md — FieldDefinitions are forked, never mutated
+
+*Reversed 2026-08-17, when the Library became a place in the tree. A Definition
+is now edited in place and the change propagates downstream to every bound
+instance — which is the reason the Library exists as a destination at all. The
+reasoning below is still the correct account of what fork bought: it sidestepped
+cascading config changes and the "who may edit this" question entirely, and its
+retirement is what makes `disposition` (owned / delegated / pinned) load-bearing
+rather than tidy-up. Note also what the fork rule was doing for versioning:
+`definitionId` was the revision pin, and under mutation it no longer is.*
+
+> **Phase 1 ships with no user-facing edit or delete of FieldDefinitions.** This is a deliberate simplification, not an oversight — multi-user identity and permissions don't exist yet, so any edit/delete UX is premature.
+>
+> - **Edit is conceptually "fork"**: any future UI affordance that looks like "edit this FieldDefinition" (whether the change is to label, config, or both) **mints a new FieldDefinition** rather than mutating the existing one. The original is untouched; downstream DataField instances remain bound to it. This sidesteps cascading config changes (e.g. unit changes on a `number-kv` field) and avoids the question of which user is authorised to edit a given entry.
+> - **Delete is admin-only**: end users cannot delete FieldDefinitions — not their own, not others'. Bad or duplicate entries are removed by the dev team directly in Firestore. The `deletedAt` column exists on the entity for forward compatibility (and for the rare admin tombstone), but no client write path sets it in Phase 1. Soft-deleted FieldDefinitions are filtered out of the Kind band's listing.
+>
+> Per-user delete UX, ownership-based permissions ("you can delete your own"), config-edit-creates-fork affordances, and label-uniqueness / dedup logic are all deferred to LATER.md and revisited once real multi-user identity lands.
+
+*And the one-sentence form of the same rule, from → The cascade:*
+
+> A Definition is **forked, never mutated** (editing one mints a new id; existing instances stay bound to the one they were minted from); `definitionId` *is* the version, so there is no `componentVersion` and no migration runner.
+
+### From SPECIFICATION.md — the Library as a set, and a Definition as an Element of the kind it defines
+
+*Replaced 2026-08-17 by SPEC → The Library. The Library is a place in the tree,
+not a set surfaced under one band; a Definition is a Node, not a field-like
+Element of the kind it defines; and its identity test moved from
+`parentId === null` to `definitionId === id` so it survives having a parent. The
+`parentId === null` reasoning is kept because it explains why arbitrary
+user-authored groups were blocked for as long as they were — the block was never
+about grouping, it was about identity riding on position.*
+
+> ### The Library
+>
+> The Library is the set of all active FieldDefinitions, surfaced to users under the Add Surface's **Kind band** — each kind expanding to the Definitions of that kind (see The Add Surface).
+>
+> #### Where the Library lives
+>
+> - **A typed tree, not a side table**: a Definition is an `Element` (with `treeType: library`) and its config is its child sub-field Elements; it syncs, history-tracks, and reverts like any other Element.
+>
+> #### Listing under the Kind band
+>
+> - **Grouping by kind costs nothing structural.** The Kind band is a view over the `library` tree — Definitions are gathered by their `kind` and rendered beneath it, never re-parented. A Definition's identity test (`parentId === null`) is untouched, which is exactly why arbitrary user-authored groups are the deferred case and this one is not.
+
+*And the entity definition it carried:*
+
+> **Purpose:** A Library entry — a field-like Element of the kind it defines, living in the `library` tree (`treeType: library`), whose config is its child sub-field Elements. Instances bind to it by `definitionId`. It is **not a separate entity**: its columns are the Element columns (`kind` = the kind it defines, `name` = the label), and it has no `config` column — config is its subtree.
+
+### From SPECIFICATION.md / ELEMENT-MODEL.md — the atomic compound config sub-field
+
+*The `compound` kind is retired (2026-08-17). Its only tenant was `number-kv`'s
+`{LL,L,H,HH}`, which is four independent `number-kv` sub-fields now — the
+authoring UI already drew it as four flat rows, and the Library needs each one
+separately editable with its own history. The atomicity argument below is sound
+and was simply never cashed: the one candidate cluster did not need it. If a
+co-varying set ever appears whose torn merge is genuinely dangerous, this is the
+argument to make again — on that set's own merits, not by inheritance.*
+
+> - **The only object-valued residue is the compound sub-field** — co-varying values that must move together (`thresholds: {LL,L,H,HH}`) bundle into one atomic LWW'd object, by necessity (atomicity), not by default.
+> - **Granularity is a choice** — decomposed config can tear under concurrent offline edits (`L` and `H` converging to `L > H`); this is allowed, flagged, and revertible. Validation is **advisory** by default; reserve the atomic compound for the few values where a wrong combination is *dangerous*, not merely silly.
+
+*From ELEMENT-MODEL → number-kv and → Config leaves:*
+
+> The `{LL,L,H,HH}` cluster is the one place an object-valued config survives (a small atomic compound), because the values co-vary and a torn merge (`L > H`) would be dangerous. Everything else is an independent scalar sub-field.
+
+> - `threshold-compound` — a compound own value, atomic LWW; the one config leaf that earns a new kind.
+
+### From LATER.md — the tree switcher (Assets / Config / Library)
+
+*Retired 2026-08-17. There is one app and one tree, and the tree is the switcher:
+`treeType` is a routing tag on the Element (which audit log, whether it syncs),
+never a navigational partition, so no view state is parameterised by it and there
+is nothing to switch between. The rest of the entry survives in LATER — the
+config UI really is the existing renderers with no new view layer, which is why
+the switcher looked necessary and wasn't.*
+
+> So the config UI is the existing TreeNode / DataCard / FieldList renderers pointed at a different tree — one FSM state parameterised by `treeType`, not a new view layer. The same switcher also delivers the long-deferred **dedicated Library view** (above) as a side effect.
+>
+> - **Tree switcher on the ROOT view** — Assets / Config / Library.
+
+*And the destination it named, from → FieldDefinition Library Phase-2 enhancements:*
+
+> - **Dedicated Library view** (a TreeNode stack under the app's main menu) for browsing / managing FieldDefinitions outside the Add Surface — and the only place a Definition ever becomes *editable*, since the Add Surface only ever adds.

@@ -42,7 +42,7 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 
 # Field-like kinds (inline; lean on `OwnValue` / `Edges` / `Derivation`)
 
-A field-like kind draws an inline row on its Node's Data Card and is edited in place. A field-like kind minted from the Library binds to its Library Definition by `definitionId`; its config lives as that Definition's child sub-field Elements (see `SPECIFICATION.md → Config is Elements`). The binding is kind-agnostic: a re-root *policy container* (`logbook`) binds a Definition through the same column, while leaf re-roots (`node`, `job`) carry null.
+A field-like kind draws an inline row on its Node's Data Card and is edited in place. An instance minted from the Library binds to its Definition by `definitionId`; that Definition's config is the Fields on its own Data Card (see `SPECIFICATION.md → The Library`). The binding is kind-agnostic: a re-root *policy container* (`logbook`) binds a Definition through the same column, while ordinary leaf re-roots (`node`, `job`) carry null. The one self-referential case is a Definition itself, whose `definitionId` equals its own `id` — that is how "is this a Definition" is answered, at any depth and under any parent.
 
 ## origin
 
@@ -108,7 +108,7 @@ This is the deliberately rich field-like kind — its breadth of config exercise
 
 **Composition**: `OwnValue(number)` + a config subtree. **Placement**: inline.
 
-**Value shape**: `number | null`. Units, format, thresholds, and refresh expectation are **not** stored per-instance — they are owned config copied from the Definition at mint (edit-is-fork). Unit conversion is deferred.
+**Value shape**: `number | null`. Units, format, thresholds and refresh expectation are **not** stored per-instance — they are the Definition's config, read live, so editing the Definition changes what every bound instance means (`SPECIFICATION.md → Edit / Delete Semantics`). Copy-at-mint for the meaning-defining knobs is what `disposition: owned` is for, and it is encoded but unwired. Unit conversion is deferred.
 
 **Config sub-fields**:
 
@@ -123,19 +123,19 @@ This is the deliberately rich field-like kind — its breadth of config exercise
 | `nominalMode`            | enum-kv      | No       | `"range"` (default) / `"discrete"`                                                               |
 | `nominalMin` / `nominalMax` | number-kv? | Cond.   | Range-mode only. Bounds of the expected operating range                                         |
 | `nominalValue` / `tolerance` | number-kv? | Cond.  | Discrete-mode only. Expected exact value ± acceptable deviation                                  |
-| thresholds `{LL,L,H,HH}` | compound     | No       | Atomic compound sub-field (co-varying; one LWW'd object). ISA-18.2 thresholds                    |
+| `thresholdLL` / `thresholdL` / `thresholdH` / `thresholdHH` | number-kv? | No | Four independent ISA-18.2 threshold sub-fields                                |
 | `expectedRefreshSeconds` | number-kv?   | No       | If set, a value older than this renders as **stale**. Stored in canonical seconds               |
 
-The `{LL,L,H,HH}` cluster is the one place an object-valued config survives (a small atomic compound), because the values co-vary and a torn merge (`L > H`) would be dangerous. Everything else is an independent scalar sub-field.
+**The thresholds are four sub-fields, not one compound** (changed 2026-08-17, with the Library-as-a-place work). The `compound` kind is retired: the cluster was four numbers in one value slot, the authoring UI already drew it as four flat sibling rows, and the Library surfaces each as its own editable, individually history-tracked Field. Atomicity is given up knowingly — a torn merge (`L > H`) is now possible and is caught by validation rather than prevented by the value shape. Every config sub-field is an independent scalar.
 
-**Config invariants** (enforced at Library-authoring time, via the threshold compound's `validate` or the kind's optional `ConfigForm`):
+**Config invariants** (enforced on every config write — see `SPECIFICATION.md → Required config is enforced on every write`; a Definition is editable for its whole life, so a one-shot authoring gate is not enough):
 
 - **Range mode**: `LL ≤ L ≤ nominalMin ≤ nominalMax ≤ H ≤ HH`. Any subset may be omitted; provided values must satisfy the chain.
 - **Discrete mode**: `LL ≤ L ≤ (nominalValue − tolerance)` and `(nominalValue + tolerance) ≤ H ≤ HH`. `tolerance ≥ 0`.
 - `decimals ≥ 0`. `expectedRefreshSeconds > 0` if set.
 - `displayFormat === "currency"` ⇒ `currencyCode` non-empty.
 
-**Authoring form — one flat list** (the canonical exercise for the conditional-reveal patterns the wider Library-authoring UI reuses). Every knob is a sibling row in schema order, `unitsSymbol` first because it is the one required knob. The threshold compound contributes four rows of its own (`Threshold LL/L/H/HH`) rather than a parent row that expands.
+**Authoring form — one flat list** (the canonical exercise for the conditional-reveal patterns the wider Library-authoring UI reuses). Every knob is a sibling row in schema order, `unitsSymbol` first because it is the one required knob. The four thresholds are four rows (`Threshold LL/L/H/HH`), which is now what they are in storage too rather than a presentation of one packed object.
 
 The three collapsible tiers this kind used to specify — Required / Common (*Display & nominal*) / Advanced (*Alarms & freshness*) — were **built and then removed, 2026-08-16**; see SUPERSEDED for the original text and reasoning, and LATER → *Config authoring: progressive disclosure* for what would bring them back. This kind is still the exercise; what it exercises is now `visibleWhen` alone.
 
@@ -388,13 +388,18 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 # Config leaves
 
-The leaves of config subtrees (see `SPECIFICATION.md → Config is Elements`). Most **reuse the field-like kinds outright**; only the compound earns a new kind:
+The leaves of config subtrees (see `SPECIFICATION.md → Config is Elements`). They **reuse the field-like kinds outright** — every one of them. Nothing here earns a new kind:
 
 - `units` — an `enum-kv` keyed to quantity-kind.
 - `quantity-kind` — a fixed-option enum (e.g. `length-unit`, options {m, ft, in}), locked by `kind`-immutability.
 - `staleness` — a `number-kv` in seconds.
-- flags — booleans (`multiline`, `requireCaption`, `allowOther`).
-- `threshold-compound` — a compound own value, atomic LWW; the one config leaf that earns a new kind.
+- flags — `flag` (`multiline`, `requireCaption`, `allowOther`).
+- option lists — `string-list` (`enum-kv.options`).
+- thresholds — four independent `number-kv` sub-fields.
+
+**`flag` and `string-list` are not a config-only species.** They are the **boolean** and **list** field kinds; config is simply the only place they have been needed so far, which is what `mintVia: 'config-only'` records. Once a Definition's config is editable in the Library they need real renderers (a toggle, a chips list) exactly as any other field kind does.
+
+**`compound` is retired** (2026-08-17). Its sole tenant was `number-kv`'s thresholds, which are now four sub-fields. Config leaves are all scalars.
 
 These are leaves, never new primitives.
 
@@ -405,7 +410,7 @@ These are leaves, never new primitives.
 # What is *not* a kind
 
 - **Domain typology stays soft.** Pump, vessel, relay, road-bridge — and org variants like task or work-order — are user-grown `typeOf` tags on the relevant kind, never kinds and never a schema column. Identity and lens-matching key on `kind` (the one hard discriminant); the soft layer (tags, position, field-presence) feeds search / filter / sort / facet. The behaviour-free domain typology ships as **forkable seed `typeOf` data** (tag + default field bundle), read by one generic service that suggests fields from a node's `typeOf`.
-- **A field Definition is not its own kind.** It is an Element of the very kind it defines, living in the `library` tree and bound to instances by `definitionId`. The Library is a population, not a kind. (This holds for re-root policy Definitions too: `fd_logbook_policy` is a `library`-tree Element of kind `logbook`.)
+- **A field Definition is not its own kind.** It is a **Node** (`kind: node`, `treeType: library`) under the Library Node, identified by `definitionId === id`, whose Data Card's Fields are its config — including the Field naming the kind it defines. It is a Node so every Definition is alike: one card, one row, one set of gestures, one place. The Library is a population, not a kind. (Re-root policy Definitions are the same shape: `fd_logbook_policy` is a Definition Node whose defined kind is `logbook`.)
 - **The Add Surface is not a kind.** It renders as a Field row and shares that row's shell, but nothing about it is ever stored, so it has no manifest, no placement and no entry in `FIELD_KINDS` — a phantom kind would need excluding from `allowedChildKinds`, sibling ordering and every storage query in turn. What varies between it and a persisted row (glyph, name slot, value slot, which bands) is a **role** on the shared shell. See `SPECIFICATION.md → The Add Surface`.
 
 ---
@@ -418,7 +423,8 @@ These are leaves, never new primitives.
 4. **Arbiter classification** — is `ArbiterSpec` a closed set of pairwise rules or a general resolver?
 5. **`treeType` granularity** — policy keyed by tree root, by `treeType` enum, or per-kind?
 6. **Action exactly-once** — offline-replay idempotency (keys, dedupe window), when Action is built.
-7. **Sub-field granularity** — per cross-field invariant, the line between independent sub-fields and one atomic compound sub-field.
+7. **Sub-field granularity** — *resolved 2026-08-17: fully decomposed.* `compound` is retired and every config leaf is an independent scalar, so co-varying clusters are held together by cross-field validation rather than by an atomic value shape. Reopen only if a set appears whose torn merge is genuinely dangerous rather than merely wrong — and make the atomicity argument on that set's own merits.
+12. **`treeType` on a container that holds mixed subtrees** — the tag is stamped per Element, not inherited. The Library Node carries `library` and everything beneath it does too, so nothing is mixed today. When an app-level Node holds the Library (`library`) beside App Defaults (`config`), that Node is neither. Decide before the second such container exists, not before the first.
 8. **Disposition & pin encoding** — is owned/delegated/pinned an authored flag on the Definition-side sub-field (and where), or entailed by template-vs-open plus a pin boolean? Plus the read-time cost of assembling a Definition's config subtree vs the old blob (memo / materialization — bounded, but measure).
 9. **Canonical classifier tag** — whether the soft layer gains one required, single-valued, controlled-but-user-grown tag per node (a firm handle for search / filter / target over domain typology), distinct from open multi-tags. Deferred; identity stays on `kind`.
 10. **Approval validity predicate** — is `ValiditySpec` only rev-staleness, or also target-*state* predicates (an `approval` valid only while its target Job is in state X)? Scoped to rev-staleness for now.
