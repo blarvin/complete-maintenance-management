@@ -105,10 +105,18 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
      *
      * **Subscribed, not sampled.** `TargetSpec.pin: 'live'` is a claim about the
      * *target*, so re-reading only when this link's own value changes was not it:
-     * renaming or deleting the target left a stale name on screen until the row
-     * happened to remount. Writes emit and readers subscribe here as everywhere
-     * else (`useElementById` is the same shape) — a deleted target resolves to
-     * null and the row falls back to `(unresolved: …)` on the spot.
+     * any write to the target has to reach the row without waiting for it to
+     * remount. Writes emit and readers subscribe here as everywhere else
+     * (`useElementById` is the same shape).
+     *
+     * **What that does not yet buy** (corrected 2026-08-16). The subscription
+     * fires, but `resolveEdge` → `getElementById` is a bare `db.elements.get`,
+     * which — unlike `getChildren` beside it — returns soft-deleted rows. A
+     * deleted target therefore keeps resolving and keeps rendering as live, `→`
+     * and all; only an id that never existed reaches `(unresolved: …)`. And
+     * nothing user-facing renames an Element yet (`UPDATE_ELEMENT_NAME` has no
+     * production caller), so the live pin's headline case is wired but
+     * untriggerable. Both are the resolver-status item in ISSUES → Architecture.
      *
      * Stale-async guard: an in-flight resolve must not land after the tracked id
      * changed (effects capture their values at run time).
