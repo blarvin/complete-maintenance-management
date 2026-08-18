@@ -1,0 +1,41 @@
+/* ConfigSummary — read-only config rows, shared by the Library picker's row
+   peek and Field Details → Config. Lifted from the picker's own module so both
+   surfaces stay identical. Deliberately layout-neutral: it declines any grid
+   and lays out inside whatever cell it is given. */
+
+.summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.row {
+    display: flex;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+}
+
+.label {
+    color: var(--text-muted);
+    min-width: var(--label-width);
+}
+
+.value {
+    color: var(--text-metadata);
+}
+
+/* Provenance: these values belong to the Definition, not to the instance
+   showing them. Reads as an aside rather than another row, because it is
+   about the rows above rather than one of them. */
+.source {
+    font-size: var(--text-xs);
+    color: var(--text-placeholder);
+    font-style: italic;
+    margin-top: var(--space-1);
+}
+
+.empty {
+    font-size: var(--text-xs);
+    color: var(--text-placeholder);
+    font-style: italic;
+}

@@ -11,6 +11,18 @@ export type ToastInput = {
     durationMs?: number;
     action?: ToastAction;
     onExpire?: () => void | Promise<void>;
+    /**
+     * Marks this toast as one of a repeatable series. A `show()` whose key
+     * matches the visible toast **extends** it — same toast, new message and
+     * action, timer restarted — instead of replacing it.
+     *
+     * Exists because the Snackbar is single-slot: without it, adding three
+     * fields in a row would leave only the third undoable, and the toast would
+     * remount and re-animate on each one (`SnackbarHost` renders `<Show keyed>`).
+     * The caller accumulates whatever its Undo has to reverse; the service only
+     * has to not throw the toast away.
+     */
+    coalesceKey?: string;
 };
 
 export type ActiveToast = {
@@ -21,6 +33,7 @@ export type ActiveToast = {
     action?: ToastAction;
     onExpire?: () => void | Promise<void>;
     createdAt: number;
+    coalesceKey?: string;
 };
 
 export type SnackbarStore = {

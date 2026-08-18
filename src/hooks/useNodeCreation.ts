@@ -14,7 +14,8 @@
 import type { Accessor } from 'solid-js';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getCommandBus } from '../data/commands';
-import { commitPendingDraft, discardPendingDraft } from '../data/services/pendingDraft';
+import { commitPendingDraft, discardPendingDraft, seedPendingDraft } from '../data/services/pendingDraft';
+import { CONSTRUCTION_DEFAULT_DEFINITION_IDS } from '../data/definitionIds';
 import { generateId } from '../utils/id';
 import type { Kind } from '../data/models';
 import type { UnderConstructionData } from '../state/appState.types';
@@ -23,8 +24,9 @@ import type { UnderConstructionData } from '../state/appState.types';
  * Payload for completing node creation.
  * Matches what TreeNodeConstruction emits via onCreate.
  *
- * Fields are created from the composer draft (localStorage, keyed by nodeId):
- * complete() commits the draft against the new node right after it exists.
+ * Fields are created from the pending draft (localStorage, keyed by nodeId):
+ * complete() seeds the construction defaults into it, then commits it against
+ * the new node right after it exists.
  */
 export type CreateNodePayload = {
     name: string;
@@ -108,9 +110,16 @@ export function useNodeCreation(parentId: Accessor<string | null>): UseNodeCreat
             },
         });
 
-        // Commit the in-flight composer draft (localStorage, keyed by nodeId)
-        // against the freshly-created node. -1 so the first field lands at
-        // siblingOrder 0. Clears the draft internally.
+        // The construction defaults are a node-creation policy, not a side
+        // effect of rendering a picker: seed them here so a new node is born
+        // with them even when every add-field surface is switched off
+        // (ENABLED_ADD_FIELD_SURFACES). Stored-draft-wins, so when a surface
+        // *is* mounted it has already seeded the same rows and this is a no-op.
+        await seedPendingDraft(ucData.id, CONSTRUCTION_DEFAULT_DEFINITION_IDS);
+
+        // Commit the in-flight draft (localStorage, keyed by nodeId) against the
+        // freshly-created node. -1 so the first field lands at siblingOrder 0.
+        // Clears the draft internally.
         await commitPendingDraft(ucData.id, -1);
 
         completeConstruction();

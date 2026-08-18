@@ -243,11 +243,21 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
 
     // === Display Value Event Handlers ===
 
+    /**
+     * Double-tap guards a *persisted* value: the row is there to be read, and an
+     * accidental brush must not put it into edit. A `pendingMode` row is the
+     * opposite — it exists only to be filled in, nothing is committed until
+     * Create, and there is no value yet to protect. So one tap opens it, matching
+     * the always-open controls in the authoring surface's config rows.
+     *
+     * `checkDoubleTap` is skipped rather than ignored: its tap state feeds only
+     * this decision, and nothing else reads it.
+     */
     const valuePointerDown = (ev: PointerEvent | MouseEvent) => {
         if (appState.editingElementId === options.fieldId) return;
         const x = ev.clientX ?? 0;
         const y = ev.clientY ?? 0;
-        if (checkDoubleTap(x, y)) {
+        if (options.pendingMode || checkDoubleTap(x, y)) {
             // Cancel the compatibility mousedown: beginEdit swaps the display
             // element for the input synchronously, so the browser's post-
             // pointerdown focus action would target a stale hit-test and steal

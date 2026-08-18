@@ -1,0 +1,237 @@
+/* AddFieldSurface — the create affordance drawn as a Field row.
+
+   The row itself is `DataField.module.css`'s `.datafieldWrapper`, imported
+   directly by the component: same subgrid, same named tracks, same expanded
+   treatment. What lives here is only what a *draft* row adds — the ＋, the name
+   input, the construction tint — plus the tree rows the Kind band is built from,
+   which lay out in flex inside a band body rather than in the card's subgrid. */
+
+/* ── The row's own slots ──────────────────────────────────────────────────── */
+
+/* Worn whenever the row holds a draft, open or closed, so an unfinished Field
+   can neither be mistaken for a real one nor lost among them (SPEC →
+   Committing). A hue, not another grey: it sits where `--bg-expanded` would
+   otherwise be and must not read as it. */
+.constructing {
+    background: var(--bg-construction);
+    border-radius: var(--radius-sm);
+}
+
+/* The ＋ rides in the same column a persisted Field carries its disclosure
+   triangle in, and — like `.datafieldChevron` — is flush left rather than
+   centred, so the glyph and the triangles line up down the card. No `width`:
+   the button stretches to whatever `details-chevron` is. */
+.plusGlyph {
+    grid-column: details-chevron;
+    grid-row: 1;
+    align-self: baseline;
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    /* Same nudge as `.datafieldChevron`: box centre sits 0.5em above baseline,
+       cap-centre ~0.35em. */
+    transform: translateY(0.15em);
+}
+
+.plusGlyph:hover {
+    color: var(--accent);
+}
+
+.plusGlyph:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+}
+
+/* `line-height: 0` keeps a glyph larger than the row's text from growing the
+   1em button box — it overflows symmetrically instead, which is what a
+   disclosure control wants. The rotation lives on the mark rather than the
+   button so the × turns about its own centre and stays in its column. */
+.plusMark {
+    display: block;
+    font-family: inherit;
+    font-size: var(--text-lg);
+    line-height: 0;
+    transition: transform var(--duration-fast) var(--ease-default);
+}
+
+.plusMarkOpen {
+    transform: rotate(45deg);
+}
+
+/* The name is an input at rest: no border, no background, no padding — it reads
+   as the label it is about to become.
+
+   `field-sizing: content` (Chromium 123+, already relied on by
+   `textarea.datafieldTextarea`) is what makes the card reflow to the finished
+   width as the name is typed, rather than to a placeholder. Without it the
+   `size={1}` attribute in the JSX collapses the intrinsic width and `min-width`
+   takes over — the shared `label` track must never be widened by this input's
+   default ~20ch. */
+.nameInput {
+    grid-column: label;
+    grid-row: 1;
+    field-sizing: content;
+    min-width: var(--label-width);
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: var(--text-primary);
+}
+
+/* Darker than `--text-placeholder`, so the row is legible as an affordance
+   rather than as an empty field (SPEC → The row). */
+.nameInput::placeholder {
+    color: var(--text-secondary);
+    opacity: 1;
+}
+
+.nameInput:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: 1px;
+    border-radius: var(--radius-sm);
+}
+
+/* ── Band contents ────────────────────────────────────────────────────────── */
+
+/* Prose leading the Config band: what is being created, and where to change it.
+   Quiet — it is chrome, not a knob, and nothing about it is stored. */
+.memo {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    font-style: italic;
+    padding-bottom: var(--space-2);
+}
+
+.kindRows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.rowHead {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.rowName {
+    flex: 0 1 auto;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.rowName:hover {
+    text-decoration: underline;
+}
+
+.rowName:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+/* The selected kind / picked Definition. A persistent marker, because this is
+   draft state rather than browser focus. */
+.rowNameSelected {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.selectedMarker {
+    flex: none;
+    font-size: var(--text-xs);
+    line-height: 1;
+    color: var(--accent);
+}
+
+.notice {
+    font-size: var(--text-xs);
+    color: var(--text-placeholder);
+    font-style: italic;
+}
+
+/* One indent per level, matching ConfigRows so depth reads consistently whether
+   the level came from the Library or from a kind's config. */
+.nested {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-left: var(--chevron-col-width);
+}
+
+/* ── Tools ────────────────────────────────────────────────────────────────── */
+
+.toolsRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-6);
+    padding-top: var(--space-1);
+}
+
+.createButton {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--accent);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.createButton:disabled {
+    color: var(--text-disabled);
+    cursor: default;
+}
+
+.cancelButton {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.cancelButton:hover {
+    color: var(--text-secondary);
+}
+
+.createButton:focus-visible,
+.cancelButton:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+.error {
+    font-size: var(--text-xs);
+    color: var(--destructive);
+    padding-bottom: var(--space-2);
+}

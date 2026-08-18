@@ -4,7 +4,7 @@
  * `Edges(internal, live) + Reads.resolver` / `inline`. A live-resolved link to
  * another Element: the value is the target's id, the Renderer resolves its name.
  * No config knobs in v1 (a target-kind filter / real picker is deferred), so it
- * reuses the inert config stub. `mintVia: 'composer'` — authored as a Definition
+ * reuses the inert config stub. `mintVia: 'add-surface'` — authored as a Definition
  * like the other field kinds.
  *
  * Named for its composition, not its use (renamed from `asset-doc`, 2026-08-12).
@@ -13,8 +13,10 @@
  * `external-link`: the two exercise both halves of `TargetSpec.scope`.
  */
 
+import type { Component } from 'solid-js';
 import { ConfigFieldStubConfigForm } from './configFieldStub';
 import { InternalLinkField } from '../components/DataField/InternalLinkField';
+import type { FieldRendererProps } from './types';
 import type { DataFieldValue, DefinitionConfig, InternalLinkValue } from '../data/models';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { KindManifest } from './types';
@@ -22,10 +24,12 @@ import type { KindManifest } from './types';
 export const internalLinkManifest: KindManifest = {
     kind: 'internal-link',
     pickerLabel: 'Internal Link',
-    mintVia: 'composer',
+    authoringMemo: 'Creating an Internal Link field — pick a different Kind below to change that',
+    mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['internal-link'],
-    Renderer: InternalLinkField,
+    // Localized cast — see the note in `external-link.manifest.ts`.
+    Renderer: InternalLinkField as unknown as Component<FieldRendererProps>,
     ConfigForm: ConfigFieldStubConfigForm,
     defaultConfig: (): DefinitionConfig => ({}),
     displayPreview: (v: DataFieldValue | null) =>

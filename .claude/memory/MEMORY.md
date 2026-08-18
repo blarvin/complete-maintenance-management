@@ -7,5 +7,7 @@
 - [PS 5.1 file-rewrite encoding](ps51-file-rewrite-encoding.md) — never bulk-rewrite files via Get-Content/Set-Content; it mangles UTF-8 and adds a BOM
 - [Two machines, git bash](two-machines-git-bash.md) — never hardcode absolute paths in checked-in config; CLAUDE_PROJECT_DIR arrives empty
 - [jCodeMunch watcher setup](jcodemunch-watcher-setup.md) — Startup .cmd runs the watcher at logon; needs --with watchfiles, schtasks is denied
-- [Next branch: tree-native Field UI](next-branch-tree-native-field-ui.md) — composer + legacy add-field get replaced; [Fields UI]-tagged issues are parked
+- [Tree-native Field UI (landed)](next-branch-tree-native-field-ui.md) — Add Surface is a Field row; composer + legacy are dormant, not deleted; [Fields UI] no longer means parked
 - [Fix obvious doc prose errors](fix-obvious-doc-prose-errors.md) — repair mangled pastes and stale claims directly; report, don't ask
+- [Config tree sketches](config-tree-sketches.md) — the six ASCII wireframes: published page + transcript id, and how to recover diagrams from past sessions
+- [Chrome MCP tab runs no rAF](chrome-mcp-tab-no-raf.md) — smooth scroll / CSS animation / screenshots stall there; assert DOM state, leave motion to the user

@@ -1,0 +1,182 @@
+/* ConfigRows — a kind's config as tree rows.
+
+   Rows lay out in flex rather than the card's subgrid: they draw inside a band
+   body (`DetailBands.module.css` → `.sectionBody`), which is one grid item
+   spanning `label / end` — a plain block as far as its own children are
+   concerned. Labels align by a fixed column instead. */
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    /* One height for every control, so a checkbox row is exactly as tall as a
+       text row. Resolved against each control's own font-size, which is
+       `--text-sm` for all of them. */
+    --entry-height: 1.45em;
+}
+
+/* `center`, not `baseline`. A replaced element takes its bottom margin edge as
+   its baseline, so a baseline-aligned checkbox drags the row's text down to meet
+   it — the flag row came out taller than its neighbours with its label sitting
+   low. Every row here is single-line, so centring is equivalent for the text
+   rows and correct for the control rows. */
+.row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    min-height: 1.6em;
+}
+
+.label {
+    flex: 0 0 auto;
+    min-width: 118px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+/* ── Entry affordances: a hole, not a widget ─────────────────────────────────
+
+   Every knob shows its control at rest rather than a dash that becomes one on
+   activation. The surface behind these rows is already filled (the Add Surface
+   wears the under-construction hue), so a control needs no border to be legible
+   — the page's own background showing through *is* the affordance, and it reads
+   as somewhere to put something precisely because the fill around it does not.
+
+   That is also why there is no edit mode left in `LeafRow`: with the control
+   always present, single-click entry is what remains rather than something
+   added. `.value` / `.valueEmpty` / `.input` went with it. */
+
+.entry {
+    flex: 1 1 auto;
+    min-width: 0;
+    /* Wide enough to be an invitation, short enough that a column of them still
+       reads as a list of knobs rather than a wall of bars. */
+    max-width: 24ch;
+    height: var(--entry-height);
+    font: inherit;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0 var(--space-2);
+}
+
+.entry:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+/* A number input's native spinner appears on hover and sits proud of the hole,
+   so a number knob would flicker into looking like a widget while a text one
+   next to it stayed flat. Suppressed on both engines. */
+.entry[type='number'] {
+    appearance: textfield;
+}
+
+.entry::-webkit-inner-spin-button,
+.entry::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+/* Suppress the native select chrome so it sits flush like the text holes; the
+   caret is drawn separately in the padding this reserves. */
+.entrySelect {
+    appearance: none;
+    padding-right: calc(var(--space-2) * 2 + var(--field-chevron-size) * 1.4);
+    cursor: pointer;
+}
+
+.selectWrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 24ch;
+    position: relative;
+    display: flex;
+}
+
+.selectWrap .entry {
+    max-width: none;
+}
+
+.selectCaret {
+    position: absolute;
+    right: var(--space-2);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+/* Same hole, square — and exactly as tall as a text hole, so the flag row is
+   the same height as every other row. (The alignment half of that lives on
+   `.row`, which centres rather than baselines for this reason.) */
+.entryCheck {
+    flex: none;
+    appearance: none;
+    width: var(--entry-height);
+    height: var(--entry-height);
+    margin: 0;
+    background: var(--bg-surface);
+    border: none;
+    border-radius: var(--radius-sm);
+    position: relative;
+    cursor: pointer;
+}
+
+.entryCheck::after {
+    content: '';
+    position: absolute;
+    left: 36%;
+    top: 14%;
+    width: 24%;
+    height: 52%;
+    border: solid var(--text-primary);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    opacity: 0;
+}
+
+.entryCheck:checked::after {
+    opacity: 1;
+}
+
+.entryCheck:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+.remove {
+    flex: none;
+    font-family: inherit;
+    font-size: var(--text-sm);
+    line-height: 1;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0 var(--space-2);
+    cursor: pointer;
+}
+
+.remove:hover {
+    color: var(--destructive);
+}
+
+.addItem {
+    font-family: inherit;
+    font-size: var(--text-sm);
+    color: var(--accent);
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+.remove:focus-visible,
+.addItem:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}

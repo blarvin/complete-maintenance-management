@@ -12,8 +12,16 @@
      width 50/50. `spacer` lives BETWEEN `value` and `metadata` — the
      elastic spacer pushes `metadata` flush against the trailing chevron
      so timestamps right-align across every row.
-   - `metadata` is `auto` so it sizes to the widest metadata content.
+   - `metadata` is `auto`, but nothing is placed in it any more: both the live
+     row's metadata and each history entry's span `spacer / history-chevron`
+     instead, so the track measures 0 and stays there. That is deliberate —
+     these tracks are shared by every row of the card, so anything sized by one
+     expanded field's content resizes every other field's value (see
+     `.metadata` in DataFieldDetails.module.css). The track survives as the
+     named line those items right-align to.
    - `details-chevron` and `history-chevron` are fixed `--chevron-col-width`.
+     The leading one holds its triangle flush left, so the add surface below can
+     line its own glyph and words up with the rows above.
 
    History entries (DataFieldHistory) are direct subgrid children of
    `datafieldWrapper`. Each entry spans `value / history-chevron`, picking

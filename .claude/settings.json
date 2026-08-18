@@ -101,7 +101,6 @@
       "Edit(tests/**)",
       "Edit(cypress/**)",
       "Edit(docs/**)",
-      "Write(docs/**)",
       "Bash(find:*)",
       "Bash(echo:*)",
       "Bash(cd:*)",

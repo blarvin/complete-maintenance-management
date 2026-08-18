@@ -59,6 +59,26 @@ export type UIState = {
     expandedCards: Set<string>;        // container elementId -> card is expanded
     expandedFieldDetails: Set<string>; // field elementId -> details are expanded
     expandedNodeDetails: Set<string>;  // container elementId -> node details panel is expanded
+    /**
+     * `${persistKey}:${bandId}` -> this band's open state is flipped from its
+     * working default. Not keyed by elementId alone: one host row has several
+     * bands, and the Add Surface's key is per-node rather than per-element
+     * because its draft row has no persistent identity (see DetailBands).
+     */
+    toggledBands: Set<string>;
+};
+
+/**
+ * Where a reveal is going. Two strings wide and serializable — the payload a
+ * command layer would hand this transition later, with no DOM in it. The
+ * caller resolves `branchId` because transitions are synchronous and a Field
+ * is not in the node index (see IMPLEMENTATION.md → Reveal).
+ */
+export type RevealTarget = {
+    /** The element to centre and flash. May be a Field. */
+    elementId: string;
+    /** The node to re-root to so `elementId` is on screen. `null` → ROOT view. */
+    branchId: string | null;
 };
 
 /**
@@ -67,18 +87,25 @@ export type UIState = {
 export type AppState = {
     // Current view (FSM state)
     view: ViewState;
-    
+
     // Navigation history for back navigation
     history: string[];
-    
+
     // Under-construction state (when creating a new node)
     underConstruction: UnderConstructionData;
-    
+
     // UI preferences (persisted)
     ui: UIState;
-    
+
     // Currently editing element (only one at a time per SPEC)
     editingElementId: string | null;
+
+    /**
+     * The element to centre and flash on arrival. Ephemeral: a flash that
+     * survived a reload would be a bug, which is why this sits beside `ui`
+     * rather than inside it — everything in `ui` round-trips through uiPrefs.
+     */
+    revealedElementId: string | null;
 };
 
 /**
@@ -94,7 +121,9 @@ export function createInitialState(): AppState {
             expandedCards: prefs.expandedCards,
             expandedFieldDetails: prefs.expandedFieldDetails,
             expandedNodeDetails: prefs.expandedNodeDetails,
+            toggledBands: prefs.toggledBands,
         },
         editingElementId: null,
+        revealedElementId: null,
     };
 }

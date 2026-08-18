@@ -40,7 +40,6 @@ export const DefinitionAuthoringForm = (props: DefinitionAuthoringFormProps) => 
         pickKind,
         setLabel,
         setConfig,
-        setConfigError,
         cancel,
         save,
     } = useDefinitionDraft();
@@ -102,10 +101,11 @@ export const DefinitionAuthoringForm = (props: DefinitionAuthoringFormProps) => 
                     <Dynamic
                         component={getDefinitionAuthoring(kind())!.ConfigForm}
                         config={config()}
-                        onChange={(cfg: DefinitionConfig, error?: string | null) => {
-                            setConfig(cfg);
-                            setConfigError(error ?? null);
-                        }}
+                        // The second argument of `ConfigFormProps.onChange` is
+                        // dropped: the draft derives `configError` from the live
+                        // config via `CONFIG_VALIDATORS`, which is where these
+                        // forms' cross-field rules moved. Nothing to store.
+                        onChange={(cfg: DefinitionConfig) => setConfig(cfg)}
                     />
                 </div>
             </div>

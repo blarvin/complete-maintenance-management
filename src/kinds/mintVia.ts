@@ -23,18 +23,18 @@ import type { MintVia } from './types';
 
 export const KIND_MINT_VIA = {
     node: 'node-create',
-    'text-kv': 'composer',
-    'enum-kv': 'composer',
-    'number-kv': 'composer',
-    'single-image': 'composer',
+    'text-kv': 'add-surface',
+    'enum-kv': 'add-surface',
+    'number-kv': 'add-surface',
+    'single-image': 'add-surface',
     org: 'node-create',
     job: 'node-create',
     // Framework-provisioned lenses — materialized per node, never user-picked.
     jobs: 'provision',
     'log-entry': 'node-create',
     logbook: 'provision',
-    'internal-link': 'composer',
-    'external-link': 'composer',
+    'internal-link': 'add-surface',
+    'external-link': 'add-surface',
     // Config-only sub-field kinds — real kinds, but only inside a config subtree.
     flag: 'config-only',
     compound: 'config-only',

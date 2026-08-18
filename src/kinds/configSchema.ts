@@ -10,8 +10,17 @@
  */
 
 import type { ConfigSubField } from './types';
-import type { CompoundValue, Kind, NumberKvConfig } from '../data/models';
-import { packThresholds, validateThresholds } from '../components/DataField/numberKvState';
+import type { CompoundValue, DefinitionConfig, EnumKvConfig, Kind, NumberKvConfig } from '../data/models';
+import {
+    packThresholds,
+    validateThresholds,
+    validateNumberKvConfig,
+} from '../components/DataField/numberKvState';
+
+const isCurrency = (c: Record<string, unknown>) => c.displayFormat === 'currency';
+/** `nominalMode` defaults to `range` when unset (ELEMENT-MODEL → number-kv). */
+const isRangeMode = (c: Record<string, unknown>) => (c.nominalMode ?? 'range') === 'range';
+const isDiscreteMode = (c: Record<string, unknown>) => c.nominalMode === 'discrete';
 
 export const TEXT_KV_CONFIG_SCHEMA: ConfigSubField[] = [
     { key: 'maxLength', label: 'Max length', kind: 'number-kv', disposition: 'owned' },
@@ -21,27 +30,71 @@ export const TEXT_KV_CONFIG_SCHEMA: ConfigSubField[] = [
 ];
 
 export const ENUM_KV_CONFIG_SCHEMA: ConfigSubField[] = [
-    { key: 'options', label: 'Options', kind: 'string-list', disposition: 'owned' },
+    {
+        key: 'options', label: 'Options', kind: 'string-list', disposition: 'owned',
+        // The draft seeds two blank rows (see the manifest's `defaultConfig`), and
+        // a user adding a third may well leave it empty — so blanks are stripped
+        // on the way to storage rather than persisted as empty choices. This is
+        // what `pack` is for: authoring shape in, stored value out.
+        pack: (c) => {
+            const filled = ((c.options as string[] | undefined) ?? [])
+                .map((o) => o.trim())
+                .filter((o) => o !== '');
+            return filled.length ? filled : undefined;
+        },
+    },
     { key: 'allowOther', label: 'Allow other', kind: 'flag', disposition: 'delegated' },
-    { key: 'default', label: 'Default', kind: 'text-kv', disposition: 'delegated' },
+    {
+        // A picker over the options being typed above, not a free text box: the
+        // cross-field rule is `default ∈ options`, so offering anything else is
+        // offering a validation error. `enum-kv` rather than `text-kv` because
+        // that is what the value actually is.
+        key: 'default', label: 'Default', kind: 'enum-kv', disposition: 'delegated',
+        dynamicOptions: (c) =>
+            ((c.options as string[] | undefined) ?? [])
+                .map((o) => o.trim())
+                .filter((o) => o !== ''),
+    },
 ];
 
+/**
+ * `number-kv` is the deliberately rich kind. Its knobs are **one flat list** in
+ * render order: `unitsSymbol` is the required one and leads; the rest follow,
+ * with `visibleWhen` hiding the ones the current config makes irrelevant.
+ *
+ * The three collapsible authoring tiers this kind used to carry were removed
+ * 2026-08-16 — see SUPERSEDED → *number-kv progressive disclosure* for the
+ * reasoning, and LATER → *Config authoring: progressive disclosure* for what it
+ * would take to bring them back.
+ */
 export const NUMBER_KV_CONFIG_SCHEMA: ConfigSubField[] = [
     { key: 'unitsSymbol', label: 'Units symbol', kind: 'text-kv', disposition: 'owned' },
     { key: 'unitsLongForm', label: 'Units (long form)', kind: 'text-kv', disposition: 'owned' },
     { key: 'affixPosition', label: 'Affix position', kind: 'enum-kv', disposition: 'delegated', options: ['prefix', 'suffix'] },
     { key: 'decimals', label: 'Decimals', kind: 'number-kv', disposition: 'owned' },
     { key: 'displayFormat', label: 'Display format', kind: 'enum-kv', disposition: 'delegated', options: ['decimal', 'scientific', 'engineering', 'percent', 'currency'] },
-    { key: 'currencyCode', label: 'Currency code', kind: 'text-kv', disposition: 'owned' },
+    { key: 'currencyCode', label: 'Currency code', kind: 'text-kv', disposition: 'owned', visibleWhen: isCurrency },
     { key: 'nominalMode', label: 'Nominal mode', kind: 'enum-kv', disposition: 'owned', options: ['range', 'discrete'] },
-    { key: 'nominalMin', label: 'Nominal min', kind: 'number-kv', disposition: 'owned' },
-    { key: 'nominalMax', label: 'Nominal max', kind: 'number-kv', disposition: 'owned' },
-    { key: 'nominalValue', label: 'Nominal value', kind: 'number-kv', disposition: 'owned' },
-    { key: 'tolerance', label: 'Tolerance', kind: 'number-kv', disposition: 'owned' },
+    // `nominalMode` selects which pair is authorable; the other is hidden rather
+    // than disabled, so the form never shows two contradictory nominals at once.
+    { key: 'nominalMin', label: 'Nominal min', kind: 'number-kv', disposition: 'owned', visibleWhen: isRangeMode },
+    { key: 'nominalMax', label: 'Nominal max', kind: 'number-kv', disposition: 'owned', visibleWhen: isRangeMode },
+    { key: 'nominalValue', label: 'Nominal value', kind: 'number-kv', disposition: 'owned', visibleWhen: isDiscreteMode },
+    { key: 'tolerance', label: 'Tolerance', kind: 'number-kv', disposition: 'owned', visibleWhen: isDiscreteMode },
     {
         // The one object-valued residue: {LL,L,H,HH} co-vary, so they bundle into
         // a single atomic compound sub-field with its own ordering guard.
+        // `members` are the same flat draft keys `pack` reads — authoring draws
+        // them as four sibling rows; storage still writes one packed object. The
+        // member labels carry `Threshold` because this sub-field's own label no
+        // longer renders above them (ISA-18.2 LL/L/H/HH, ELEMENT-MODEL → number-kv).
         key: 'thresholds', label: 'Thresholds', kind: 'compound', disposition: 'owned',
+        members: [
+            { key: 'lowLow', label: 'Threshold LL', kind: 'number-kv' },
+            { key: 'low', label: 'Threshold L', kind: 'number-kv' },
+            { key: 'high', label: 'Threshold H', kind: 'number-kv' },
+            { key: 'highHigh', label: 'Threshold HH', kind: 'number-kv' },
+        ],
         pack: (c) => {
             const t = packThresholds(c as unknown as NumberKvConfig);
             return Object.keys(t).length ? t : undefined;
@@ -72,4 +125,37 @@ export const CONFIG_SCHEMAS: Partial<Record<Kind, ConfigSubField[]>> = {
     'number-kv': NUMBER_KV_CONFIG_SCHEMA,
     'single-image': SINGLE_IMAGE_CONFIG_SCHEMA,
     logbook: LOGBOOK_CONFIG_SCHEMA,
+};
+
+/**
+ * Cross-field config invariants — the rules that span sub-fields and so belong
+ * to no single one of them. This is what a per-kind `ConfigForm` used to exist
+ * for: authoring is rows now, so an invariant is validation rather than a
+ * bespoke component.
+ *
+ * A sub-field's *own* guard stays on its `validate` (thresholds' internal
+ * ordering); this is only for rules that read more than one key.
+ */
+export const CONFIG_VALIDATORS: Partial<Record<Kind, (config: DefinitionConfig) => string | null>> = {
+    // Nominal-vs-threshold ordering, currency ⇒ currencyCode, decimals ≥ 0,
+    // refresh > 0 — already written and already component-free.
+    'number-kv': (config) => validateNumberKvConfig(config as NumberKvConfig),
+
+    // `options` is the vocabulary `default` must belong to, which is exactly why
+    // the two cannot be authored as independent rows.
+    'enum-kv': (config) => {
+        const { options, default: fallback } = config as EnumKvConfig;
+        const filled = (options ?? []).filter((o) => o.trim() !== '');
+        // Two, not one: an enum is a *choice*, and one option is a constant with
+        // nothing to select. Two is also the floor for a reason — a two-option
+        // enum is how this app makes a yes/no field, since `flag` is
+        // `mintVia: 'config-only'` and never offered as a Definition. The draft
+        // therefore seeds two blank rows and this is the matching gate, so the
+        // surface and the validator say the same thing.
+        if (filled.length < 2) return 'Needs at least two options';
+        if (fallback !== undefined && fallback !== '' && !filled.includes(fallback)) {
+            return `Default (${fallback}) must be one of the options`;
+        }
+        return null;
+    },
 };

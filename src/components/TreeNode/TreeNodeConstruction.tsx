@@ -1,10 +1,11 @@
 /**
  * TreeNodeConstruction - Under-construction mode UI for TreeNode.
  *
- * Renders inputs for name/subtitle and uses FieldList (composer-mode) for the
- * field batch. On Save, props.onCreate creates the empty node; the in-flight
- * composer rows (persisted in localStorage by nodeId) are committed by
- * useNodeCreation right after the node exists — no handle into the composer.
+ * Renders inputs for name/subtitle and mounts FieldList in construction mode
+ * for the field batch — which draws nothing while ENABLED_ADD_FIELD_SURFACES
+ * is empty. On Save, props.onCreate creates the empty node; the pending draft
+ * (persisted in localStorage by nodeId) is seeded-if-empty and committed by
+ * useNodeCreation right after the node exists — no handle into any surface.
  */
 
 import { createSignal, onMount } from 'solid-js';
@@ -12,14 +13,8 @@ import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
-import { DEFINITION_IDS } from '../../data/services/seedDefinitions';
+import { CONSTRUCTION_DEFAULT_DEFINITION_IDS } from '../../data/definitionIds';
 import styles from './TreeNode.module.css';
-
-const DEFAULT_DEFINITION_IDS = [
-    DEFINITION_IDS.typeOf,
-    DEFINITION_IDS.description,
-    DEFINITION_IDS.tags,
-] as const;
 
 // Re-export for backwards compatibility
 export type { ConstructionField } from './types';
@@ -110,7 +105,7 @@ export const TreeNodeConstruction = (props: TreeNodeConstructionProps) => {
                 <FieldList
                     nodeId={props.id}
                     isConstruction={true}
-                    initialDefinitionIds={DEFAULT_DEFINITION_IDS}
+                    initialDefinitionIds={CONSTRUCTION_DEFAULT_DEFINITION_IDS}
                 />
             </DataCard>
         </div>

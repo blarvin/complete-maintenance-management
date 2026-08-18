@@ -207,6 +207,28 @@ export function filterDeleted<T extends SoftDeletable>(entities: T[]): T[] {
 }
 
 // ============================================================================
+// Value presence
+// ============================================================================
+
+/**
+ * Whether a field-like Element holds no value yet — the `isUnfilled` state
+ * (SPEC → DataField States).
+ *
+ * **Derived, never stored.** An unfilled field is a *recorded intention* ("this
+ * pump has a serial number; nobody has read the plate yet"), not an unfinished
+ * form, so it is read off the value rather than tracked — it resolves the moment
+ * a value lands and returns if one is cleared.
+ *
+ * `''` counts alongside `null`: `parseText` writes `null` for a blank
+ * (`TextKvField.tsx`), but an empty string can still arrive from a sync pull or
+ * an older row, and an empty-string field is just as unfilled to a reader.
+ * Single definition on purpose — nothing else may re-derive this.
+ */
+export function isUnfilled(value: DataFieldValue | null | undefined): boolean {
+  return value === null || value === undefined || value === '';
+}
+
+// ============================================================================
 // History
 // ============================================================================
 

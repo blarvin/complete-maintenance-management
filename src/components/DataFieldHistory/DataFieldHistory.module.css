@@ -120,8 +120,14 @@
     min-width: 0;
 }
 
+/* Same span-a-flexible-track treatment as `.metadata` on the live row: sitting
+   in the `metadata` track would let a history entry's timestamp size a track the
+   whole card shares, reflowing every other field's value. Right edge is the
+   `history-chevron` line either way, so entry metadata still aligns under live
+   metadata. */
 .historyMeta {
-    grid-column: metadata;  /* aligns with outer `metadata` */
+    grid-column: spacer / history-chevron;
+    justify-self: end;
     text-align: right;
     color: var(--text-metadata);
     font-size: var(--text-sm); /* match .metadata above for visual alignment */

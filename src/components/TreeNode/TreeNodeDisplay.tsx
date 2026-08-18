@@ -5,14 +5,16 @@
  * Field logic is delegated to FieldList component.
  */
 
-import { Show } from 'solid-js';
+import { Show, createSignal } from 'solid-js';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
+import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
@@ -36,6 +38,11 @@ export type TreeNodeDisplayProps = {
 export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     const appState = useAppState();
     const { toggleCardExpanded, toggleNodeDetailsExpanded } = useAppTransitions();
+
+    // Reveal target: a link pointing at this node brings it into view and
+    // flashes it here, leaving the tap that re-roots to the user.
+    const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
+    const isRevealed = useRevealOnArrival(() => props.id, wrapperEl);
 
     // Card / node-details state from the FSM (persisted)
     const isExpanded = () => selectors.getDataCardState(appState, props.id) === 'EXPANDED';
@@ -79,7 +86,14 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     const showDataCard = () => ownsChildren() || isLens();
 
     return (
-        <div class={styles.nodeWrapper} style={{ '--datacard-indent': indentVar() }}>
+        <div
+            ref={setWrapperEl}
+            classList={{
+                [styles.nodeWrapper]: true,
+                [styles.nodeWrapperRevealed]: isRevealed(),
+            }}
+            style={{ '--datacard-indent': indentVar() }}
+        >
             <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded()}>
                 <div>
                     <TreeBreadcrumbs nodeId={props.id} />
@@ -92,6 +106,9 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
 
                         {/* Future: Breadcrumb hierarchy */}
                         {/* Path: Root > Parent > Current */}
+                    </div>
+                    <div class={detailsStyles.idRow}>
+                        <ElementIdRow id={props.id} />
                     </div>
                     <div class={detailsStyles.actionsRow}>
                         <button
@@ -124,7 +141,7 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             <Show when={showDataCard()}>
                 <DataCard isOpen={isExpanded()}>
                     <Show when={ownsChildren()}>
-                        <FieldList nodeId={props.id} isConstruction={false} />
+                        <FieldList nodeId={props.id} kind={props.kind} isConstruction={false} />
                     </Show>
                     {/* The compact in-card rollup is the lens's CHILD (under-a-node)
                         summary only. Re-rooted (PARENT), the jobs render as Node-like

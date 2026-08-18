@@ -45,6 +45,10 @@
   --bg-selected: var(--color-blue-100);
   --bg-selected-hover: var(--color-blue-200);
   --bg-expanded: var(--color-gray-300);
+  /* A row holding an uncommitted draft — the Add Surface's under-construction
+     tint. A hue rather than another grey (SPEC → Style Guide): it sits inside
+     the expanded-field shade and must not read as it. */
+  --bg-construction: var(--color-yellow-100);
 
   --border-default: var(--color-black);
   --border-muted: var(--color-gray-400);
@@ -80,11 +84,24 @@
   /* === LAYOUT CONSTANTS === */
   --container-max: 650px;
   --container-min: 240px;
-  --chevron-col-width: 24px;
+  /* The disclosure column: every tree row's chevron box, the matching spacer on
+     rows that can't expand, and one level of indent. Sized to the widest glyph
+     it holds (the 10px expanded triangle) plus a little air — it was 24px, which
+     left ~17px of dead space before the label on every row and every level. */
+  --chevron-col-width: 14px;
   --node-chevron-size: 28px;
   /* Field chevrons are CSS triangles (border-trick), sized in px so the
      visual size is independent of font scaling. */
   --field-chevron-size: 5px;
+  /* The triangle itself, as `border-width` shorthands. Tokens rather than a
+     shared rule because the glyph is drawn two ways — on a `::before`
+     (disclosure.module.css) and on a real element (DetailBands) — and a
+     pseudo-element cannot take a class, so the two forms cannot share one
+     selector. They carried byte-identical copies of this math until 2026-08-16. */
+  --chevron-glyph-right: var(--field-chevron-size) 0 var(--field-chevron-size)
+      calc(var(--field-chevron-size) * 1.4);
+  --chevron-glyph-down: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
+      var(--field-chevron-size);
   --label-width: 50px;
   --child-indent: 32px;
   --datacard-indent: 30px;

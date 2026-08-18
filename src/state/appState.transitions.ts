@@ -5,7 +5,7 @@
  * Transitions are guarded and ensure invalid states are impossible.
  */
 
-import type { AppState, UnderConstructionData } from './appState.types';
+import type { AppState, RevealTarget, UnderConstructionData } from './appState.types';
 import { saveUIPrefs } from './uiPrefs';
 import { guards } from './guards';
 
@@ -14,6 +14,7 @@ function persistUIPrefs(state: AppState): void {
         expandedCards: state.ui.expandedCards,
         expandedFieldDetails: state.ui.expandedFieldDetails,
         expandedNodeDetails: state.ui.expandedNodeDetails,
+        toggledBands: state.ui.toggledBands,
     });
 }
 
@@ -26,6 +27,7 @@ function persistUIPrefs(state: AppState): void {
  *   BRANCH → BRANCH(parentId) [navigateUp]
  *   BRANCH → ROOT             [navigateUp when at root-level node]
  *   * → ROOT                  [navigateToRoot]
+ *   * → ROOT | BRANCH(owner)  [revealElement]
  */
 export const transitions = {
     /**
@@ -44,6 +46,7 @@ export const transitions = {
 
         // Clear any editing state
         state.editingElementId = null;
+        state.revealedElementId = null;
     },
 
     /**
@@ -66,6 +69,7 @@ export const transitions = {
 
         // Clear any editing state
         state.editingElementId = null;
+        state.revealedElementId = null;
     },
 
     /**
@@ -73,10 +77,57 @@ export const transitions = {
      */
     navigateToRoot: (state: AppState): void => {
         if (!guards.notUnderConstruction(state)) return;
-        
+
         state.view = { state: 'ROOT' };
         state.history = [];
         state.editingElementId = null;
+        state.revealedElementId = null;
+    },
+
+    /**
+     * Reveal an element: show it *where it already lives*, rather than making it
+     * the new branch root. Brings the owning node into view, opens its card, and
+     * marks the element so the row that eventually mounts can centre and flash
+     * itself (see `useRevealOnArrival`).
+     *
+     * This is what `→` on an `internal-link` does, whatever the target's kind —
+     * one glyph, one behaviour. Re-rooting a node target as well would give one
+     * affordance two meanings depending on what is behind it; revealing a node
+     * still leaves it one tap from being re-rooted, and doesn't cost you your
+     * place if that isn't what you wanted.
+     *
+     * `branchId` is resolved by the caller, not derived here: transitions are
+     * synchronous and pure, and a Field is not in the node index.
+     */
+    revealElement: (state: AppState, target: RevealTarget): void => {
+        if (!guards.notUnderConstruction(state)) return;
+
+        if (target.branchId === null) {
+            state.view = { state: 'ROOT' };
+            state.history = [];
+        } else {
+            state.view = { state: 'BRANCH', elementId: target.branchId };
+            // Open the owner's card so a Field row is actually on screen when it
+            // arrives. Card expansion is device-local view state, so unlike the
+            // reveal itself this one does belong in the persisted half.
+            const newSet = new Set(state.ui.expandedCards);
+            newSet.add(target.branchId);
+            state.ui.expandedCards = newSet;
+        }
+
+        state.editingElementId = null;
+        state.revealedElementId = target.elementId;
+
+        persistUIPrefs(state);
+    },
+
+    /**
+     * Drop the pending reveal. Called by the flashing row once its animation is
+     * done, and by every navigation transition so a stale flash can't outlive
+     * the view it belonged to.
+     */
+    clearReveal: (state: AppState): void => {
+        state.revealedElementId = null;
     },
 
     /**
@@ -143,6 +194,26 @@ export const transitions = {
             newSet.add(nodeId);
         }
         state.ui.expandedNodeDetails = newSet;
+
+        persistUIPrefs(state);
+    },
+
+    /**
+     * Flip one band's open state away from (or back to) its working default.
+     *
+     * Stores the *override*, not the value — see `UIPrefs.toggledBands`. Lives
+     * here rather than in `DetailBands` because the details region remounts on
+     * every collapse (`<Show>` in DataField), which discarded component-local
+     * band state every time the field was closed.
+     */
+    toggleBandOpen: (state: AppState, bandKey: string): void => {
+        const newSet = new Set(state.ui.toggledBands);
+        if (newSet.has(bandKey)) {
+            newSet.delete(bandKey);
+        } else {
+            newSet.add(bandKey);
+        }
+        state.ui.toggledBands = newSet;
 
         persistUIPrefs(state);
     },

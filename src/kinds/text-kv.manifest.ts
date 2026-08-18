@@ -9,7 +9,8 @@ import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types'
 export const textKvManifest: KindManifest = {
     kind: 'text-kv',
     pickerLabel: 'Text',
-    mintVia: 'composer',
+    authoringMemo: 'Creating a Text field — pick a different Kind below to change that',
+    mintVia: 'add-surface',
     placement: 'inline',
     ...KIND_CAPABILITIES['text-kv'], // capability subset — structural seam, not read yet
     Renderer: TextKvField as unknown as Component<FieldRendererProps>,

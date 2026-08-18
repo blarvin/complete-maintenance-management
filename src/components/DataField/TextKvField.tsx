@@ -25,6 +25,8 @@ export type TextKvFieldProps = {
     definitionId: string;
     value: string | null;
     rootRef: Accessor<HTMLElement | undefined>;
+    /** Draft config, for a row with no Definition to fetch from (the Add Surface). */
+    config?: TextKvConfig;
     /** When set, edits are buffered (no IDB write) and forwarded via onChange.
      *  `autoFocus` is set only for the row the user just ticked. */
     pendingMode?: { onChange: (value: string | null) => void | Promise<void>; autoFocus?: boolean };
@@ -55,9 +57,11 @@ const makeValidate = (config: TextKvConfig) => {
 
 export const TextKvField = (props: TextKvFieldProps) => {
     // Error-catching fetcher: never enters the throwing state (no ErrorBoundary);
-    // missing/wrong-kind def degrades to an empty config.
-    const [config] = createResource(
-        () => props.definitionId,
+    // missing/wrong-kind def degrades to an empty config. A null source skips the
+    // fetch entirely — a draft row carries its config on the prop and has no
+    // Definition to read.
+    const [fetched] = createResource(
+        () => (props.config ? null : props.definitionId),
         async (definitionId): Promise<TextKvConfig> => {
             try {
                 const def = await getDefinitionQueries().getDefinitionById(definitionId);
@@ -69,7 +73,13 @@ export const TextKvField = (props: TextKvFieldProps) => {
         },
     );
 
+    const config = () => props.config ?? fetched();
+
     return (
+        // `keyed` remounts the body when the config object's identity changes,
+        // which for a draft is every edit in the Config band. Intended: the body
+        // captures config as a mount-time constant, and an enum's options must
+        // reach the value slot.
         <Show when={config()} keyed fallback={<span class={styles.datafieldValue}>…</span>}>
             {(cfg) => <TextKvBody {...props} config={cfg} />}
         </Show>

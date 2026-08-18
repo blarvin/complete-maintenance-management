@@ -94,6 +94,27 @@ button {
     caret-color: transparent;
 }
 
+/* …but every declaration above inherits, and `.no-caret` sits on the DataCard
+   and on each DataField wrapper — so text entry anywhere inside a card is born
+   caretless and unselectable unless it opts back out. Opting out per input
+   doesn't scale (three surfaces shipped without it); do it once, here. The
+   double-tap-to-edit gesture guard is unaffected: it lives on the *display*
+   span (`.datafieldValueEditable`), not on the input that replaces it. */
+.no-caret :is(input, textarea) {
+    caret-color: auto;
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+}
+
+/* Non-text inputs are controls, not text — keep the pointer. */
+.no-caret input:is([type='checkbox'], [type='radio'], [type='file'],
+                  [type='button'], [type='submit'], [type='range'], [type='color']) {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 /* Button reset - strips all default button styling */
 .btn-reset {
     appearance: none;

@@ -14,7 +14,7 @@
 
 import { createContext, useContext } from 'solid-js';
 import { createStore, produce } from 'solid-js/store';
-import type { AppState, UnderConstructionData } from './appState.types';
+import type { AppState, RevealTarget, UnderConstructionData } from './appState.types';
 import { createInitialState } from './appState.types';
 import { transitions } from './appState.transitions';
 
@@ -22,12 +22,15 @@ export type AppActions = {
     navigateToNode: (elementId: string) => void;
     navigateUp: (parentId: string | null) => void;
     navigateToRoot: () => void;
+    revealElement: (target: RevealTarget) => void;
+    clearReveal: () => void;
     startConstruction: (data: NonNullable<UnderConstructionData>) => void;
     cancelConstruction: () => void;
     completeConstruction: () => void;
     toggleCardExpanded: (nodeId: string) => void;
     toggleFieldDetailsExpanded: (fieldId: string) => void;
     toggleNodeDetailsExpanded: (nodeId: string) => void;
+    toggleBandOpen: (bandKey: string) => void;
     startFieldEdit: (fieldId: string) => void;
     stopFieldEdit: () => void;
 };
@@ -47,6 +50,10 @@ export function createAppState(): AppStateContextValue {
             setState(produce((s) => transitions.navigateUp(s, parentId))),
         navigateToRoot: () =>
             setState(produce((s) => transitions.navigateToRoot(s))),
+        revealElement: (target) =>
+            setState(produce((s) => transitions.revealElement(s, target))),
+        clearReveal: () =>
+            setState(produce((s) => transitions.clearReveal(s))),
         startConstruction: (data) =>
             setState(produce((s) => transitions.startConstruction(s, data))),
         cancelConstruction: () =>
@@ -59,6 +66,8 @@ export function createAppState(): AppStateContextValue {
             setState(produce((s) => transitions.toggleFieldDetailsExpanded(s, fieldId))),
         toggleNodeDetailsExpanded: (nodeId) =>
             setState(produce((s) => transitions.toggleNodeDetailsExpanded(s, nodeId))),
+        toggleBandOpen: (bandKey) =>
+            setState(produce((s) => transitions.toggleBandOpen(s, bandKey))),
         startFieldEdit: (fieldId) =>
             setState(produce((s) => transitions.startFieldEdit(s, fieldId))),
         stopFieldEdit: () =>

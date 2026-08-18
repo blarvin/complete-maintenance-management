@@ -16,15 +16,22 @@ export const USER_ID = "localUser" as const;
 export const AUTHOR_ID_APP_DEVELOPER = "appDeveloper" as const;
 
 /**
- * Which add-field surfaces FieldList renders in display mode (A/B roster).
- * Construction mode always uses the composer regardless of this list.
- * See src/components/FieldList/addFieldSurfaces.ts for the surface contract.
+ * Which add-field surfaces FieldList renders — in *both* display and
+ * construction mode. See src/components/FieldList/addFieldSurfaces.ts for the
+ * surface contract.
+ *
+ * The tree-native Add Surface runs alone. The two legacy surfaces are still in
+ * the codebase and still work — add their ids back to compare all three side by
+ * side in the running app, which is why the new surface shipped as a roster
+ * entry rather than a replacement.
+ *
+ * They can be deleted, along with this roster, once the new surface is settled
+ * (ISSUES → Tech Debt). Until then this line is the whole switch.
  */
 export const ENABLED_ADD_FIELD_SURFACES: readonly AddFieldSurfaceId[] = [
-    "composer",
-    "legacy",
-];
-
+    'add-surface',
+]; // 'add-surface', 'composer', 'legacy' or any subset
+ 
 /**
  * Max push attempts per sync queue item before it's parked as exhausted
  * (surfaced via error snackbar with Retry; re-armed on app startup).

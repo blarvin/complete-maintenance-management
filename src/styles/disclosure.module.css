@@ -1,0 +1,88 @@
+/* Shared disclosure triangle. Two halves, because two kinds of host want it:
+
+   - **The glyph** (`.glyph*`) — the bare triangle, applied to a real element.
+     For a host that already owns its own box: DetailBands draws its chevron as
+     a span inside the heading button, so it wants the triangle and nothing else.
+   - **The box** (`.chevron*`) — the flex-row disclosure column with the glyph on
+     its `::before`. For tree rows that want the whole gesture: the config rows
+     inside an authoring row and inside a group, and the Kind band's rows.
+
+   The border math lives in `--chevron-glyph-right` / `--chevron-glyph-down`
+   (tokens.css) rather than in a shared rule, because a pseudo-element cannot
+   take a class — so the two forms below cannot share a selector, only a value.
+   DetailBands carried its own byte-identical copy until 2026-08-16.
+
+   Deliberately NOT shared with `DataField.module.css`'s chevron: that one is
+   grid-positioned into a named subgrid column (`grid-column: details-chevron`)
+   and pins differently for block-shaped values. Same triangle, different
+   positioning contract — merging them would couple the card's grid to this. */
+
+/* ── The glyph ──────────────────────────────────────────────────────────── */
+
+.glyph {
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.glyphRight {
+    border-width: var(--chevron-glyph-right);
+    border-left-color: currentColor;
+}
+
+.glyphDown {
+    border-width: var(--chevron-glyph-down);
+    border-top-color: currentColor;
+}
+
+/* ── The box ────────────────────────────────────────────────────────────── */
+
+.chevron {
+    flex: none;
+    align-self: baseline;
+    width: var(--chevron-col-width);
+    height: 1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--border-default);
+    cursor: pointer;
+    /* Box centre sits 0.5em above baseline, cap-centre ~0.35em; drop the
+       difference so the triangle lands on the adjacent text's cap-centre. */
+    transform: translateY(0.15em);
+}
+
+.chevron::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.chevronRight::before {
+    border-width: var(--chevron-glyph-right);
+    border-left-color: currentColor;
+}
+
+.chevronDown::before {
+    border-width: var(--chevron-glyph-down);
+    border-top-color: currentColor;
+}
+
+.chevron:hover {
+    color: var(--text-secondary);
+}
+
+/* A leaf row keeps the same indent as a parent's chevron so labels line up
+   down the column whether or not a row can expand. */
+.chevronSpacer {
+    flex: none;
+    width: var(--chevron-col-width);
+}

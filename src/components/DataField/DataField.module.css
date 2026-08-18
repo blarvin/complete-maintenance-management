@@ -21,6 +21,45 @@
     border-radius: var(--radius-sm);
 }
 
+/* Reveal-on-arrival: this row is what an `internal-link`'s `→` was pointing at.
+   One pulse, then gone — `useRevealOnArrival` drops the class on a timeout, so
+   nothing here loops or needs an end state. The outline is drawn rather than the
+   border so the row's grid geometry doesn't shift as it fires. */
+.datafieldWrapperRevealed {
+    border-radius: var(--radius-sm);
+    animation: datafieldReveal 1.4s ease-out;
+}
+
+@keyframes datafieldReveal {
+    0% {
+        background: var(--bg-expanded);
+        outline: var(--border-width) solid var(--accent);
+        outline-offset: 2px;
+    }
+    70% {
+        background: var(--bg-expanded);
+        outline: var(--border-width) solid var(--accent);
+        outline-offset: 2px;
+    }
+    100% {
+        background: transparent;
+        outline: var(--border-width) solid transparent;
+        outline-offset: 2px;
+    }
+}
+
+/* Reduced motion: the reveal still has to be *visible* — it is the whole point
+   of the trip — so it degrades to a static outline that the same timeout clears,
+   not to nothing. */
+@media (prefers-reduced-motion: reduce) {
+    .datafieldWrapperRevealed {
+        animation: none;
+        background: var(--bg-expanded);
+        outline: var(--border-width) solid var(--accent);
+        outline-offset: 2px;
+    }
+}
+
 /* Construction mode field - same as datafield but without the chevron column */
 .constructionField {
     display: grid;
@@ -33,15 +72,19 @@
 /* Field-row chevron — CSS triangle (border-trick) inside a flex button.
    Sized in px (no font baggage) and centered onto the adjacent text's
    cap-center via `align-self: baseline` + a small em-based translate.
-   Triangle direction is set by the orientation modifier classes below. */
+   Triangle direction is set by the orientation modifier classes below.
+
+   Horizontally the triangle is flush left, not centred, so it lines up with the
+   "+ Add Field" row below — a full-row child starting at this track's left edge.
+   No `width`: the button stretches to whatever `details-chevron` is, so the
+   track is the only place that column's width is decided. */
 .datafieldChevron {
     grid-column: details-chevron;
     align-self: baseline;
-    width: var(--chevron-col-width);
     height: 1em;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     background: none;
     border: none;
     padding: 0;
@@ -101,8 +144,79 @@
     cursor: default;
 }
 
+/* isUnfilled — a fact the record doesn't hold yet. De-emphasis, not colour:
+   it marks an absence, not an action (SPEC → Style Guide). Dimming the *label*
+   is what makes it scannable — the label column reads as a work list down the
+   card, whatever each renderer draws in the value column. Higher specificity
+   than .datafieldLabel above, so it wins without !important. */
+.datafieldWrapperUnfilled .datafieldLabel {
+    color: var(--text-muted);
+}
+
+/* The value takes the whole run from `value` to the trailing chevron, at every
+   width. It used to auto-place into `value` alone, which is one of two equal
+   `1fr` tracks — so a Description wrapped inside half the card while the other
+   half sat empty. Nothing competes for the right of row 1 any more: the
+   metadata moved to its own row (DataFieldDetails.module.css → `.metadata`).
+
+   `.datafieldValue` is also worn by the read-only config renderers, but those
+   draw inside a band body (`DetailBands.module.css` → `.sectionBody`) — a plain
+   block, not a grid item — where these two properties are simply ignored. */
 .datafieldValue {
+    grid-column: value / history-chevron;
+    grid-row: 1;
     color: var(--text-secondary);
+}
+
+/* external-link at rest: the value surface and the open-link target side by side
+   in the one value cell (see ExternalLinkField — *two targets, two acts*). The
+   row takes the grid placement so the text inside it can be a plain flex child;
+   `.datafieldValue`'s own `grid-column` / `grid-row` are simply ignored there,
+   the same way they are inside a config band body. */
+.datafieldLinkRow {
+    grid-column: value / history-chevron;
+    grid-row: 1;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+/* A long URL must wrap inside the cell rather than widen the shared track. */
+.datafieldLinkRow .datafieldValue {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The travel affordance, worn by both link kinds: `external-link`'s `↗` (an
+   anchor, opens a tab) and `internal-link`'s `→` (a button, reveals the target
+   where it lives). One class because it is one role — the only thing in the row
+   that leaves it — so the resets cover both element types. */
+.datafieldLinkOpen {
+    flex: none;
+    color: var(--accent);
+    text-decoration: none;
+    line-height: 1;
+    padding: 0 var(--space-1);
+    background: none;
+    border: none;
+    font: inherit;
+    /* Deliberately larger and heavier than the row's text: it is a target, not a
+       word, and at `--text-sm` regular weight the glyph read as punctuation. */
+    font-size: var(--text-base);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.datafieldLinkOpen:hover {
+    text-decoration: underline;
+}
+
+.datafieldLinkOpen:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-sm);
 }
 
 /* Underline shows only while focused — both the focusable display element
@@ -136,11 +250,9 @@ input.datafieldValue {
     margin: 0;
     font: inherit;
     color: inherit;
-    user-select: text;
-    cursor: text;
-    /* Override inherited `caret-color: transparent` from .no-caret ancestors —
-       we need a visible caret while actively inputting a value. */
-    caret-color: auto;
+    /* Caret / selection / cursor come from the global `.no-caret :is(input,
+       textarea)` opt-out (global.css) — every input here has a .no-caret
+       ancestor, so opting out per input is redundant. */
     touch-action: manipulation;
 }
 
@@ -158,9 +270,6 @@ textarea.datafieldTextarea {
     margin: 0;
     font: inherit;
     color: inherit;
-    user-select: text;
-    cursor: text;
-    caret-color: auto;
     touch-action: manipulation;
     width: 100%;
     resize: vertical;
@@ -176,16 +285,10 @@ textarea.datafieldTextarea {
     font-style: italic;
 }
 
-/* Mobile: metadata wraps to its own row beneath the value (see
-   DataFieldDetails.module.css and DataFieldHistory.module.css for the
-   matching overrides). Value spans through the metadata column so it
-   gets the full horizontal budget; chevrons and label stay pinned to
-   row 1 so the disclosure controls remain adjacent to the value. */
-@media (max-width: 600px) {
-    .datafieldChevron { grid-row: 1; }
-    .datafieldLabel { grid-row: 1; }
-    .datafieldValue {
-        grid-column: value / history-chevron;
-        grid-row: 1;
-    }
-}
+/* Chevron and label stay pinned to row 1 so the disclosure control remains
+   adjacent to the value, which now claims that row's full width at every size.
+   This was a mobile-only block; the two widths no longer disagree, and
+   DataFieldHistory keeps the one media query that still earns its keep — its
+   entries stay a compact one-line table on desktop. */
+.datafieldChevron { grid-row: 1; }
+.datafieldLabel { grid-row: 1; }

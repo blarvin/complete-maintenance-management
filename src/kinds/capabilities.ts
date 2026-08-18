@@ -11,9 +11,18 @@
  * (§584), which reads capability subsets without booting the app. `satisfies
  * Record<Kind, CapabilitySet>` enforces an entry for every kind.
  *
- * **Structural seam only** — not read by any consumer in the running app yet; the
- * lens / node-like kinds (#6) are the first readers, the cascade arbiter (#7) the
- * second.
+ * **Read by the running app**, and the place to hang new per-kind behaviour.
+ * The component-free predicate modules read it directly — `childrenPolicy`
+ * (`allowedChildKinds`, `canHaveChildren`, `isLensSurfaced`, `storesOwnValue`),
+ * `provisionPolicy` (the lens schedule), `valueCompat` (`acceptsValue`) — and
+ * through them the Add Surface's entailment, the lens reconciler, the rollup
+ * gathers and Field Details' History band. The cascade arbiter (#7) is the next
+ * reader.
+ *
+ * That matters when deciding how to add per-kind behaviour: a capability
+ * declared here answers for every kind at once and is enforced by the
+ * `satisfies` below, where a hand-listed predicate elsewhere has to be
+ * remembered. Prefer widening a descriptor to adding an allowlist.
  */
 
 import type { Kind } from '../data/models';
@@ -31,8 +40,8 @@ import { kindsMintedVia } from './mintVia';
  * `registry.ts` would be a cycle: registry → manifest → capabilities).
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/** Field kinds a user can author in the composer — what any container admits inline. */
-const FIELD_CHILD_KINDS: Kind[] = kindsMintedVia('composer');
+/** Field kinds a user can author in the Add Surface — what any container admits inline. */
+const FIELD_CHILD_KINDS: Kind[] = kindsMintedVia('add-surface');
 
 /** Everything an open physical container admits: creatable node kinds, then fields. */
 const CONTAINER_CHILD_KINDS: Kind[] = [...kindsMintedVia('node-create'), ...FIELD_CHILD_KINDS];
@@ -58,12 +67,12 @@ export const KIND_CAPABILITIES = {
     // Field-like kinds compose OwnValue; `shape` is the value-shape vocabulary
     // (#5) the DataField dispatcher's arrangement law reads. Validation/threshold
     // logic stays config-level for now.
-    'text-kv': { ownValue: { shape: 'scalar' } },
-    'enum-kv': { ownValue: { shape: 'scalar' } },
-    'number-kv': { ownValue: { shape: 'scalar' } },
+    'text-kv': { ownValue: { shape: 'scalar', runtime: 'string' } },
+    'enum-kv': { ownValue: { shape: 'scalar', runtime: 'string' } },
+    'number-kv': { ownValue: { shape: 'scalar', runtime: 'number' } },
     // composite: the renderer owns its sub-structure (image + caption) — the
     // generic label is suppressed and the chevron pins to the row top.
-    'single-image': { ownValue: { shape: 'composite' } },
+    'single-image': { ownValue: { shape: 'composite', runtime: 'object' } },
 
     // ── Node-like kinds (#6b minimal set) — first consumers of the seam ──
 
@@ -141,7 +150,7 @@ export const KIND_CAPABILITIES = {
     // Config-only sub-field kinds also bear an own value (inside config subtrees).
     // Scalar for now (behavior-preserving); reassign compound/string-list by
     // essence only when a consumer wants their own sub-structure.
-    flag: { ownValue: { shape: 'scalar' } },
-    compound: { ownValue: { shape: 'scalar' } },
-    'string-list': { ownValue: { shape: 'scalar' } },
+    flag: { ownValue: { shape: 'scalar', runtime: 'boolean' } },
+    compound: { ownValue: { shape: 'scalar', runtime: 'object' } },
+    'string-list': { ownValue: { shape: 'scalar', runtime: 'object' } },
 } satisfies Record<Kind, CapabilitySet>;

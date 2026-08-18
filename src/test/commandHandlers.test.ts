@@ -76,6 +76,38 @@ describe('CREATE_ELEMENT_FROM_DEFINITION across kinds', () => {
     expect(result.value).toBeNull();
   });
 
+  it("mints with the Definition's default when the create surface supplied no value", async () => {
+    await createParentNode('n1');
+    await seedDefinition('fd_status', 'enum-kv', 'Status', {
+      options: ['In Service', 'Maintenance', 'Retired'],
+      default: 'In Service',
+    });
+
+    const result = await getCommandBus().execute({
+      type: 'CREATE_ELEMENT_FROM_DEFINITION',
+      payload: { parentId: 'n1', definitionId: 'fd_status' },
+    });
+
+    // Not unfilled: the Definition already said what a new one starts as.
+    expect(result.value).toBe('In Service');
+  });
+
+  it('lets an explicit initialValue beat the Definition default', async () => {
+    await createParentNode('n1');
+    await seedDefinition('fd_status', 'enum-kv', 'Status', {
+      options: ['In Service', 'Maintenance', 'Retired'],
+      default: 'In Service',
+    });
+
+    const result = await getCommandBus().execute({
+      type: 'CREATE_ELEMENT_FROM_DEFINITION',
+      payload: { parentId: 'n1', definitionId: 'fd_status', initialValue: 'Retired' },
+    });
+
+    // The value slot speaks about this instance; the default about every one.
+    expect(result.value).toBe('Retired');
+  });
+
   it('creates a number-kv element', async () => {
     await createParentNode('n1');
     await seedDefinition('fd_weight', 'number-kv', 'Weight', {

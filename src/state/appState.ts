@@ -11,6 +11,7 @@ export type {
     DataFieldState,
     DataFieldDetailsState,
     UnderConstructionData,
+    RevealTarget,
     UIState,
     AppState,
     TreeNodeState,

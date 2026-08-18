@@ -8,9 +8,8 @@
  * carry identity only — their rendering is framework-owned (TreeNode) until the
  * chrome-entailment cluster routes it through a manifest Renderer. Both arms share
  * the capability descriptors the SPEC catalogues (ownValue/children/edges/…,
- * SourceSpec, provision) via `CapabilitySet`; they are a **structural seam only**
- * — carried per kind but read by no consumer yet (the lens / node-like kinds are
- * the first readers, the cascade arbiter the second).
+ * SourceSpec, provision) via `CapabilitySet`, which **is** read by the running
+ * app — see `capabilities.ts` for the current readers.
  */
 
 import type { Accessor, Component } from 'solid-js';
@@ -47,12 +46,54 @@ export type ConfigSubField = {
     default?: DataFieldValue | null;
     /** Fixed option vocabulary for `enum-kv` sub-fields (e.g. affixPosition prefix/suffix). */
     options?: string[];
+    /**
+     * Option vocabulary read from the draft config instead of fixed — for a
+     * sub-field whose choices *are* another knob's value (`default` must be one
+     * of `options`). Takes precedence over `options`. Authoring-only, like
+     * `visibleWhen`, and reads the same flat config.
+     */
+    dynamicOptions?: (config: Record<string, unknown>) => string[];
     /** Coherence guard for the sub-field's own value (e.g. threshold ordering). */
     validate?: (value: DataFieldValue | null) => string | null;
     /** config → stored value. Defaults to `config[key]`. Return `undefined` to omit. */
     pack?: (config: Record<string, unknown>) => DataFieldValue | null | undefined;
     /** stored value → partial config. Defaults to `{ [key]: value }`. */
     unpack?: (value: DataFieldValue | null) => Record<string, unknown>;
+
+    /* ── Authoring shape (read only by the Add Surface's config rows) ─────────
+     * Reveal comes from data so a kind never declares layout — the same one-way
+     * rule as chrome entailment. Neither field touches storage:
+     * `serializeConfig`/`assembleConfig` ignore them entirely.
+     *
+     * There is deliberately no grouping field. Config authors as one flat list
+     * (SUPERSEDED → *number-kv progressive disclosure*); a category label that
+     * is genuinely load-bearing belongs in the sub-field's own `label`.
+     * ────────────────────────────────────────────────────────────────────── */
+
+    /**
+     * For an atomic `compound`: the flat draft keys it packs, as authorable
+     * sibling rows. `thresholds` stores one `{lowLow, low, high, highHigh}`
+     * object, but the draft config carries those four as **flat keys** — `pack`
+     * reads them off the flat object — so this is purely how authoring renders
+     * them, never a second storage shape. The compound's own `label` is not
+     * rendered, so each member's label has to stand alone.
+     */
+    members?: ConfigSubFieldMember[];
+
+    /**
+     * Value-driven conditional reveal: the row is skipped when this returns
+     * false (`currencyCode` only under a currency format; the nominal pair that
+     * `nominalMode` selects). Reads the flat draft config, matching `pack`.
+     */
+    visibleWhen?: (config: Record<string, unknown>) => boolean;
+};
+
+/** One authorable part of a compound sub-field (see `ConfigSubField.members`). */
+export type ConfigSubFieldMember = {
+    /** Flat draft-config key — the same name `pack` reads. */
+    key: string;
+    label: string;
+    kind: Kind;
 };
 
 /**
@@ -69,6 +110,13 @@ export type FieldRendererProps = {
     id: string;
     definitionId: string;
     value: DataFieldValue | null;
+    /**
+     * Draft config for a Field that has no Definition yet — the Add Surface's
+     * value slot (SPEC → The Add Surface → The row). Replaces the `definitionId`
+     * fetch when present, which is what lets an `enum-kv` draft preview the
+     * options being typed in the Config band rather than rendering with none.
+     */
+    config?: DefinitionConfig;
     /** Read accessor to the owning DataField row element (the dispatcher owns the
      *  ref) — renderers read it for outside-click containment covering the whole
      *  row (chevron, label, value), not just the value column. */
@@ -119,6 +167,18 @@ export type ValueShape = 'scalar' | 'block' | 'composite';
  */
 export type ValueSpec = {
     shape: ValueShape;
+    /**
+     * The value's **runtime** type, which `shape` deliberately does not carry —
+     * `shape` is the arrangement law (text, enum and number are all `scalar`),
+     * and arrangement says nothing about whether a renderer will be handed a
+     * string or a number.
+     *
+     * Required, so a new value-bearing kind cannot be added without saying which:
+     * the Add Surface consults it (`valueCompat.acceptsValue`) before carrying a
+     * drafted value across a kind change, and a wrong answer means handing
+     * `NumberKvField` a string and watching `toFixed` throw mid-render.
+     */
+    runtime: 'string' | 'number' | 'boolean' | 'object';
     validate?: (value: DataFieldValue | null) => string | null;
 };
 
@@ -126,11 +186,15 @@ export type ValueSpec = {
  * Which create affordance offers this kind (SPEC §registry & manifest).
  * `config-only` kinds (`flag`/`compound`/`string-list`) are registered and
  * renderable but exist solely inside config subtrees — never offered as a new
- * Definition in the composer picker (which lists `composer` kinds only).
+ * Definition in the Add Surface's picker (which lists `add-surface` kinds only).
  * `provision` kinds (`jobs`/`logbook`) are materialized by the framework (the lens
  * provisioned per node), never offered in any user create affordance.
+ *
+ * `add-surface` was named `composer` until 2026-08-14, after the surface it
+ * described was retired. Not to be confused with `AddFieldSurfaceId` — that is
+ * *which* surface renders; this is *which affordance may mint this kind*.
  */
-export type MintVia = 'composer' | 'node-create' | 'config-only' | 'provision';
+export type MintVia = 'add-surface' | 'node-create' | 'config-only' | 'provision';
 
 /** `template` = fixed core; `open` = user-grown (always allowlist-constrained). */
 export type ChildrenMode = 'template' | 'open';
@@ -202,7 +266,10 @@ export type ValiditySpec = Record<string, never>;
  * The composed capability subset + node-oriented descriptors a kind draws from.
  * Each capability is optional; absence = origin in that axis (SPEC §527). Shared
  * by inline (field-like) and re-root (node-like) manifests alike — they are one
- * composition space, not two systems. **Not yet read by any consumer.**
+ * composition space, not two systems. **Read by the component-free predicate
+ * modules** (`childrenPolicy`, `provisionPolicy`, `valueCompat`) and through them
+ * by the create surfaces, the lens reconciler and the gathers; see
+ * `capabilities.ts`.
  */
 export type CapabilitySet = {
     ownValue?: ValueSpec;
@@ -227,6 +294,13 @@ type ManifestIdentity = {
     kind: Kind;
     /** Label for the authoring-form segmented picker. */
     pickerLabel: string;
+    /**
+     * Prose leading the Add Surface's Config band: what is being created, and
+     * that the Kind band below changes it (SPEC → The Add Surface → The bands).
+     * Authoring chrome, never stored — deliberately NOT a `ConfigSubField`,
+     * because `CONFIG_SCHEMAS` drives `serializeConfig`.
+     */
+    authoringMemo?: string;
     mintVia: MintVia;
     /** Where this kind draws its surface — separates node-like from field-like. */
     placement: 'inline' | 're-root';
@@ -252,7 +326,7 @@ type ManifestIdentity = {
 } & CapabilitySet;
 
 /**
- * Inline (field-like) kinds: drawn as a DataField row, authored via the composer.
+ * Inline (field-like) kinds: drawn as a DataField row, authored via the Add Surface.
  * Carries everything the framework needs to render and author one field kind.
  * The Definition-authoring contract lives on ManifestIdentity (placement-
  * agnostic); it is re-asserted required here — every field kind is authorable.
