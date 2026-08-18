@@ -1,0 +1,110 @@
+/* Editors for the two config-only kinds, as they render on a Definition's Data
+   Card in the Library.
+
+   Both wear `.datafieldValue` alongside these classes, so the grid placement
+   (`value / history-chevron`, row 1) comes from there and this file only says how
+   the control looks inside that cell. Controls are drawn as holes in the row
+   rather than bordered widgets, matching the Add Surface's config rows
+   (`ConfigRows.module.css` → `.entry`). */
+
+.flagRow {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+}
+
+.checkbox {
+    /* Baseline-aligned with the label beside it: a checkbox's box centre sits
+       above the text baseline, so nudge it down the same way the field chevron is. */
+    align-self: baseline;
+    transform: translateY(0.15em);
+    margin: 0;
+    cursor: pointer;
+}
+
+.checkbox:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+}
+
+/* The word beside the box. Redundant with the checkbox visually, and deliberately
+   so: the read-only peek of this same knob reads "Yes"/"No" (configValueFormat),
+   and a reader moving between the two surfaces should meet the same word. */
+.flagWord {
+    color: var(--text-secondary);
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-2);
+    min-width: 0;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-1);
+    max-width: 100%;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    background: var(--bg-expanded);
+}
+
+.chipInput {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    /* Sizes to its content rather than to a fixed track, so a list of short
+       entries doesn't reserve a column's worth of empty box per chip. The
+       fallback width keeps a freshly-added blank entry tappable. */
+    field-sizing: content;
+    min-width: 4ch;
+    max-width: 100%;
+    touch-action: manipulation;
+}
+
+.chipInput:focus {
+    text-decoration: underline;
+}
+
+.chipRemove,
+.addItem {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chipRemove {
+    color: var(--text-muted);
+}
+
+.chipRemove:hover {
+    color: var(--text-secondary);
+}
+
+.addItem {
+    color: var(--accent);
+}
+
+.addItem:hover {
+    text-decoration: underline;
+}
+
+.chipRemove:focus-visible,
+.addItem:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-sm);
+}

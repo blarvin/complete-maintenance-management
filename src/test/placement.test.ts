@@ -17,7 +17,7 @@ describe('placement', () => {
   });
 
   it('classifies the field-like kinds as inline', () => {
-    for (const k of ['text-kv', 'enum-kv', 'number-kv', 'single-image', 'internal-link', 'external-link', 'flag', 'compound', 'string-list'] as const) {
+    for (const k of ['text-kv', 'enum-kv', 'number-kv', 'single-image', 'internal-link', 'external-link', 'flag', 'string-list'] as const) {
       expect(isInline(k)).toBe(true);
       expect(isReRoot(k)).toBe(false);
     }

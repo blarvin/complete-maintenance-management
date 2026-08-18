@@ -13,10 +13,10 @@
  * mount-time constant it may capture (`makeValidate(config)`).
  */
 
-import { Show, createResource, type Accessor } from 'solid-js';
+import { Show, type Accessor } from 'solid-js';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { getDefinitionQueries } from '../../data/queries';
+import { useDefinitionConfig } from '../../hooks/useDefinitionConfig';
 import type { TextKvConfig } from '../../data/models';
 import styles from './DataField.module.css';
 
@@ -25,8 +25,11 @@ export type TextKvFieldProps = {
     definitionId: string;
     value: string | null;
     rootRef: Accessor<HTMLElement | undefined>;
-    /** Draft config, for a row with no Definition to fetch from (the Add Surface). */
+    /** Draft config, for a row with no Definition to fetch from (the Add Surface,
+     *  and a config Field on a Definition's card in the Library). */
     config?: TextKvConfig;
+    /** Write-once: the row displays but never opens an editor. */
+    readOnly?: boolean;
     /** When set, edits are buffered (no IDB write) and forwarded via onChange.
      *  `autoFocus` is set only for the row the user just ticked. */
     pendingMode?: { onChange: (value: string | null) => void | Promise<void>; autoFocus?: boolean };
@@ -56,24 +59,22 @@ const makeValidate = (config: TextKvConfig) => {
 };
 
 export const TextKvField = (props: TextKvFieldProps) => {
-    // Error-catching fetcher: never enters the throwing state (no ErrorBoundary);
-    // missing/wrong-kind def degrades to an empty config. A null source skips the
-    // fetch entirely — a draft row carries its config on the prop and has no
-    // Definition to read.
-    const [fetched] = createResource(
-        () => (props.config ? null : props.definitionId),
-        async (definitionId): Promise<TextKvConfig> => {
-            try {
-                const def = await getDefinitionQueries().getDefinitionById(definitionId);
-                if (!def || def.kind !== 'text-kv') return {};
-                return def.config as TextKvConfig;
-            } catch {
-                return {};
-            }
-        },
+    // Live, not merely fetched: an edit to this Definition in the Library has to
+    // reach this row (SPEC → *Downstream only*). A null id skips the fetch — a
+    // draft row carries its config on the prop and has no Definition to read.
+    const { definition, loading } = useDefinitionConfig(() =>
+        props.config ? null : props.definitionId,
     );
 
-    const config = () => props.config ?? fetched();
+    // Missing / wrong-kind / failed degrades to an empty config, exactly as the
+    // error-catching fetcher this replaced did — `undefined` only ever means "the
+    // fetch is still in flight", which is what the `<Show>` fallback below draws.
+    const config = (): TextKvConfig | undefined => {
+        if (props.config) return props.config;
+        if (loading()) return undefined;
+        const def = definition();
+        return def?.kind === 'text-kv' ? (def.config as TextKvConfig) : {};
+    };
 
     return (
         // `keyed` remounts the body when the config object's identity changes,
@@ -108,6 +109,7 @@ const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
         parse: parseText,
         validate: makeValidate(props.config),
         rootRef: props.rootRef,
+        readOnly: props.readOnly,
         pendingMode: props.pendingMode,
     });
     /* eslint-enable solid/reactivity */

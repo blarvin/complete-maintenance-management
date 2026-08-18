@@ -31,15 +31,15 @@ export type Disposition = 'owned' | 'delegated' | 'pinned';
  * `configSchema` and drives serialize/assemble in `configElements.ts`.
  *
  * `pack`/`unpack` bridge the flat in-memory config object to a sub-field's stored
- * value. They default to `config[key]` ⇄ `{ [key]: value }`; only the compound
- * thresholds entry overrides them (4 flat fields ⇄ one `{LL,L,H,HH}` object).
+ * value. They default to `config[key]` ⇄ `{ [key]: value }`; only `enum-kv.options`
+ * overrides `pack`, to strip the blank rows the draft seeds.
  */
 export type ConfigSubField = {
     /** Stable machine key; child id is `${defId}::cfg::${key}`. */
     key: string;
     /** Human label (the sub-field Element's `name`). */
     label: string;
-    /** Sub-field kind (reuses field kinds; `flag`/`compound`/`string-list` for the rest). */
+    /** Sub-field kind (reuses field kinds; `flag`/`string-list` for the rest). */
     kind: Kind;
     disposition: Disposition;
     /** Fresh default at mint (documentation/forward-use; not consumed in encode-only). */
@@ -53,7 +53,9 @@ export type ConfigSubField = {
      * `visibleWhen`, and reads the same flat config.
      */
     dynamicOptions?: (config: Record<string, unknown>) => string[];
-    /** Coherence guard for the sub-field's own value (e.g. threshold ordering). */
+    /** Coherence guard for the sub-field's own value. Rules that read more than
+     *  one knob live in `CONFIG_VALIDATORS` instead (the threshold chain moved
+     *  there when `compound` was retired). */
     validate?: (value: DataFieldValue | null) => string | null;
     /** config → stored value. Defaults to `config[key]`. Return `undefined` to omit. */
     pack?: (config: Record<string, unknown>) => DataFieldValue | null | undefined;
@@ -71,29 +73,11 @@ export type ConfigSubField = {
      * ────────────────────────────────────────────────────────────────────── */
 
     /**
-     * For an atomic `compound`: the flat draft keys it packs, as authorable
-     * sibling rows. `thresholds` stores one `{lowLow, low, high, highHigh}`
-     * object, but the draft config carries those four as **flat keys** — `pack`
-     * reads them off the flat object — so this is purely how authoring renders
-     * them, never a second storage shape. The compound's own `label` is not
-     * rendered, so each member's label has to stand alone.
-     */
-    members?: ConfigSubFieldMember[];
-
-    /**
      * Value-driven conditional reveal: the row is skipped when this returns
      * false (`currencyCode` only under a currency format; the nominal pair that
      * `nominalMode` selects). Reads the flat draft config, matching `pack`.
      */
     visibleWhen?: (config: Record<string, unknown>) => boolean;
-};
-
-/** One authorable part of a compound sub-field (see `ConfigSubField.members`). */
-export type ConfigSubFieldMember = {
-    /** Flat draft-config key — the same name `pack` reads. */
-    key: string;
-    label: string;
-    kind: Kind;
 };
 
 /**
@@ -117,6 +101,15 @@ export type FieldRendererProps = {
      * options being typed in the Config band rather than rendering with none.
      */
     config?: DefinitionConfig;
+    /**
+     * Display but never open an editor. Its one user is the `kind` Field on a
+     * Definition, which is write-once: `kind` immutability is load-bearing across
+     * the system, and changing a Definition's kind once instances exist would
+     * re-render every one of them under a renderer their stored values do not fit
+     * (SPEC → *The defined kind is a config Field*). Changing the kind means
+     * coining a new Definition.
+     */
+    readOnly?: boolean;
     /** Read accessor to the owning DataField row element (the dispatcher owns the
      *  ref) — renderers read it for outside-click containment covering the whole
      *  row (chevron, label, value), not just the value column. */

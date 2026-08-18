@@ -10,12 +10,8 @@
  */
 
 import type { ConfigSubField } from './types';
-import type { CompoundValue, DefinitionConfig, EnumKvConfig, Kind, NumberKvConfig } from '../data/models';
-import {
-    packThresholds,
-    validateThresholds,
-    validateNumberKvConfig,
-} from '../components/DataField/numberKvState';
+import type { DefinitionConfig, EnumKvConfig, Kind, NumberKvConfig } from '../data/models';
+import { validateNumberKvConfig } from '../components/DataField/numberKvState';
 
 const isCurrency = (c: Record<string, unknown>) => c.displayFormat === 'currency';
 /** `nominalMode` defaults to `range` when unset (ELEMENT-MODEL → number-kv). */
@@ -81,27 +77,17 @@ export const NUMBER_KV_CONFIG_SCHEMA: ConfigSubField[] = [
     { key: 'nominalMax', label: 'Nominal max', kind: 'number-kv', disposition: 'owned', visibleWhen: isRangeMode },
     { key: 'nominalValue', label: 'Nominal value', kind: 'number-kv', disposition: 'owned', visibleWhen: isDiscreteMode },
     { key: 'tolerance', label: 'Tolerance', kind: 'number-kv', disposition: 'owned', visibleWhen: isDiscreteMode },
-    {
-        // The one object-valued residue: {LL,L,H,HH} co-vary, so they bundle into
-        // a single atomic compound sub-field with its own ordering guard.
-        // `members` are the same flat draft keys `pack` reads — authoring draws
-        // them as four sibling rows; storage still writes one packed object. The
-        // member labels carry `Threshold` because this sub-field's own label no
-        // longer renders above them (ISA-18.2 LL/L/H/HH, ELEMENT-MODEL → number-kv).
-        key: 'thresholds', label: 'Thresholds', kind: 'compound', disposition: 'owned',
-        members: [
-            { key: 'lowLow', label: 'Threshold LL', kind: 'number-kv' },
-            { key: 'low', label: 'Threshold L', kind: 'number-kv' },
-            { key: 'high', label: 'Threshold H', kind: 'number-kv' },
-            { key: 'highHigh', label: 'Threshold HH', kind: 'number-kv' },
-        ],
-        pack: (c) => {
-            const t = packThresholds(c as unknown as NumberKvConfig);
-            return Object.keys(t).length ? t : undefined;
-        },
-        unpack: (v) => (v ? { ...(v as CompoundValue) } : {}),
-        validate: (v) => validateThresholds(v as CompoundValue | null),
-    },
+    // The ISA-18.2 alarm chain (LL/L/H/HH), four ordinary sub-fields rather than
+    // one atomic `compound` — retired 2026-08-17 with the Library-as-a-place work.
+    // The authoring band already drew them as four flat rows, and the Library
+    // gives each its own editable, individually history-tracked Field; atomicity
+    // is given up knowingly, with the `LL ≤ L ≤ H ≤ HH` chain caught by
+    // `CONFIG_VALIDATORS` instead of prevented by the value shape. Each label
+    // carries `Threshold` because there is no parent row above them to lean on.
+    { key: 'lowLow', label: 'Threshold LL', kind: 'number-kv', disposition: 'owned' },
+    { key: 'low', label: 'Threshold L', kind: 'number-kv', disposition: 'owned' },
+    { key: 'high', label: 'Threshold H', kind: 'number-kv', disposition: 'owned' },
+    { key: 'highHigh', label: 'Threshold HH', kind: 'number-kv', disposition: 'owned' },
     { key: 'expectedRefreshSeconds', label: 'Refresh seconds', kind: 'number-kv', disposition: 'delegated' },
 ];
 

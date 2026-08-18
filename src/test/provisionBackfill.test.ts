@@ -79,8 +79,14 @@ describe('backfillProvisionedLenses', () => {
 
   it('skips deleted rows, non-business trees, and the kinds that never hold a lens', async () => {
     await db.elements.put(row('gone', 'node', null, { deletedAt: 1 }));
-    // A re-root policy Definition is a `library` row of a lens kind.
-    await db.elements.put(row('fd_policy', 'logbook', null, { treeType: 'library' as TreeType }));
+    // A FieldDefinition is a `library` row of the most lens-eligible kind there
+    // is — `node` — so the tree gate is the only thing standing between the
+    // Library and a Jobs box on every Definition.
+    await db.elements.put(
+      row('fd_policy', 'node', 'library_root', { treeType: 'library' as TreeType, definitionId: 'fd_policy' }),
+    );
+    // …and the Library Node it hangs under.
+    await db.elements.put(row('library_root', 'node', null, { treeType: 'library' as TreeType }));
     // Lens-surfaced kinds are rolled up by a lens, so they never nest their own.
     await db.elements.put(row('j1', 'job', null));
     await db.elements.put(row('le1', 'log-entry', null));

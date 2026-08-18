@@ -1,7 +1,8 @@
 /**
  * Dev-seeded Definitions, written as `library`-tree Elements
- * (config-as-Elements): each seed is a Definition Element plus its config
- * sub-field child Elements (deterministic `::cfg::` ids via `serializeConfig`).
+ * (config-as-Elements): the `Field Library` Node, then each seed as a Definition
+ * Element parented to it plus its config sub-field child Elements (deterministic
+ * `::cfg::` ids via `serializeConfig`).
  *
  * Phase-1 starter set covering each Component (text-kv, enum-kv, number-kv,
  * single-image) plus the three default fields used at new-node construction
@@ -18,17 +19,23 @@ import type { Element, DefinitionConfig, Kind } from '../models';
 import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { now } from '../../utils/time';
 import { serializeConfig } from '../../kinds/configElements';
-import { DEFINITION_IDS } from '../definitionIds';
+import { DEFINITION_IDS, LIBRARY_ROOT_ID, LIBRARY_ROOT_NAME } from '../definitionIds';
 import { devLog } from '../../utils/devMode';
 
 // Stable ids live in ../definitionIds (import-free, so kind policies can read
 // them); re-exported here for the existing consumers.
-export { DEFINITION_IDS } from '../definitionIds';
+export { DEFINITION_IDS, LIBRARY_ROOT_ID } from '../definitionIds';
 
-// Bumped for the logbook policy Definition (the binding seam's forcing kind).
-export const SEED_VERSION = 8;
+// Bumped for the Library-as-a-place shape: the Library Node, Definitions as its
+// `kind: node` children, and the defined kind as a config Field.
+export const SEED_VERSION = 9;
 export const SEED_KEY = 'definitionsSeededVersion';
 
+/**
+ * `kind` here means the kind the seed **defines**, not the Element's own kind —
+ * every Definition Element is a `node`. It flows into `serializeConfig`, which
+ * writes it as the leading `::cfg::kind` child.
+ */
 type SeedRow = { id: string; kind: Kind; label: string; config: DefinitionConfig };
 
 const SEEDS: SeedRow[] = [
@@ -116,16 +123,38 @@ export async function seedDefinitions(): Promise<void> {
   // become editable. `updatedBy` carries the app-developer provenance (the old
   // separate `authorId` column folds into it).
   await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
+    // The Library Node first — every Definition parents to it, so it has to exist
+    // before them. `siblingOrder: -1` **is** the "pinned at the top of ROOT" rule:
+    // the adapter already sorts roots by `siblingOrder` and business roots start
+    // at 0, so no view sorts anything specially (SPEC → *The Library*).
+    const libraryRoot: Element = {
+      id: LIBRARY_ROOT_ID,
+      kind: 'node',
+      name: LIBRARY_ROOT_NAME,
+      subtitle: null,
+      value: null,
+      parentId: null,
+      siblingOrder: -1,
+      definitionId: null,
+      treeType: 'library',
+      updatedBy: AUTHOR_ID_APP_DEVELOPER,
+      updatedAt: timestamp,
+      deletedAt: null,
+    };
+    await db.elements.put(libraryRoot);
+
     for (const seed of SEEDS) {
       const defElement: Element = {
         id: seed.id,
-        kind: seed.kind,
+        // A Definition is a Node so that every Definition is alike; `seed.kind` is
+        // the kind it *defines* and rides in the config subtree below.
+        kind: 'node',
         name: seed.label,
         subtitle: null,
         value: null,
-        parentId: null,
+        parentId: LIBRARY_ROOT_ID,
         siblingOrder: 0,
-        definitionId: null,
+        definitionId: seed.id,
         treeType: 'library',
         updatedBy: AUTHOR_ID_APP_DEVELOPER,
         updatedAt: timestamp,

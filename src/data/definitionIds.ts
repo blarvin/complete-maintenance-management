@@ -6,6 +6,17 @@
  * The `fd_` prefix is historical (FieldDefinition) and deliberately kept:
  * ids are opaque, and churning them buys nothing (see the WP1 rename note).
  */
+/**
+ * The `Field Library` Node — the place in the tree every Definition hangs under
+ * (SPEC → *The Library*). A fixed id rather than a minted one so the seed, the
+ * adapter and the UI can all name it without a lookup, exactly as `DEFINITION_IDS`
+ * lets the app reference a seeded Definition by constant instead of by label.
+ */
+export const LIBRARY_ROOT_ID = 'library_root';
+
+/** Display name of the Library Node. Seeded once; not user-renamed in Phase 1. */
+export const LIBRARY_ROOT_NAME = 'Field Library';
+
 export const DEFINITION_IDS = {
   description: 'fd_description',
   typeOf: 'fd_type_of',

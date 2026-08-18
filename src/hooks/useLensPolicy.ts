@@ -4,19 +4,23 @@
  *
  * The lens's `definitionId` was stamped at provision time (stamp-if-resolvable,
  * handlers.ts); null (jobs, pre-existing lenses) or a missing Definition falls
- * back to the target kind's `pickerLabel` with staleness off. Definitions are
- * fork-not-mutate (no edit path), so no DEFINITION_WRITTEN subscription is
- * needed — the effect re-runs only when the lens element or target kind changes.
+ * back to the target kind's `pickerLabel` with staleness off.
+ *
+ * **It re-resolves on a Definition write.** It used to have no subscription, and
+ * that was correct for its reason: Definitions were fork-not-mutate, with no edit
+ * path, so a resolved policy could not go stale. The Library retires that premise
+ * (SPEC → *Edit / Delete Semantics*) — renaming the Logbook Policy's entry label
+ * has to reach a mounted Logbook — so the resolve rides `useDefinitionConfig`
+ * like every other Definition read.
  *
  * First-paint note: the signal starts empty (`entryLabel: ''`); consumers
  * render `policy().entryLabel || pickerLabel` to cover the tick before the
  * effect resolves.
  */
 
-import { createSignal, createEffect, onCleanup, type Accessor } from 'solid-js';
-import { getDefinitionQueries } from '../data/queries';
+import { createMemo, type Accessor } from 'solid-js';
+import { useDefinitionConfig } from './useDefinitionConfig';
 import { getKindManifest } from '../kinds/registry';
-import { initializeStorage } from '../data/storage/initStorage';
 import { resolveLensPolicy, type LensPolicy } from '../kinds/lensPolicy';
 import type { Element, Kind, LogbookConfig } from '../data/models';
 
@@ -24,26 +28,17 @@ export function useLensPolicy(
     lensEl: Accessor<Element | null>,
     targetKind: Accessor<Kind | null>,
 ): Accessor<LensPolicy> {
-    const [policy, setPolicy] = createSignal<LensPolicy>({ entryLabel: '', staleness: 0 });
+    // Gated on `targetKind` so a plain node (BranchView on anything that is not a
+    // lens) never fetches a Definition it has no use for.
+    const { definition } = useDefinitionConfig(() =>
+        targetKind() ? (lensEl()?.definitionId ?? null) : null,
+    );
 
-    createEffect(() => {
-        const definitionId = lensEl()?.definitionId ?? null;
+    const policy = createMemo((): LensPolicy => {
         const tk = targetKind();
-        if (!tk) return; // not a lens (e.g. BranchView on a plain node)
-
+        if (!tk) return { entryLabel: '', staleness: 0 };
         const fallback = getKindManifest(tk).pickerLabel;
-        setPolicy(resolveLensPolicy(null, fallback));
-        if (!definitionId) return;
-
-        let disposed = false;
-        onCleanup(() => {
-            disposed = true;
-        });
-        void (async () => {
-            await initializeStorage();
-            const def = await getDefinitionQueries().getDefinitionById(definitionId);
-            if (!disposed) setPolicy(resolveLensPolicy((def?.config as LogbookConfig) ?? null, fallback));
-        })();
+        return resolveLensPolicy((definition()?.config as LogbookConfig) ?? null, fallback);
     });
 
     return policy;

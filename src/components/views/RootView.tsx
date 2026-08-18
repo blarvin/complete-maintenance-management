@@ -16,7 +16,11 @@ export const RootView = () => {
     const appState = useAppState();
     const { navigateToNode } = useAppTransitions();
 
-    // Root = children of null. Reloads arrive via the storage event bus.
+    // Root = children of null, which is the business-tree roots **plus the Field
+    // Library Node** (`listRootElements`). The Library sorts first on its seeded
+    // `siblingOrder: -1` and passes the `isReRoot` filter like any other `node`,
+    // so it needs no special case here — being a place in the tree is the whole
+    // point (SPEC → *The Library*). Reloads arrive via the storage event bus.
     const { children: nodes, isLoading } = useElementChildren(() => null, 'nodes');
 
     const { ucNode, start, cancel, complete } = useNodeCreation(() => null);
@@ -50,6 +54,8 @@ export const RootView = () => {
                             subtitle={n.subtitle ?? ''}
                             nodeState={selectors.getDisplayNodeState(appState, n.id)}
                             kind={n.kind}
+                            parentId={n.parentId}
+                            definitionId={n.definitionId}
                             onNodeClick={() => navigateToNode(n.id)}
                         />
                     )}

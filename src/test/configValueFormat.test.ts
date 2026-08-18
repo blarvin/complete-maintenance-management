@@ -12,11 +12,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  formatFlag,
-  formatStringList,
-  formatCompound,
-} from '../kinds/configValueFormat';
+import { formatFlag, formatStringList } from '../kinds/configValueFormat';
 
 describe('formatFlag', () => {
   it('reads booleans as words', () => {
@@ -39,21 +35,6 @@ describe('formatStringList', () => {
   });
 });
 
-describe('formatCompound', () => {
-  it('renders key=value pairs in insertion order', () => {
-    // packThresholds inserts lowLow → low → high → highHigh, which is the
-    // ascending chain the ordering invariant is stated over — so the formatted
-    // string reads left-to-right as that chain without the formatter knowing
-    // anything about thresholds.
-    expect(formatCompound({ lowLow: 0, low: 2, high: 8, highHigh: 10 }))
-      .toBe('lowLow=0, low=2, high=8, highHigh=10');
-  });
-
-  it('omits absent keys rather than printing blanks', () => {
-    expect(formatCompound({ low: 2, high: 8 })).toBe('low=2, high=8');
-  });
-
-  it('handles a compound with no keys set', () => {
-    expect(formatCompound({})).toBe('');
-  });
-});
+/* `formatCompound` was tested here until 2026-08-17. `compound` is retired —
+   number-kv's thresholds are four ordinary `number-kv` sub-fields now, each
+   formatted by that kind's own display path. */

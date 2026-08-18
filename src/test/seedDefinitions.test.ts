@@ -4,14 +4,17 @@ import { IDBAdapter } from '../data/storage/IDBAdapter';
 import {
   seedDefinitions,
   DEFINITION_IDS,
+  LIBRARY_ROOT_ID,
   SEED_VERSION,
   SEED_KEY,
 } from '../data/services/seedDefinitions';
 import { AUTHOR_ID_APP_DEVELOPER } from '../constants';
-import { configChildId } from '../kinds/configElements';
+import { configChildId, DEFINED_KIND_KEY } from '../kinds/configElements';
 
+/** A Definition is the row that points at itself — not the row with no parent,
+ *  which is now the Library Node (SPEC → *What identifies a Definition*). */
 const libraryDefs = async () =>
-  (await db.elements.toArray()).filter((e) => e.treeType === 'library' && e.parentId === null);
+  (await db.elements.toArray()).filter((e) => e.treeType === 'library' && e.definitionId === e.id);
 
 describe('seedDefinitions (config-as-Elements)', () => {
   beforeEach(async () => {
@@ -36,6 +39,50 @@ describe('seedDefinitions (config-as-Elements)', () => {
     ]);
     const meta = await db.syncMetadata.get(SEED_KEY);
     expect(meta?.value).toBe(SEED_VERSION);
+  });
+
+  it('writes the Library Node, pinned above the assets and parenting every Definition', async () => {
+    await seedDefinitions();
+
+    const root = await db.elements.get(LIBRARY_ROOT_ID);
+    expect(root?.kind).toBe('node');
+    expect(root?.name).toBe('Field Library');
+    expect(root?.parentId).toBeNull();
+    expect(root?.treeType).toBe('library');
+    // The pin is the order, not a view-level special case: root elements sort by
+    // `siblingOrder` and business roots start at 0.
+    expect(root?.siblingOrder).toBe(-1);
+    // The Library Node is not itself a Definition — it defines nothing.
+    expect(root?.definitionId).toBeNull();
+
+    for (const def of await libraryDefs()) {
+      expect(def.parentId).toBe(LIBRARY_ROOT_ID);
+    }
+  });
+
+  it('writes every Definition as a `node` whose defined kind is a config Field', async () => {
+    await seedDefinitions();
+
+    const weight = await db.elements.get(DEFINITION_IDS.weight);
+    // The Element's own kind, so every Definition renders, sorts and navigates
+    // alike (SPEC → *A FieldDefinition is a Node*).
+    expect(weight?.kind).toBe('node');
+    expect(weight?.definitionId).toBe(DEFINITION_IDS.weight);
+
+    const definedKind = await db.elements.get(
+      configChildId(DEFINITION_IDS.weight, DEFINED_KIND_KEY),
+    );
+    expect(definedKind?.value).toBe('number-kv');
+    expect(definedKind?.name).toBe('Kind');
+    expect(definedKind?.siblingOrder).toBe(0);
+  });
+
+  it('materializes unset knobs so the Library has a row to tap', async () => {
+    await seedDefinitions();
+    // Weight sets no `currencyCode`; the row still exists, carrying null.
+    const currency = await db.elements.get(configChildId(DEFINITION_IDS.weight, 'currencyCode'));
+    expect(currency).toBeDefined();
+    expect(currency?.value).toBeNull();
   });
 
   it('writes config as child sub-field Elements with deterministic ids', async () => {
@@ -86,9 +133,9 @@ describe('seedDefinitions (config-as-Elements)', () => {
     expect(second.find((d) => d.id === first[0].id)?.updatedAt).toBe(firstTs);
   });
 
-  it('seeds all expected kinds', async () => {
+  it('seeds all expected kinds — read off the assembled views, not the kind column', async () => {
     await seedDefinitions();
-    const byId = new Map((await db.elements.toArray()).map((e) => [e.id, e]));
+    const byId = new Map((await new IDBAdapter().listDefinitions()).data.map((d) => [d.id, d]));
     expect(byId.get(DEFINITION_IDS.description)?.kind).toBe('text-kv');
     expect(byId.get(DEFINITION_IDS.status)?.kind).toBe('enum-kv');
     expect(byId.get(DEFINITION_IDS.weight)?.kind).toBe('number-kv');

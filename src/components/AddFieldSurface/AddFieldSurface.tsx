@@ -314,8 +314,10 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
 /* ────────────────────────────────────────────────────────────────────────────
  * The Kind band — one row per admitted kind, expanding to that kind's Library
  * Definitions. A **view** over the `library` tree, never a re-parenting: the
- * Definitions are gathered by their `kind` and drawn beneath it, so the identity
- * test (`parentId === null`) is untouched (SPEC → Listing under the Kind band).
+ * Definitions are gathered by the kind they define and drawn beneath it, so the
+ * identity test (`definitionId === id`) is untouched (SPEC → Listing under the
+ * Kind band). That test is position-independent, so grouping was never blocked by
+ * it — what a Definition's row is *under* has nothing to do with what it is.
  * ──────────────────────────────────────────────────────────────────────────── */
 
 type KindBandProps = {

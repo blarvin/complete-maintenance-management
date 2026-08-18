@@ -11,10 +11,10 @@
  * mount-time constant it may capture (formatEdit/parseEdit/makeValidate).
  */
 
-import { Show, createMemo, createResource, type Accessor } from 'solid-js';
+import { Show, createMemo, type Accessor } from 'solid-js';
 import { useFieldEdit } from '../../hooks/useFieldEdit';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
-import { getDefinitionQueries } from '../../data/queries';
+import { useDefinitionConfig } from '../../hooks/useDefinitionConfig';
 import type { NumberKvConfig } from '../../data/models';
 import { computeNumberKvState, formatNumberKvDisplay, parseNumber } from './numberKvState';
 import styles from './DataField.module.css';
@@ -30,8 +30,11 @@ export type NumberKvFieldProps = {
      *  written, never stale). */
     updatedAt?: number;
     rootRef: Accessor<HTMLElement | undefined>;
-    /** Draft config, for a row with no Definition to fetch from (the Add Surface). */
+    /** Draft config, for a row with no Definition to fetch from (the Add Surface,
+     *  and a config Field on a Definition's card in the Library). */
     config?: NumberKvConfig;
+    /** Write-once: the row displays but never opens an editor. */
+    readOnly?: boolean;
     /** When set, edits are buffered (no IDB write) and forwarded via onChange. */
     pendingMode?: { onChange: (value: number | null) => void | Promise<void>; autoFocus?: boolean };
 };
@@ -74,25 +77,21 @@ function buildHelperText(config: NumberKvConfig): string {
 }
 
 export const NumberKvField = (props: NumberKvFieldProps) => {
-    // Error-catching fetcher: never enters the throwing state (no ErrorBoundary);
-    // missing/wrong-kind/failed def degrades to null → the "—" fallback. A null
-    // source skips the fetch entirely — a draft row carries its config on the
-    // prop and has no Definition to read.
-    const [fetched] = createResource(
-        () => (props.config ? null : props.definitionId),
-        async (definitionId): Promise<NumberKvConfig | null> => {
-            try {
-                const def = await getDefinitionQueries().getDefinitionById(definitionId);
-                if (!def || def.kind !== 'number-kv') return null;
-                return def.config as NumberKvConfig;
-            } catch {
-                return null;
-            }
-        },
+    // Live, not merely fetched: a `decimals` or units change made in the Library
+    // has to reach this row (SPEC → *Downstream only*). A null id skips the fetch —
+    // a draft row carries its config on the prop and has no Definition to read.
+    const { definition, loading: fetching } = useDefinitionConfig(() =>
+        props.config ? null : props.definitionId,
     );
 
-    const config = () => props.config ?? fetched();
-    const loading = () => !props.config && fetched.loading;
+    // Missing / wrong-kind / failed degrades to null → the "—" fallback, as the
+    // error-catching fetcher this replaced did.
+    const config = (): NumberKvConfig | null | undefined => {
+        if (props.config) return props.config;
+        const def = definition();
+        return def?.kind === 'number-kv' ? (def.config as NumberKvConfig) : null;
+    };
+    const loading = () => !props.config && fetching();
 
     return (
         <Show when={!loading()} fallback={<span class={styles.datafieldValue}>…</span>}>
@@ -142,6 +141,7 @@ const NumberKvBody = (props: NumberKvFieldProps & { config: NumberKvConfig }) =>
         parse: parseEdit,
         validate: makeValidate(config),
         rootRef: props.rootRef,
+        readOnly: props.readOnly,
         pendingMode: props.pendingMode,
     });
 

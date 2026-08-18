@@ -54,15 +54,28 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
         expect(getAncestorPath('f1')).toEqual([]);
     });
 
-    it('ELEMENT_WRITTEN for a non-business tree is ignored (re-root policy Definition)', () => {
+    it('ELEMENT_WRITTEN for a non-business tree is ignored (a FieldDefinition)', () => {
+        // Every Definition is `kind: node` now, so the placement filter above lets
+        // it straight through — the `treeType` gate is the only thing keeping the
+        // whole Library out of the navigable node index. Worth pinning: a pulled
+        // Definition arrives on this path exactly like a created asset would.
         handleStorageEvent({
             type: 'ELEMENT_WRITTEN',
             origin: 'local',
-            element: { id: 'fd_logbook_policy', kind: 'logbook', parentId: null, name: 'Logbook Policy', value: null, treeType: 'library', deletedAt: null },
+            element: { id: 'fd_logbook_policy', kind: 'node', parentId: 'library_root', name: 'Logbook Policy', value: null, treeType: 'library', deletedAt: null },
         });
 
-        // A library row of a re-root kind is not a tree node.
         expect(getAncestorPath('fd_logbook_policy')).toEqual([]);
+    });
+
+    it('ELEMENT_WRITTEN for the Library Node itself is ignored', () => {
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            origin: 'local',
+            element: { id: 'library_root', kind: 'node', parentId: null, name: 'Field Library', value: null, treeType: 'library', deletedAt: null },
+        });
+
+        expect(getAncestorPath('library_root')).toEqual([]);
     });
 
     // Soft delete is the only removal channel — a written element carrying

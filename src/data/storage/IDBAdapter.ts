@@ -18,8 +18,10 @@ import type {
 import type { Definition, Element, ElementHistory, Kind, TreeType } from '../models';
 import { filterActive } from '../models';
 import { shouldSyncTreeType, shouldLogHistory } from '../treePolicy';
-import { serializeConfig, assembleConfig } from '../../kinds/configElements';
+import { serializeConfig, assembleConfig, readDefinedKind } from '../../kinds/configElements';
+import { CONFIG_VALIDATORS } from '../../kinds/configSchema';
 import { isInline } from '../../kinds/placement';
+import { LIBRARY_ROOT_ID } from '../definitionIds';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { devLog } from '../../utils/devMode';
@@ -63,6 +65,24 @@ function mapDexieError(err: unknown): { code: StorageErrorCode; retryable: boole
   }
 }
 
+/**
+ * **What identifies a Definition: `definitionId === id`** — a Definition points at
+ * itself (SPEC → *What identifies a Definition*). This replaced `parentId === null`,
+ * which was the test only for as long as Definitions were tree roots; they hang
+ * under the Library Node now. The self-reference is position-independent, so it
+ * survives folders inside the Library and the eventual move of the whole Library
+ * beneath an app-level Node.
+ *
+ * The three cases are disjoint on the one column: a Definition carries its own id,
+ * an instance carries the Definition's, and a config Field (or any plain Node)
+ * carries `null`.
+ */
+const isDefinitionRow = (e: Element): boolean => e.definitionId === e.id;
+
+/** A config sub-field Element: a `library` row bound to nothing (the inverse of
+ *  `isDefinitionRow` within the library tree). */
+const isConfigChildRow = (e: Element): boolean => e.definitionId === null;
+
 export class IDBAdapter implements SyncableStorageAdapter {
   readonly syncQueue: SyncQueueManager;
 
@@ -78,13 +98,16 @@ export class IDBAdapter implements SyncableStorageAdapter {
     return this.run(async () => {
       const all = await db.elements.toArray();
       const defs = all.filter(
-        (e) => e.treeType === 'library' && e.parentId === null && e.deletedAt === null,
+        (e) => e.treeType === 'library' && isDefinitionRow(e) && e.deletedAt === null,
       );
       defs.sort((a, b) => a.name.localeCompare(b.name));
-      // Group active library children by id once, so assembly is O(n) not N+1.
+      // Group active library config children by id once, so assembly is O(n) not
+      // N+1. The inverse of the identity test, not of the parent test: Definitions
+      // have a parent now (the Library Node), so `parentId !== null` would have
+      // swept every Definition into this map.
       const childById = new Map<string, Element>();
       for (const e of all) {
-        if (e.treeType === 'library' && e.parentId !== null && e.deletedAt === null) {
+        if (e.treeType === 'library' && isConfigChildRow(e) && e.deletedAt === null) {
           childById.set(e.id, e);
         }
       }
@@ -98,7 +121,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async getDefinition(id: string): Promise<StorageResult<Definition | null>> {
     return this.run(async () => {
       const def = await db.elements.get(id);
-      if (!def || def.treeType !== 'library' || def.parentId !== null) {
+      if (!def || def.treeType !== 'library' || !isDefinitionRow(def)) {
         return createResult(null);
       }
       const children = filterActive(await db.elements.where('parentId').equals(id).toArray());
@@ -112,15 +135,24 @@ export class IDBAdapter implements SyncableStorageAdapter {
    * Element and its config sub-field children (config-as-Elements). `config` is
    * assembled on read — there is no stored blob. `authorId` mirrors the
    * Definition Element's `updatedBy` (the old separate column folds into it).
+   *
+   * **This is the seam that absorbs kind-as-a-Field.** A Definition's Element is
+   * `kind: 'node'` now (SPEC → *A FieldDefinition is a Node*), so the kind it
+   * *defines* is read from its `::cfg::kind` child and surfaced here under the
+   * view's `kind`. Every consumer of a Definition — `handlers.ts`'s mint,
+   * `useLensPolicy`, the Kind band, all four kv renderers — reads this view and
+   * therefore needed no change. The `?? def.kind` fallback covers a row written
+   * before the kind child existed.
    */
   private buildDefinitionView(
     def: Element,
     getChild: (childId: string) => Element | undefined,
   ): Definition {
-    const config = assembleConfig(def.id, def.kind, getChild);
+    const definedKind = readDefinedKind(def.id, getChild) ?? def.kind;
+    const config = assembleConfig(def.id, definedKind, getChild);
     return {
       id: def.id,
-      kind: def.kind,
+      kind: definedKind,
       label: def.name,
       config,
       authorId: def.updatedBy,
@@ -137,13 +169,17 @@ export class IDBAdapter implements SyncableStorageAdapter {
 
       const defElement: Element = {
         id: input.id,
-        kind: input.kind,
+        // Every Definition is a `node` so that every Definition is alike — same
+        // row, same card, same gestures, same place. The kind it *defines* rides
+        // in `serializeConfig`'s leading `::cfg::kind` child below.
+        kind: 'node',
         name: input.label,
         subtitle: null,
         value: null,
-        parentId: null,
+        parentId: LIBRARY_ROOT_ID,
         siblingOrder: 0,
-        definitionId: null,
+        // The self-reference *is* the identity test.
+        definitionId: input.id,
         treeType: 'library',
         updatedBy: userId,
         updatedAt: timestamp,
@@ -214,8 +250,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async listRootElements(): Promise<StorageResult<Element[]>> {
     return this.run(async () => {
       const all = await db.elements.toArray();
-      // Business-tree roots only — library Definitions are `parentId: null` too.
-      const active = all.filter(e => e.parentId === null && e.deletedAt === null && e.treeType === 'business');
+      // The business-tree roots plus the Library Node, which is the only `library`
+      // row left at the top level now that Definitions hang beneath it. It is
+      // seeded at `siblingOrder: -1`, which is the whole of the "pinned at the top
+      // of ROOT" rule — no view-level special case (SPEC → *The Library*).
+      const active = all.filter(e =>
+        e.parentId === null
+        && e.deletedAt === null
+        && (e.treeType === 'business' || e.treeType === 'library'),
+      );
       active.sort((a, b) => a.siblingOrder - b.siblingOrder);
       return createResult(active);
     });
@@ -270,7 +313,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       }
       if (input.definitionId) {
         const def = await db.elements.get(input.definitionId);
-        if (!def || def.treeType !== 'library' || def.parentId !== null) {
+        if (!def || def.treeType !== 'library' || !isDefinitionRow(def)) {
           throw makeStorageError('not-found', `Definition not found: ${input.definitionId}`, { retryable: false });
         }
       }
@@ -332,6 +375,15 @@ export class IDBAdapter implements SyncableStorageAdapter {
         throw makeStorageError('not-found', `Element not found: ${id}`, { retryable: false });
       }
 
+      // A Definition is editable for its whole life now, so the kind's cross-field
+      // rules run on **every** config-Field write rather than once at a pre-Create
+      // gate (SPEC → *Required config is enforced on every write*). Unbypassable
+      // because it sits in the adapter, not in a form.
+      const owningDefinition = await this.owningDefinition(existing);
+      if (owningDefinition && 'value' in updates) {
+        await this.assertConfigCoherent(owningDefinition, id, updates.value ?? null);
+      }
+
       const timestamp = now();
       const userId = getCurrentUserId();
 
@@ -377,9 +429,56 @@ export class IDBAdapter implements SyncableStorageAdapter {
           origin: 'local',
           element: { id: written.id, kind: written.kind, parentId: written.parentId, name: written.name, value: written.value, treeType: written.treeType, deletedAt: written.deletedAt },
         });
+        // Editing a config Field *is* editing the Definition — this is the event
+        // every mounted instance re-reads its config on (SPEC → *Downstream only*).
+        // Without it a units change would sit in the Library, visible to nobody.
+        if (owningDefinition) {
+          storageEventBus.emit({
+            type: 'DEFINITION_WRITTEN',
+            origin: 'local',
+            definition: { id: owningDefinition.id, deletedAt: owningDefinition.deletedAt },
+          });
+        }
       }
       return createResult(undefined);
     });
+  }
+
+  /**
+   * The Definition an Element is a config Field of, or null. A config child is a
+   * `library` row bound to nothing whose parent points at itself.
+   */
+  private async owningDefinition(el: Element): Promise<Element | null> {
+    if (el.treeType !== 'library' || !isConfigChildRow(el) || el.parentId === null) return null;
+    const parent = await db.elements.get(el.parentId);
+    return parent && isDefinitionRow(parent) ? parent : null;
+  }
+
+  /**
+   * Reassemble the Definition's config with `childId` set to `nextValue` and run
+   * the kind's cross-field validator, throwing on failure. Reassembling rather
+   * than checking the one value is the point: the rules that matter here
+   * (`enum-kv` needs two options, the `LL ≤ L ≤ H ≤ HH` chain) span sub-fields, so
+   * no single-value check could see them — and the threshold chain became exactly
+   * this kind of rule when `compound` was retired.
+   */
+  private async assertConfigCoherent(
+    def: Element,
+    childId: string,
+    nextValue: Element['value'],
+  ): Promise<void> {
+    const children = filterActive(await db.elements.where('parentId').equals(def.id).toArray());
+    const byId = new Map(children.map((c) => [c.id, c]));
+    const definedKind = readDefinedKind(def.id, (cid) => byId.get(cid)) ?? def.kind;
+    const validate = CONFIG_VALIDATORS[definedKind];
+    if (!validate) return;
+    const next = assembleConfig(def.id, definedKind, (cid) =>
+      cid === childId ? { value: nextValue } : byId.get(cid),
+    );
+    const error = validate(next);
+    if (error) {
+      throw makeStorageError('validation', error, { retryable: false });
+    }
   }
 
   async softDeleteElement(id: string): Promise<StorageResult<void>> {
@@ -490,14 +589,20 @@ export class IDBAdapter implements SyncableStorageAdapter {
         origin: 'remote',
         element: { id: element.id, kind: element.kind, parentId: element.parentId, name: element.name, value: element.value, treeType: element.treeType, deletedAt: element.deletedAt },
       });
-      // A library Definition arriving from a pull is a Library change — signal the
-      // Composer the same way local creation does.
-      if (element.treeType === 'library' && element.parentId === null) {
-        storageEventBus.emit({
-          type: 'DEFINITION_WRITTEN',
-          origin: 'remote',
-          definition: { id: element.id, deletedAt: element.deletedAt },
-        });
+      // A library row arriving from a pull is a Library change — signal it the same
+      // way a local write does. Both halves count: the Definition Element itself,
+      // and one of its config Fields (a pulled units change has to repaint every
+      // mounted instance exactly like a local edit). A config child names its
+      // Definition by `parentId`.
+      if (element.treeType === 'library') {
+        const definitionId = isDefinitionRow(element) ? element.id : element.parentId;
+        if (definitionId !== null) {
+          storageEventBus.emit({
+            type: 'DEFINITION_WRITTEN',
+            origin: 'remote',
+            definition: { id: definitionId, deletedAt: element.deletedAt },
+          });
+        }
       }
     });
   }

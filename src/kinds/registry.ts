@@ -29,7 +29,6 @@ import { logbookManifest } from './logbook.manifest';
 import { internalLinkManifest } from './internal-link.manifest';
 import { externalLinkManifest } from './external-link.manifest';
 import { flagManifest } from './flag.manifest';
-import { compoundManifest } from './compound.manifest';
 import { stringListManifest } from './string-list.manifest';
 
 export const KIND_REGISTRY = {
@@ -49,8 +48,9 @@ export const KIND_REGISTRY = {
     'external-link': externalLinkManifest,
     // Config-only sub-field kinds (config-as-Elements). Registered for value
     // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).
+    // `compound` was the third; retired 2026-08-17 when number-kv's thresholds
+    // became four ordinary sub-fields (ELEMENT-MODEL → number-kv).
     flag: flagManifest,
-    compound: compoundManifest,
     'string-list': stringListManifest,
 } satisfies Record<string, KindManifest>;
 

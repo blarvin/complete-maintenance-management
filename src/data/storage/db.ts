@@ -270,6 +270,27 @@ export class AppDatabase extends Dexie {
         tx.table('syncMetadata').clear(),
       ]);
     });
+
+    // Version 12: the Library becomes a place in the tree. Every stored library
+    // row changes shape at once — a Definition is now `kind: 'node'` with
+    // `definitionId === id` under the `Field Library` Node, its defined kind moved
+    // into a `::cfg::kind` child, config is materialized rather than sparse, and
+    // the `compound` kind is gone. Identical stores to v11; the change is entirely
+    // in row payloads, so this version exists only for its clear-on-upgrade — an
+    // old row would fail the new identity test and read as an orphan.
+    this.version(12).stores({
+      elements: 'id, parentId, kind, definitionId, treeType, siblingOrder, updatedAt, deletedAt',
+      elementHistory: 'id, elementId, updatedAt, rev, [elementId+rev]',
+      syncQueue: 'id, status, timestamp, entityType',
+      syncMetadata: 'key',
+    }).upgrade(async (tx) => {
+      await Promise.all([
+        tx.table('elements').clear(),
+        tx.table('elementHistory').clear(),
+        tx.table('syncQueue').clear(),
+        tx.table('syncMetadata').clear(),
+      ]);
+    });
   }
 }
 

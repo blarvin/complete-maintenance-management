@@ -41,7 +41,6 @@ export const KIND_PLACEMENT = {
     'external-link': 'inline',
     // Config-only sub-field kinds
     flag: 'inline',
-    compound: 'inline',
     'string-list': 'inline',
 } as const satisfies Record<Kind, Placement>;
 

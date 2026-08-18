@@ -37,7 +37,6 @@ export const KIND_MINT_VIA = {
     'external-link': 'add-surface',
     // Config-only sub-field kinds — real kinds, but only inside a config subtree.
     flag: 'config-only',
-    compound: 'config-only',
     'string-list': 'config-only',
 } as const satisfies Record<Kind, MintVia>;
 

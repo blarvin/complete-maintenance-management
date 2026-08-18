@@ -16,8 +16,7 @@ import {
   CONFIG_VALIDATORS,
   NUMBER_KV_CONFIG_SCHEMA,
 } from '../kinds/configSchema';
-import { serializeConfig, assembleConfig } from '../kinds/configElements';
-import { packThresholds } from '../components/DataField/numberKvState';
+import { serializeConfig, assembleConfig, configChildId } from '../kinds/configElements';
 import type { DefinitionConfig, Kind } from '../data/models';
 
 const sub = (key: string) => {
@@ -100,21 +99,37 @@ describe('dynamic option vocabularies', () => {
   });
 });
 
-describe('compound members', () => {
-  it('thresholds members are exactly the flat keys pack reads', () => {
-    // If these drift, authoring edits keys that never reach storage — silently.
-    const members = sub('thresholds').members!.map((m) => m.key);
-    const packed = Object.keys(
-      packThresholds({ lowLow: 1, low: 2, high: 3, highHigh: 4 }),
-    );
-    expect(members).toEqual(packed);
+describe('the alarm thresholds, now four ordinary sub-fields', () => {
+  const THRESHOLDS = ['lowLow', 'low', 'high', 'highHigh'] as const;
+
+  it('are four scalar number-kv entries, not one compound', () => {
+    // `compound` is retired (2026-08-17): the authoring band already drew these as
+    // four flat rows, and the Library gives each its own editable, individually
+    // history-tracked Field. This is the guard against the packed shape returning
+    // as a quiet convenience.
+    for (const key of THRESHOLDS) {
+      expect(sub(key).kind, `${key} is not a scalar`).toBe('number-kv');
+      expect(Object.keys(sub(key)), `${key} carries pack/unpack`)
+        .not.toContain('pack');
+    }
+    expect(NUMBER_KV_CONFIG_SCHEMA.find((s) => s.key === 'thresholds')).toBeUndefined();
   });
 
-  it('member labels stand alone — the compound label no longer renders above them', () => {
-    // Flattening dropped the `Thresholds` parent row, so `Low low` beside
-    // `Nominal min` would have been ambiguous. The category moved into the label.
-    for (const m of sub('thresholds').members!) {
-      expect(m.label, `${m.key} leans on the compound label`).toMatch(/^Threshold /);
+  it('carry stand-alone labels — there is no parent row above them to lean on', () => {
+    // `Low low` beside `Nominal min` would have been ambiguous, so the category
+    // moved into each label when the `Thresholds` parent row went away.
+    for (const key of THRESHOLDS) {
+      expect(sub(key).label, `${key} leans on a label that no longer renders`)
+        .toMatch(/^Threshold /);
+    }
+  });
+
+  it('each get their own config Element, so each gets its own history', () => {
+    // The point of the retirement: a torn `L > H` merge is now possible and caught
+    // by validation, in exchange for four separately-auditable knobs.
+    const children = serializeConfig('fd', 'number-kv', { low: 2, high: 8 } as DefinitionConfig);
+    for (const key of THRESHOLDS) {
+      expect(children.map((c) => c.id)).toContain(configChildId('fd', key));
     }
   });
 });
@@ -184,17 +199,32 @@ describe('storage is indifferent to the authoring fields', () => {
     expect(options?.value).toEqual(['In Service', 'Down']);
   });
 
-  it('emits no options child at all when every seeded row is still blank', () => {
+  it('materializes an all-blank options row as unset, not as an empty list', () => {
+    // The child exists (every knob gets a row — SPEC → *Materialization*) but
+    // carries no value, which is a different statement from `[]`: an `enum-kv`
+    // with an empty option list cannot be filled in, whereas an unset one has
+    // simply not been authored yet.
     const children = serializeConfig('fd', 'enum-kv', { options: ['', ''] } as DefinitionConfig);
-    expect(children.map((c) => c.id)).not.toContain('fd::cfg::options');
+    const options = children.find((c) => c.id === 'fd::cfg::options');
+    expect(options?.value).toBeNull();
   });
 
-  it('emits no child for a hidden sub-field that was never filled', () => {
-    // `currencyCode` is revealed only under a currency format; leaving it unset
-    // must stay sparse rather than writing an empty child.
+  it('materializes a hidden sub-field that was never filled', () => {
+    // `currencyCode` is revealed only under a currency format. `visibleWhen` is an
+    // authoring fact and storage stays indifferent to it: the row exists so that
+    // switching the format later has something to write into.
     const children = serializeConfig('fd', 'number-kv', {
       unitsSymbol: 'psi',
     } as DefinitionConfig);
-    expect(children.map((c) => c.id)).not.toContain('fd::cfg::currencyCode');
+    const currency = children.find((c) => c.id === 'fd::cfg::currencyCode');
+    expect(currency?.value).toBeNull();
+  });
+
+  it('assembles back to a sparse config, so no downstream consumer sees the nulls', () => {
+    // Materialization is invisible above the adapter: every reader of a
+    // `Definition` view (the mint path, the kv renderers, the lens policy) still
+    // gets exactly the keys that were set.
+    expect(roundTrip('number-kv', { unitsSymbol: 'psi' } as DefinitionConfig))
+      .toEqual({ unitsSymbol: 'psi' });
   });
 });

@@ -60,10 +60,11 @@ export function initializeDevTools(): void {
 
   w.__wipeDefinitions = async () => {
     try {
-      // The Library is `library`-tree Elements (Definitions + their config
-      // sub-field children), not a separate table — clear all of them.
+      // The Library is `library`-tree Elements (the Library Node, its Definitions
+      // and their config sub-field children), not a separate table — clear all of
+      // them. A Definition is the row that points at itself.
       const libraryEls = await db.elements.where('treeType').equals('library').toArray();
-      const defCount = libraryEls.filter(e => e.parentId === null).length;
+      const defCount = libraryEls.filter(e => e.definitionId === e.id).length;
       await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
         await db.elements.bulkDelete(libraryEls.map(e => e.id));
         // Reset the seed-version key so seedDefinitions() runs again on the

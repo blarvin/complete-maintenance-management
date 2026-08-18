@@ -50,6 +50,12 @@ stale or dangling.
 
 3.) **Field Value no longer aligns with current value's metadata string.**
 
+4.) **Number config rows in the Library render with 2 decimals** — `Decimals: 2.00`, `Staleness (seconds): 604,800.00`, `Max words: 2.00`. A config row is a real `number-kv` Field now, and `FieldList` hands it `{}` as config, so `formatNumber`'s `decimals ?? 2` default applies. Passing `{ decimals: 0 }` instead would be wrong for `Tolerance: 0.5`, so the fix is a "plain number, no fixed precision" path in `formatNumber` rather than a different default. Surfaced in the 2026-08-18 Library hand-test.
+
+5.) **A materialized-but-unset config row reads `Empty`, not `Unset`** — the two words are a real distinction (`ConfigValueFields`: unset means the kind's own default applies; empty means nobody has recorded the fact yet), but only the `flag`/`string-list` read-only path still says `Unset`. A `text-kv` or `number-kv` config row goes through that kind's ordinary renderer, which says `Empty`. Now that every knob is materialized, this is the common case. Surfaced in the 2026-08-18 Library hand-test.
+
+6.) **`visibleWhen` is not applied on a Definition's card** — Weight shows `Nominal min`/`Nominal max` *and* `Nominal value`/`Tolerance`, which is exactly the contradictory pair the Add Surface's `ConfigRows` uses `visibleWhen` to prevent. Materialization writes every knob (correctly — the row has to exist to be set later), so the reveal rule has to move to render time on this surface too, reading the assembled config. Surfaced in the 2026-08-18 Library hand-test.
+
 
 ## Features
 
@@ -157,5 +163,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 13.) **`core-loop.cy.ts` looks for a history chevron that no longer exists** — it fails at `[aria-label="Open field history"]`, which is present nowhere in `src/`: the chevron went away when History became an always-open band, and the spec was never updated. Confirmed pre-existing by stashing the Add Surface work and re-running against HEAD — identical failure, so it is not a regression from that branch. `lens-loop`, `offline-sync` and `retention` pass. Fix is to drop the click and assert the entries directly (they render already-expanded). Observed 2026-08-15.
 
-14.) **`Snackbar.coalesceKey` and `onExpire` have no production caller** — both existed for the retired pick-runs (a coalesced "N fields added" toast whose Undo reversed the whole run). Create is one action with one inverse now, so it routes through `commitWithUndo` and neither is passed anywhere outside `snackbar/` and its own tests. The mechanism is sound and tested; the call is whether an unused seam earns its keep, and note Tech Debt #8 wants `onExpire` for the deferred delete-history write. Observed 2026-08-15.
+14.) **A rejected config write reports "Please check the inputs and try again."** — the per-write required-config check works (removing an option from `Status` down to one is refused and the row rolls back), but `describeForUser` maps every `validation` StorageError to that one sentence, discarding the validator's own message ("Needs at least two options"). The specific reason is the only part that tells the user what to do. Widening `describeForUser` to return `err.message` for `validation` touches every validation site, so it is a decision rather than a tweak. Observed in the 2026-08-18 Library hand-test.
+
+15.) **`Snackbar.coalesceKey` and `onExpire` have no production caller** — both existed for the retired pick-runs (a coalesced "N fields added" toast whose Undo reversed the whole run). Create is one action with one inverse now, so it routes through `commitWithUndo` and neither is passed anywhere outside `snackbar/` and its own tests. The mechanism is sound and tested; the call is whether an unused seam earns its keep, and note Tech Debt #8 wants `onExpire` for the deferred delete-history write. Observed 2026-08-15.
 

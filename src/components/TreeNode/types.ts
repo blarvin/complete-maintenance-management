@@ -56,6 +56,13 @@ export type TreeNodeDisplayProps = TreeNodeBaseProps & {
     /** The element's kind — drives the manifest-aware shell (DataCard/chevron, #5). */
     kind: Kind;
     parentId?: string | null;
+    /**
+     * The element's Definition binding. Carried so the shell can tell a
+     * **FieldDefinition** apart from any other Node: a Definition points at itself
+     * (`definitionId === id`, SPEC → *What identifies a Definition*), which is what
+     * makes its card's Fields config and withholds the delete affordance.
+     */
+    definitionId?: string | null;
     onNodeClick?: () => void;
     onNavigateUp?: (parentId: string | null) => void;
 };

@@ -28,13 +28,14 @@
  */
 
 import { Show, createSignal, onCleanup } from 'solid-js';
-import { getElementQueries, getDefinitionQueries } from '../../data/queries';
+import { getElementQueries } from '../../data/queries';
 import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
 import { compareHistory } from '../../data/storage/historyHelpers';
+import { useDefinitionConfig } from '../../hooks/useDefinitionConfig';
 import { storesOwnValue } from '../../kinds/childrenPolicy';
 import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
-import type { Kind, Definition, ElementHistory } from '../../data/models';
+import type { Kind, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
 import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
@@ -44,7 +45,9 @@ import styles from './DataFieldDetails.module.css';
 
 export type DataFieldDetailsProps = {
     fieldId: string;
-    definitionId: string;
+    /** Null for a **config Field** on a Definition's card — it is bound to no
+     *  Definition, so there is nothing to summarise and nothing to link to. */
+    definitionId: string | null;
     kind: Kind;
     onDelete: () => void;
 };
@@ -56,8 +59,12 @@ const hasConfig = (kind: Kind): boolean => (CONFIG_SCHEMAS[kind]?.length ?? 0) >
 
 export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     const [history, setHistory] = createSignal<ElementHistory[]>([]);
-    const [definition, setDefinition] = createSignal<Definition | null>(null);
     const [isLoaded, setIsLoaded] = createSignal(false);
+
+    // The History band renders past values through the *current* config, so a
+    // Library edit has to reach it too — otherwise a reverted reading would still
+    // print in the old units (SPEC → *The audit consequence, stated plainly*).
+    const { definition } = useDefinitionConfig(() => props.definitionId);
 
     // Only value-edit rows are field-value history (name/subtitle/parentId/
     // siblingOrder edits are not). Sorted ascending (oldest first) so the
@@ -90,14 +97,8 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
 
     void (async () => {
         try {
-            const [h, def] = await Promise.all([
-                fetchHistory(),
-                getDefinitionQueries().getDefinitionById(props.definitionId),
-            ]);
-            if (!disposed) {
-                setHistory(h);
-                setDefinition(def);
-            }
+            const h = await fetchHistory();
+            if (!disposed) setHistory(h);
         } catch (e) {
             console.error('Failed to load field details:', e);
         } finally {
@@ -148,18 +149,26 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
         {
             id: 'config',
             title: 'Config',
-            present: hasConfig(props.kind),
+            // A config Field has no Definition, so there is no config *of* it to
+            // show — it *is* config. Gating on the binding rather than on the kind
+            // keeps the band from drawing an empty "No configuration" box on every
+            // row of every Definition's card.
+            present: !!props.definitionId && hasConfig(props.kind),
             collapsible: true,
             defaultOpen: false,
-            // Inert on purpose. Every config sub-field is `delegated` in Phase 1:
-            // it lives on the Definition and is read live, so an instance shows
-            // what its Definition says and the override is the cascade arbiter's
-            // job (SPEC → Field Details). Do not "fix" this into editable rows
-            // without the arbiter — an edit here would mutate shared meaning.
+            // Inert on purpose, and this is the surface the Library does *not*
+            // change. Every config sub-field is `delegated` in Phase 1: it lives on
+            // the Definition and is read live, so an instance shows what its
+            // Definition says and the override is the cascade arbiter's job
+            // (SPEC → Field Details). Editing happens in one place, and that place
+            // is the Definition's own card in the Library — reached by walking
+            // there. Do not "fix" this into editable rows without the arbiter: an
+            // edit here would mutate shared meaning from a surface that reads as
+            // local. (The live link to that card is ISSUES → Features.)
             body: () => (
                 <div class={bands.sectionBody}>
                     <ConfigSummary
-                        definitionId={props.definitionId}
+                        definitionId={props.definitionId!}
                         source={definition()?.label}
                     />
                 </div>
@@ -179,16 +188,24 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
                     <div classList={{ [styles.idRow]: true, 'no-caret': true }}>
                         <ElementIdRow id={props.fieldId} />
                     </div>
-                    <div classList={{ [styles.actionsRow]: true, 'no-caret': true }}>
-                        <button
-                            type="button"
-                            class={styles.deleteButton}
-                            onClick={() => props.onDelete()}
-                            aria-label="Delete this field"
-                        >
-                            Delete Field
-                        </button>
-                    </div>
+                    {/* No delete on a config Field: config is *provisioned* from
+                        the kind's schema, so removing a row would silently drop a
+                        knob from every instance bound to that Definition. Repair
+                        is the reconciler's job and the reconciler is not built
+                        (SPEC → *Config Fields are provisioned*), so the alpha
+                        simply does not offer the gesture. */}
+                    <Show when={props.definitionId}>
+                        <div classList={{ [styles.actionsRow]: true, 'no-caret': true }}>
+                            <button
+                                type="button"
+                                class={styles.deleteButton}
+                                onClick={() => props.onDelete()}
+                                aria-label="Delete this field"
+                            >
+                                Delete Field
+                            </button>
+                        </div>
+                    </Show>
                 </>
             ),
         },

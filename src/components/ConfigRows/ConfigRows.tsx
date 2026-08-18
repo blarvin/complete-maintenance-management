@@ -2,8 +2,9 @@
  * ConfigRows — a kind's config, authored as tree rows.
  *
  * The generic authoring UI (SPEC → Authoring a Definition). **One flat list, one
- * row per knob** — including a compound's members, which draw as ordinary
- * sibling rows rather than one level deeper. Collapsible category groups were
+ * row per knob** — including the four alarm thresholds, which were one `compound`
+ * drawn as four sibling rows until the kind was retired 2026-08-17 and the schema
+ * started saying what the band already showed. Collapsible category groups were
  * removed 2026-08-16 (see SUPERSEDED → *number-kv progressive disclosure*): every
  * label stands on its own, so the group chevrons were a level of structure that
  * hid knobs without telling the reader anything the labels didn't. Where a
@@ -25,13 +26,17 @@
  *
  * **Bound to the flat draft config, never to Elements.** Nothing exists to
  * parent a sub-field Element to until the Definition commits, and
- * `serializeConfig` builds the subtree then — including packing a compound's
- * flat member keys back into one object.
+ * `serializeConfig` builds the subtree then.
+ *
+ * Not to be confused with a Definition's card **in the Library**, which draws the
+ * same knobs as real `DataField` rows over the persisted sub-field Elements
+ * (`FieldList`). This surface exists because at authoring time those Elements do
+ * not exist yet.
  */
 
 import { For, Index, Show, createUniqueId } from 'solid-js';
 import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
-import type { ConfigSubField, ConfigSubFieldMember } from '../../kinds/types';
+import type { ConfigSubField } from '../../kinds/types';
 import type { DefinitionConfig, Kind, StringListValue } from '../../data/models';
 import chevron from '../../styles/disclosure.module.css';
 import styles from './ConfigRows.module.css';
@@ -246,22 +251,6 @@ export const ConfigRows = (props: ConfigRowsProps) => {
     const listSubs = () => schema().filter((s) => s.kind === 'string-list');
 
     const renderSub = (sub: ConfigSubField) => {
-        // A compound stores one packed object but authors as its parts, so it
-        // contributes N sibling rows rather than a row of its own.
-        if (sub.members) {
-            return (
-                <For each={sub.members}>
-                    {(m: ConfigSubFieldMember) => (
-                        <LeafRow
-                            label={m.label}
-                            kind={m.kind}
-                            value={flat()[m.key]}
-                            onWrite={(v) => write(m.key, v)}
-                        />
-                    )}
-                </For>
-            );
-        }
         if (sub.kind === 'string-list') {
             return (
                 <ListRows

@@ -13,8 +13,8 @@
  * prevents focus theft on re-runs.
  */
 
-import { Show, For, createSignal, createEffect, createMemo, createResource, onMount, onCleanup, type Accessor } from 'solid-js';
-import { getDefinitionQueries } from '../../data/queries';
+import { Show, For, createSignal, createEffect, createMemo, onMount, onCleanup, type Accessor } from 'solid-js';
+import { useDefinitionConfig } from '../../hooks/useDefinitionConfig';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
@@ -34,6 +34,9 @@ export type EnumKvFieldProps = {
      *  This is the kind where preview fidelity matters most — without it a draft
      *  enum would offer no options at all. */
     config?: EnumKvConfig;
+    /** Write-once: the value shows but the popover never opens. Its one user is a
+     *  Definition's `Kind` row (SPEC → *The defined kind is a config Field*). */
+    readOnly?: boolean;
     /** When set, edits are buffered (no IDB write) and forwarded via onChange.
      *  `autoFocus` flags the row as just-ticked-by-user so the popover should
      *  auto-open and focus its first option; seeded rows leave it false. */
@@ -83,32 +86,32 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
         setPopoverPos({ top, left });
     };
 
-    // Error-catching fetcher: never enters the throwing state (no ErrorBoundary).
-    // A null source skips the fetch entirely — a draft row carries its config on
-    // the prop and has no Definition to read.
-    const [fetchedOptions] = createResource(
-        () => (props.config ? null : props.definitionId),
-        async (definitionId): Promise<{ options: string[]; allowOther: boolean }> => {
-            try {
-                const def = await getDefinitionQueries().getDefinitionById(definitionId);
-                if (!def || def.kind !== 'enum-kv') return { options: [], allowOther: false };
-                const config = def.config as EnumKvConfig;
-                return { options: config.options, allowOther: config.allowOther ?? false };
-            } catch {
-                return { options: [], allowOther: false };
-            }
-        },
+    // Live, not merely fetched: adding an option in the Library has to reach this
+    // row (SPEC → *Downstream only*). A null id skips the fetch — a draft row
+    // carries its config on the prop and has no Definition to read.
+    const { definition, loading } = useDefinitionConfig(() =>
+        props.config ? null : props.definitionId,
     );
 
-    // A memo, not a plain accessor: the draft branch builds a fresh object, and
+    // A memo, not a plain accessor: both branches build a fresh object, and
     // `<Show keyed>` below would otherwise remount the option list on every read.
-    const options = createMemo(() => {
+    // `undefined` while the fetch is in flight is what draws the "Loading…" row;
+    // missing / wrong-kind / failed degrades to an empty vocabulary.
+    const options = createMemo((): { options: string[]; allowOther: boolean } | undefined => {
         const draft = props.config;
-        if (!draft) return fetchedOptions();
-        return { options: draft.options ?? [], allowOther: draft.allowOther ?? false };
+        if (draft) return { options: draft.options ?? [], allowOther: draft.allowOther ?? false };
+        if (loading()) return undefined;
+        const def = definition();
+        if (def?.kind !== 'enum-kv') return { options: [], allowOther: false };
+        const config = def.config as EnumKvConfig;
+        return { options: config.options ?? [], allowOther: config.allowOther ?? false };
     });
 
     const open = () => {
+        // Write-once rows have nothing to open. Guarding here rather than at each
+        // gesture covers the pointer path, the keyboard path and the pendingMode
+        // auto-open in one place.
+        if (props.readOnly) return;
         if (appState.editingElementId === props.id) return;
         startFieldEdit(props.id);
         setIsOpen(true);
@@ -285,15 +288,18 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
                 classList={{
                     [styles.datafieldValue]: true,
                     [styles.datafieldValueUnderlined]: hasValue(),
-                    [styles.datafieldValueEditable]: true,
+                    // A write-once row is a reading surface, so it declines the
+                    // editable affordances entirely — no focus stop, no button
+                    // role, no listbox promise it cannot keep.
+                    [styles.datafieldValueEditable]: !props.readOnly,
                     'no-caret': true,
                 }}
                 onPointerDown={handleTriggerPointerDown}
                 onKeyDown={handleTriggerKeyDown}
-                tabIndex={0}
-                role="button"
-                aria-haspopup="listbox"
-                aria-expanded={isEditing()}
+                tabIndex={props.readOnly ? undefined : 0}
+                role={props.readOnly ? undefined : 'button'}
+                aria-haspopup={props.readOnly ? undefined : 'listbox'}
+                aria-expanded={props.readOnly ? undefined : isEditing()}
                 aria-labelledby={labelId()}
             >
                 {displayValue() || <span class={styles.datafieldPlaceholder}>Empty</span>}

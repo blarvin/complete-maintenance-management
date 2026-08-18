@@ -125,14 +125,15 @@ export type SingleImageValue = {
 };
 
 // Config sub-field value shapes (config-as-Elements). These kinds back the
-// `library`-tree config subtree; in Phase 1 they only ever exist as config
-// sub-fields (see `flag` / `compound` / `string-list` manifests), never as
-// standalone Data Card rows.
+// `library`-tree config subtree; they are excluded from the Add Surface's picker
+// (`mintVia: 'config-only'`) but do render as ordinary editable rows on a
+// Definition's Data Card in the Library.
+//
+// A third, `compound`, held number-kv's `{lowLow, low, high, highHigh}` as one
+// atomic object; retired 2026-08-17 when those became four sibling `number-kv`
+// sub-fields. Every config leaf is a scalar now.
 export type FlagValue = boolean;
 export type StringListValue = string[];
-/** A small atomic co-varying object — the one object-valued config residue
- *  (e.g. number-kv thresholds `{lowLow, low, high, highHigh}`). */
-export type CompoundValue = { [k: string]: number };
 
 /**
  * Type-level kind → value map over every registry kind. Re-root (node-like)
@@ -150,7 +151,6 @@ export type KindValueMap = {
   'internal-link': InternalLinkValue;
   'external-link': ExternalLinkValue;
   flag: FlagValue;
-  compound: CompoundValue;
   'string-list': StringListValue;
   // re-root kinds: no own value
   node: never;

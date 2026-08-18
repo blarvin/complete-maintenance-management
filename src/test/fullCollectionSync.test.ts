@@ -39,9 +39,15 @@ function makeElement(overrides: Partial<Element> & { id: string }): Element {
   };
 }
 
+// A Definition in the shape the app writes: a `node` under the Library Node,
+// pointing at itself (SPEC → *What identifies a Definition*). The kind it defines
+// lives in its `::cfg::kind` child, not in this column.
 const seededDef = makeElement({
   id: 'fd_dev_description',
+  kind: 'node',
   treeType: 'library',
+  parentId: 'library_root',
+  definitionId: 'fd_dev_description',
   updatedBy: AUTHOR_ID_APP_DEVELOPER,
 });
 const seededCfgChild = makeElement({
@@ -53,7 +59,10 @@ const seededCfgChild = makeElement({
 });
 const userLibraryDef = makeElement({
   id: 'fd_user_abc',
+  kind: 'node',
   treeType: 'library',
+  parentId: 'library_root',
+  definitionId: 'fd_user_abc',
   updatedBy: USER_ID,
 });
 const userBusinessNode = makeElement({

@@ -148,9 +148,8 @@ export const KIND_CAPABILITIES = {
     },
 
     // Config-only sub-field kinds also bear an own value (inside config subtrees).
-    // Scalar for now (behavior-preserving); reassign compound/string-list by
-    // essence only when a consumer wants their own sub-structure.
+    // Scalar for now (behavior-preserving); reassign `string-list` by essence only
+    // when a consumer wants its own sub-structure.
     flag: { ownValue: { shape: 'scalar', runtime: 'boolean' } },
-    compound: { ownValue: { shape: 'scalar', runtime: 'object' } },
     'string-list': { ownValue: { shape: 'scalar', runtime: 'object' } },
 } satisfies Record<Kind, CapabilitySet>;

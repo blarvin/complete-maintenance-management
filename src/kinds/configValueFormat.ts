@@ -16,7 +16,7 @@
  * returns null, while a renderer draws its own placeholder.
  */
 
-import type { CompoundValue, FlagValue, StringListValue } from '../data/models';
+import type { FlagValue, StringListValue } from '../data/models';
 
 /** `true` → `Yes`. At this type size a word reads faster than a glyph, and it
  *  matches how the value is spoken ("multiline: yes"). */
@@ -29,15 +29,6 @@ export const formatFlag = (v: FlagValue): string => (v ? 'Yes' : 'No');
 export const formatStringList = (v: StringListValue): string =>
     v.length === 0 ? 'None' : v.join(', ');
 
-/** `{lowLow:0, low:2, high:8}` → `lowLow=0, low=2, high=8`.
- *
- *  Deliberately generic `key=value`: `compound` is a kind, not a threshold
- *  editor, and teaching it to print `LL` for `lowLow` would fold one consumer's
- *  vocabulary into the shared kind. Key order is `packThresholds`' insertion
- *  order, which for the only compound in the system is the ascending chain the
- *  `lowLow ≤ low ≤ high ≤ highHigh` invariant is stated over — so it already
- *  reads left-to-right as that chain. */
-export const formatCompound = (v: CompoundValue): string =>
-    Object.entries(v)
-        .map(([key, n]) => `${key}=${n}`)
-        .join(', ');
+/* `formatCompound` lived here until 2026-08-17. `compound` is retired — number-kv's
+   thresholds are four ordinary `number-kv` sub-fields now, each formatted by that
+   kind — so there is no object-valued config leaf left to print. */

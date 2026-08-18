@@ -12,18 +12,35 @@ import { DataFieldDetails } from '../DataFieldDetails/DataFieldDetails';
 import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import { getInlineManifest } from '../../kinds/registry';
 import { isUnfilled } from '../../data/models';
-import type { Kind, DataFieldValue } from '../../data/models';
+import type { Kind, DataFieldValue, DefinitionConfig } from '../../data/models';
 import styles from './DataField.module.css';
 
 export type DataFieldProps = {
     id: string;
     name: string;
-    definitionId: string;
+    /**
+     * Nullable because a **config Field** is a row here too (a Definition's Data
+     * Card in the Library) and a config Field is bound to no Definition —
+     * `definitionId: null` is the third case of the identity column (SPEC → *What
+     * identifies a Definition*). Such a row is handed its `config` directly
+     * instead, by whoever knows the schema.
+     */
+    definitionId: string | null;
     kind: Kind;
     value: DataFieldValue | null;
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
     updatedAt?: number;
+    /**
+     * Config supplied by the caller instead of fetched from a Definition. Two
+     * callers: the Add Surface's draft row (which has no Definition yet) and a
+     * config Field in the Library (which never will). Without it a config row's
+     * renderer waits forever on a resource whose source is null.
+     */
+    config?: DefinitionConfig;
+    /** Write-once: the row displays but never opens an editor. The `kind` Field on
+     *  a Definition is the only user (SPEC → *The defined kind is a config Field*). */
+    readOnly?: boolean;
 };
 
 export const DataField = (props: DataFieldProps) => {
@@ -94,7 +111,12 @@ export const DataField = (props: DataFieldProps) => {
             <Dynamic
                 component={manifest().Renderer}
                 id={props.id}
-                definitionId={props.definitionId}
+                // `''` rather than null: every renderer uses this as a
+                // `createResource` source, and a falsy source is what skips the
+                // fetch a config row has nothing to fetch from.
+                definitionId={props.definitionId ?? ''}
+                config={props.config}
+                readOnly={props.readOnly}
                 value={props.value}
                 updatedAt={props.updatedAt}
                 rootRef={rootEl}

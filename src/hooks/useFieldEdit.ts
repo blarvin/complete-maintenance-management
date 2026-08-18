@@ -45,6 +45,17 @@ export type UseFieldEditOptions<T extends DataFieldValue> = {
     /** Read accessor to the outer DataField row; used for outside-click cancel. Owned by the dispatcher. */
     rootRef: Accessor<HTMLElement | undefined>;
     /**
+     * Write-once: the row displays but never enters edit mode. Guarded at
+     * `beginEdit`, so every entry point — double-tap, Enter/Space, the composer's
+     * auto-focus — is covered by the one check.
+     *
+     * Its only user is a Definition's `Kind` row, which is a `enum-kv` and so does
+     * not come through this hook at all; it is threaded anyway because the write-
+     * once idea belongs to the edit lifecycle rather than to one kind, and the
+     * next write-once knob should not have to re-derive it.
+     */
+    readOnly?: boolean;
+    /**
      * When set, save does NOT dispatch UPDATE_ELEMENT_VALUE or show a Snackbar.
      * Instead it forwards the parsed value to onChange. Used by FieldComposer
      * for in-flight (un-persisted) Template previews.
@@ -116,6 +127,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // pendingMode commits the (possibly empty) value back to the pending row, so
     // dismissing without typing leaves the row checked with a null value.
     onMount(() => {
+        if (options.readOnly) return;
         if (!options.pendingMode?.autoFocus) return;
         if (options.initialValue !== null) return;
         if (appState.editingElementId === options.fieldId) return;
@@ -126,6 +138,7 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
     // === Edit Flow Handlers ===
 
     const beginEdit = () => {
+        if (options.readOnly) return;
         if (appState.editingElementId === options.fieldId) return;
         // Seed the buffer BEFORE the FSM write — Solid mounts the input
         // synchronously on startFieldEdit, so the buffer must hold the right

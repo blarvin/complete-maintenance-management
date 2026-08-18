@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 
-describe('AppDatabase schema (v11 — the binding column renames: fieldDefinitionId → definitionId)', () => {
+describe('AppDatabase schema (v12 — the Library becomes a place in the tree)', () => {
   beforeEach(async () => {
     await db.delete();
     await db.open();
@@ -11,8 +11,12 @@ describe('AppDatabase schema (v11 — the binding column renames: fieldDefinitio
     await db.delete();
   });
 
-  it('opens at version 11', () => {
-    expect(db.verno).toBe(11);
+  it('opens at version 12', () => {
+    // v12 keeps v11's stores exactly and exists only for its clear-on-upgrade:
+    // every library row changed *shape* (Definition as `kind: node`,
+    // `definitionId === id`, kind-as-a-config-Field, materialized config), and an
+    // old row would fail the new identity test and read as an orphan.
+    expect(db.verno).toBe(12);
   });
 
   it('no longer exposes the legacy nodes/fields/history or fieldDefinitions stores', () => {

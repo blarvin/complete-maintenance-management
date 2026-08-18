@@ -11,7 +11,7 @@
  * whether the value is in nominal range.
  */
 
-import type { CompoundValue, NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
+import type { NumberKvConfig, NumberKvDisplayFormat } from '../../data/models';
 
 export type NumberKvState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
 
@@ -158,38 +158,18 @@ export function computeNumberKvState(
 }
 
 /**
- * Validate a NumberKvConfig. Returns null on valid; otherwise an error
- * message naming the first violated invariant.
+ * Validate the ordering of the four threshold knobs
+ * `{lowLow ≤ low ≤ high ≤ highHigh}` (provided subset).
  *
- * Used by the Definition authoring form (PR 6) to gate Save, and by
- * unit tests against seed data. The runtime renderer doesn't call this —
- * config is assumed valid by the time it reaches the field.
+ * This used to be one `compound` sub-field's own coherence guard, which the value
+ * shape kept atomic. `compound` is retired (2026-08-17): the four are ordinary
+ * sibling `number-kv` sub-fields now, so the chain is a **cross-field rule** like
+ * every other, run over the whole reassembled config. Kept as its own function
+ * because `validateNumberKvConfig` layers the nominal-band invariants on top of it
+ * and the split is still the honest one.
  */
-/**
- * Collect the flat threshold fields off a `NumberKvConfig` into the compound
- * sub-field's value object, omitting absent keys. The inverse (unpack) is a
- * plain spread back onto config, since the keys match the flat field names.
- */
-export function packThresholds(config: NumberKvConfig): CompoundValue {
-    const t: CompoundValue = {};
-    if (config.lowLow !== undefined) t.lowLow = config.lowLow;
-    if (config.low !== undefined) t.low = config.low;
-    if (config.high !== undefined) t.high = config.high;
-    if (config.highHigh !== undefined) t.highHigh = config.highHigh;
-    return t;
-}
-
-/**
- * Validate the internal ordering of the thresholds compound sub-field
- * `{lowLow ≤ low ≤ high ≤ highHigh}` (provided subset). This is the `compound`
- * sub-field's own coherence guard (config-as-Elements): it owns *only* the
- * threshold-object invariants. Cross-field invariants against the nominal band
- * stay in `validateNumberKvConfig` (the authoring-form override). Accepts the
- * raw sub-field value (`DataFieldValue`-compatible); null → valid.
- */
-export function validateThresholds(t: CompoundValue | null): string | null {
-    if (!t) return null;
-    const { lowLow, low, high, highHigh } = t as Record<string, number | undefined>;
+export function validateThresholds(config: NumberKvConfig): string | null {
+    const { lowLow, low, high, highHigh } = config;
     // L ≤ H pair (when both set, regardless of nominal mode).
     if (low !== undefined && high !== undefined && !(low <= high)) {
         return `low (${low}) must be ≤ high (${high})`;
@@ -209,6 +189,16 @@ export function validateThresholds(t: CompoundValue | null): string | null {
     return null;
 }
 
+/**
+ * Validate a NumberKvConfig. Returns null on valid; otherwise an error
+ * message naming the first violated invariant.
+ *
+ * Registered as the `number-kv` entry in `CONFIG_VALIDATORS`, which the Add
+ * Surface reads to gate Create and the adapter re-runs on **every** config-Field
+ * write (SPEC → *Required config is enforced on every write*). The runtime
+ * renderer doesn't call it — config is assumed valid by the time it reaches the
+ * field.
+ */
 export function validateNumberKvConfig(config: NumberKvConfig): string | null {
     if (config.decimals !== undefined && config.decimals < 0) {
         return 'decimals must be ≥ 0';
@@ -223,8 +213,7 @@ export function validateNumberKvConfig(config: NumberKvConfig): string | null {
     }
 
     const { lowLow, low, high, highHigh } = config;
-    // Threshold-internal ordering is owned by the compound sub-field's validate.
-    const thresholdError = validateThresholds(packThresholds(config));
+    const thresholdError = validateThresholds(config);
     if (thresholdError) return thresholdError;
 
     const mode = config.nominalMode ?? 'range';

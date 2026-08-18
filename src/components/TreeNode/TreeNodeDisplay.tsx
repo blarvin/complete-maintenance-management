@@ -19,6 +19,7 @@ import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
 import { nodeRenderMode } from '../../kinds/renderMode';
+import { LIBRARY_ROOT_ID } from '../../data/definitionIds';
 import type { DisplayNodeState } from './types';
 import type { Kind } from '../../data/models';
 import styles from './TreeNode.module.css';
@@ -31,6 +32,8 @@ export type TreeNodeDisplayProps = {
     nodeState: DisplayNodeState;
     kind: Kind;
     parentId?: string | null;
+    /** Self-referential on a FieldDefinition — see `TreeNodeDisplayProps` in ./types. */
+    definitionId?: string | null;
     onNodeClick?: () => void;
     onNavigateUp?: (parentId: string | null) => void;
 };
@@ -76,6 +79,23 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     // physical ownership. It renders for a kind that owns children (Children →
     // FieldList) OR that derives a typed rollup (a lens → LensRollup). The `jobs`
     // container is both: its own DataFields plus the "Jobs (N)" rollup.
+    /** A FieldDefinition: the Node points at itself (SPEC → *What identifies a
+     *  Definition*). Its card's Fields are its config. */
+    const isDefinition = () => !!props.definitionId && props.definitionId === props.id;
+    const isLibraryRoot = () => props.id === LIBRARY_ROOT_ID;
+
+    /**
+     * Delete is admin-only across the Library (SPEC → *Edit / Delete Semantics*):
+     * end users cannot remove a Definition — not their own, not others' — because
+     * one is shared meaning that other people's Fields are bound to, and the
+     * Library Node itself is not user-created either.
+     *
+     * **Non-deletability is a permissions concern, not a kind.** When permissions
+     * land this becomes a property available to any Element; until then it is
+     * simply an affordance these Nodes do not draw.
+     */
+    const canDelete = () => !isDefinition() && !isLibraryRoot();
+
     const renderMode = () => nodeRenderMode(props.kind);
     const lensTargetKind = () => {
         const rm = renderMode();
@@ -110,16 +130,18 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                     <div class={detailsStyles.idRow}>
                         <ElementIdRow id={props.id} />
                     </div>
-                    <div class={detailsStyles.actionsRow}>
-                        <button
-                            type="button"
-                            class={detailsStyles.deleteButton}
-                            onClick={() => void handleDeleteNode()}
-                            aria-label="Delete this asset"
-                        >
-                            Delete Asset
-                        </button>
-                    </div>
+                    <Show when={canDelete()}>
+                        <div class={detailsStyles.actionsRow}>
+                            <button
+                                type="button"
+                                class={detailsStyles.deleteButton}
+                                onClick={() => void handleDeleteNode()}
+                                aria-label="Delete this asset"
+                            >
+                                Delete Asset
+                            </button>
+                        </div>
+                    </Show>
                 </div>
             </TreeNodeDetails>
             <NodeHeader
@@ -141,7 +163,12 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             <Show when={showDataCard()}>
                 <DataCard isOpen={isExpanded()}>
                     <Show when={ownsChildren()}>
-                        <FieldList nodeId={props.id} kind={props.kind} isConstruction={false} />
+                        <FieldList
+                            nodeId={props.id}
+                            kind={props.kind}
+                            isDefinition={isDefinition()}
+                            isConstruction={false}
+                        />
                     </Show>
                     {/* The compact in-card rollup is the lens's CHILD (under-a-node)
                         summary only. Re-rooted (PARENT), the jobs render as Node-like
