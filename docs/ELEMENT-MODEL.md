@@ -37,9 +37,9 @@ This catalogues every **kind** the framework is meant to reach — one self-cont
 | logical-container             | `Edges(members, multi) + Reads.resolver`                         | Spare Parts (hand-picked)      | re-root          | describe |
 | cross-tree action             | `Action(cross-tree)`                                             | "close all child jobs"         | inline           | open     |
 | saved view                    | view-state overlay                                               | "my open jobs"                 | re-root          | open     |
-| library                       | `Children(closed)` (seeded root)                                 | Field Library, pinned on ROOT  | re-root          | describe |
-| definitions                   | population gather → field Definitions (lens)                     | every Definition, previewed    | re-root          | describe |
-| kinds                         | registry gather (code, no Elements)                              | the admitted kinds + schemas   | re-root          | describe |
+| library                       | `Children(template)` (seeded root)                               | Field Library, pinned on ROOT  | re-root          | current  |
+| definitions                   | population gather → field Definitions (lens)                     | every Definition, live preview | re-root          | current  |
+| kinds                         | registry gather (code, no Elements)                              | each kind as a live archetype  | re-root          | current  |
 
 ---
 
@@ -329,13 +329,13 @@ The target kind is the only parameter — an org that works in "work orders," "t
 
 **Purpose**: The Library surface (SPEC → *The Library*): the vocabulary made walkable. Three chrome kinds, three seeded Elements (`treeType: library`), and no per-Definition storage — every listing is gathered.
 
-- **`library`** — the `Field Library` root pinned on ROOT (`parentId: null`, `siblingOrder: -1`). **Composition**: `Children(closed)` — its only children are the two seeded lenses. It draws no add surfaces, no delete, no rename: chrome entailment, not permissions.
-- **`definitions`** — the lens over the Definition population: every active field-like Definition (a `library`-tree root of a field kind), sorted by `name`. Renders each as a Node row (name, id subtitle) over a read-only one-field card — a synthetic unfilled instance drawn by the Definition's own kind's Renderer, never minted, never stored. The population source is not yet a `SourceSpec` relation — hardcoded, like ROOT's `business` gather (ISSUES → Architecture).
-- **`kinds`** — the lens over **code**: the registry's admitted field kinds, each a row (its `pickerLabel`) over its config schema and defaults. No Derivation over Elements at all; no Element behind any row.
+- **`library`** — the `Field Library` root pinned on ROOT (`parentId: null`, `siblingOrder: -1`). **Composition**: `Children(template: definitions + kinds)` — its only children are the two seeded lenses, and it is the one place a `mintVia: 'provision'` kind legitimately appears in an allowlist, because the seeder owns those rows and no picker ever offers them. It draws no add surfaces, no delete, no rename: chrome entailment, not permissions.
+- **`definitions`** — the lens over the Definition population: every active field-like Definition (a `library`-tree root of a field kind), sorted by `name`. Renders each as an ordinary Node card — name over its id in the subtitle — whose DataCard holds one **live** instance of the field: the Definition's own kind's Renderer in `pendingMode` over preview-local state, with the three Details bands and a disabled Delete. Never minted, never stored. **Composition**: `Reads.resolver` — deliberately *not* `Derivation`, which would enrol it in `isLensSurfaced` and hide the gathered kind from the tree. The population source is not yet a `SourceSpec` relation — hardcoded, like ROOT's `business` gather (ISSUES → Architecture).
+- **`kinds`** — the lens over **code**: the registry's admitted field kinds, each an ordinary Node card whose DataCard holds the kind as an **archetype** — a live instance above the live config rows the Add Surface authors with, seeded from `defaultConfig()`. Turning a knob re-renders the instance. No Derivation over Elements at all; no Element behind any row. Same `Reads.resolver` composition as `definitions`, and for the same reason.
 
-**Placement**: re-root, all three. Never user-minted (seeded; the two children could ride the provisioner instead — ISSUES). Read-only surfaces: no edit machinery, no propagation, no materialization (SPEC → *The Library → The preview*).
+**Placement**: re-root, all three. Never user-minted (`mintVia: 'provision'`, seeded; the two children could ride the provisioner instead — ISSUES). All three carry `KindValueMap` entries of `never`. **Write-free, not inert**: the surfaces are manipulable and nothing they do reaches storage, history, sync or the command bus (SPEC → *The Library → The preview is a live microcosm*).
 
-**Status: describe** — specced 2026-08-20 (the Library-As-Lens-Tree design), unbuilt.
+**Status: current** — specced and built 2026-08-20 (the Library-As-Lens-Tree design; previews made live in the same pass).
 
 ## job
 

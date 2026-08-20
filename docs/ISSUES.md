@@ -55,7 +55,7 @@ stale or dangling.
 
 1.) **Build the Add Surface as a Field row** — SPEC → *The Add Surface* is rewritten and settled (2026-08-15): shared row shell with a `field` / `adder` role, `＋` in the chevron column, chrome-less name input in the label track sizing to content, the draft kind's real Renderer in the value slot via `pendingMode`, and bands **Config · Kind · Tools** replacing History · Config · Tools. Create/Cancel in Tools; collapse keeps the draft; construction tint whenever a draft is held. Retires `LibraryPicker` and `DefinitionAuthoring` as separate surfaces. Keyboard is explicitly out of scope for this pass (SPEC → Keyboard & Accessibility).
 
-2.) **Group the Library by kind under the Kind band** — one row per admitted kind, expanding to that kind's Definitions. A view, no re-parenting: it reads each Definition's `kind` column, and should share its gather with the Library lens (Features #14) rather than growing a second. Search in the name slot is the deferred follow-up (LATER → *FieldDefinition Library*).
+2.) **Group the Library by kind under the Kind band** — one row per admitted kind, expanding to that kind's Definitions. A view, no re-parenting: it reads each Definition's `kind` column, and should share its gather with the `definitions` lens (built 2026-08-20) rather than growing a second. Search in the name slot is the deferred follow-up (LATER → *FieldDefinition Library*).
 
 3.) **Node metadata in TreeNodeDetails/Config** — show `createdAt`, last `updatedAt`, last `updatedBy`, 'id', 'version', and description/byline. It already shows "from <libraryField>".
 
@@ -67,7 +67,7 @@ stale or dangling.
 
 7.) **Decide namespace collision scheme for libraryFields with same display name to coexist** — when two libraryFields have the same display name, they will need to coexist in the library. We need to decide how to handle this. They each already have a unique id and version, but that is not UX friendly. They may need byline or description like a subtitle (displayed in Tools section).
 
-8.) **Active link to FieldLibrary from Config section of a Field** — now has a destination to point at (the Definition's entry in the Library lens, Features #14), and the reveal machinery landed (`useRevealOnArrival`), so the shape is reveal-the-Definition rather than re-root-to-the-Library. Also wanted by LATER → *Editing a picked Definition's config from the Add Surface*, which asks for the same link from the Add Surface's Config band. One affordance, several callers — and read-only at the far end: the lens edits nothing.
+8.) **Active link to FieldLibrary from Config section of a Field** — now has a destination to point at (the Definition's entry in the Library lens, built 2026-08-20), and the reveal machinery landed (`useRevealOnArrival`), so the shape is reveal-the-Definition rather than re-root-to-the-Library. Also wanted by LATER → *Editing a picked Definition's config from the Add Surface*, which asks for the same link from the Add Surface's Config band. One affordance, several callers — and read-only at the far end: the lens writes nothing.
 
 9.) **Decide Field "re-configure" UX** — **re-opened 2026-08-20**: the 2026-08-17 edit-in-place answer died with the rejected place-design (SUPERSEDED). Under fork-never-mutate (SPEC → *Edit / Delete Semantics*), "re-configure" means minting a successor Definition and rebinding the instance — the affordance for that is undecided. A Field's Config band still wants a live link to its Definition (same want as Features #8); the Library lens gives it a read-only destination.
 
@@ -81,7 +81,6 @@ stale or dangling.
 
 13.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
 
-14.) **Build the Library lens** — SPEC → *The Library* is rewritten and settled (2026-08-20, replacing the rejected 2026-08-17 place-design): a seeded `Field Library` root (`siblingOrder: -1`, its pin) on ROOT with two seeded children, `Field Definitions` and `Kinds` — three new registry kinds, three chrome Elements, and **no storage change to any Definition**. Listings are pure gathers: field-like Definitions sorted by `name`, previewed as a Node row (name, id subtitle — the placeholder answer to Features → *namespace collision scheme*) over a read-only one-field card rendered as deployed, sans value; kinds gathered from the registry with their config schemas. Build needs: `listRootElements` widened to admit the root by kind; kind-aware Definition / config-sub-field tests in `IDBAdapter`; a truly inert read-only render path for the preview card (the moment Architecture #8 said to revisit on).
 
 
 
@@ -103,7 +102,7 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 7.) **`KindAdornment` re-gathers the whole subtree on every write** — a BFS over the parent's subtree per (debounced) `storageEventBus` emit, plus a `FieldList` subscription per expanded `NavigableRow` — O(subtree) per write. Fine at prototype scale; revisit if sluggish.
 
-8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted.
+8.) **[Fields UI] `NavigableRow` "peek" is read-only for adding but not editing** — `hideAddSurfaces` hides the add surfaces, but fields in the expanded `FieldList` stay double-tap-editable. Intentional; revisit if a truly inert preview is ever wanted. **The Library lens was the first surface to want one and decided against it** (2026-08-20): its previews are *live but write-free* — the real Renderer in `pendingMode` over preview-local state, with no Element behind the row — which reads better than inertness and needs no new render path. The truly-inert variant still has no caller.
 
 11.) **[Fields UI] `internal-link` real target picker** — the target is still a raw element-id paste. Editing a saved link landed 2026-08-16; the picker is the remaining half, and it needs the address (nearest ancestor + name) in its result rows for the same disambiguation reason the value cell does. Whether it should be *constrained* by `TargetSpec.allowedKinds` is a spec decision first — LATER → *§6b minimal kind set*.
 
@@ -118,6 +117,8 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 26.) **`listRootElements` hardcodes an implicit population gather** — `treeType === 'business'` at `IDBAdapter.ts:218` *is* the ROOT view's definition, and the Library lens adds a second population read (`library`-tree roots) beside it. `SourceSpec.relation` only speaks `children | ancestors | edges`, so "every root of a typed tree" has no explicit form; a population relation would let ROOT and the Library ride one primitive instead of two hardcoded filters. Fine as an implicit default for now. Surfaced in the Library-As-Lens-Tree design discussion, 2026-08-20.
 
 27.) **The Library's two lens children are seeded; they could be provisioned** — v1 seeds all three Library chrome Elements (the `library` root plus `definitions` and `kinds`) as constant-id idempotent seed writes, because a boot-time singleton is exactly the seeder's job. The other way: the two children declare `provision` capabilities and ride the existing `KIND_CAPABILITIES`-derived schedule (`${parentId}::definitions`, the `jobs` pattern), triggered by the `library` root's creation — no new machinery, but nothing needs it while the trio is fixed. Decided seed-for-now in the Library-As-Lens-Tree design discussion, 2026-08-20.
+
+28.) **`.previewGrid` duplicates `FieldList`'s named grid tracks** — `DataField`'s `.datafieldWrapper` is `grid-template-columns: subgrid`, so a row mounted outside a `FieldList` collapses its columns (label overlapping value) unless its container restates the six named tracks. `LibraryViews.module.css` restates them verbatim for the Library previews, so the contract now lives in two places and a third caller would copy it again. Extract to a shared class when that third caller appears. Observed building the Library lens, 2026-08-20.
 
 ## Tech Debt
 

@@ -580,6 +580,30 @@ Written against the first version (a `+ Add Field` button opening a `LibraryPick
 
 ---
 
+### The Library lens (2026-08-20)
+
+Built to SPEC → *The Library* in four slices (kinds → storage identity → seed/surface → views). The spec drove it and mostly held; where the build diverged, the SPEC was rewritten to match and says so in place.
+
+**Definition identity became kind-aware, in one module.** Five call sites in `IDBAdapter` tested `treeType === 'library' && parentId === null` inline — a fine test while Definitions were that tree's only roots. The three chrome Elements share that shape, so the predicates moved to `src/data/libraryChrome.ts` (`isDefinitionRow`, `isConfigSubField`, `isLibraryChrome`, …) and gained the `kind` column. Component-free on purpose, like the other `src/kinds/*` policy modules: the storage layer and unit tests read it without pulling a `.tsx`. It is **kind-based, not shape-based** — `fd_logbook_policy` is a Definition of the re-root kind `logbook`, so "is it field-like?" would have silently demoted it.
+
+**Seed order in `initStorage` is load-bearing.** `seedDefinitions()` had to move *above* `seedNodeIndexFromDb()`. The seeder writes `db.elements` directly with no bus emit — deliberate, seeds bypass sync — so on a fresh profile the chrome rows landed after the index was built and never entered it, leaving breadcrumbs blank inside the Library. Anything else seeded directly and needed in the index has the same ordering requirement.
+
+**The Library root is admitted to ROOT by `kind`, and pinned by `siblingOrder`.** `listRootElements` widened to `treeType === 'business' || kind === 'library'`; the existing sort *is* the pin, because the seed writes `siblingOrder: -1` and business roots start at 0. No view special-cases it. `nextSiblingOrder` stays business-only — nothing is ever minted beside the Library root.
+
+**One prop carries preview mode, and the synthetic id is what makes it safe.** `DataField.preview` runs the kind's real Renderer in `pendingMode` over a local signal, so the value is live and no command is ever issued. The first build wrapped the Renderer in HTML `inert`; hand-testing retired that. Inertness bought nothing — the row's id (`library-preview::<defId>`) has no Element behind it, so a command targeting it could not write anything even if one were dispatched. What preview mode still *does* disable is Tools' Delete, which addresses a real id (see below). Verified by reading IndexedDB after editing: no rows, no history, empty sync queue.
+
+**A kind declares its own preview seed.** `InlineManifest.previewSeed(config)` returns the microcosm's opening value; only `enum-kv` declares one (its first configured option), because only it reads as broken while empty. This replaced a first attempt at a `placeholderPreview` *string* — the string was a picture of a value, and a value the renderer actually holds is both simpler and interactive.
+
+**`ConfigSummary` grew a schema-complete mode rather than the Library growing its own config renderer.** `schemaKind` unions the kind's `CONFIG_SCHEMAS` entries with the Definition's stored sub-fields, rendering `—` for the absent ones. Display-only — nothing is written, and the deployed-instance path is untouched (SPEC explains why the two surfaces differ). A second config renderer in `LibraryViews` would have drifted from this one within a release.
+
+**The Kinds archetype reuses `ConfigRows` untouched**, which was possible only because that component was already fully controlled (`{kind, config, onChange}`) with no storage coupling — its own docblock says "bound to the flat draft config, never to Elements." So the archetype is a local config signal plus a local value signal handed to the same two components the Add Surface uses; the knob→instance reactivity is the existing `FieldRendererProps.config` path, not new wiring.
+
+**Mounting a `DataField` outside a `FieldList` requires FieldList's track contract.** `.datafieldWrapper` is `grid-template-columns: subgrid`, so a row dropped into a plain container collapses its columns and the label overlaps the value. `LibraryViews.module.css`'s `.previewGrid` mirrors the named tracks. The duplication is real and filed (ISSUES → Architecture).
+
+**Chrome nodes suppress two affordances in `TreeNodeDisplay`**, both read off `isLibraryChrome(props.kind)` inside thunks (`solid/reactivity` runs at error): the empty-card chevron and the Delete Asset row. That is chrome entailment doing the work permissions would otherwise do — the manifest simply doesn't draw them.
+
+---
+
 ### Data Model Conventions
 
 **Root Nodes**: Use `parentId: null`, not sentinel value like `"ROOT"`. Adapter queries use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.
