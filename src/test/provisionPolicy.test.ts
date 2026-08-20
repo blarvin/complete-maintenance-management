@@ -42,8 +42,11 @@ describe('provisionPolicy', () => {
     for (const k of ['jobs', 'logbook'] as const) {
       expect(isProvisionedLens(k)).toBe(true);
     }
-    for (const k of ['node', 'org', 'job', 'log-entry', 'text-kv'] as const) {
+    // The Library chrome kinds are `mintVia: 'provision'` but carry no
+    // `provision` capability — seeded once, never reconciled per node.
+    for (const k of ['node', 'org', 'job', 'log-entry', 'text-kv', 'library', 'definitions', 'kinds'] as const) {
       expect(isProvisionedLens(k)).toBe(false);
     }
+    expect(PROVISIONED_LENSES).toHaveLength(2);
   });
 });

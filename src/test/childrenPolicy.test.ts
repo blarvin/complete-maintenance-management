@@ -42,15 +42,23 @@ describe('allowedChildKinds', () => {
     }
   });
 
-  it('never admits a framework-provisioned or config-only kind anywhere', () => {
+  it('never admits a framework-provisioned or config-only kind under a business parent', () => {
     // `jobs`/`logbook` are materialized per node; flag/compound/string-list exist
-    // only inside config subtrees. Neither is user-pickable under any parent.
+    // only inside config subtrees; the Library chrome kinds are seeded once.
+    // None is user-pickable under any business parent. (`library` is the one
+    // sanctioned provision-kind allowlist — tested separately below.)
     const neverPickable = [...kindsMintedVia('provision'), ...kindsMintedVia('config-only')];
     for (const parent of ['node', 'org', 'job', 'log-entry', 'jobs', 'logbook'] as const) {
       for (const k of neverPickable) {
         expect(allowedChildKinds(parent)).not.toContain(k);
       }
     }
+  });
+
+  it('the library root admits exactly its two seeded chrome children', () => {
+    // Template mode: the one place a provision-minted kind appears in an
+    // allowlist — the seeder owns these rows, no picker ever offers them.
+    expect(allowedChildKinds('library')).toEqual(['definitions', 'kinds']);
   });
 
   it('a record node (job, log-entry) admits assets and fields but never an org', () => {
@@ -79,8 +87,8 @@ describe('canHaveChildren', () => {
     }
   });
 
-  it('is false for field-like kinds (no children capability)', () => {
-    for (const k of ['text-kv', 'internal-link'] as const) {
+  it('is false for field-like kinds and the Library index lenses (no children capability)', () => {
+    for (const k of ['text-kv', 'internal-link', 'definitions', 'kinds'] as const) {
       expect(canHaveChildren(k)).toBe(false);
     }
   });

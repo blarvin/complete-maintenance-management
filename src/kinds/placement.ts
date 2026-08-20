@@ -39,6 +39,10 @@ export const KIND_PLACEMENT = {
     logbook: 're-root',
     'internal-link': 'inline',
     'external-link': 'inline',
+    // Library chrome kinds — the lens tree's root + its two index lenses
+    library: 're-root',
+    definitions: 're-root',
+    kinds: 're-root',
     // Config-only sub-field kinds
     flag: 'inline',
     compound: 'inline',
