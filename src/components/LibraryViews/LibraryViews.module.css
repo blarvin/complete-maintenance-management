@@ -1,0 +1,40 @@
+/* LibraryViews — the two Library index lenses (Definitions, Kinds). Both draw
+   their entries as ordinary Node cards (NodeHeader + DataCard), so the only
+   styles here are for what goes *inside* a card. */
+
+/* The grid mirrors FieldList's named tracks — a DataField row opts into them via
+   subgrid, so mounting one outside a FieldList needs the same track contract or
+   its columns collapse. */
+.previewGrid {
+    display: grid;
+    grid-template-columns:
+        [details-chevron] var(--chevron-col-width)
+        [label]           minmax(var(--label-width), auto)
+        [value]           minmax(0, 1fr)
+        [spacer]          minmax(0, 1fr)
+        [metadata]        auto
+        [history-chevron] var(--chevron-col-width)
+        [end];
+    row-gap: var(--space-3);
+    column-gap: var(--space-2);
+    align-items: baseline;
+}
+
+/* The Kinds lens's archetype surface: instance row above its live knobs. Filled
+   rather than bare, because a ConfigRows control is drawn as a *hole* in its
+   background instead of a bordered widget — it only reads as somewhere to put
+   something when the surface around it is filled. Same fill the expanded field
+   details wear, so the two surfaces are recognisably the same thing. */
+.archetype {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    background: var(--bg-expanded);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+}
+
+.empty {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}

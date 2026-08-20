@@ -24,6 +24,14 @@ export type DataFieldProps = {
     /** Epoch ms when this DataField was last written. Used by number-kv for
      *  stale-state computation. */
     updatedAt?: number;
+    /**
+     * Library preview mode (DefinitionsIndex): a live microcosm. The Renderer
+     * runs in `pendingMode` over local state — the value is editable in place
+     * (seeded via the manifest's `previewSeed`) but nothing ever reaches the
+     * command bus or sync — and Tools' Delete is disabled. The id is synthetic,
+     * so no command may ever target it.
+     */
+    preview?: boolean;
 };
 
 export const DataField = (props: DataFieldProps) => {
@@ -54,6 +62,12 @@ export const DataField = (props: DataFieldProps) => {
 
     const manifest = createMemo(() => getInlineManifest(props.kind));
 
+    // Library-preview microcosm: the Renderer runs in `pendingMode` over this
+    // local signal, so the value is live (switch an enum option, type a number,
+    // watch threshold state) but no command ever reaches the bus or sync.
+    // eslint-disable-next-line solid/reactivity -- the seed is read once; the preview value is local from mount on
+    const [previewValue, setPreviewValue] = createSignal<DataFieldValue | null>(props.value);
+
     // The arrangement law, entailed by the kind's value shape (SPEC → chrome
     // entailment): scalar = label + inline run + centred chevron; block = label +
     // tall block + top chevron; composite = renderer-owned sub-structure, label
@@ -70,7 +84,7 @@ export const DataField = (props: DataFieldProps) => {
                 [styles.datafieldWrapperBlock]: shape() !== 'scalar',
                 // Derived, not stored — a card shows at a glance which facts are
                 // still owed (SPEC → DataField States → isUnfilled).
-                [styles.datafieldWrapperUnfilled]: isUnfilled(props.value),
+                [styles.datafieldWrapperUnfilled]: isUnfilled(props.preview ? previewValue() : props.value),
                 [styles.datafieldWrapperRevealed]: isRevealed(),
                 'no-caret': true,
             }}
@@ -95,9 +109,10 @@ export const DataField = (props: DataFieldProps) => {
                 component={manifest().Renderer}
                 id={props.id}
                 definitionId={props.definitionId}
-                value={props.value}
+                value={props.preview ? previewValue() : props.value}
                 updatedAt={props.updatedAt}
                 rootRef={rootEl}
+                pendingMode={props.preview ? { onChange: setPreviewValue } : undefined}
             />
 
             <Show when={isDetailsExpanded()}>
@@ -106,6 +121,7 @@ export const DataField = (props: DataFieldProps) => {
                     definitionId={props.definitionId}
                     kind={props.kind}
                     onDelete={handleDelete}
+                    preview={props.preview}
                 />
             </Show>
         </div>

@@ -341,6 +341,14 @@ export type InlineManifest = ManifestIdentity & {
      *  kinds whose display formatting depends on it (e.g. number-kv decimals /
      *  affix); the other kinds ignore it and a 1-arg function stays assignable. */
     displayPreview: (value: DataFieldValue | null, config?: DefinitionConfig) => string | null;
+    /**
+     * Seed value for a Library preview of this kind — the microcosm's starting
+     * state, computed from the Definition's config (enum-kv seeds its first
+     * option). The preview mounts the real Renderer in `pendingMode` over local
+     * state, so the value is live and switchable without ever touching the
+     * command bus or sync. Absent = start unfilled (null).
+     */
+    previewSeed?: (config: DefinitionConfig) => DataFieldValue | null;
 };
 
 /**

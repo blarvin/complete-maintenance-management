@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js';
 import { EnumKvConfigForm } from '../components/FieldComposer/configForms/EnumKvConfigForm';
 import { EnumKvField } from '../components/DataField/EnumKvField';
-import type { DataFieldValue, DefinitionConfig } from '../data/models';
+import type { DataFieldValue, DefinitionConfig, EnumKvConfig } from '../data/models';
 import { ENUM_KV_CONFIG_SCHEMA } from './configSchema';
 import { KIND_CAPABILITIES } from './capabilities';
 import type { ConfigFormProps, FieldRendererProps, KindManifest } from './types';
@@ -22,5 +22,9 @@ export const enumKvManifest: KindManifest = {
     // holds Create until two are filled in.
     defaultConfig: (): DefinitionConfig => ({ options: ['', ''] }),
     displayPreview: (v: DataFieldValue | null) => (v === null || v === undefined ? null : String(v)),
+    // The Library preview seeds the first configured option, so the microcosm
+    // opens showing a real choice the viewer can switch (locally, never synced).
+    previewSeed: (config: DefinitionConfig) =>
+        (config as EnumKvConfig).options?.find((o) => o.trim() !== '') ?? null,
     configSchema: ENUM_KV_CONFIG_SCHEMA,
 };

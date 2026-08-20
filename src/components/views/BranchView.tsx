@@ -13,6 +13,9 @@ import { useElementChildren, useElementById } from '../../hooks/useElementChildr
 import { useLensGather } from '../../hooks/useLensGather';
 import { useLensPolicy } from '../../hooks/useLensPolicy';
 import { isReRoot } from '../../kinds/placement';
+import { libraryIndexView } from '../../data/libraryChrome';
+import { DefinitionsIndex } from '../LibraryViews/DefinitionsIndex';
+import { KindsIndex } from '../LibraryViews/KindsIndex';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
 import { reRootCreateKindsFor } from '../../kinds/registry';
 import { derivationOf, nodeRenderMode } from '../../kinds/renderMode';
@@ -72,6 +75,15 @@ export const BranchView = (props: BranchViewProps) => {
 
     const { ucNode, start, cancel, complete } = useNodeCreation(() => props.parentId);
 
+    // Library index lenses route to their gather views (plain kind check — the
+    // gathers aren't expressible as a DerivationSpec). The `library` root itself
+    // renders as an ordinary plain branch: its two stored children arrive via
+    // useElementChildren, and CreateNodeButton self-suppresses (empty allowlist).
+    const indexView = () => {
+        const el = parentEl();
+        return el ? libraryIndexView(el.kind) : null;
+    };
+
     return (
         <Show
             when={!isLoading() && parentNode()}
@@ -95,6 +107,9 @@ export const BranchView = (props: BranchViewProps) => {
 
                 {/* Children container with indent */}
                 <div class="branch-children">
+                    <Show when={!indexView()} fallback={
+                        indexView() === 'definitions' ? <DefinitionsIndex /> : <KindsIndex />
+                    }>
                     <Show
                         when={lensTargetKind()}
                         fallback={
@@ -165,6 +180,7 @@ export const BranchView = (props: BranchViewProps) => {
                             targetKind={lensTargetKind()!}
                             entryLabel={lensPolicy().entryLabel || undefined}
                         />
+                    </Show>
                     </Show>
                 </div>
             </main>
