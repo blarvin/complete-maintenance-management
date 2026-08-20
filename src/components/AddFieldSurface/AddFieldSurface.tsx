@@ -314,8 +314,9 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
 /* ────────────────────────────────────────────────────────────────────────────
  * The Kind band — one row per admitted kind, expanding to that kind's Library
  * Definitions. A **view** over the `library` tree, never a re-parenting: the
- * Definitions are gathered by their `kind` and drawn beneath it, so the identity
- * test (`parentId === null`) is untouched (SPEC → Listing under the Kind band).
+ * Definitions are gathered by their `kind` and drawn beneath it, so Definition
+ * identity (`isDefinitionRow` — a non-chrome library root) is untouched
+ * (SPEC → Listing under the Kind band).
  * ──────────────────────────────────────────────────────────────────────────── */
 
 type KindBandProps = {

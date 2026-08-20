@@ -14,15 +14,17 @@ import type { StorageEvent } from './storageEventBus';
 import { storageEventBus } from './storageEventBus';
 import { upsertNodeSummary, removeNodeSummary } from './nodeIndex';
 import { isReRoot } from '../kinds/placement';
+import { isLibraryChrome } from './libraryChrome';
 
 /** Process a single storage event and update the node index. */
 export function handleStorageEvent(event: StorageEvent): void {
   switch (event.type) {
     case 'ELEMENT_WRITTEN':
       if (!isReRoot(event.element.kind)) break; // only re-root (navigable) nodes are indexed
-      // Business tree only: a re-root policy Definition (logbook) is a library
-      // row of a re-root kind — e.g. arriving via sync pull — not a tree node.
-      if (event.element.treeType !== 'business') break;
+      // Business tree + Library chrome: a re-root policy Definition (logbook) is
+      // a library row of a re-root kind — e.g. arriving via sync pull — not a
+      // tree node; the chrome rows ARE navigable (breadcrumbs inside the Library).
+      if (event.element.treeType !== 'business' && !isLibraryChrome(event.element.kind)) break;
       if (event.element.deletedAt === null) {
         upsertNodeSummary({
           id: event.element.id,

@@ -65,6 +65,24 @@ describe('nodeIndexSubscriber — handleStorageEvent', () => {
         expect(getAncestorPath('fd_logbook_policy')).toEqual([]);
     });
 
+    it('a Library chrome row enters the index (breadcrumbs inside the Library)', () => {
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            origin: 'local',
+            element: { id: 'lib_root', kind: 'library', parentId: null, name: 'Field Library', value: null, treeType: 'library', deletedAt: null },
+        });
+        handleStorageEvent({
+            type: 'ELEMENT_WRITTEN',
+            origin: 'local',
+            element: { id: 'lib_kinds', kind: 'kinds', parentId: 'lib_root', name: 'Kinds', value: null, treeType: 'library', deletedAt: null },
+        });
+
+        expect(getAncestorPath('lib_kinds')).toEqual([
+            { id: 'lib_root', name: 'Field Library' },
+            { id: 'lib_kinds', name: 'Kinds' },
+        ]);
+    });
+
     // Soft delete is the only removal channel — a written element carrying
     // `deletedAt` is what drops a node out of the index (IMPLEMENTATION.md →
     // *Retention over reconciliation*).

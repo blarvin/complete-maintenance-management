@@ -14,6 +14,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { configChildId } from '../kinds/configElements';
+import type { Element } from '../data/models';
 
 describe('IDBAdapter — Definitions as library Elements', () => {
   beforeEach(async () => {
@@ -75,6 +76,45 @@ describe('IDBAdapter — Definitions as library Elements', () => {
 
     const defs = (await adapter.listDefinitions()).data;
     expect(defs.map((d) => d.id)).toEqual(['fd_live']);
+  });
+
+  it('Library chrome rows are never Definitions (kind-aware identity)', async () => {
+    const adapter = new IDBAdapter();
+    await adapter.createDefinition({ id: 'fd_a', kind: 'text-kv', label: 'Alpha', config: {} });
+    // A chrome row as the seeder writes it: library-tree root of a chrome kind.
+    const ts = Date.now();
+    await db.elements.put({
+      id: 'lib_root', kind: 'library', parentId: null, name: 'Field Library', subtitle: null,
+      value: null, definitionId: null, treeType: 'library', siblingOrder: -1,
+      createdAt: ts, updatedAt: ts, updatedBy: 'appDeveloper', deletedAt: null,
+    } as Element);
+
+    // Excluded from the Definitions listing…
+    const defs = (await adapter.listDefinitions()).data;
+    expect(defs.map((d) => d.id)).toEqual(['fd_a']);
+    // …not resolvable as a Definition…
+    expect((await adapter.getDefinition('lib_root')).data).toBeNull();
+    // …and rejected as a definitionId on create.
+    const res = adapter.createElement({
+      id: 'f1', kind: 'text-kv', parentId: null, name: 'F', definitionId: 'lib_root',
+    });
+    await expect(res).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('a chrome row arriving via applyRemoteElement emits no DEFINITION_WRITTEN', async () => {
+    const adapter = new IDBAdapter();
+    const { storageEventBus } = await import('../data/storageEventBus');
+    const seen: string[] = [];
+    const unsub = storageEventBus.subscribe((e) => { seen.push(e.type); });
+    const ts = Date.now();
+    await adapter.applyRemoteElement({
+      id: 'lib_kinds', kind: 'kinds', parentId: 'lib_root', name: 'Kinds', subtitle: null,
+      value: null, definitionId: null, treeType: 'library', siblingOrder: 1,
+      createdAt: ts, updatedAt: ts, updatedBy: 'appDeveloper', deletedAt: null,
+    } as Element);
+    unsub();
+    expect(seen).toContain('ELEMENT_WRITTEN');
+    expect(seen).not.toContain('DEFINITION_WRITTEN');
   });
 
   it('getDefinition returns null for a config sub-field id (not a top-level Definition)', async () => {

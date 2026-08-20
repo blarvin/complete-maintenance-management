@@ -21,6 +21,7 @@ import { devLog } from '../../utils/devMode';
 import { initializeNodeIndex } from '../nodeIndex';
 import { subscribeNodeIndex } from '../nodeIndexSubscriber';
 import { isReRoot } from '../../kinds/placement';
+import { isLibraryChrome } from '../libraryChrome';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
@@ -82,6 +83,12 @@ async function doInitializeStorage(): Promise<void> {
       devLog('[Storage] IDB has', elementCount, 'elements, using existing data');
     }
 
+    // Seed dev Definitions + the Library chrome rows (idempotent; no sync
+    // enqueue). Must run BEFORE the node-index seed: the seeder writes
+    // `db.elements` directly with no bus emit, so a fresh DB would otherwise
+    // miss the chrome rows in the index.
+    await seedDefinitions();
+
     await seedNodeIndexFromDb();
     subscribeNodeIndex();
     subscribeSyncTrigger();
@@ -97,9 +104,6 @@ async function doInitializeStorage(): Promise<void> {
     // Initialize CQRS command bus and query layer
     initializeCommandBus(idbAdapter);
     initializeQueries(idbAdapter);
-
-    // Seed dev Definitions (idempotent; no sync enqueue).
-    await seedDefinitions();
 
     // Reconcile lens containers onto nodes that predate a lens kind. Provisioning
     // is otherwise create-time only, so every node minted before `logbook` landed
@@ -181,9 +185,10 @@ async function migrateFromFirestore(): Promise<void> {
 async function seedNodeIndexFromDb(): Promise<void> {
   const elements = await db.elements.toArray();
   const activeNodes = elements
-    // Business tree only: a re-root policy Definition (logbook) is a library
-    // row of a re-root kind and must not enter the node index.
-    .filter(el => isReRoot(el.kind) && el.deletedAt === null && el.treeType === 'business')
+    // Business tree + Library chrome: a re-root policy Definition (logbook) is a
+    // library row of a re-root kind and must not enter the node index, but the
+    // chrome rows are navigable (breadcrumbs/links inside the Library).
+    .filter(el => isReRoot(el.kind) && el.deletedAt === null && (el.treeType === 'business' || isLibraryChrome(el.kind)))
     .map(el => ({ id: el.id, parentId: el.parentId, name: el.name }));
   initializeNodeIndex(activeNodes);
 }

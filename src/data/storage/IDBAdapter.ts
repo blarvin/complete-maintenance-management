@@ -20,6 +20,7 @@ import { filterActive } from '../models';
 import { shouldSyncTreeType, shouldLogHistory } from '../treePolicy';
 import { serializeConfig, assembleConfig } from '../../kinds/configElements';
 import { isInline } from '../../kinds/placement';
+import { isDefinitionRow, isConfigSubField } from '../libraryChrome';
 import { getCurrentUserId } from '../../context/userContext';
 import { now } from '../../utils/time';
 import { devLog } from '../../utils/devMode';
@@ -77,14 +78,12 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async listDefinitions(): Promise<StorageResult<Definition[]>> {
     return this.run(async () => {
       const all = await db.elements.toArray();
-      const defs = all.filter(
-        (e) => e.treeType === 'library' && e.parentId === null && e.deletedAt === null,
-      );
+      const defs = all.filter((e) => isDefinitionRow(e) && e.deletedAt === null);
       defs.sort((a, b) => a.name.localeCompare(b.name));
       // Group active library children by id once, so assembly is O(n) not N+1.
       const childById = new Map<string, Element>();
       for (const e of all) {
-        if (e.treeType === 'library' && e.parentId !== null && e.deletedAt === null) {
+        if (isConfigSubField(e) && e.deletedAt === null) {
           childById.set(e.id, e);
         }
       }
@@ -98,7 +97,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async getDefinition(id: string): Promise<StorageResult<Definition | null>> {
     return this.run(async () => {
       const def = await db.elements.get(id);
-      if (!def || def.treeType !== 'library' || def.parentId !== null) {
+      if (!def || !isDefinitionRow(def)) {
         return createResult(null);
       }
       const children = filterActive(await db.elements.where('parentId').equals(id).toArray());
@@ -214,8 +213,9 @@ export class IDBAdapter implements SyncableStorageAdapter {
   async listRootElements(): Promise<StorageResult<Element[]>> {
     return this.run(async () => {
       const all = await db.elements.toArray();
-      // Business-tree roots only — library Definitions are `parentId: null` too.
-      const active = all.filter(e => e.parentId === null && e.deletedAt === null && e.treeType === 'business');
+      // Business-tree roots plus the pinned Library root (siblingOrder −1 sorts
+      // it first) — library Definitions are `parentId: null` too and stay out.
+      const active = all.filter(e => e.parentId === null && e.deletedAt === null && (e.treeType === 'business' || e.kind === 'library'));
       active.sort((a, b) => a.siblingOrder - b.siblingOrder);
       return createResult(active);
     });
@@ -270,7 +270,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       }
       if (input.definitionId) {
         const def = await db.elements.get(input.definitionId);
-        if (!def || def.treeType !== 'library' || def.parentId !== null) {
+        if (!def || !isDefinitionRow(def)) {
           throw makeStorageError('not-found', `Definition not found: ${input.definitionId}`, { retryable: false });
         }
       }
@@ -492,7 +492,7 @@ export class IDBAdapter implements SyncableStorageAdapter {
       });
       // A library Definition arriving from a pull is a Library change — signal the
       // Composer the same way local creation does.
-      if (element.treeType === 'library' && element.parentId === null) {
+      if (isDefinitionRow(element)) {
         storageEventBus.emit({
           type: 'DEFINITION_WRITTEN',
           origin: 'remote',

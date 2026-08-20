@@ -18,6 +18,7 @@ import { getSyncManager } from './syncManager';
 import { db } from '../storage/db';
 import { clearStorage } from '../storage/initStorage';
 import { SEED_KEY } from '../services/seedDefinitions';
+import { isDefinitionRow } from '../libraryChrome';
 import { DEV_TOOLS_ENABLED } from '../../utils/devMode';
 
 /** Register the console helpers on `window`. No-op unless the dev gate is open. */
@@ -63,7 +64,8 @@ export function initializeDevTools(): void {
       // The Library is `library`-tree Elements (Definitions + their config
       // sub-field children), not a separate table — clear all of them.
       const libraryEls = await db.elements.where('treeType').equals('library').toArray();
-      const defCount = libraryEls.filter(e => e.parentId === null).length;
+      // Count real Definitions (chrome rows are cleared too, but aren't counted).
+      const defCount = libraryEls.filter(isDefinitionRow).length;
       await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
         await db.elements.bulkDelete(libraryEls.map(e => e.id));
         // Reset the seed-version key so seedDefinitions() runs again on the

@@ -92,6 +92,18 @@ describe('backfillProvisionedLenses', () => {
     expect(created).toBe(0);
   });
 
+  it('Library chrome rows accrue no lenses', async () => {
+    await db.elements.put(row('lib_root', 'library', null, { treeType: 'library' as TreeType, siblingOrder: -1 }));
+    await db.elements.put(row('lib_definitions', 'definitions', 'lib_root', { treeType: 'library' as TreeType }));
+    await db.elements.put(row('lib_kinds', 'kinds', 'lib_root', { treeType: 'library' as TreeType, siblingOrder: 1 }));
+
+    const created = await backfillProvisionedLenses(await adapter.getAllElements(), adapter);
+
+    expect(created).toBe(0);
+    expect(await db.elements.get('lib_root::jobs')).toBeUndefined();
+    expect(await db.elements.get('lib_root::logbook')).toBeUndefined();
+  });
+
   it('backfills each container node independently', async () => {
     await db.elements.put(row('n1', 'node', null));
     await db.elements.put(row('o1', 'org', 'n1'));

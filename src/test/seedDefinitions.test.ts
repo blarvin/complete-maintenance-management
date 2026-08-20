@@ -9,9 +9,10 @@ import {
 } from '../data/services/seedDefinitions';
 import { AUTHOR_ID_APP_DEVELOPER } from '../constants';
 import { configChildId } from '../kinds/configElements';
+import { LIBRARY_CHROME_IDS } from '../data/definitionIds';
+import { isDefinitionRow } from '../data/libraryChrome';
 
-const libraryDefs = async () =>
-  (await db.elements.toArray()).filter((e) => e.treeType === 'library' && e.parentId === null);
+const libraryDefs = async () => (await db.elements.toArray()).filter(isDefinitionRow);
 
 describe('seedDefinitions (config-as-Elements)', () => {
   beforeEach(async () => {
@@ -95,6 +96,41 @@ describe('seedDefinitions (config-as-Elements)', () => {
     expect(byId.get(DEFINITION_IDS.powerRating)?.kind).toBe('number-kv');
     expect(byId.get(DEFINITION_IDS.mainImage)?.kind).toBe('single-image');
     expect(byId.get(DEFINITION_IDS.logbookPolicy)?.kind).toBe('logbook');
+  });
+
+  it('seeds the three Library chrome rows with pinned order and zero sync ops', async () => {
+    await seedDefinitions();
+    const byId = new Map((await db.elements.toArray()).map((e) => [e.id, e]));
+
+    const root = byId.get(LIBRARY_CHROME_IDS.root);
+    expect(root?.kind).toBe('library');
+    expect(root?.parentId).toBeNull();
+    expect(root?.siblingOrder).toBe(-1);
+    expect(root?.treeType).toBe('library');
+
+    const defsLens = byId.get(LIBRARY_CHROME_IDS.definitions);
+    expect(defsLens?.kind).toBe('definitions');
+    expect(defsLens?.parentId).toBe(LIBRARY_CHROME_IDS.root);
+    expect(defsLens?.siblingOrder).toBe(0);
+
+    const kindsLens = byId.get(LIBRARY_CHROME_IDS.kinds);
+    expect(kindsLens?.kind).toBe('kinds');
+    expect(kindsLens?.parentId).toBe(LIBRARY_CHROME_IDS.root);
+    expect(kindsLens?.siblingOrder).toBe(1);
+
+    expect(await db.syncQueue.count()).toBe(0);
+  });
+
+  it('listRootElements pins the Library root first; lenses and Definitions stay out', async () => {
+    await seedDefinitions();
+    const adapter = new IDBAdapter();
+    await adapter.createElement({ id: 'n1', kind: 'node', parentId: null, name: 'Asset' });
+
+    const roots = (await adapter.listRootElements()).data;
+    expect(roots[0].id).toBe(LIBRARY_CHROME_IDS.root);
+    expect(roots.map((r) => r.id)).toContain('n1');
+    expect(roots.map((r) => r.id)).not.toContain(LIBRARY_CHROME_IDS.definitions);
+    expect(roots.map((r) => r.id)).not.toContain(DEFINITION_IDS.description);
   });
 
   it('seeds the logbook policy Definition (the first re-root Definition) with its config subtree', async () => {

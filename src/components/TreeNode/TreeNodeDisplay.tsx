@@ -18,6 +18,7 @@ import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import { getCommandBus } from '../../data/commands';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
+import { isLibraryChrome } from '../../data/libraryChrome';
 import { nodeRenderMode } from '../../kinds/renderMode';
 import type { DisplayNodeState } from './types';
 import type { Kind } from '../../data/models';
@@ -83,7 +84,10 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     };
     const isLens = () => renderMode().mode === 'lens';
     const ownsChildren = () => canHaveChildren(props.kind);
-    const showDataCard = () => ownsChildren() || isLens();
+    // Library chrome bears no DataCard (its children arrive by re-rooting, and
+    // the index lenses gather rather than own) and no Delete Asset row.
+    const isChrome = () => isLibraryChrome(props.kind);
+    const showDataCard = () => !isChrome() && (ownsChildren() || isLens());
 
     return (
         <div
@@ -110,16 +114,18 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                     <div class={detailsStyles.idRow}>
                         <ElementIdRow id={props.id} />
                     </div>
-                    <div class={detailsStyles.actionsRow}>
-                        <button
-                            type="button"
-                            class={detailsStyles.deleteButton}
-                            onClick={() => void handleDeleteNode()}
-                            aria-label="Delete this asset"
-                        >
-                            Delete Asset
-                        </button>
-                    </div>
+                    <Show when={!isChrome()}>
+                        <div class={detailsStyles.actionsRow}>
+                            <button
+                                type="button"
+                                class={detailsStyles.deleteButton}
+                                onClick={() => void handleDeleteNode()}
+                                aria-label="Delete this asset"
+                            >
+                                Delete Asset
+                            </button>
+                        </div>
+                    </Show>
                 </div>
             </TreeNodeDetails>
             <NodeHeader
