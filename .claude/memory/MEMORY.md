@@ -11,4 +11,5 @@
 - [Tree-native Field UI (landed)](next-branch-tree-native-field-ui.md) — Add Surface is a Field row; composer + legacy are dormant, not deleted; [Fields UI] no longer means parked
 - [Fix obvious doc prose errors](fix-obvious-doc-prose-errors.md) — repair mangled pastes and stale claims directly; report, don't ask
 - [Config tree sketches](config-tree-sketches.md) — the six ASCII wireframes: published page + transcript id, and how to recover diagrams from past sessions
+- [Prefer live reuse over static imitation](prefer-live-reuse-over-static-imitation.md) — previews wire the real component in a real mode; safety from the data, not from disabling the UI
 - [Chrome MCP tab runs no rAF](chrome-mcp-tab-no-raf.md) — smooth scroll / CSS animation / screenshots stall there; assert DOM state, leave motion to the user
