@@ -42,7 +42,7 @@ This spec speaks in two registers, and keeping them distinct is the whole game. 
 | **capability**      | One of the six composable behaviours (OwnValue, Children, Edges, Derivation, Action, Reads) a manifest draws from. A kind is the origin displaced by a capability subset.                |
 | **placement**       | A manifest field: where a kind draws its surface — `inline` (a Field-like row on a Data Card) or `re-root` (a Node-like navigable view). Placement, not a separate table, separates node-like from field-like. |
 | **Renderer**        | Code that draws an Element for a surface, selected by `placement`. **New surfaces ship as new manifests, not new tables.**                                                              |
-| **FieldDefinition** | A Library entry: a Node (`kind: node`, `treeType: library`) whose Data Card's Fields are the config of the field kind it defines. Identified by `definitionId === id`; instances bind to it by `definitionId`.                                                                                |
+| **FieldDefinition** | A Library entry: an Element in the `library` tree (`treeType: library`, `parentId: null`) whose `kind` is the field kind it defines and whose config is its child sub-field Elements. Instances bind to it by `definitionId`.                                                                                |
 
 
 **The bridge, in one sentence:** *every surface is one Element drawn by the renderer its `kind`'s manifest supplies — the user navigates surfaces; the system stores Elements and looks up behaviour by `kind`.*
@@ -232,7 +232,7 @@ These rows are therefore the app's **first rendering of a delegated value**, and
 
 Phase 1 builds the first row only: the delegation is **visible** and the override is **absent**, which is the honest rendering of what the system actually does. Making a row editable is **the cascade arbiter's job, not this surface's** — it requires honouring `disposition` so an override writes an owned child rather than mutating shared meaning.
 
-**The chip is not free**, and the cost is architectural rather than visual: chrome entailment runs one way (see *Data Model → Manifest → chrome*), so *"this value is delegated"* has to be something the renderer can **read from the manifest**, never infer from a null. That requirement is the first place `ArbiterSpec` stops being a type and becomes pixels, and it is worth honouring in Phase 1's one-state version so the other two states cost nothing structural later. Tapping the chip through to its source waits on the Library view. [Phase 2+]
+**The chip is not free**, and the cost is architectural rather than visual: chrome entailment runs one way (see *Data Model → Manifest → chrome*), so *"this value is delegated"* has to be something the renderer can **read from the manifest**, never infer from a null. That requirement is the first place `ArbiterSpec` stops being a type and becomes pixels, and it is worth honouring in Phase 1's one-state version so the other two states cost nothing structural later. Tapping the chip through to its source waits on a reveal into the Library lens. [Phase 2+]
 
 ## Snackbar & Undo
 
@@ -361,7 +361,7 @@ All interactive elements are keyboard-accessible. This is a core quality bar, no
 
 Users can reorder DataFields within a DataCard. Whatever the gesture, the commit is settled: `siblingOrder` is renumbered across the affected run (renumber-the-run, never fractional keys — see *Data Model → Sorting policy*), persisted immediately, and logged to history. This is also the point at which gaps left by deletes get compacted.
 
-Reordering matters more than it looks, and for a reason outside this card: `siblingOrder` is the single ordering primitive across every tree. Whatever gesture arranges one asset's fields is the same gesture that will arrange the Library, and the one that will set the order every new node is born with once bindings live in the `config` tree (see LATER.md → *Config-tree UI*). It is learned once and spent three times, which is the argument for choosing it deliberately rather than reaching for the first thing that works.
+Reordering matters more than it looks, and for a reason outside this card: `siblingOrder` is the single ordering primitive across every tree. Whatever gesture arranges one asset's fields is the same gesture that will set the order every new node is born with once bindings live in the `config` tree (see LATER.md → *Config-tree UI*). It is learned once and spent twice, which is the argument for choosing it deliberately rather than reaching for the first thing that works.
 
 **The gesture is undecided, and is not part of the Add Surface branch.** One constraint is already known: it cannot hang off the row's chevron, which is spoken for as the Details toggle — a drag handle there would need drag-versus-tap disambiguation on touch, and the two actions are too different to share a target.
 
@@ -405,7 +405,7 @@ The shell is shared code, not an imitation of one. That is what makes this surfa
 
 - **Selecting a kind** sets the draft's kind, and the Config band above re-renders for it. The name and the entered value survive the change; the config does not — a number's thresholds mean nothing to an enum. Reconsidering the kind mid-draft is a supported move, not a mistake to guard against.
 - **The selected kind stays marked as selected.** That is state on the draft, not browser focus, which is transient and would be lost to the next tap.
-- **Expanding a kind** lists that kind's Library Definitions beneath it. This is the Library's whole presence in the surface, and it is a **view, not a re-parenting** — nothing about how a Definition is stored changes in order for it to appear under its kind. (A Definition's defined kind is now a config Field rather than its `kind` column, so the gathering reads that Field; see *The Library → The defined kind is a config Field*.)
+- **Expanding a kind** lists that kind's Library Definitions beneath it. It is a **view, not a re-parenting** — the gathering reads each Definition's `kind` column, and nothing about how a Definition is stored changes in order for it to appear under its kind.
 - **Picking a Definition** loads it into the row: the name fills from the Definition, and the Config band shows that Definition's config **read-only**. Config is `delegated` (see Field Details), so altering what an existing Definition means is not this surface's job.
 
 **Tools** — `Create` and `Cancel`.
@@ -429,17 +429,17 @@ The row is the Field, with one unavoidable exception: a kind that suppresses its
 
 ### Deferred
 
-- **Search.** Typing into the name slot should first search the Library, so an existing Definition is found by name rather than by walking to its kind. Until that lands, the Kind band is the only route to the Library. [Phase 2+]
+- **Search.** Typing into the name slot should first search the Library, so an existing Definition is found by name rather than by walking to its kind. Until that lands, the Kind band is the fast route while adding, and the Library lens (see *The Library*) is the browse route. [Phase 2+]
 - **Editing a picked Definition's config**, whether by fork or otherwise (see Edit / Delete Semantics). [Phase 2+]
 - **Picking is committing.** An earlier design for this surface minted on pick with no Create step, reversing by Undo rather than Cancel, on the grounds that the row *is* the field so there is nothing to preview. It is **suspended, not discarded**: an explicit Create/Cancel pair is what a draft row needs while its shape is being settled, and the surface may return to immediate commit once it is.
-- **Groups beyond the kinds themselves.** Grouping by kind is free because it is a view. Arbitrary user-authored groups needed a Definition's identity to stop being `parentId === null` — that happened (identity is now `definitionId === id`), so what is deferred is only the grouping UI. [Phase 2+]
+- **Groups beyond the kinds themselves.** Grouping by kind is free because it is a view. Arbitrary user-authored groups are not: a Definition is identified by `parentId === null` (see *The Library → What identifies a Definition*), so it cannot sit beneath a folder Node without ceasing to be one. Identity would have to move off position first. [Phase 2+]
 - Typeahead ranking, popularity, "recently added" sort. [Phase 2+]
 
 ### Authoring a Definition
 
 Authoring is the app's one deliberate exception to *Minting Records Identity*: a Definition holds an **ephemeral draft** until Create, because unlike a Node or a DataField it must be coherent at birth — a `number-kv` with no units, or an `enum-kv` with no options, is not incomplete but meaningless.
 
-**Config is rows, never a form — one flat list, one row per knob.** No categories, no collapsible tiers, nothing nested. **What varies comes from data, never from a per-kind component**: `visibleWhen` shows a row only when another value calls for it, and that is the whole of the variation. (The `members` mechanism, which expanded an atomic compound into sibling rows, went with `compound` itself — the four thresholds are four sub-fields now, so there is nothing left to expand.)
+**Config is rows, never a form — one flat list, one row per knob.** No categories, no collapsible tiers, nothing nested. **What varies comes from data, never from a per-kind component**: `visibleWhen` shows a row only when another value calls for it, and `members` expands the one atomic compound (`number-kv`'s thresholds) into sibling rows — presentation of a packed object, not its storage. That is the whole of the variation.
 
 **Flatness is the decision, not the starting point.** Collapsible category groups were built and then removed (2026-08-16), because every config label already stands on its own: the group chevrons hid knobs behind a level of structure that told the reader nothing the labels didn't. **Where a category label is genuinely load-bearing it belongs in the sub-field's own label** — `Low low` became `Threshold LL` when the `Thresholds` parent row went away. Reintroducing depth is a spec change, not a styling one; the removed reasoning is in SUPERSEDED, and the terms for its return are in LATER → *Config authoring: progressive disclosure*.
 
@@ -470,7 +470,7 @@ Authoring is the app's one deliberate exception to *Minting Records Identity*: a
 
 Required config is enforced before Create, which is disabled while anything blocks it; everything else takes the kind's defaults and may be left alone.
 
-**The Add Surface only ever *adds*.** Editing an existing Definition happens in the Library, which is a place in the tree reached by re-rooting into the Library Node (see *The Library*) — the same tree renderers, no second view layer. Minted from everywhere, edited in one place.
+**The Add Surface only ever *adds*.** And nothing else edits either: a Definition is **forked, never mutated** (see *Edit / Delete Semantics for FieldDefinitions*), and the Library lens that lists Definitions is read-only. Minted from everywhere, mutated nowhere.
 
 ## DataField Components and Crowdsourced Library
 
@@ -481,14 +481,13 @@ Required config is enforced before Create, which is disabled while anything bloc
 Three layers — each is the precondition for the next:
 
 1. **kind manifest** — dev-authored code: a `Renderer` + capability subset + descriptors, keyed by `kind` (e.g. `"text-kv"`, `"number-kv"`) in the registry. The closed set is owned by the dev team; users cannot author kinds (see *Data Model → Earning a kind*).
-2. **FieldDefinition** — a Library entry: a **Node** (`kind: node`, `treeType: library`) living under the Library Node, whose Data Card's **Fields are its config** (units, thresholds, flags — not a config blob), including the `kind` Field naming the field kind it defines. Definitions are what users pick from in the Add Surface's Kind band and what they edit in the Library. Both dev-seeded and user-authored entries are the same species.
-3. **DataField** (instance) — an Element minted from a Definition, attached to a Node, holding one typed `value` and bound to its Definition by `definitionId`. Its `kind` is the Definition's defined kind. Today it **delegates** all config, reading live from the Definition, so Definition edits propagate; `disposition: owned` (copy-at-mint) is encoded but unwired, and is what will eventually pin the meaning-defining knobs. `name` is snapshotted at creation and must come to follow a Definition rename (see *Edit / Delete Semantics*).
+2. **FieldDefinition** — a Library entry: a field-like Element of the kind it defines, living in the `library` tree, whose **config is its child sub-field Elements** (units, thresholds, flags — not a config blob). Definitions are what users pick from in the Add Surface's Kind band and what the Library lens lists. Both dev-seeded and user-authored entries are the same species.
+3. **DataField** (instance) — an Element minted from a Definition, attached to a Node, holding one typed `value` and bound to its Definition by `definitionId`. Its `kind` is the Definition's kind. Today it **delegates** all config, reading live from the Definition — indistinguishable from copy-at-mint while a Definition is forked, never mutated; `disposition: owned` is the encoded, unwired copy-at-mint pin. `name` is snapshotted at creation.
 
 ```
 kind manifest (code: Renderer + capabilities + descriptors)
-  └── Library Node (node; treeType: library; parentId: null)
-       └── FieldDefinition (node; definitionId === id; config = the Fields on its card)
-            └── DataField instance (Element on a Node: + value + definitionId binding)
+  └── FieldDefinition (library-tree Element; kind = what it defines; config = child sub-field Elements)
+       └── DataField instance (Element on a Node: + value + definitionId binding)
 ```
 
 The word **Template** is reserved for a future feature: a *set* of Definitions bundled as a unit (e.g. "HPU with Accumulator"). Templates are out of scope for the Library work, and nothing in Phase 1 uses the word "Template".
@@ -508,23 +507,25 @@ Additional field kinds (`date-kv`, `composite-kv`, `image-carousel`, `image-grid
 
 ### The Library
 
-***Intent:*** *the vocabulary a team works in is something they can walk to, look at and change — not a hidden schema.*
+***Intent:*** *the vocabulary a team works in is something they can walk to, read and compare — not a hidden schema.*
 
-The Library is a **place in the tree**. A `Field Library` Node sits pinned at the top of the ROOT view; its children are the FieldDefinitions; each Definition's Data Card carries the config that defines it. Reaching it is the ordinary gesture — tap the Node, re-root into it — because there is one tree and the tree is the navigation.
+The Library is a **lens, not a place things live**. A `Field Library` Node sits pinned at the top of the ROOT view; re-rooting into it shows two children, **Field Definitions** and **Kinds**; each is a lens whose listing is **gathered, never stored** — the same shape as `jobs`, which lists every `job` below its parent without owning one. Definitions stay exactly where and what they are — roots of the `library` tree, Elements of the kind they define — and the lens reads them there. Nothing about a Definition changes in order to appear in the Library.
 
-It remains surfaced under the Add Surface's **Kind band**, which stays the fast path while adding a field (see The Add Surface). The Kind band is for *using* the Library; the Library Node is for *reading and changing* it.
+It is one of two surfaces over the same population: the Add Surface's **Kind band** is for *using* the Library while adding a field (see The Add Surface); the Library lens is for *reading and comparing* it. Neither edits anything (see Edit / Delete Semantics).
+
+*(An earlier design made the Library a **place** — Definitions re-parented as `kind: node` children of a Library Node, identity moved to `definitionId === id`, the defined kind demoted to a config Field, config materialized, edit-in-place with downstream propagation. It was prototyped and rejected 2026-08-20: it rewrote a whole population's storage to buy what a gather gets for free. The full text is in SUPERSEDED.md. What survives of it is this section's frame: `treeType` as a routing tag, no switcher, and the Library entered from a Node on ROOT.)*
 
 #### One tree, no switcher
 
 There is no tree switcher, and `ViewState` carries no `treeType` — the Library is an ordinary `BRANCH`, reached by re-rooting into a Node like anything else.
 
-`treeType` is a **routing tag on the Element, not a place**: it selects which audit log a change files under and whether the Element syncs at all (see *Populations are typed trees*). `business` and `library` sync identically; the only thing that separates them is the audit log, which is what keeps Definition edits out of the maintenance record. Because it is a tag it travels with the Element wherever it sits — a `library`-tagged subtree hanging beneath an ordinary Node is the intended shape, not a violation of one.
+`treeType` is a **routing tag on the Element, not a place**: it selects which audit log a change files under and whether the Element syncs at all (see *Populations are typed trees*). `business` and `library` sync identically; the only thing that separates them is the audit log, which is what keeps Library writes out of the maintenance record.
 
 This supersedes the earlier *tree switcher on the ROOT view (Assets / Config / Library)* sketch: the `config` tree will arrive the same way the Library does, as a Node you walk to.
 
 #### One global, shared Library
 
-There is exactly **one** Library — the `library` typed tree (see *Data Model → Populations are typed trees*) — shared across all users via sync. **Authoring is contributing**: every user-authored Definition becomes visible in every other user's Kind band the next time their client syncs. There is no private/public toggle, no per-workspace scope, no opt-in import step, no moderation, no "personal vs. community" tabs in Phase 1. The Add Surface is the discovery surface.
+There is exactly **one** Library — the `library` typed tree (see *Data Model → Populations are typed trees*) — shared across all users via sync. **Authoring is contributing**: every user-authored Definition becomes visible in every other user's Kind band the next time their client syncs. There is no private/public toggle, no per-workspace scope, no opt-in import step, no moderation, no "personal vs. community" tabs in Phase 1. The Add Surface and the Library lens are the discovery surfaces.
 
 Consequences worth being explicit about:
 
@@ -534,60 +535,52 @@ Consequences worth being explicit about:
 
 Privacy implication for the user: labels may carry proprietary information (e.g. a specific manufacturer's serial-format field name). Users should know that what they author is shared. Surfacing this expectation in the authoring UI is a UX concern tracked in ISSUES.md, not a SPEC-level toggle.
 
-#### Everything in the Library is a Node with Fields
+#### Where the Library lives
 
-- **The Library Node** — an ordinary `node` (`treeType: library`, `parentId: null`), pinned to the top of the ROOT listing. Not user-created and not user-deletable; **non-deletability is a permissions concern, not a kind** — when permissions land it becomes a property available to any Element, and until then it is simply an affordance this Node does not draw.
-- **A FieldDefinition is a Node** — `kind: node`, `treeType: library`, parented to the Library Node, with one Data Card like every other Node-like Element. It is a Node *so that every Definition is alike*: same row, same card, same gestures, same place. A Definition whose `kind` column carried the kind it defines would render, sort and navigate differently for every kind in the catalogue.
-- **A Definition's config is ordinary Fields on its Data Card** — editable in place, history-tracked, LWW'd, like any other Field. They are not a separate species: they are Fields whose values are read at mint to configure a new instance. **Config is a *use*, not a kind.**
-- **A Definition's card is open.** It may carry Fields that are not config at all — notes, ownership, whatever a team finds useful. Provisioned config Fields are told apart by their deterministic ids, never by position.
-- **Not a side table**: a Definition is an `Element`, so it syncs, history-tracks and reverts like any other. (Landed 2026-06-27 — config-as-Elements; the old separate `fieldDefinitions` Dexie table was dropped in schema v10.)
+- **A typed tree, not a side table**: a Definition is an `Element` with `treeType: library`, whose `kind` column carries the field kind it defines and whose config is its child sub-field Elements. It syncs, history-tracks and reverts like any other Element. (Landed 2026-06-27 — config-as-Elements; the old separate `fieldDefinitions` Dexie table was dropped in schema v10.)
+- **A Definition is a root of that tree** — `parentId: null`, which is also what identifies it (see below). The Library lens gathers it there; nothing re-parents it.
 - **Sync**: Library Elements ride the same bidirectional sync as business Elements (Push-then-Pull, LWW on `updatedAt`, queued through `SyncQueueManager`), routed by `treeType` for history/visibility.
 - **Seed entries** (the starter set): written client-side on first run, idempotent via a seed version. Seed writes bypass the sync queue — seeds are identical per client, and syncing them would produce N redundant writes per N clients. Their stable deterministic ids let the UI reference defaults by constant (`DEFINITION_IDS`), not by label.
 - **User-authored entries**: enqueue through the sync queue like any other user write; appear on other clients on next pull.
 
+#### Three kinds, three Elements, no migration
+
+The Library surface's whole storage footprint is **three seeded chrome Elements**, all `treeType: library`, written by the seeder with the other seeds (constant ids, idempotent via the seed version, bypassing the sync queue):
+
+- **`library`** — the `Field Library` root: `parentId: null`, seeded at `siblingOrder: -1`, which *is* the "pinned above the business roots" rule — ROOT already sorts by `siblingOrder` and business roots start at 0, so no view special-cases it. (`listRootElements` must widen to admit it: the ROOT gather currently filters `treeType: 'business'`, and the Library root is recognised by its `kind`.)
+- **`definitions`** — the `Field Definitions` lens, child of the root.
+- **`kinds`** — the `Kinds` lens, child of the root.
+
+Each is a **new registry kind**, which is the framework's sanctioned move — new surfaces ship as new manifests, not new tables. Being kinds rather than plain `node`s is load-bearing three times over: the provisioner's per-node lenses (Jobs, Logbook) never attach to them; the affordances they lack (delete, rename, add surfaces) are ordinary chrome entailment — the manifest simply doesn't draw them, so non-deletability needs no permissions machinery; and the `kind` column is what excludes them from Definition identity (below).
+
+Seeding all three is the v1 choice; the two children could instead ride the lens provisioner (`${parentId}::definitions`, the `jobs` pattern) — tracked in ISSUES, not built.
+
+#### The gather
+
+- **Field Definitions** lists every active **field-like** Definition — a root of the `library` tree whose `kind` is field-like — sorted by `name` (every Definition mints at `siblingOrder: 0`, so name is the only order there is). Re-root policy Definitions (`fd_logbook_policy`) are excluded, exactly as the Add Surface's inline listing excludes them; whether they ever list here is open.
+- **Kinds** gathers from **code, not storage**: the registry — each admitted field kind with its config schema and defaults, the same admission the Add Surface's Kind band uses. There is no Element behind any row.
+- Both gathers are pure reads, hardcoded for v1 the same way `listRootElements` hardcodes the `business` population for ROOT. Making population gathers an explicit `SourceSpec` relation is tracked in ISSUES.
+
+#### The preview
+
+Each gathered Definition draws as a **Node row plus a one-field card**: the row carries the Definition's `name` with its id as the subtitle (the interim answer to duplicate labels); the card beneath renders the field **as deployed, sans value** — a synthetic unfilled instance (`value: null`, bound by `definitionId`) drawn by the kind's own Renderer, read-only. Nothing is minted and nothing is stored: the rows and cards are the lens's rendered expression of the gather, which is what chrome is (*Manifest → chrome*).
+
+- **No placeholder vocabulary is invented.** An unfilled field is already the specced, expected state of a real field; each kind already draws its own empty state, and the preview reuses it. A kind that suppresses its own label once persisted (e.g. `single-image`) shows nothing in the card — its name is on the Node row above.
+- **Config shows where deployed config shows** — the Details stack's Config section, read-only, exactly as a deployed instance renders its delegated config. An unset knob simply doesn't render: config is sparse child Elements, and the preview is faithful to that. No knob is materialized to make the Library look fuller than storage is. `number-kv`'s thresholds render as the one atomic `compound` value they are.
+- **Kinds rows are the same shape**: the kind's `pickerLabel` as the row, its config schema (knobs and defaults) as the card — the Library's "as they appear in authoring" view of what the Add Surface's Config band offers.
+
 #### What identifies a Definition
 
-**`definitionId === id`.** A Definition points at itself.
+**A root of the `library` tree whose `kind` is field-like.** `parentId === null` in the `library` tree was the whole test while Definitions were that tree's only roots; the three Library chrome Elements now share it, so the `kind` column completes the test — chrome kinds (`library`, `definitions`, `kinds`) are never Definitions, and a Definition's kind is always the field kind it defines. (The inverse — `parentId !== null` in the `library` tree meaning "config sub-field" — needs the same kind-awareness: the two lens children are parented and are not config.)
 
-This replaces `parentId === null`, which was the test only for as long as Definitions were tree roots. The self-reference holds at any depth, under any parent, so it survives the Library Node, folders inside it, and the eventual move of the whole Library beneath an app-level Node. It also reads true: `definitionId` already answers "which Definition am I bound to," and a Definition is bound to itself.
-
-The three cases are then disjoint on one column:
-
-
-| Element                          | `definitionId`         |
-| -------------------------------- | ---------------------- |
-| a FieldDefinition                | its own `id`           |
-| an instance minted from one      | that Definition's `id` |
-| a config Field, or any plain Node | `null`                 |
-
-
-**Config Fields carry `null` for now, and that is an interim.** The end state is that a config Field is itself an instance — "Units symbol", "Decimals", "Threshold LL" become seeded Definitions, and *every* Field on *every* card in the app, including the ones inside the Library, is minted from something. The interim is a strict subset of that end state, so nothing built now gets unbuilt later: the identity test does not change, only that config Fields stop being `null`. Deferred as LATER → *Config Fields as instances*.
-
-#### The defined kind is a config Field
-
-A Definition is a `node`, so the kind it defines cannot live in the `kind` column. It is a config Field like the others, at the deterministic id `${defId}::cfg::kind`, and it is the one read **first** — it selects the config schema the Definition's remaining Fields are provisioned from.
-
-**It is write-once**: set at mint, read-only thereafter. `kind` immutability is load-bearing everywhere else in the system (*One substrate, a spectrum of kinds*), and changing a Definition's kind once instances exist would re-render every one of them under a renderer their stored values do not fit. Changing the kind means coining a new Definition.
-
-#### Config Fields are provisioned, not authored ad hoc
-
-A Definition's config Fields are materialized from its kind's config schema by a **ProvisionSpec**, on the same terms as a lens: deterministic ids (`${defId}::cfg::${key}` — the twin of `${nodeId}::jobs`), idempotent, **reconciled rather than created once**.
-
-Reconciliation does three jobs, and only the first is obvious:
-
-1. **Materialization** — every knob the schema declares gets a row, valued or not. Without it the Library could only show config somebody had already set: an unset knob has no Element, so no row, so nothing to tap in order to set it.
-2. **Repair** — config is read back by exact id, so a deleted config Field would silently remove a knob from every instance bound to that Definition. Reconciliation puts it back. This is what makes config safe to edit in place rather than fragile.
-3. **Schema evolution** — a kind gains a knob and every existing Definition grows the Field on next reconcile. No migration runner, which is the promise "value/config shapes are widen-only" has been carrying by convention alone.
-
-**Required config is enforced on every write, not at one gate.** A Definition can be edited forever, so the kind's cross-field rules (`enum-kv` options non-empty, `number-kv` units present, the threshold chain) run on each config Field write: reassemble the Definition's config, validate, reject. Stronger than the pre-Create check it replaces, which could only guard the moment of authoring.
+Identity riding on position is what keeps arbitrary grouping of Definitions deferred: a Definition cannot be given a parent without ceasing to be one (see *The Add Surface → Deferred*).
 
 #### Listing under the Kind band
 
-See *The Add Surface → The bands* for the listing and what is deferred. Three consequences belong here rather than there:
+See *The Add Surface → The bands* for the listing and what is deferred. Two consequences belong here rather than there:
 
-- **The Library has no order of its own yet.** Every Definition is minted at `siblingOrder: 0`, so both the Kind band and the Library Node's children sort by `name`. Now that the Library is a place, `siblingOrder` should come to mean there what it means everywhere else — which makes the Library the second consumer of the still-undecided reorder gesture (see *DataField Reordering*).
-- **Grouping by kind costs nothing structural.** The Kind band gathers Definitions by their defined kind and renders them beneath it, never re-parenting. That was once justified by leaving `parentId === null` untouched; the identity test is now `definitionId === id`, which is position-independent, so **arbitrary user-authored groups are no longer blocked** — a Definition may sit under a folder Node inside the Library without ceasing to be one. What remains deferred is the grouping UI, not its possibility.
-- **A newly authored entry needs no special placement.** It mints its instance directly, so it never has to be found in the list it just joined; on the next opening it simply takes its alphabetical place under its kind.
+- **The Library has no order of its own.** Every Definition is minted at `siblingOrder: 0`, so the Kind band and the Library lens both sort by `name`.
+- **Grouping by kind costs nothing structural.** The Kind band gathers Definitions by their `kind` column and renders them beneath their kind, never re-parenting; the Library lens's flat listing reads the same population the same way. One gather, two surfaces.
 
 ### FieldDefinition Authoring
 
@@ -599,17 +592,14 @@ The authoring surface is specced with the row that hosts it — see *The Add Sur
 
 ### Edit / Delete Semantics for FieldDefinitions
 
-**A Definition is edited in place, and the edit reaches every instance bound to it.** This reverses the earlier *forked, never mutated* rule — deliberately, and as the whole reason the Library exists as a place: change a meaning once and the estate converges on it. The superseded fork rule and its reasoning are kept verbatim in SUPERSEDED.md.
+**Phase 1 ships with no user-facing edit or delete of FieldDefinitions**, and the Library lens is read-only. This is a deliberate simplification, not an oversight — multi-user identity and permissions don't exist yet, so any edit/delete UX is premature.
 
-- **Minted from everywhere, edited only through the Library.** Coining a Definition stays cheap and available on any card (the Add Surface); changing one has exactly one address. That asymmetry is the design, not a restriction awaiting removal.
-- **Downstream only.** An edit to a Definition flows out to its instances. An edit to an instance never flows back. **Upstream propagation is rejected outright, not deferred** — one user's local correction silently rewriting shared meaning for everyone is chaos that no amount of notification, confirmation or gating redeems. Without downstream flow, though, the Library would be a dead catalogue with no convergence; so the arrow points one way and only one way.
-- **`definitionId` stops being the version.** Under mutation it names the Definition, not a revision of it. What an instance was minted against is recoverable from the Definition's own history rather than pinned on the instance, so there is still no `componentVersion` and no migration runner.
-- **`disposition` is the intervention layer.** `owned` (copied at mint, does not propagate) is precisely a per-sub-field version pin; `pinned` is delegated-with-override-disabled. Both are already encoded on every config sub-field and read by nothing — wiring them is the cascade arbiter's job (*The cascade*). **Until then everything propagates**, which is right for the Library's alpha and too blunt for production: a units change should probably not arrive silently across ten thousand readings.
-- **Renaming a Definition propagates too.** A Field's `name` is snapshotted from the Definition's label at mint today, so a rename currently reaches nothing. Under downstream propagation it must reach every instance — that is a code change, not only a spec one.
-- **The audit consequence, stated plainly.** An instance's history records its values; the Definition's history records changes to what those values *mean*. Answering "what did 145 mean in March" needs both logs joined. This is inherent to live propagation, not a defect to be fixed later.
-- **Delete is admin-only** and unchanged: end users cannot delete Definitions — not their own, not others'. Bad or duplicate entries are removed by the dev team directly in Firestore. `deletedAt` exists for forward compatibility and the rare admin tombstone; no client write path sets it. Soft-deleted Definitions are filtered out of both the Kind band and the Library Node's children, so the Library is **not** a recovery surface.
+- **Edit is conceptually "fork"**: any future affordance that looks like "edit this Definition" (label, config, or both) **mints a new Definition** rather than mutating the existing one. The original is untouched; downstream instances remain bound to what they were minted from. This sidesteps cascading config changes (e.g. a unit change on a `number-kv`) and the question of which user is authorised to edit a shared entry. `definitionId` *is* the version — there is no `componentVersion` and no migration runner.
+- **Delete is admin-only**: end users cannot delete Definitions — not their own, not others'. Bad or duplicate entries are removed by the dev team directly in Firestore. `deletedAt` exists for forward compatibility and the rare admin tombstone; no client write path sets it. Soft-deleted Definitions are filtered out of the Kind band and the Library lens alike, so the Library is **not** a recovery surface.
 
-Ownership-based permissions ("you may edit/delete your own"), change notification and gating between a Library edit and its arrival on every client, and label-uniqueness / dedup logic all remain deferred to LATER.md and are revisited once real multi-user identity lands.
+An edit-in-place design — mutate the Definition, propagate downstream to every bound instance — was specced and prototyped (2026-08-17/18) and rejected with the place-design it rode on; its text is archived in SUPERSEDED.md. **Upstream propagation** (an instance edit rewriting its Definition) was rejected outright under both designs and stays rejected.
+
+Per-user delete UX, ownership-based permissions ("you may edit/delete your own"), edit-as-fork affordances, and label-uniqueness / dedup logic are all deferred to LATER.md and revisited once real multi-user identity lands.
 
 ### Default DataFields at Node Creation
 
@@ -628,11 +618,9 @@ UI code references these three by stable ID via the `DEFINITION_IDS` constant, n
 ### What stays in LATER.md (Phase-2+)
 
 - **Templates** (composite sets of FieldDefinitions, e.g. "HPU with Accumulator") — distinct, larger feature.
-- **Library discovery UX**: typeahead filter (see The Add Surface → Deferred → *Search*), user-authored groups beyond the kinds (no longer blocked by identity — the UI is what is deferred), popularity ranking, "recently added" sort.
+- **Library discovery UX**: typeahead filter (see The Add Surface → Deferred → *Search*), user-authored groups beyond the kinds (blocked on identity-by-position — see *What identifies a Definition*), popularity ranking, "recently added" sort.
 - **Moderation / promotion to canonical** for crowdsourced entries.
-- **Config Fields as instances** — a Definition's config Fields minted from seeded meta-Definitions, so every Field in the app is an instance of something and `definitionId: null` on a config Field goes away.
-- **Notification / gating on propagation** — a Library edit reaches every client silently today. Wiring `disposition` (`owned` = copy-at-mint pin, `pinned` = override-disabled) is the cascade arbiter's job and the first real intervention on that path.
-- **Ownership-based edit/delete permissions** for Definitions, and non-deletability as a general Element property rather than an affordance withheld from one Node.
+- **User-facing edit/delete** of Definitions with real ownership rules; edit stays conceptually fork (see *Edit / Delete Semantics*).
 - **Label uniqueness / dedup / merge** flows.
 - `**number-kv` per-instance metadata**: a user-set Valid-Until date on each entered value (distinct from the config-level `expectedRefreshSeconds`); per-instance Priority/Severity, Redaction Rule, Source. These belong on the instance Element, not in the Definition's config, and interact with history/audit in ways the other knobs don't.
 - `**number-kv` unit conversion at display time** (e.g. user-preferred metric/imperial). Storage stays canonical; display does the work.
@@ -806,11 +794,11 @@ A field's secondary values — units, quantity-kind, decimals, ranges, alert poi
 2. **Definition specificity** — general → narrow → instance; a narrow Definition stores only overrides and delegates the rest (config-as-Elements + inherit-unless-override *is* the specificity spectrum).
 3. **App → org → role → user config** down the authority hierarchy, each layer's prefs being Fields on a Node.
 
-**Audit-safe by construction:** config and prefs file in **Library / overlay** history, not business history, so delegating them touches no business audit. **A Definition is mutated in place, and the change propagates downstream to every instance** (see *Edit / Delete Semantics* — this reverses the earlier fork-never-mutate rule). `definitionId` therefore names the Definition rather than a revision of it; there is still no `componentVersion` and no migration runner, because what an instance was minted against is answered by the Definition's own history. `disposition: owned` is the per-sub-field pin that will stop selected knobs from propagating; it is encoded and unwired, so today everything propagates.
+**Audit-safe by construction:** config and prefs file in **Library / overlay** history, not business history, so delegating them touches no business audit. A Definition is **forked, never mutated** (editing one mints a new id; existing instances stay bound to the one they were minted from); `definitionId` *is* the version, so there is no `componentVersion` and no migration runner. `disposition: owned` is the encoded, unwired per-sub-field copy-at-mint pin — inert today, since a Definition that never changes makes live-read and copy indistinguishable.
 
 ### Populations are typed trees
 
-**`treeType` is a routing tag, not a navigational partition.** There is one tree and one navigation: `Up` walks `parentId` to a root, then to the ROOT view, never above a root, and no view state is parameterised by `treeType`. The ROOT view lists the business-tree roots **plus the Library Node**, pinned above them (see *The Library → One tree, no switcher*). What the tag selects is policy only — which audit log a change files under, and whether the Element syncs:
+**`treeType` is a routing tag, not a navigational partition.** There is one tree and one navigation: `Up` walks `parentId` to a root, then to the ROOT view, never above a root, and no view state is parameterised by `treeType`. The ROOT view lists the business-tree roots **plus the `Field Library` lens Node**, pinned above them (see *The Library → One tree, no switcher*). What the tag selects is policy only — which audit log a change files under, and whether the Element syncs:
 
 | `treeType`   | example contents                          | history  | sync                     |
 | ------------ | ----------------------------------------- | -------- | ------------------------ |
@@ -838,7 +826,7 @@ Chrome is always **derived**, **device-local view state**, or **the rendered exp
 
 #### FieldDefinition (a Library-tree Element)
 
-**Purpose:** A Library entry — a **Node** (`kind: node`, `treeType: library`) parented to the Library Node, whose Data Card's Fields are its config. Identified by `definitionId === id`; instances bind to it by the same column. It is **not a separate entity**: its columns are the Element columns (`name` = the label), it has no `config` column — config is the Fields on its card — and the field kind it defines is one of those Fields (`${defId}::cfg::kind`), write-once at mint.
+**Purpose:** A Library entry — a field-like Element of the kind it defines, living in the `library` tree (`treeType: library`, `parentId: null`), whose config is its child sub-field Elements. Instances bind to it by `definitionId`. It is **not a separate entity**: its columns are the Element columns (`kind` = the kind it defines, `name` = the label), and it has no `config` column — config is its subtree.
 
 > Migration note: **landed** (2026-06-27, config-as-Elements). The old separate `fieldDefinitions` Dexie table, its `config` JSON blob, and the `authorId`/`componentType` columns are gone — the table collapsed into the `library` tree, the blob into a config subtree, and `authorId` into `updatedBy`. In code the assembled read-model view is the `Definition` type; instances bind by `definitionId` (renamed from `fieldDefinitionId` 2026-07-01 — the binding is kind-agnostic: re-root policy containers like `logbook` bind a Definition through the same column).
 

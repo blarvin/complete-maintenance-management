@@ -296,14 +296,12 @@ recur; it is recorded in ISSUES if it bites the Add Surface.*
 
 ### From SPECIFICATION.md — FieldDefinitions are forked, never mutated
 
-*Reversed 2026-08-17, when the Library became a place in the tree. A Definition
-is now edited in place and the change propagates downstream to every bound
-instance — which is the reason the Library exists as a destination at all. The
-reasoning below is still the correct account of what fork bought: it sidestepped
-cascading config changes and the "who may edit this" question entirely, and its
-retirement is what makes `disposition` (owned / delegated / pinned) load-bearing
-rather than tidy-up. Note also what the fork rule was doing for versioning:
-`definitionId` was the revision pin, and under mutation it no longer is.*
+*Reversed 2026-08-17, when the Library became a place in the tree — a Definition
+was to be edited in place, propagating downstream to every bound instance. **That
+reversal was itself reversed 2026-08-20** when the place-design was rejected
+(see the Library-as-a-place entry at the bottom of this file): the fork rule
+below is current SPEC again (SPECIFICATION.md → Edit / Delete Semantics). Kept
+here as the record of the round-trip.*
 
 > **Phase 1 ships with no user-facing edit or delete of FieldDefinitions.** This is a deliberate simplification, not an oversight — multi-user identity and permissions don't exist yet, so any edit/delete UX is premature.
 >
@@ -318,13 +316,13 @@ rather than tidy-up. Note also what the fork rule was doing for versioning:
 
 ### From SPECIFICATION.md — the Library as a set, and a Definition as an Element of the kind it defines
 
-*Replaced 2026-08-17 by SPEC → The Library. The Library is a place in the tree,
-not a set surfaced under one band; a Definition is a Node, not a field-like
-Element of the kind it defines; and its identity test moved from
-`parentId === null` to `definitionId === id` so it survives having a parent. The
-`parentId === null` reasoning is kept because it explains why arbitrary
-user-authored groups were blocked for as long as they were — the block was never
-about grouping, it was about identity riding on position.*
+*Replaced 2026-08-17 by the Library-as-a-place design — a Definition became a
+Node under a Library Node, identity moved to `definitionId === id`. **That design
+was rejected 2026-08-20** (entry at the bottom of this file), and the text below
+is largely current again: a Definition is a field-like Element of the kind it
+defines, identified by `parentId === null`, and the Library is a population —
+now read by a lens (SPEC → The Library) as well as by the Kind band, rather
+than surfaced under the band alone.*
 
 > ### The Library
 >
@@ -344,13 +342,12 @@ about grouping, it was about identity riding on position.*
 
 ### From SPECIFICATION.md / ELEMENT-MODEL.md — the atomic compound config sub-field
 
-*The `compound` kind is retired (2026-08-17). Its only tenant was `number-kv`'s
-`{LL,L,H,HH}`, which is four independent `number-kv` sub-fields now — the
-authoring UI already drew it as four flat rows, and the Library needs each one
-separately editable with its own history. The atomicity argument below is sound
-and was simply never cashed: the one candidate cluster did not need it. If a
-co-varying set ever appears whose torn merge is genuinely dangerous, this is the
-argument to make again — on that set's own merits, not by inheritance.*
+*The `compound` kind was retired 2026-08-17 — its justification was the
+place-design's editable Library ("each threshold separately editable with its
+own history"). **Reversed 2026-08-20** with that design's rejection: the
+retirement was never cashed in code (the schema still mints `thresholds` as one
+`compound`, `configSchema.ts`), the Library lens renders storage faithfully, and
+the atomicity text below is current again in SPEC / ELEMENT-MODEL.*
 
 > - **The only object-valued residue is the compound sub-field** — co-varying values that must move together (`thresholds: {LL,L,H,HH}`) bundle into one atomic LWW'd object, by necessity (atomicity), not by default.
 > - **Granularity is a choice** — decomposed config can tear under concurrent offline edits (`L` and `H` converging to `L > H`); this is allowed, flagged, and revertible. Validation is **advisory** by default; reserve the atomic compound for the few values where a wrong combination is *dangerous*, not merely silly.
@@ -377,3 +374,63 @@ the switcher looked necessary and wasn't.*
 *And the destination it named, from → FieldDefinition Library Phase-2 enhancements:*
 
 > - **Dedicated Library view** (a TreeNode stack under the app's main menu) for browsing / managing FieldDefinitions outside the Add Surface — and the only place a Definition ever becomes *editable*, since the Add Surface only ever adds.
+
+### From SPECIFICATION.md — the Library as a place in the tree (the whole design)
+
+*Removed 2026-08-20 on branch Library-As-Lens-Tree. The place-design — specced
+2026-08-17, prototyped end-to-end on branch Field-Definition-Library-alpha
+(`cca33ec`), and rejected in concept: Definitions re-parented as `kind: node`
+children of a Library Node, identity moved to `definitionId === id`, the defined
+kind demoted to a `::cfg::kind` config Field, config materialized by a
+reconciling ProvisionSpec, per-write validation, and edit-in-place with
+downstream propagation. It rewrote a whole population's storage (Dexie v12,
+clear-on-upgrade) to buy what a lens gather gets for free. What survives:
+`treeType` as a routing tag, no switcher, and the Library entered from a Node
+pinned on ROOT — respecced as SPEC → The Library (a lens). What it superseded
+returns: fork-never-mutate, identity by `parentId === null` (now kind-aware),
+sparse config, and the atomic `compound`. The prototype's code lives on the
+abandoned branch; nothing of it is merged.*
+
+> #### Everything in the Library is a Node with Fields
+>
+> - **The Library Node** — an ordinary `node` (`treeType: library`, `parentId: null`), pinned to the top of the ROOT listing. Not user-created and not user-deletable; **non-deletability is a permissions concern, not a kind** — when permissions land it becomes a property available to any Element, and until then it is simply an affordance this Node does not draw.
+> - **A FieldDefinition is a Node** — `kind: node`, `treeType: library`, parented to the Library Node, with one Data Card like every other Node-like Element. It is a Node *so that every Definition is alike*: same row, same card, same gestures, same place. A Definition whose `kind` column carried the kind it defines would render, sort and navigate differently for every kind in the catalogue.
+> - **A Definition's config is ordinary Fields on its Data Card** — editable in place, history-tracked, LWW'd, like any other Field. They are not a separate species: they are Fields whose values are read at mint to configure a new instance. **Config is a *use*, not a kind.**
+> - **A Definition's card is open.** It may carry Fields that are not config at all — notes, ownership, whatever a team finds useful. Provisioned config Fields are told apart by their deterministic ids, never by position.
+
+> #### What identifies a Definition
+>
+> **`definitionId === id`.** A Definition points at itself.
+>
+> This replaces `parentId === null`, which was the test only for as long as Definitions were tree roots. The self-reference holds at any depth, under any parent, so it survives the Library Node, folders inside it, and the eventual move of the whole Library beneath an app-level Node. It also reads true: `definitionId` already answers "which Definition am I bound to," and a Definition is bound to itself.
+>
+> **Config Fields carry `null` for now, and that is an interim.** The end state is that a config Field is itself an instance — "Units symbol", "Decimals", "Threshold LL" become seeded Definitions, and *every* Field on *every* card in the app, including the ones inside the Library, is minted from something.
+
+> #### The defined kind is a config Field
+>
+> A Definition is a `node`, so the kind it defines cannot live in the `kind` column. It is a config Field like the others, at the deterministic id `${defId}::cfg::kind`, and it is the one read **first** — it selects the config schema the Definition's remaining Fields are provisioned from.
+>
+> **It is write-once**: set at mint, read-only thereafter. `kind` immutability is load-bearing everywhere else in the system (*One substrate, a spectrum of kinds*), and changing a Definition's kind once instances exist would re-render every one of them under a renderer their stored values do not fit. Changing the kind means coining a new Definition.
+
+> #### Config Fields are provisioned, not authored ad hoc
+>
+> A Definition's config Fields are materialized from its kind's config schema by a **ProvisionSpec**, on the same terms as a lens: deterministic ids (`${defId}::cfg::${key}` — the twin of `${nodeId}::jobs`), idempotent, **reconciled rather than created once**.
+>
+> Reconciliation does three jobs, and only the first is obvious:
+>
+> 1. **Materialization** — every knob the schema declares gets a row, valued or not. Without it the Library could only show config somebody had already set: an unset knob has no Element, so no row, so nothing to tap in order to set it.
+> 2. **Repair** — config is read back by exact id, so a deleted config Field would silently remove a knob from every instance bound to that Definition. Reconciliation puts it back. This is what makes config safe to edit in place rather than fragile.
+> 3. **Schema evolution** — a kind gains a knob and every existing Definition grows the Field on next reconcile. No migration runner, which is the promise "value/config shapes are widen-only" has been carrying by convention alone.
+>
+> **Required config is enforced on every write, not at one gate.** A Definition can be edited forever, so the kind's cross-field rules (`enum-kv` options non-empty, `number-kv` units present, the threshold chain) run on each config Field write: reassemble the Definition's config, validate, reject. Stronger than the pre-Create check it replaces, which could only guard the moment of authoring.
+
+*And the Edit / Delete Semantics it carried — the propagation half:*
+
+> **A Definition is edited in place, and the edit reaches every instance bound to it.** This reverses the earlier *forked, never mutated* rule — deliberately, and as the whole reason the Library exists as a place: change a meaning once and the estate converges on it.
+>
+> - **Minted from everywhere, edited only through the Library.** Coining a Definition stays cheap and available on any card (the Add Surface); changing one has exactly one address. That asymmetry is the design, not a restriction awaiting removal.
+> - **Downstream only.** An edit to a Definition flows out to its instances. An edit to an instance never flows back. **Upstream propagation is rejected outright, not deferred** — one user's local correction silently rewriting shared meaning for everyone is chaos that no amount of notification, confirmation or gating redeems. Without downstream flow, though, the Library would be a dead catalogue with no convergence; so the arrow points one way and only one way.
+> - **`definitionId` stops being the version.** Under mutation it names the Definition, not a revision of it. What an instance was minted against is recoverable from the Definition's own history rather than pinned on the instance, so there is still no `componentVersion` and no migration runner.
+> - **`disposition` is the intervention layer.** `owned` (copied at mint, does not propagate) is precisely a per-sub-field version pin; `pinned` is delegated-with-override-disabled. Both are already encoded on every config sub-field and read by nothing — wiring them is the cascade arbiter's job (*The cascade*). **Until then everything propagates**, which is right for the Library's alpha and too blunt for production: a units change should probably not arrive silently across ten thousand readings.
+> - **Renaming a Definition propagates too.** A Field's `name` is snapshotted from the Definition's label at mint today, so a rename currently reaches nothing. Under downstream propagation it must reach every instance — that is a code change, not only a spec one.
+> - **The audit consequence, stated plainly.** An instance's history records its values; the Definition's history records changes to what those values *mean*. Answering "what did 145 mean in March" needs both logs joined. This is inherent to live propagation, not a defect to be fixed later.
