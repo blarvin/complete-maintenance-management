@@ -623,9 +623,9 @@ Every new node is born with three DataFields, minted unfilled by the constructio
 
 They are **node-creation policy, not a rendering side effect** — they arrive whether or not any add surface was ever mounted. Once the node exists they are ordinary DataFields: editable, deletable, reorderable like any other. Nothing locks them, because there is no longer a checkbox to lock; a user who deletes "Tags" from one pump has simply decided that pump doesn't need it.
 
-Which three is a binding, and bindings are destined for the `config` tree (see LATER.md → *Definition Packs*). The eventual affordance is provenance rather than prohibition: a default field can say *where it came from* and let the user navigate there, which defers permissions to the place they land instead of a role check at the field.
+Which three is a **binding**, and it now lives where bindings belong: it is `constructionDefaults` in the active pack, not a constant in code (see *The starter Library* below). The pack is still the app layer of a cascade whose upper layers — org, role, user — are deferred to the `config` tree (LATER.md → *Definition Packs*). The eventual affordance is provenance rather than prohibition: a default field can say *where it came from* and let the user navigate there, which defers permissions to the place they land instead of a role check at the field.
 
-UI code references these three by stable ID via the `DEFINITION_IDS` constant, never by label.
+Node creation reads the binding through `constructionDefaults()` and never by label; the pack names the three by stable ID (`DEFINITION_IDS`).
 
 ### What stays in LATER.md (Phase-2+)
 
@@ -646,30 +646,20 @@ The full per-kind specifications — composition, value shape, config sub-fields
 
 (The former `single-image` kind — which crammed image + caption into one value object — is superseded by `image` + `image-with-caption`, where the caption is a sibling `text-kv` sub-field and so gains its own history.)
 
-### Seeded FieldDefinitions (starter Library)
+### The starter Library — a bundled Definition Pack
 
-Phase 1 ships with a set of dev-seeded Definitions (Library-tree Elements, `updatedBy: "appDeveloper"`) so the Library is non-empty on first run. The starter set is small and biased toward fields any asset is likely to have — the user-authoring path is expected to grow the Library from here.
+Phase 1 ships a **pack**: a set of Definitions (Library-tree Elements, `updatedBy: "appDeveloper"`) plus the bindings that point at them, so the Library is non-empty on first run and a new node is born useful. The user-authoring path grows the Library from there.
 
+The pack is **bundled into the app build** (`src/data/packs/defaultPack.ts`) — compiled in, so loading cannot fail and the app never boots packless. Loading a pack from a file, from an org layer, or by user upload is deferred (LATER.md → *Definition Packs*).
 
-| Label          | kind          | Notes                                               |
-| -------------- | ------------- | --------------------------------------------------- |
-| Description    | text-kv       | `multiline: true`                                   |
-| Type Of        | text-kv       | User-defined categories                             |
-| Tags           | text-kv       | Comma-separated values (structured tags [Phase 2+]) |
-| Location       | text-kv       | Physical location                                   |
-| Serial Number  | text-kv       | Manufacturer serial                                 |
-| Part Number    | text-kv       | Manufacturer part number                            |
-| Manufacturer   | text-kv       | Equipment manufacturer                              |
-| Model          | text-kv       | Equipment model                                     |
-| Status         | enum-kv       | `options: ["In Service", "Maintenance", "Retired"]` |
-| Installed Date | text-kv       | ISO date; `date-kv` kind [Phase 2+]                 |
-| Weight         | number-kv     | `unitsSymbol: "kg", unitsLongForm: "kilograms"`     |
-| Power Rating   | number-kv     | `unitsSymbol: "W", unitsLongForm: "Watts"`          |
-| Note           | text-kv       | `multiline: true`                                   |
-| Main Image     | image         | one image                                           |
+**`defaultPack.ts` is the authoritative list of rows.** It is not restated here: the enumeration lived in this document once, drifted from the code within a release, and the drift was itself filed as an issue. What this spec owns is the *shape* of the set:
 
+- **30 Definitions**, covering general industrial maintenance, simple manufacturing and agricultural machinery — human maintenance and manual entry, never telemetry.
+- Only kinds the app has today: `text-kv`, `enum-kv`, `number-kv`, `single-image`, `internal-link`, `logbook`. Dates are `text-kv` holding an ISO string (`date-kv` is [Phase 2+]).
+- Grouped as: identity and description (Description, Type Of, Tags, Location, Serial Number, Part Number, Manufacturer, Model, Status, Installed Date, Weight, Power Rating, Note, Main Image); maintenance and service (hours, service dates and intervals, criticality, condition, safety notes, supplier); fluids, consumables and spares (fuel, lubricant, oil capacity, filter part number, grease points); and nameplate/operating values read off a gauge by hand.
+- One row is not a field at all: `Logbook Policy`, the `logbook` policy Definition each provisioned Logbook container binds (see *Definition binding*).
 
-The three pre-checked construction defaults (`Type Of`, `Description`, `Tags`) are a subset of this list and are described under "Default DataFields at Node Creation" above.
+**The bindings ship with the pack, not as constants in code.** Three of them: `constructionDefaults` (the Definitions every new node is born with — `Type Of`, `Description`, `Tags`; see "Default DataFields at Node Creation" above), `lensPolicies` (lens kind → its policy Definition), and `lensNames` (lens kind → the container's display name). Consumers read them through resolver functions rather than reaching into the pack, which is the seam the `config`-tree cascade eventually resolves instead.
 
 ### Empty State (ROOT View)
 

@@ -4,7 +4,7 @@
  * In the console:
  * - `await window.__sync()`             — run one sync cycle now
  * - `await window.__syncStatus()`       — sync queue: status, retries, errors
- * - `await window.__wipeDefinitions()`  — drop the Library, re-seed on reload
+ * - `await window.__wipeDefinitions()`  — drop the Library, re-seed the pack on reload
  * - `await window.__wipeLocal()`        — delete the whole local DB and reload
  * - `await window.__mintDemoTree()`     — mint the dev example asset tree
  *
@@ -71,12 +71,13 @@ export function initializeDevTools(): void {
       await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
         await db.elements.bulkDelete(libraryEls.map(e => e.id));
         // Reset the seed-version key so seedDefinitions() runs again on the
-        // next reload, restoring the dev seeds (factory-default reset). To keep
-        // the set genuinely empty instead, pin it: put({ key: SEED_KEY, value: SEED_VERSION }).
+        // next reload, restoring the bundled pack's Definitions — these are what
+        // every node is born with, not scaffolding. To keep the set genuinely
+        // empty instead, pin it: put({ key: SEED_KEY, value: SEED_VERSION }).
         await db.syncMetadata.delete(SEED_KEY);
       });
-      console.log(`[DevTools] Cleared ${defCount} Definition(s) from IDB. Reload to re-seed the defaults.`);
-      return `Cleared ${defCount} Definition(s) from IDB — reload to re-seed defaults`;
+      console.log(`[DevTools] Cleared ${defCount} Definition(s) from IDB. Reload to re-seed from the bundled pack.`);
+      return `Cleared ${defCount} Definition(s) from IDB — reload to re-seed from the bundled pack`;
     } catch (err) {
       console.error('[DevTools] Wipe Definitions failed:', err);
       throw err;

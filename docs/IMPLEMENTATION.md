@@ -604,6 +604,26 @@ Built to SPEC → *The Library* in four slices (kinds → storage identity → s
 
 ---
 
+### Definition Packs — the resolver seam, bundled (2026-08-21)
+
+The first staged step of LATER → *Definition Packs*: the starter Definitions and the three things that selected them stopped being constants. `src/data/packs/` holds the pack (`types.ts`, `defaultPack.ts`, `activePack.ts`); everything else reads `packDefinitions()` / `constructionDefaults()` / `lensPolicyFor(kind)` / `lensNameFor(kind)`.
+
+**Bundled, with no setter — the alpha's whole safety argument.** `activePack` is a `const` pointing at `DEFAULT_PACK`, compiled into the build. Loading cannot fail, so "never boot packless" holds by construction rather than by a fallback path nobody exercises. `public/packs` + fetch + a first-run picker are deferred; when they land, this module is the only one that changes.
+
+**TS-with-`satisfies`, not JSON.** A pack is data, which argues for JSON — but a JSON import widens every `kind` to `string` and every `config` to an untyped object, so the compiler stops checking that `{ options: [...] }` belongs to an `enum-kv` and a typo in a kind becomes a runtime seed failure. `satisfies FieldDefinitionPack` over a TS module keeps the full union checking for free and lets rows reference `DEFINITION_IDS`. The runtime validator that JSON would need is the deferred *import* work's job, and building it now would be building the second half first.
+
+**Resolvers, not the pack object.** Callers never see `activePack`. Two reasons: reaching in for `.lensNames` re-couples every call site to the pack's shape, and an absent optional key has to read as "none" once, here, instead of being `?? []`-defaulted at each site. `constructionDefaults` is optional and defaults to empty — a pack that ships Definitions and binds nothing is legitimate.
+
+**The lens schedule became a function; the lens *vocabulary* stayed eager.** `PROVISIONED_LENSES` was a module-level const composed at import time — before the first render, long before the DB opens — which is exactly the wrong shape for something a pack supplies. It is `getProvisionedLenses()` now, recomposed per call (no memo: ~16 kinds, called once per `CREATE_ELEMENT` or backfill row). `isProvisionedLens` did **not** move: which kinds *are* lenses is `KIND_CAPABILITIES` data, pack-independent, and read on render paths — so `PROVISIONED_KINDS` is still a `Set` built at import, and `KindAdornment.tsx` needed no edit.
+
+**The registry's fourth self-check was deleted, not ported.** It threw when a lens's display `name` disagreed with its manifest's `pickerLabel`. That premise dies with packs: a pack is *entitled* to name the Logbook container "Daybook", and a mismatch is a choice, not drift. What is still worth pinning — that the *shipped* pack agrees with the manifests — moved to `src/test/defaultPack.test.ts` as literals (`jobs: 'Jobs'`, `logbook: 'Logbook'`) with a mirror comment, because a test may not import `registry.ts` (no Solid JSX transform in Vitest). That test also carries the semantic checks `satisfies` cannot: unique non-empty ids/labels, `enum-kv` options non-empty, every `number-kv` carrying a units symbol, and each binding resolving to a pack row of the right kind.
+
+**The seeder kept the writing and lost the content.** `seedDefinitions.ts` loops `packDefinitions()`; `CHROME_SEEDS` stays in code, because chrome is app structure — a pack that could remove the Library root could brick the app. `SEED_VERSION` went to 10 only in the commit that changed row content; the mechanical move shipped byte-identical data deliberately, so it could not force a reseed. `seedDefinitions.test.ts` now counts against the pack instead of a copied label list, which is what stops the SPEC-vs-seeds drift from re-forming inside the tests.
+
+**The demo asset tree is a fixture, not pack content.** `src/data/fixtures/demoTree.ts` (`window.__mintDemoTree()`) mints example assets through the **command bus**, so it exercises what the UI exercises — lenses get provisioned, the logbook policy gets stamped, fields snapshot their Definition's label. Keeping it out of the pack format is structural: the day a pack arrives from an org or an upload, it must not be able to write rows into somebody's asset tree. Jobs and log entries parent to the **owning node**, never to the lens (`LensCreate.tsx` does the same) — the lens is a pure view that gathers them back — and node-like children take the adapter's appended `siblingOrder`, since the two provisioned lenses already hold the first slots of that section.
+
+---
+
 ### Data Model Conventions
 
 **Root Nodes**: Use `parentId: null`, not sentinel value like `"ROOT"`. Adapter queries use `where('parentId', '==', null)` directly. TypeScript type is `parentId: string | null`.

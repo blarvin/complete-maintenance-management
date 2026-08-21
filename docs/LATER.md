@@ -56,7 +56,7 @@ The seam landed 2026-07-01 (full `fieldDefinitionId → definitionId` type-famil
 
 ### Definition Packs — seeds and bindings as data
 
-Decided in discussion 2026-08-14; supersedes the old ISSUES Tech Debt #7 ("are the dev seeds product content?"), which could not be answered as posed. The seeded Definitions were never the load-bearing thing — the **bindings** are. Three populations sit in one `SEEDS` array and differ only in what selects them: *nothing* selects `Status` / `Weight` / `Power Rating` (the user picks them); `CONSTRUCTION_DEFAULT_DEFINITION_IDS` (`src/data/definitionIds.ts`, read by `TreeNodeConstruction.tsx` and `useNodeCreation.ts`) selects the three construction defaults; `LENS_POLICY_DEFINITIONS` (`provisionPolicy.ts`) selects the logbook policy. Both selectors are `const`s in code. Once they are data, "dev seed" vs "product content" stops being a distinction — there is one population of Definitions and a separate question of what points at them.
+Decided in discussion 2026-08-14; supersedes the old ISSUES Tech Debt #7 ("are the dev seeds product content?"), which could not be answered as posed. The seeded Definitions were never the load-bearing thing — the **bindings** are. Three populations sat in one `SEEDS` array and differed only in what selected them: *nothing* selected `Status` / `Weight` / `Power Rating` (the user picks them); `CONSTRUCTION_DEFAULT_DEFINITION_IDS` (`definitionIds.ts`) selected the three construction defaults; `LENS_POLICY_DEFINITIONS` (`provisionPolicy.ts`) selected the logbook policy. All three were `const`s in code, and all three are pack data as of 2026-08-21. Now that they are data, "dev seed" vs "product content" is no longer a distinction — there is one population of Definitions and a separate question of what points at them.
 
 **Destination:** bindings live in the `config` tree (SPECIFICATION.md → *Populations are typed trees*; the cascade's job #3, app→org→role→user), resolved by the arbiter (ISSUES Architecture #4). A **pack** is the app-layer end of that cascade, shipped as a file:
 
@@ -67,14 +67,14 @@ Decided in discussion 2026-08-14; supersedes the old ISSUES Tech Debt #7 ("are t
   "lensNames":    { "logbook": "Daybook" } }
 ```
 
-The format is the existing `SeedRow[]` plus three binding maps — `serializeConfig()` already turns each row's config into its child subtree, so there is no import format to invent.
+The format is `PackDefinitionRow[]` plus three binding maps (`src/data/packs/types.ts`) — `serializeConfig()` already turns each row's config into its child subtree, so there is no import format to invent.
 
 **Why it's wanted:** a client demo is unconvincing against a Library of generic fields. A pack makes a prospect's own vocabulary appear on every new asset in seconds, precisely because it carries bindings and not just a longer field list. It runs backwards too — configure a client's Library in a workshop, export the pack, use it as the starter for their next site.
 
 **Staged, cheapest first:**
 
-- **The resolver seam** — replace the two `const` selectors with `constructionDefaults()` / `lensPolicyFor(kind)`. Backed by the pack now, by the `config` tree later, without touching call sites. The only piece that must come first, and the only one that constrains anything.
-- **Pack file + first-run picker** — `public/packs/*.json`, bundled default as the offline fallback. Buys the entire demo story with no cascade.
+- ~~**The resolver seam**~~ — **done 2026-08-21.** `constructionDefaults()` / `lensPolicyFor(kind)` / `lensNameFor(kind)` / `packDefinitions()` live in `src/data/packs/activePack.ts`; all three `const` selectors are deleted and the lens schedule is lazy (IMPLEMENTATION.md → *Definition Packs — the resolver seam, bundled*).
+- ~~**Bundled pack**~~ — **done 2026-08-21.** `src/data/packs/defaultPack.ts`, a TS module with `satisfies` (not JSON — the compiler checks the `kind`/`config` unions, and the runtime validator JSON would need belongs to import). 30 rows, re-authored, plus all three binding maps. **Still deferred from this bullet:** `public/packs/*.json`, fetching one at runtime, and the first-run picker — the demo story wants them, and the bundled pack is the offline fallback they'd fall back *to*.
 - **Config-tree UI** — see UI/UX → *Config-tree UI*.
 - **Org / user layers, per-node override, source chips** — need the arbiter (#4).
 
