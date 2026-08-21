@@ -71,27 +71,40 @@ export const savePendingForms = (nodeId: string, forms: PendingForm[]) => {
 };
 
 /**
+ * The draft plus what could not be put in it. `missingIds` is the point: an id
+ * the Library cannot resolve used to be skipped with no else branch, so a boot
+ * where the seed hadn't landed produced a field-less node with nothing recorded.
+ * Reported, not retried — a caller decides how loudly (Phase 1).
+ */
+export type SeededDraft = { forms: PendingForm[]; missingIds: string[] };
+
+/**
  * Ensure a draft exists for nodeId, seeded from `definitionIds` if it doesn't.
  * Idempotent and stored-draft-wins, so it is safe to call from more than one
  * place: node creation calls it so the construction defaults land whether or
  * not a picker was ever mounted, and the composer calls it on mount for the
- * same rows. Returns the resulting draft.
+ * same rows. Returns the resulting draft and any ids that did not resolve.
  */
 export const seedPendingDraft = async (
     nodeId: string,
     definitionIds: readonly string[]
-): Promise<PendingForm[]> => {
+): Promise<SeededDraft> => {
     const existing = loadPendingForms(nodeId);
-    if (existing.length > 0) return existing;
+    if (existing.length > 0) return { forms: existing, missingIds: [] };
 
     const fdq = getDefinitionQueries();
     const seeded: PendingForm[] = [];
+    const missingIds: string[] = [];
     for (const id of definitionIds) {
         const def = await fdq.getDefinitionById(id);
         if (def) seeded.push(pendingFormFromDefinition(def));
+        else missingIds.push(id);
     }
     if (seeded.length > 0) savePendingForms(nodeId, seeded);
-    return seeded;
+    if (missingIds.length > 0) {
+        console.warn('[pendingDraft] Definitions not found in the Library:', missingIds);
+    }
+    return { forms: seeded, missingIds };
 };
 
 /** Remove any draft for nodeId. */

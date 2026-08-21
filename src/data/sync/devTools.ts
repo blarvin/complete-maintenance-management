@@ -4,7 +4,7 @@
  * In the console:
  * - `await window.__sync()`             — run one sync cycle now
  * - `await window.__syncStatus()`       — sync queue: status, retries, errors
- * - `await window.__wipeDefinitions()`  — drop the Library, re-seed the pack on reload
+ * - `await window.__wipeDefinitions()`  — drop the Library and reload; the pack re-seeds
  * - `await window.__wipeLocal()`        — delete the whole local DB and reload
  * - `await window.__mintDemoTree()`     — mint the dev example asset tree
  *
@@ -18,7 +18,7 @@
 import { getSyncManager } from './syncManager';
 import { db } from '../storage/db';
 import { clearStorage } from '../storage/initStorage';
-import { SEED_KEY } from '../services/seedDefinitions';
+import { BOOTSTRAP_POPULATIONS, bootstrapKey } from '../services/bootstrap';
 import { isDefinitionRow } from '../libraryChrome';
 import { mintDemoTree } from '../fixtures/demoTree';
 import { DEV_TOOLS_ENABLED } from '../../utils/devMode';
@@ -61,6 +61,18 @@ export function initializeDevTools(): void {
     }
   };
 
+  /**
+   * Drop the whole `library` tree and reload, which re-seeds it from the bundled
+   * pack — these Definitions are what every node is born with, not scaffolding.
+   * To keep the set genuinely empty instead, pin the population keys after
+   * wiping: `put({ key: bootstrapKey(id), value: revision })` for each.
+   *
+   * Reloads, like `__wipeLocal()`: the un-reloaded window was a real hazard, not
+   * a nicety. Anything minted between the wipe and a manual reload stamped
+   * `definitionId: null` on its lenses and lost its construction defaults, since
+   * both stamp only what resolves. (`restampUnboundLenses` now repairs the lens
+   * half on the next boot; the defaults half is reported, not recoverable.)
+   */
   w.__wipeDefinitions = async () => {
     try {
       // The Library is `library`-tree Elements (Definitions + their config
@@ -70,14 +82,14 @@ export function initializeDevTools(): void {
       const defCount = libraryEls.filter(isDefinitionRow).length;
       await db.transaction('rw', [db.elements, db.syncMetadata], async () => {
         await db.elements.bulkDelete(libraryEls.map(e => e.id));
-        // Reset the seed-version key so seedDefinitions() runs again on the
-        // next reload, restoring the bundled pack's Definitions — these are what
-        // every node is born with, not scaffolding. To keep the set genuinely
-        // empty instead, pin it: put({ key: SEED_KEY, value: SEED_VERSION }).
-        await db.syncMetadata.delete(SEED_KEY);
+        // Both populations own rows in this tree, so both revision keys reset.
+        for (const population of BOOTSTRAP_POPULATIONS) {
+          await db.syncMetadata.delete(bootstrapKey(population.id));
+        }
       });
-      console.log(`[DevTools] Cleared ${defCount} Definition(s) from IDB. Reload to re-seed from the bundled pack.`);
-      return `Cleared ${defCount} Definition(s) from IDB — reload to re-seed from the bundled pack`;
+      console.log(`[DevTools] Cleared ${defCount} Definition(s) from IDB — reloading to re-seed from the bundled pack.`);
+      window.location.reload();
+      return `Cleared ${defCount} Definition(s) from IDB — reloading to re-seed from the bundled pack`;
     } catch (err) {
       console.error('[DevTools] Wipe Definitions failed:', err);
       throw err;

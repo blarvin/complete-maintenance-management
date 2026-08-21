@@ -25,8 +25,8 @@ import { isLibraryChrome } from '../libraryChrome';
 import { subscribeSyncTrigger } from '../syncSubscriber';
 import { initializeCommandBus } from '../commands';
 import { initializeQueries } from '../queries';
-import { seedDefinitions } from '../services/seedDefinitions';
-import { backfillProvisionedLenses } from '../services/provisionLenses';
+import { runBootstrap } from '../services/bootstrap';
+import { backfillProvisionedLenses, restampUnboundLenses } from '../services/provisionLenses';
 
 /**
  * Memoized init state. All callers share the same promise so concurrent
@@ -39,10 +39,11 @@ import { backfillProvisionedLenses } from '../services/provisionLenses';
  * another startup syncFull — per edit-triggered reload.
  * Client-only state — the app is a client-only SPA with no server render.
  */
-type InitState = { initialized: boolean; initPromise: Promise<void> | null };
+type InitState = { initialized: boolean; degraded: boolean; initPromise: Promise<void> | null };
 const globalState = globalThis as typeof globalThis & { __cmmInitState?: InitState };
 const state: InitState =
-  globalState.__cmmInitState ?? (globalState.__cmmInitState = { initialized: false, initPromise: null });
+  globalState.__cmmInitState ??
+  (globalState.__cmmInitState = { initialized: false, degraded: false, initPromise: null });
 
 /**
  * Initialize storage and sync.
@@ -83,11 +84,11 @@ async function doInitializeStorage(): Promise<void> {
       devLog('[Storage] IDB has', elementCount, 'elements, using existing data');
     }
 
-    // Seed dev Definitions + the Library chrome rows (idempotent; no sync
-    // enqueue). Must run BEFORE the node-index seed: the seeder writes
-    // `db.elements` directly with no bus emit, so a fresh DB would otherwise
-    // miss the chrome rows in the index.
-    await seedDefinitions();
+    // Write the app-owned populations — Library chrome + the active pack's
+    // Definitions (idempotent; no sync enqueue). Must run BEFORE the node-index
+    // seed: the runner writes `db.elements` directly with no bus emit, so a
+    // fresh DB would otherwise miss the chrome rows in the index.
+    await runBootstrap();
 
     await seedNodeIndexFromDb();
     subscribeNodeIndex();
@@ -110,8 +111,16 @@ async function doInitializeStorage(): Promise<void> {
     // has a Jobs box and no Logbook — and the next lens kind repeats that. Runs
     // after the migration/seed so it sees the full local set; idempotent, so a
     // steady-state startup writes nothing.
-    const backfilled = await backfillProvisionedLenses(await idbAdapter.getAllElements(), idbAdapter);
+    const storedElements = await idbAdapter.getAllElements();
+    const backfilled = await backfillProvisionedLenses(storedElements, idbAdapter);
     if (backfilled > 0) devLog('[Storage] Backfilled', backfilled, 'lens containers');
+
+    // The other half of the same degradation: a lens *created* while its policy
+    // Definition was unresolvable minted with `definitionId: null` and nothing
+    // ever looked again. Reads the same pre-backfill snapshot — lenses the
+    // backfill just minted stamped themselves if resolvable.
+    const restamped = await restampUnboundLenses(storedElements);
+    if (restamped > 0) devLog('[Storage] Re-stamped', restamped, 'lens policies');
 
     // Start the sync manager
     const syncManager = initializeSyncManager(idbAdapter, firestoreAdapter, syncQueue);
@@ -138,8 +147,14 @@ async function doInitializeStorage(): Promise<void> {
     // before their first query (and this promise resolves on failure too).
   } catch (err) {
     console.error('[Storage] Initialization failed:', err);
-    // Don't throw - app should still work offline with empty IDB
+    // Don't throw — the app should still render rather than showing nothing.
+    // `initialized` stays true so the data hooks stop waiting, but `degraded`
+    // is what says the boot got no further than the throw: no Library, no
+    // command bus, every write failing. `getBootState()` is how the UI can tell
+    // the two apart; one boolean covering both is what made a failed init
+    // report success (IMPLEMENTATION.md → *Per-population bootstrap*).
     state.initialized = true;
+    state.degraded = true;
   }
 }
 
@@ -200,12 +215,26 @@ export function isStorageInitialized(): boolean {
   return state.initialized;
 }
 
+/** How the boot actually went. `degraded` = init threw; see the catch above. */
+export type BootState = 'pending' | 'ok' | 'degraded';
+
+/**
+ * The boot outcome the UI can read. `pending` until `initializeStorage()`
+ * settles, then `ok` or `degraded` — a degraded app renders, but has no Library
+ * and no command bus, so it is worth telling the user about.
+ */
+export function getBootState(): BootState {
+  if (state.degraded) return 'degraded';
+  return state.initialized ? 'ok' : 'pending';
+}
+
 /**
  * Clear all IDB data (for testing or reset).
  */
 export async function clearStorage(): Promise<void> {
   await db.delete();
   state.initialized = false;
+  state.degraded = false;
   state.initPromise = null;
   devLog('[Storage] Cleared all data');
 }

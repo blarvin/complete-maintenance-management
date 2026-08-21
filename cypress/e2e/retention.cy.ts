@@ -73,7 +73,7 @@ describe('data retention', () => {
     });
 
     it('the dev Library seeds survive a full sync against an empty server', () => {
-        // The seeds never sync (seedDefinitions enqueues nothing), so they were
+        // The seeds never sync (the bootstrap runner enqueues nothing), so they were
         // the original victims of the purge — ISSUES Bugs #1, previously fixed
         // by an explicit exemption inside the strategy. Nothing exempts them
         // now; nothing purges. The construction defaults are the visible proof.

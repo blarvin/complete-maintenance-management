@@ -2,6 +2,7 @@ import type { SnackbarService, SnackbarStore, ToastInput, ActiveToast } from './
 import { DEFAULT_DURATIONS } from './types';
 
 export type { SnackbarService, SnackbarStore, ToastInput, SnackbarVariant, ActiveToast, ToastAction } from './types';
+export { PERSISTENT_DURATION } from './types';
 
 let registeredStore: SnackbarStore | null = null;
 let timerId: ReturnType<typeof setTimeout> | null = null;

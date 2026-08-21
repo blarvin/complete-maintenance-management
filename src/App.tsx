@@ -8,7 +8,8 @@
 
 import { onMount, Show } from 'solid-js';
 import { createAppState, AppStateContext, selectors } from './state/appState';
-import { initializeStorage } from './data/storage/initStorage';
+import { initializeStorage, getBootState } from './data/storage/initStorage';
+import { getSnackbarService, PERSISTENT_DURATION } from './services/snackbar';
 import { SnackbarHost } from './components/Snackbar/SnackbarHost';
 import { SyncTargetBadge } from './components/SyncTargetBadge/SyncTargetBadge';
 import { RootView } from './components/views/RootView';
@@ -21,6 +22,21 @@ export const App = () => {
     onMount(async () => {
         // Initialize storage
         await initializeStorage();
+
+        // A degraded boot renders an app with no Library and no command bus:
+        // every write throws and every new node is born field-less. It used to
+        // be indistinguishable from a clean boot, so say so.
+        // This `await` is also what guarantees SnackbarHost has registered its
+        // store — App's onMount is queued before its children's, and only the
+        // suspension lets theirs run first.
+        if (getBootState() === 'degraded') {
+            getSnackbarService().show({
+                variant: 'error',
+                message: 'Storage failed to initialize — reload to retry',
+                durationMs: PERSISTENT_DURATION,
+                action: { label: 'Reload', handler: () => window.location.reload() },
+            });
+        }
 
         // Log service worker registration status. Not awaited: `ready` only
         // resolves once a SW activates, and dev never registers one (the SW is

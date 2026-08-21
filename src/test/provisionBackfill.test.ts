@@ -9,8 +9,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
-import { backfillProvisionedLenses } from '../data/services/provisionLenses';
+import { backfillProvisionedLenses, restampUnboundLenses } from '../data/services/provisionLenses';
 import { getProvisionedLenses } from '../kinds/provisionPolicy';
+import { AUTHOR_ID_APP_DEVELOPER } from '../constants';
 import type { Element, Kind, TreeType } from '../data/models';
 
 const row = (id: string, kind: Kind, parentId: string | null, over: Partial<Element> = {}): Element => ({
@@ -112,5 +113,80 @@ describe('backfillProvisionedLenses', () => {
 
     expect(created).toBe(SUFFIXES.length * 2);
     expect((await db.elements.get(`o1::${SUFFIXES[0]}`))?.parentId).toBe('o1');
+  });
+});
+
+/**
+ * The binding half: a lens that minted while its policy Definition was
+ * unresolvable keeps `definitionId: null` and nothing ever looks again, because
+ * both provisioning entry points skip a lens that already exists.
+ */
+describe('restampUnboundLenses', () => {
+  // `logbook` is the one lens the pack binds a policy to; `jobs` binds none.
+  const bound = getProvisionedLenses().find((l) => l.definitionId)!;
+  const policyId = bound.definitionId!;
+
+  /** The policy Definition as it is bootstrapped: a library-tree root row. */
+  const policyDefinition = () =>
+    row(policyId, bound.kind, null, {
+      treeType: 'library' as TreeType,
+      updatedBy: AUTHOR_ID_APP_DEVELOPER,
+    });
+
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
+
+  afterEach(async () => {
+    await db.delete();
+  });
+
+  it('stamps a lens that minted unbound, once its policy Definition is there', async () => {
+    await db.elements.put(policyDefinition());
+    await db.elements.put(row('n1', 'node', null));
+    await db.elements.put(row(`n1::${bound.suffix}`, bound.kind, 'n1'));
+
+    const stamped = await restampUnboundLenses(await db.elements.toArray());
+
+    expect(stamped).toBe(1);
+    expect((await db.elements.get(`n1::${bound.suffix}`))?.definitionId).toBe(policyId);
+    expect((await db.elements.get(`n1::${bound.suffix}`))?.updatedBy).toBe(AUTHOR_ID_APP_DEVELOPER);
+  });
+
+  it('leaves the lens unbound while the Definition is still unresolvable', async () => {
+    await db.elements.put(row('n1', 'node', null));
+    await db.elements.put(row(`n1::${bound.suffix}`, bound.kind, 'n1'));
+
+    expect(await restampUnboundLenses(await db.elements.toArray())).toBe(0);
+    expect((await db.elements.get(`n1::${bound.suffix}`))?.definitionId).toBeNull();
+  });
+
+  it('never stamps the policy Definition itself, which is a row of the same kind', async () => {
+    await db.elements.put(policyDefinition());
+
+    expect(await restampUnboundLenses(await db.elements.toArray())).toBe(0);
+    expect((await db.elements.get(policyId))?.definitionId).toBeNull();
+  });
+
+  it('skips lenses that are already bound or deleted, and is idempotent', async () => {
+    await db.elements.put(policyDefinition());
+    await db.elements.put(row('n1', 'node', null));
+    await db.elements.put(row(`n1::${bound.suffix}`, bound.kind, 'n1', { definitionId: 'fd_other' }));
+    await db.elements.put(row(`n2::${bound.suffix}`, bound.kind, 'n2', { deletedAt: 1 }));
+
+    expect(await restampUnboundLenses(await db.elements.toArray())).toBe(0);
+    expect((await db.elements.get(`n1::${bound.suffix}`))?.definitionId).toBe('fd_other');
+    expect((await db.elements.get(`n2::${bound.suffix}`))?.definitionId).toBeNull();
+  });
+
+  it('enqueues no sync ops — the stamp is deterministic per client', async () => {
+    await db.elements.put(policyDefinition());
+    await db.elements.put(row('n1', 'node', null));
+    await db.elements.put(row(`n1::${bound.suffix}`, bound.kind, 'n1'));
+
+    await restampUnboundLenses(await db.elements.toArray());
+
+    expect(await db.syncQueue.count()).toBe(0);
   });
 });

@@ -36,7 +36,7 @@ is the point: pick the one you actually mean.
 |---|---|
 | Clear this browser's data | `await window.__wipeLocal()` (deletes the DB, reloads) |
 | Clear the emulator | `npm run wipe:emulator` |
-| Re-seed the Library from the pack | `await window.__wipeDefinitions()`, then reload |
+| Re-seed the Library from the pack | `await window.__wipeDefinitions()` (drops the Library, reloads) |
 | Fully clean slate | `npm run wipe:emulator`, then `__wipeLocal()` |
 | A tree to look at, on a clean slate | `__wipeLocal()`, then `await window.__mintDemoTree()` |
 
@@ -70,9 +70,9 @@ await window.__mintDemoTree()  // ~60 Elements: three roots of example assets
 database and reloads, so the app re-inits from nothing: the bundled pack re-seeds
 (30 Definitions + the Library chrome), the node index rebuilds, lenses get
 provisioned as nodes arrive. Reach for it after **anything that changes seeded
-data** — a `SEED_VERSION` bump, an edit to `src/data/packs/defaultPack.ts`, a new
-kind — because the seeder is version-gated and an unchanged version means your
-edit is simply never written. It **never touches the server**: a local reset and
+data** — a population `revision` bump, an edit to `src/data/packs/defaultPack.ts`,
+a new kind — because each bootstrap population is revision-gated and an unchanged
+revision means your edit is simply never written. It **never touches the server**: a local reset and
 a remote wipe are different intentions (see the table above). Each sync target
 has its own database, so wiping in emulator mode leaves your production-mode data
 alone, and vice versa.
