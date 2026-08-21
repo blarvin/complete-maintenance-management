@@ -41,6 +41,14 @@ stale or dangling.
 
 3.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
 
+4.) **A failed storage init reports success** — the catch in `doInitializeStorage` (`initStorage.ts:139-143`) logs and sets `state.initialized = true`, so `isStorageInitialized()` says booted after a boot that got no further than `db.open()`. Everything past the throw is skipped, including `seedDefinitions()` **and** `initializeCommandBus`/`initializeQueries`, so the app runs with no Library and every write throws "CommandBus not initialized". This is the real *never boot packless* hole (LATER → *Definition Packs*): bundling the pack closed the load side, nothing closes the seed side. Wants a boot state the UI can read (`ok | degraded`), not one boolean covering both. Read from the code 2026-08-21 while planning the pack reseed.
+
+5.) **A lens minted with `definitionId: null` is never re-stamped** — `ensureProvisionedLenses` skips any lens that already exists (`provisionLenses.ts:39-40`) and the backfill only *creates* missing ones, so a lens minted while its policy Definition was unresolvable (unseeded DB, or the window `__wipeDefinitions` opens — Tech Debt #15) keeps `definitionId: null` forever and lives out its life on the `pickerLabel` fallback. Stamp-if-resolvable degrades permanently, not transiently; the fix is a re-stamp pass over existing lenses whose null now resolves. Read from the code 2026-08-21.
+
+6.) **Unresolvable construction defaults are dropped, then the draft is cleared** — `seedPendingDraft` silently skips any id `getDefinitionById` misses (`pendingDraft.ts:89-91`, no else branch), and `complete()` immediately runs `commitPendingDraft`, which clears the draft. On a boot where the seed didn't land, a new node is therefore born field-less with nothing recorded and no retry — fields lost, not deferred. Read from the code 2026-08-21.
+
+7.) **Create surfaces are live before the command bus exists** — `RootView`'s guard is `isLoading() && nodes().length === 0`, and `useElementChildren` only sets `isLoading` *after* `await initializeStorage()` (`useElementChildren.ts:51-52`), so first paint renders the whole view, `CreateNodeButton` included, while init is still in flight. `start()` is harmless (no bus), but the Create it opens calls `getCommandBus()` (`useNodeCreation.ts:101`) inside an un-awaited `complete()` — so a fast click on a slow boot is an uncaught rejection and a silently lost node. Read from the code 2026-08-21.
+
 
 ## UI, styling, layout
 
@@ -149,4 +157,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 13.) **Seeding upserts but never prunes, so a retired seed id lingers forever** — a dev profile carried `library_root` ("Field Library", kind `node`), the pre-`lib_root` chrome row, still passing `isDefinitionRow` and so counting as a 31st Definition in a 30-row pack. Nothing deletes a row the pack stopped shipping, and the Library's Definitions index will list it. Read out of IndexedDB during the Field-Packs hand-test, 2026-08-21; a fresh profile is clean, so this only bites profiles that predate a rename.
 
 14.) **A failed Cypress run leaves `cypress/screenshots/` untracked in the working tree** — it is not in `.gitignore`, so a red spec turns into an untracked directory that shows up in the next `git status` and is easy to stage by accident. Surfaced running the seed-coupled specs for Field-Packs, 2026-08-21.
+
+15.) **`__wipeDefinitions()` doesn't reload, unlike `__wipeLocal()`** — it clears the `library` tree and resets `SEED_KEY` (`devTools.ts:64`), then leaves the running app pointed at a Library that no longer exists and tells the user to reload; `__wipeLocal()` reloads for them, for exactly this reason. Anything minted in that window stamps `definitionId: null` on its lenses — permanently, per Bugs #5 — and loses its construction defaults (Bugs #6). Either reload too, or say in the docblock why the un-reloaded window is wanted. Read from the code 2026-08-21.
 
