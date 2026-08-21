@@ -1,8 +1,9 @@
 /**
  * Lens provisioning — the reconciler behind `ProvisionSpec`.
  *
- * Spec-driven throughout: both functions loop `PROVISIONED_LENSES` (derived from
- * every kind's `provision` capability), so a new lens kind joins with no edit here.
+ * Spec-driven throughout: both functions loop `getProvisionedLenses()` (derived from
+ * every kind's `provision` capability, named and bound by the active pack), so a new
+ * lens kind joins with no edit here.
  * Each lens id is deterministic (`${parentId}::${suffix}`), which is what makes the
  * whole thing idempotent — reconciling twice, or from two clients at once,
  * converges on one lens rather than minting duplicates.
@@ -16,7 +17,7 @@ import type { StorageAdapter } from '../storage/storageAdapter';
 import type { Element } from '../models';
 import { isReRoot } from '../../kinds/placement';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
-import { isProvisionedLens, PROVISIONED_LENSES } from '../../kinds/provisionPolicy';
+import { isProvisionedLens, getProvisionedLenses } from '../../kinds/provisionPolicy';
 
 /**
  * Provision each declared lens child on one container re-root node.
@@ -33,7 +34,7 @@ import { isProvisionedLens, PROVISIONED_LENSES } from '../../kinds/provisionPoli
 export async function ensureProvisionedLenses(adapter: StorageAdapter, parent: Element): Promise<number> {
   if (!isReRoot(parent.kind) || isProvisionedLens(parent.kind) || isLensSurfaced(parent.kind)) return 0;
   let created = 0;
-  for (const lens of PROVISIONED_LENSES) {
+  for (const lens of getProvisionedLenses()) {
     const lensId = `${parent.id}::${lens.suffix}`;
     const existing = await adapter.getElement(lensId);
     if (existing.data) continue;

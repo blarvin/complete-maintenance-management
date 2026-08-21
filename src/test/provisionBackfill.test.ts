@@ -1,5 +1,5 @@
 /**
- * Lens backfill — reconciling `PROVISIONED_LENSES` onto nodes that already exist.
+ * Lens backfill — reconciling the provisioning schedule onto nodes that already exist.
  * Provisioning is otherwise create-time only, so a node minted before a lens kind
  * existed never grows one (`logbook` landing after `jobs` is the case that already
  * happened). Real IDBAdapter + fake-indexeddb; lens rows are written straight to
@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '../data/storage/db';
 import { IDBAdapter } from '../data/storage/IDBAdapter';
 import { backfillProvisionedLenses } from '../data/services/provisionLenses';
-import { PROVISIONED_LENSES } from '../kinds/provisionPolicy';
+import { getProvisionedLenses } from '../kinds/provisionPolicy';
 import type { Element, Kind, TreeType } from '../data/models';
 
 const row = (id: string, kind: Kind, parentId: string | null, over: Partial<Element> = {}): Element => ({
@@ -29,7 +29,7 @@ const row = (id: string, kind: Kind, parentId: string | null, over: Partial<Elem
   ...over,
 });
 
-const SUFFIXES = PROVISIONED_LENSES.map((l) => l.suffix);
+const SUFFIXES = getProvisionedLenses().map((l) => l.suffix);
 
 describe('backfillProvisionedLenses', () => {
   let adapter: IDBAdapter;

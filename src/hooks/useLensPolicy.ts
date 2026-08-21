@@ -3,7 +3,7 @@
  * label, staleness) into a LensPolicy accessor.
  *
  * The lens's `definitionId` was stamped at provision time (stamp-if-resolvable,
- * handlers.ts); null (jobs, pre-existing lenses) or a missing Definition falls
+ * provisionLenses.ts); null (jobs, pre-existing lenses) or a missing Definition falls
  * back to the target kind's `pickerLabel` with staleness off. Definitions are
  * fork-not-mutate (no edit path), so no DEFINITION_WRITTEN subscription is
  * needed — the effect re-runs only when the lens element or target kind changes.

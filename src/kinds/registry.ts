@@ -15,7 +15,6 @@ import type { ConfigFormProps, ConfigSubField, InlineManifest, KindManifest } fr
 import { allowedChildKinds } from './childrenPolicy';
 import { KIND_PLACEMENT } from './placement';
 import { KIND_MINT_VIA } from './mintVia';
-import { PROVISIONED_LENSES } from './provisionPolicy';
 import { nodeManifest } from './node.manifest';
 import { textKvManifest } from './text-kv.manifest';
 import { enumKvManifest } from './enum-kv.manifest';
@@ -73,14 +72,19 @@ export const KIND_REGISTRY = {
  *  2. `KIND_PLACEMENT[k]` vs the manifest's `placement`.
  *  3. `KIND_MINT_VIA[k]` vs the manifest's `mintVia` — load-bearing, since the
  *     child-kind allowlists in `capabilities.ts` are derived from that mirror.
- *  4. each provisioned lens's display `name` vs the manifest's `pickerLabel`.
  *
- * (2)-(4) are component-free *mirrors* of manifest values — they exist because
+ * (2)-(3) are component-free *mirrors* of manifest values — they exist because
  * the storage layer and unit tests may not import this module, and both say in their
  * own docblocks that the agreement is unenforceable. It is enforceable *here*: this
  * is the one module that legitimately sees both sides. A mismatch throws on the first
  * `npm run dev` rather than surfacing later as a confusing symptom, and
  * `import.meta.env.DEV` keeps the whole block out of the production bundle.
+ *
+ * A fourth check lived here — each provisioned lens's display `name` vs its
+ * manifest `pickerLabel`. Its premise died when lens names became pack data:
+ * a pack is entitled to name a container something the manifest doesn't, and a
+ * mismatch is no longer drift. The shipped pack's names are pinned against the
+ * manifests as literals in `src/test/defaultPack.test.ts` instead.
  */
 if (import.meta.env.DEV) {
     for (const [key, manifest] of Object.entries(KIND_REGISTRY)) {
@@ -99,14 +103,6 @@ if (import.meta.env.DEV) {
         if (mintVia !== manifest.mintVia) {
             throw new Error(
                 `KIND_MINT_VIA['${key}'] is '${mintVia}' but its manifest declares mintVia '${manifest.mintVia}'`,
-            );
-        }
-    }
-    for (const lens of PROVISIONED_LENSES) {
-        const label = KIND_REGISTRY[lens.kind].pickerLabel;
-        if (lens.name !== label) {
-            throw new Error(
-                `provisionPolicy names the '${lens.kind}' lens '${lens.name}' but its manifest pickerLabel is '${label}'`,
             );
         }
     }
