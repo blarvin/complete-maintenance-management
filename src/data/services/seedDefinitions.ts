@@ -1,24 +1,30 @@
 /**
- * Dev-seeded Definitions, written as `library`-tree Elements
- * (config-as-Elements): each seed is a Definition Element plus its config
- * sub-field child Elements (deterministic `::cfg::` ids via `serializeConfig`).
+ * Definition seeding — the active pack's Definitions written as `library`-tree
+ * Elements (config-as-Elements): each row becomes a Definition Element plus its
+ * config sub-field child Elements (deterministic `::cfg::` ids via
+ * `serializeConfig`).
  *
- * Phase-1 starter set covering each Component (text-kv, enum-kv, number-kv,
- * single-image) plus the three default fields used at new-node construction
- * (Type Of, Description, Tags). Writes directly to `db.elements` (no sync
- * enqueue, no history) — seeds are identical per-client (deterministic ids), so
- * propagating them as sync ops would create N writes per N clients with no gain.
+ * The rows themselves are **not** authored here any more — they are pack data
+ * (`src/data/packs/`), read through `packDefinitions()`. This module owns the
+ * writing: idempotence, the transaction, the audit stamping. Writes directly to
+ * `db.elements` (no sync enqueue, no history) — the pack is identical per-client
+ * and its ids are deterministic, so propagating seeds as sync ops would create N
+ * writes per N clients with no gain.
+ *
+ * The Library chrome rows below stay in code: chrome is app structure, not pack
+ * content — a pack that could remove the Library root could brick the app.
  *
  * Idempotent via a syncMetadata version key. Bump SEED_VERSION to force a
  * reseed pass.
  */
 
 import { db } from '../storage/db';
-import type { Element, DefinitionConfig, Kind } from '../models';
+import type { Element } from '../models';
 import { AUTHOR_ID_APP_DEVELOPER } from '../../constants';
 import { now } from '../../utils/time';
 import { serializeConfig } from '../../kinds/configElements';
-import { DEFINITION_IDS, LIBRARY_CHROME_IDS } from '../definitionIds';
+import { LIBRARY_CHROME_IDS } from '../definitionIds';
+import { packDefinitions } from '../packs/activePack';
 import { devLog } from '../../utils/devMode';
 
 // Stable ids live in ../definitionIds (import-free, so kind policies can read
@@ -29,83 +35,11 @@ export { DEFINITION_IDS } from '../definitionIds';
 export const SEED_VERSION = 9;
 export const SEED_KEY = 'definitionsSeededVersion';
 
-type SeedRow = { id: string; kind: Kind; label: string; config: DefinitionConfig };
-
-const SEEDS: SeedRow[] = [
-  {
-    id: DEFINITION_IDS.description,
-    kind: 'text-kv',
-    label: 'Description',
-    config: { multiline: true },
-  },
-  {
-    id: DEFINITION_IDS.typeOf,
-    kind: 'text-kv',
-    label: 'Type Of',
-    config: { maxWords: 2 },
-  },
-  {
-    id: DEFINITION_IDS.tags,
-    kind: 'text-kv',
-    label: 'Tags',
-    config: {},
-  },
-  {
-    id: DEFINITION_IDS.status,
-    kind: 'enum-kv',
-    label: 'Status',
-    config: { options: ['In Service', 'Maintenance', 'Retired'] },
-  },
-  {
-    id: DEFINITION_IDS.weight,
-    kind: 'number-kv',
-    label: 'Weight',
-    config: {
-      unitsSymbol: 'kg',
-      unitsLongForm: 'kilograms',
-      decimals: 2,
-      affixPosition: 'suffix',
-    },
-  },
-  {
-    id: DEFINITION_IDS.powerRating,
-    kind: 'number-kv',
-    label: 'Power Rating',
-    config: {
-      unitsSymbol: 'W',
-      unitsLongForm: 'Watts',
-      decimals: 1,
-      affixPosition: 'suffix',
-    },
-  },
-  {
-    id: DEFINITION_IDS.mainImage,
-    kind: 'single-image',
-    label: 'Main Image',
-    config: { requireCaption: false },
-  },
-  {
-    id: DEFINITION_IDS.internalLink,
-    kind: 'internal-link',
-    // The domain word lives here, on the Definition — not in the kind.
-    label: 'Linked Doc',
-    config: {},
-  },
-  {
-    // The first re-root policy Definition — bound onto every provisioned
-    // `::logbook` lens at mint (stamp-if-resolvable, handlers.ts).
-    id: DEFINITION_IDS.logbookPolicy,
-    kind: 'logbook',
-    label: 'Logbook Policy',
-    config: { entryLabel: 'Entry', staleness: 7 * 24 * 60 * 60 },
-  },
-];
-
 /**
  * The three Library chrome Elements (Library-As-Lens-Tree): the pinned `library`
  * root (siblingOrder −1, so it sorts above every business root) and its two
  * index-lens children. Seeded alongside the Definitions — same transaction, no
- * sync enqueue, no history — but with explicit parentage/order, which the SEEDS
+ * sync enqueue, no history — but with explicit parentage/order, which the pack
  * loop hardcodes away.
  */
 const CHROME_SEEDS: Array<Pick<Element, 'id' | 'kind' | 'name' | 'parentId' | 'siblingOrder'>> = [
@@ -141,7 +75,7 @@ export async function seedDefinitions(): Promise<void> {
         deletedAt: null,
       });
     }
-    for (const seed of SEEDS) {
+    for (const seed of packDefinitions()) {
       const defElement: Element = {
         id: seed.id,
         kind: seed.kind,
