@@ -147,6 +147,22 @@ export const KIND_CAPABILITIES = {
         edges: { target: { scope: 'external' } },
     },
 
+    // ── Library chrome kinds (Library-As-Lens-Tree, 2026-08-20) ──
+
+    // library: the Library lens's root — Children(template) over exactly its two
+    // seeded index children. Template, not open: nothing is ever user-created
+    // here, so `CreateNodeButton` self-suppresses (no re-root creatable kinds).
+    library: {
+        children: { spec: { mode: 'template', allowedKinds: ['definitions', 'kinds'] } },
+    },
+
+    // definitions / kinds: the two index lenses — pure gathers (Definitions list /
+    // registry roster). `reads.resolver` (the internal-link precedent): they resolve
+    // other Elements to render, store nothing. Deliberately NOT `derivation` (would
+    // leak into `isLensSurfaced`) and NOT `provision` (nothing reconciles per node).
+    definitions: { reads: { resolver: true } },
+    kinds: { reads: { resolver: true } },
+
     // Config-only sub-field kinds also bear an own value (inside config subtrees).
     // Scalar for now (behavior-preserving); reassign compound/string-list by
     // essence only when a consumer wants their own sub-structure.

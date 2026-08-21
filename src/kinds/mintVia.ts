@@ -35,6 +35,10 @@ export const KIND_MINT_VIA = {
     logbook: 'provision',
     'internal-link': 'add-surface',
     'external-link': 'add-surface',
+    // Library chrome kinds — seeded once, never user-picked.
+    library: 'provision',
+    definitions: 'provision',
+    kinds: 'provision',
     // Config-only sub-field kinds — real kinds, but only inside a config subtree.
     flag: 'config-only',
     compound: 'config-only',

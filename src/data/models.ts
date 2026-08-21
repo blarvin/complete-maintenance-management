@@ -159,6 +159,9 @@ export type KindValueMap = {
   jobs: never;
   'log-entry': never;
   logbook: never;
+  library: never;
+  definitions: never;
+  kinds: never;
 };
 
 /**

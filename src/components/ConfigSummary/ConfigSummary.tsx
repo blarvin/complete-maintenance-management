@@ -18,9 +18,12 @@
  * an assembled blob.
  */
 
-import { For, Show } from 'solid-js';
+import { For, Show, createMemo } from 'solid-js';
 import { useElementChildren } from '../../hooks/useElementChildren';
 import { getInlineManifest } from '../../kinds/registry';
+import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
+import { configChildId } from '../../kinds/configElements';
+import type { Kind } from '../../data/models';
 import styles from './ConfigSummary.module.css';
 
 export type ConfigSummaryProps = {
@@ -32,24 +35,50 @@ export type ConfigSummaryProps = {
      * rows already sit inside the Definition's own row.
      */
     source?: string;
+    /**
+     * Schema-complete mode (the Library's Definition preview): render one row
+     * per entry of this kind's config schema, with "—" where the Definition
+     * stores no sub-field — instead of only the stored sub-fields. Display-level
+     * only; nothing is materialized into storage.
+     */
+    schemaKind?: Kind;
 };
+
+type SummaryRow = { label: string; text: string };
 
 export const ConfigSummary = (props: ConfigSummaryProps) => {
     const { children: subFields } = useElementChildren(() => props.definitionId, 'fields');
 
+    const rows = createMemo((): SummaryRow[] => {
+        const stored = subFields();
+        if (!props.schemaKind) {
+            return stored.map((sub) => ({
+                label: sub.name,
+                text: getInlineManifest(sub.kind).displayPreview(sub.value) ?? '—',
+            }));
+        }
+        // Schema-complete: every knob the kind declares, stored value or "—".
+        const byId = new Map(stored.map((sub) => [sub.id, sub]));
+        return (CONFIG_SCHEMAS[props.schemaKind] ?? []).map((entry) => {
+            const sub = byId.get(configChildId(props.definitionId, entry.key));
+            return {
+                label: entry.label,
+                text: sub ? (getInlineManifest(sub.kind).displayPreview(sub.value) ?? '—') : '—',
+            };
+        });
+    });
+
     return (
         <div class={styles.summary} role="group">
             <Show
-                when={subFields().length > 0}
+                when={rows().length > 0}
                 fallback={<span class={styles.empty}>No configuration</span>}
             >
-                <For each={subFields()}>
-                    {(sub) => (
+                <For each={rows()}>
+                    {(row) => (
                         <div class={styles.row}>
-                            <span class={styles.label}>{sub.name}</span>
-                            <span class={styles.value}>
-                                {getInlineManifest(sub.kind).displayPreview(sub.value) ?? '—'}
-                            </span>
+                            <span class={styles.label}>{row.label}</span>
+                            <span class={styles.value}>{row.text}</span>
                         </div>
                     )}
                 </For>

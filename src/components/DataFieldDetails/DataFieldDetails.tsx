@@ -47,6 +47,12 @@ export type DataFieldDetailsProps = {
     definitionId: string;
     kind: Kind;
     onDelete: () => void;
+    /**
+     * Library preview mode: the bands render live, but Delete is disabled and
+     * the Config band materializes the kind's full schema (unset knobs as "—")
+     * instead of only the sub-fields the Definition stores.
+     */
+    preview?: boolean;
 };
 
 /** Whether this kind has config at all. Genuinely discriminating today: the two
@@ -161,6 +167,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
                     <ConfigSummary
                         definitionId={props.definitionId}
                         source={definition()?.label}
+                        schemaKind={props.preview ? props.kind : undefined}
                     />
                 </div>
             ),
@@ -185,6 +192,7 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
                             class={styles.deleteButton}
                             onClick={() => props.onDelete()}
                             aria-label="Delete this field"
+                            disabled={props.preview}
                         >
                             Delete Field
                         </button>

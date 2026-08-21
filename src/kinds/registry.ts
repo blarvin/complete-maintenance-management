@@ -28,6 +28,9 @@ import { logEntryManifest } from './log-entry.manifest';
 import { logbookManifest } from './logbook.manifest';
 import { internalLinkManifest } from './internal-link.manifest';
 import { externalLinkManifest } from './external-link.manifest';
+import { libraryManifest } from './library.manifest';
+import { definitionsManifest } from './definitions.manifest';
+import { kindsManifest } from './kinds.manifest';
 import { flagManifest } from './flag.manifest';
 import { compoundManifest } from './compound.manifest';
 import { stringListManifest } from './string-list.manifest';
@@ -47,6 +50,10 @@ export const KIND_REGISTRY = {
     logbook: logbookManifest,
     'internal-link': internalLinkManifest,
     'external-link': externalLinkManifest,
+    // Library chrome kinds (Library-As-Lens-Tree) — seeded, never user-picked.
+    library: libraryManifest,
+    definitions: definitionsManifest,
+    kinds: kindsManifest,
     // Config-only sub-field kinds (config-as-Elements). Registered for value
     // typing + persistence; excluded from the authoring picker (see FIELD_KINDS).
     flag: flagManifest,

@@ -20,6 +20,17 @@ export const DEFINITION_IDS = {
 } as const;
 
 /**
+ * Ids of the three seeded Library chrome Elements (Library-As-Lens-Tree).
+ * Separate from `DEFINITION_IDS` on purpose: these rows are chrome, not
+ * Definitions — `isDefinitionRow` excludes them everywhere Definitions are read.
+ */
+export const LIBRARY_CHROME_IDS = {
+  root: 'lib_root',
+  definitions: 'lib_definitions',
+  kinds: 'lib_kinds',
+} as const;
+
+/**
  * The Definitions every new node is born with (SPEC → *Default DataFields at
  * Node Creation*). Owned here rather than by a picker component: node creation
  * seeds them whether or not any add-field surface is mounted.
