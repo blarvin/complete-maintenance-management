@@ -6,6 +6,7 @@
  * - `await window.__syncStatus()`       — sync queue: status, retries, errors
  * - `await window.__wipeDefinitions()`  — drop the Library, re-seed on reload
  * - `await window.__wipeLocal()`        — delete the whole local DB and reload
+ * - `await window.__mintDemoTree()`     — mint the dev example asset tree
  *
  * Gated on `DEV_TOOLS_ENABLED` (utils/devMode), so an ordinary visit to the
  * deployed app gets no globals — but `preview:pwa` and emulator-mode sessions,
@@ -19,6 +20,7 @@ import { db } from '../storage/db';
 import { clearStorage } from '../storage/initStorage';
 import { SEED_KEY } from '../services/seedDefinitions';
 import { isDefinitionRow } from '../libraryChrome';
+import { mintDemoTree } from '../fixtures/demoTree';
 import { DEV_TOOLS_ENABLED } from '../../utils/devMode';
 
 /** Register the console helpers on `window`. No-op unless the dev gate is open. */
@@ -107,7 +109,24 @@ export function initializeDevTools(): void {
     }
   };
 
+  /**
+   * Mint the dev example asset tree (src/data/fixtures/demoTree.ts) — three
+   * business roots of assets with filled fields, jobs and log entries, all
+   * through the command bus. Idempotent: a second call reports and writes
+   * nothing. Fixture data, not pack content — see the module docblock.
+   */
+  w.__mintDemoTree = async () => {
+    try {
+      const result = await mintDemoTree();
+      console.log('[DevTools]', result);
+      return result;
+    } catch (err) {
+      console.error('[DevTools] Mint demo tree failed:', err);
+      throw err;
+    }
+  };
+
   console.log(
-    '[DevTools] Console helpers: window.__sync(), __syncStatus(), __wipeDefinitions(), __wipeLocal()'
+    '[DevTools] Console helpers: window.__sync(), __syncStatus(), __wipeDefinitions(), __wipeLocal(), __mintDemoTree()'
   );
 }
