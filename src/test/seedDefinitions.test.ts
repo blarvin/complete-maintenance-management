@@ -11,6 +11,7 @@ import { AUTHOR_ID_APP_DEVELOPER } from '../constants';
 import { configChildId } from '../kinds/configElements';
 import { LIBRARY_CHROME_IDS } from '../data/definitionIds';
 import { isDefinitionRow } from '../data/libraryChrome';
+import { packDefinitions } from '../data/packs/activePack';
 
 const libraryDefs = async () => (await db.elements.toArray()).filter(isDefinitionRow);
 
@@ -20,21 +21,14 @@ describe('seedDefinitions (config-as-Elements)', () => {
     await db.open();
   });
 
-  it('writes 9 Definitions as library-tree Elements + version key on first call', async () => {
+  // Against the pack, not a copied list: which rows ship is the pack's business
+  // (`defaultPack.test.ts` has the teeth for that), while the seeder's job is
+  // writing every one of them and nothing else.
+  it('writes every pack Definition as a library-tree Element + version key on first call', async () => {
     await seedDefinitions();
     const defs = await libraryDefs();
-    expect(defs).toHaveLength(9);
-    expect(defs.map((d) => d.name).sort()).toEqual([
-      'Description',
-      'Linked Doc',
-      'Logbook Policy',
-      'Main Image',
-      'Power Rating',
-      'Status',
-      'Tags',
-      'Type Of',
-      'Weight',
-    ]);
+    expect(defs).toHaveLength(packDefinitions().length);
+    expect(defs.map((d) => d.name).sort()).toEqual(packDefinitions().map((r) => r.label).sort());
     const meta = await db.syncMetadata.get(SEED_KEY);
     expect(meta?.value).toBe(SEED_VERSION);
   });
@@ -83,7 +77,7 @@ describe('seedDefinitions (config-as-Elements)', () => {
 
     await seedDefinitions();
     const second = await libraryDefs();
-    expect(second).toHaveLength(9);
+    expect(second).toHaveLength(packDefinitions().length);
     expect(second.find((d) => d.id === first[0].id)?.updatedAt).toBe(firstTs);
   });
 

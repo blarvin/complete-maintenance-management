@@ -31,8 +31,8 @@ import { devLog } from '../../utils/devMode';
 // them); re-exported here for the existing consumers.
 export { DEFINITION_IDS } from '../definitionIds';
 
-// Bumped for the Library chrome rows (Library-As-Lens-Tree).
-export const SEED_VERSION = 9;
+// Bumped for the re-authored starter set (the bundled Definition pack, 30 rows).
+export const SEED_VERSION = 10;
 export const SEED_KEY = 'definitionsSeededVersion';
 
 /**
