@@ -25,7 +25,7 @@ item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
 and are gone, one commit each, so their numbers are permanent gaps like any
 other.
 
-**Eight carry it now, set the same day: #5, #8, #9, #12, #32, #36, #46, #50.**
+**Six carry it now, set the same day: #8, #9, #12, #36, #46, #50.**
 Every one of them names its decision inline, in a paragraph that says *Decided
 2026-08-22* and what was rejected — which is what makes the tag honest rather
 than a shortcut. A tenth was tagged with no decision attached, which is the one
@@ -101,12 +101,6 @@ Two things the fix must not disturb, both already pinned by the cases above. **O
 
 4.) **Left or Right chevrons??** - A/B testing is the only real way to know. Earlier iterations attempted to follow the informational tiers... but who knows?
 
-5.) `[auto]` **Typing a long field name resizes the card's whole label column, live, per keystroke** — `.nameInput` carries `field-sizing: content`, and the `label` track is `minmax(var(--label-width), auto)`, so every character shoves every other row's value across. Already better than it was: the reflow used to reach past the card, and is now confined to the Fields of the node being edited. Still jarring.
-
-Measured 2026-08-22, at `--text-sm: 11px`. Both spaces and `M`s cap at **50** characters (`maxlength="50"` on the input, and `setLabel` slices to `LABEL_MAX`); typing 60 of either returns 50. What differs is width, which is what reads as "unlimited": 50 `M`s renders a 458px box, 50 spaces 153px, 40 characters of realistic mixed text 216px. So the character limit and the column width are two separate numbers and must not be set to the same one — 40 characters is ≈245px in `ch`, and a 375px phone gives the whole row only ~282px.
-
-**Decided 2026-08-22: fix the column and cap the name, at different numbers.** The `label` track becomes a fixed `var(--label-width)` rather than a `minmax(…, auto)`, and the token goes to **120px** (~20 characters) — wider than the ~93px the auto track currently picks for `Filter Part Number:`, which also answers the complaint that the value column sits too far left. Labels longer than the track **ellipsize**. The name limit drops from 50 to **40** characters (`NAME_MAX` in `AddFieldSurface.tsx`, `LABEL_MAX` in `useDefinitionDraft.ts`). The track then never moves — not while typing, not when a long field is created, not between cards — which is the whole point. Leaves ~160px of value run on a 375px phone. Note this retires the "sizes to the widest label rather than truncating" intent written into `FieldList.module.css`; that comment wants updating, not preserving.
-
 ## Features
 
 8.) `[auto]` **Inline rename of NodeTitle and NodeSubtitle** — nodes are rename-less after creation. **Decided 2026-08-22: double-tap the title, exactly as a DataField value works.** The constraint that settles it is that the node header is *already* a navigation target — a tap re-roots — so a single tap cannot also mean edit, and `useDoubleTap`'s accidental-brush guard is precisely what that conflict needs. No new chrome, and no coupling to another region's state (the rejected third option gated edit on the details panel being open, which is the coupling #25 and `ExternalLinkField` both argued against). Subtitle takes the same treatment.
@@ -164,12 +158,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 30.) `listRootElements` **hardcodes an implicit population gather** — `treeType === 'business'` at `IDBAdapter.ts:218` *is* the ROOT view's definition, and the Library lens adds a second population read (`library`-tree roots) beside it. `SourceSpec.relation` only speaks `children | ancestors | edges`, so "every root of a typed tree" has no explicit form; a population relation would let ROOT and the Library ride one primitive instead of two hardcoded filters. Fine as an implicit default for now. Surfaced in the Library-As-Lens-Tree design discussion, 2026-08-20.
 
 31.) **The Library's two lens children are seeded; they could be provisioned** — v1 seeds all three Library chrome Elements (the `library` root plus `definitions` and `kinds`) as constant-id idempotent seed writes, because a boot-time singleton is exactly the seeder's job. The other way: the two children declare `provision` capabilities and ride the existing `KIND_CAPABILITIES`-derived schedule (`${parentId}::definitions`, the `jobs` pattern), triggered by the `library` root's creation — no new machinery, but nothing needs it while the trio is fixed. Decided seed-for-now in the Library-As-Lens-Tree design discussion, 2026-08-20.
-
-32.) `[auto]` `.previewGrid` **duplicates** `FieldList`**'s named grid tracks** — `DataField`'s `.datafieldWrapper` is `grid-template-columns: subgrid`, so a row mounted outside a `FieldList` collapses its columns (label overlapping value) unless its container restates the six named tracks. Observed building the Library lens, 2026-08-20.
-
-**The trigger has fired**: re-counted 2026-08-22 and the six tracks are restated in **three** files, not two — `FieldList.module.css` (`.fieldList`), `LibraryViews.module.css` (`.previewGrid`), and `FieldComposer.module.css` (`.rows`, dormant but compiling, and kept that way by #34's decision).
-
-**Decided 2026-08-22: extract now, as a token.** `--field-grid-tracks` in `tokens.css` holds the whole track list, named lines included, and all three write `grid-template-columns: var(--field-grid-tracks)`. Chosen over `composes:` from a shared CSS module because it needs no CSS-modules composition, reaches the dormant copy for free, and makes a fourth caller one line. Named grid lines do survive a custom property — check that first, it is the one thing that could sink this. Note #5 changes the `label` track in the same region, so land them in an order that does not leave two definitions disagreeing.
 
 33.) `per-user` **config sync is declared but collapses to shared** — `treeSyncMode('config')` returns `'per-user'` (`treePolicy.ts:35`), and the only consumer is `shouldSyncTreeType`, which asks "does it sync at all" and gets `true`. Nothing scopes the push, so the first `config`-tree row would ride the same shared lane as business content — a user's private prefs pushed to everyone, which is the one failure mode the typed-trees seam exists to prevent. Inert today only because Phase 1 has no `config` producer (the module docblock says so), which means **the first config producer is also the first test of this routing**: land those rows local-only and turn sync on deliberately rather than discovering the guard and the feature at once. Read from `treePolicy.ts` while scoping the per-population bootstrap, 2026-08-21.
 

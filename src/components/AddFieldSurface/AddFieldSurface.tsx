@@ -60,7 +60,8 @@ export type AddFieldSurfaceProps = {
 
 const SURFACE_ID = 'add-surface' as const;
 
-const NAME_MAX = 50;
+/** Mirrors `LABEL_MAX` in useDefinitionDraft, which is the enforcing half. */
+const NAME_MAX = 40;
 
 /**
  * Sentinel for a failed fetch. Not because `createResource` lacks an error

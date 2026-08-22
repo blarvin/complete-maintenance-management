@@ -12,20 +12,13 @@
     padding: var(--space-2);
 }
 
-/* Mirror FieldList's column tracks AND named grid lines so ComposerRow
-   subgrids can opt in and child Components (e.g. SingleImageField) that
-   reference named lines like `value` / `history-chevron` resolve to the
-   same columns the persisted fields use above. */
+/* FieldList's column tracks AND named grid lines, so ComposerRow subgrids can
+   opt in and child Components (e.g. SingleImageField) that reference named lines
+   like `value` / `history-chevron` resolve to the same columns the persisted
+   fields use above. `--field-grid-tracks` lives in tokens.css. */
 .rows {
     display: grid;
-    grid-template-columns:
-        [details-chevron] var(--chevron-col-width)
-        [label]           minmax(var(--label-width), auto)
-        [value]           minmax(0, 1fr)
-        [spacer]          minmax(0, 1fr)
-        [metadata]        auto
-        [history-chevron] var(--chevron-col-width)
-        [end];
+    grid-template-columns: var(--field-grid-tracks);
     row-gap: var(--space-3);
     column-gap: var(--space-2);
     align-items: baseline;

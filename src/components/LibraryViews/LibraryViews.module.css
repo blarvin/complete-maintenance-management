@@ -2,19 +2,13 @@
    their entries as ordinary Node cards (NodeHeader + DataCard), so the only
    styles here are for what goes *inside* a card. */
 
-/* The grid mirrors FieldList's named tracks — a DataField row opts into them via
-   subgrid, so mounting one outside a FieldList needs the same track contract or
-   its columns collapse. */
+/* A DataField row opts into FieldList's named tracks via subgrid, so mounting
+   one outside a FieldList needs the same track contract or its columns collapse.
+   `--field-grid-tracks` (tokens.css) is that contract; FieldList.module.css
+   documents what each track is for. */
 .previewGrid {
     display: grid;
-    grid-template-columns:
-        [details-chevron] var(--chevron-col-width)
-        [label]           minmax(var(--label-width), auto)
-        [value]           minmax(0, 1fr)
-        [spacer]          minmax(0, 1fr)
-        [metadata]        auto
-        [history-chevron] var(--chevron-col-width)
-        [end];
+    grid-template-columns: var(--field-grid-tracks);
     row-gap: var(--space-3);
     column-gap: var(--space-2);
     align-items: baseline;

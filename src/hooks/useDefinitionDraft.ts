@@ -51,7 +51,15 @@ export function defaultConfigFor(kind: Kind): DefinitionConfig {
     return authoring.defaultConfig();
 }
 
-const LABEL_MAX = 50;
+/**
+ * The hard stop, behind `AddFieldSurface`'s matching `maxLength` — paste and
+ * programmatic writes don't go through the input attribute. Keep the two equal.
+ *
+ * Not the same number as `--label-width`: the column is a width and this is a
+ * character count, and the two only coincide for one string. 40 M's render ~370px
+ * at `--text-sm`, 40 spaces ~120px.
+ */
+const LABEL_MAX = 40;
 
 export type UseDefinitionDraftResult = {
     kind: Accessor<Kind>;

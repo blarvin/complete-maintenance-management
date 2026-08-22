@@ -102,7 +102,32 @@
       calc(var(--field-chevron-size) * 1.4);
   --chevron-glyph-down: calc(var(--field-chevron-size) * 1.4) var(--field-chevron-size) 0
       var(--field-chevron-size);
-  --label-width: 50px;
+  /* The label column, fixed. It was `minmax(50px, auto)` in the track list
+     below, which sized to the widest label in the card — so typing a field name
+     shoved every other row's value across, live, per keystroke. 120px is ~20
+     characters at `--text-sm`, wider than the ~93px the auto track picked for
+     `Filter Part Number:`, and still leaves ~160px of value run on a 375px
+     phone. Labels past it ellipsize. Deliberately *not* the same number as the
+     40-character name limit (AddFieldSurface `NAME_MAX`): 40 M's is ~370px and
+     40 spaces ~120px, so a character count cannot double as a width. */
+  --label-width: 120px;
+  /* The field-row track contract, named grid lines included. A DataField row is
+     `grid-template-columns: subgrid`, so it collapses (label overlapping value)
+     unless the container it mounts in restates these tracks — which three of
+     them do: FieldList, the Library lens's preview grid, and the dormant
+     composer's rows. One definition instead of three copies, and a fourth
+     caller is one line. Named lines survive the substitution: a custom property
+     is a token stream, so `[label]` arrives intact.
+     What each track is *for* is documented where the contract lives,
+     FieldList.module.css. */
+  --field-grid-tracks:
+      [details-chevron] var(--chevron-col-width)
+      [label]           var(--label-width)
+      [value]           minmax(0, 1fr)
+      [spacer]          minmax(0, 1fr)
+      [metadata]        auto
+      [history-chevron] var(--chevron-col-width)
+      [end];
   --child-indent: 32px;
   --datacard-indent: 30px;
   --node-min-height: 45px;

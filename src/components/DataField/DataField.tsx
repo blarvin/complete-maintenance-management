@@ -102,7 +102,9 @@ export const DataField = (props: DataFieldProps) => {
             />
 
             {shape() !== 'composite' && (
-                <label class={styles.datafieldLabel} id={labelId()}>{props.name}:</label>
+                // `title` because the `label` track is fixed and long names
+                // ellipsize (DataField.module.css → .datafieldLabel).
+                <label class={styles.datafieldLabel} id={labelId()} title={props.name}>{props.name}:</label>
             )}
 
             <Dynamic
