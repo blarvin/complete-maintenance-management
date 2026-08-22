@@ -51,16 +51,21 @@ describe('core loop', () => {
         // The tree-native Add Surface it comes back against is covered by
         // add-surface.cy.ts; this spec stays on the create → edit → revert loop.)
 
-        // History: field details → history list → select the old value → revert.
+        // History: field details → select the old value → revert. History is an
+        // always-open band with no chevron of its own, so the entries are there
+        // as soon as the details expand.
         cy.contains('label', 'Description:').parent()
             .find('[aria-label="Expand field details"]').click();
-        cy.get('[aria-label="Open field history"]').click();
-        cy.contains('[role="listitem"]', 'First value').click();
+        // The entries themselves, not their container: `.historyList` is a
+        // subgrid pass-through with no box of its own, so it measures 0×0.
+        cy.contains('[role="listitem"]', 'First value').should('be.visible').click();
         cy.get('[aria-label="Revert to this value"]').click();
         cy.contains('[role="status"]', 'Field reverted').should('be.visible');
         cy.contains('div[role="button"]', 'First value').should('be.visible');
 
-        // Delete the field; Undo restores it with its value intact.
+        // Delete the field; Undo restores it with its value intact. Delete lives
+        // in the Tools band, which is collapsible and closed by default.
+        cy.contains('button', 'Tools').click();
         cy.get('[aria-label="Delete this field"]').click();
         cy.contains('label', 'Description:').should('not.exist');
         cy.contains('[role="status"]', 'Field deleted').should('be.visible');
