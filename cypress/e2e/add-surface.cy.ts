@@ -90,6 +90,48 @@ describe('the Add Surface', () => {
         cy.get(NAME).first().should('have.value', 'Half Written');
     });
 
+    it('keeps the whole draft across a reload', () => {
+        cy.get(EXPAND).first().click();
+        cy.get(NAME).first().type('Survives Reload');
+        // Change the kind and set a knob, so this covers the config too — the
+        // part actually worth losing sleep over is an authored config set knob
+        // by knob, not a half-typed name.
+        clickButton(/^Number$/);
+        // `.blur()` because a Config band `LeafRow` commits on native `change`,
+        // not per keystroke — typing alone never reaches the draft.
+        cy.contains('label', 'Units symbol').parent().find('input').type('bar').blur();
+
+        // A reload that keeps storage — not `freshVisit`, which deletes the app
+        // databases before the app boots. Offline is re-stubbed because a fresh
+        // document loses the stub, and going online here is not neutral: the
+        // sync channel opens, the card re-renders, and the open/closed state of
+        // the surface (component-local, not persisted) is lost with it.
+        cy.window().then((win) => {
+            (win as unknown as Record<string, unknown>).__reloadMarker = true;
+        });
+        cy.visit('/?emulator=true', {
+            onBeforeLoad(win) {
+                Object.defineProperty(win.navigator, 'onLine', {
+                    configurable: true,
+                    get: () => false,
+                });
+            },
+        });
+        // The marker is the proof the document was actually replaced, so a
+        // no-op visit cannot pass this test by leaving the page as it was.
+        cy.window({ timeout: 30000 }).should('not.have.property', '__reloadMarker');
+        cy.contains('button', 'Create New Asset', { timeout: 30000 }).should('be.visible');
+        cy.get(`[aria-label="Open ${name}"]`).click();
+        cy.expandCard(name);
+
+        // The collapsed row already shows the name, exactly as after a collapse.
+        cy.get(NAME).first().should('have.value', 'Survives Reload');
+
+        cy.get(EXPAND).first().click();
+        cy.contains('Creating a Number field').should('be.visible');
+        cy.contains('label', 'Units symbol').parent().find('input').should('have.value', 'bar');
+    });
+
     it('discards the draft on Cancel', () => {
         cy.get(EXPAND).first().click();
         cy.get(NAME).first().type('Scratch');

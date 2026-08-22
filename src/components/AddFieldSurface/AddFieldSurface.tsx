@@ -77,7 +77,8 @@ const FAILED = Symbol('failed');
 export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
     const isOpen = () => props.activeSurface() === SURFACE_ID;
 
-    const draft = useDefinitionDraft();
+    // Keyed by node: the draft outlives a reload, and each card keeps its own.
+    const draft = useDefinitionDraft(() => props.nodeId);
 
     // The row ref is owned here so outside-click detection inside the value
     // Renderer covers the whole row, exactly as DataField does it.
