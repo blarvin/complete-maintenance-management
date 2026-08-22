@@ -11,6 +11,7 @@ import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
+import { DeletedFields } from '../TreeNodeDetails/DeletedFields';
 import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
@@ -198,6 +199,11 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                     <div class={detailsStyles.idRow}>
                         <ElementIdRow id={props.id} version={meta()?.latest?.rev} />
                     </div>
+                    {/* Renders nothing unless this node has deleted Fields, so
+                        a clean node's panel is unchanged. */}
+                    <Show when={!isChrome()}>
+                        <DeletedFields nodeId={props.id} />
+                    </Show>
                     <Show when={!isChrome()}>
                         <div class={detailsStyles.actionsRow}>
                             <button

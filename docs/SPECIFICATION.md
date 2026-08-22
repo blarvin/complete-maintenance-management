@@ -321,8 +321,8 @@ interface ToastInput {
 
 ### What Snackbar does NOT cover
 
-- **Undo is not restore.** The 5-second undo window is the only in-app recovery path. After the window lapses, the soft delete is final from the user's perspective.
-- **Restore UI** is a separate concern: currently, soft-deleted entities can only be restored by clearing `deletedAt` directly in the cloud database. [Phase 2+]: a dedicated in-app view for browsing and restoring deleted items.
+- **Undo is not restore.** The 5-second undo window is the Snackbar's whole contribution to recovery; past it, the toast is gone and the Snackbar has nothing more to offer.
+- **Restore UI** is a separate concern, and a partial one. A deleted **DataField** is restorable from its node's details panel — a *Deleted fields* list, rendered only when the node has any (2026-08-22). Every other soft-deleted entity, a **node** included, is still recoverable only by clearing `deletedAt` directly in the cloud database. [Phase 2+]: one view for browsing and restoring deleted items across the tree, rather than a per-owner list.
 
 ## Loading & Error States
 
@@ -959,7 +959,7 @@ Elements support soft deletion via `deletedAt` timestamps:
 - Queries filter out soft-deleted elements by default
 - Children of soft-deleted elements are implicitly hidden (not cascade soft-deleted)
 - Soft deletes sync as ordinary field updates, so they propagate through the same lane as any other change
-- Restoration: see Snackbar & Undo for the 5s undo window; beyond that, restore is currently cloud-db-only. [Phase 2+]: in-app restore UI (a dedicated view for browsing and restoring deleted elements).
+- Restoration: see Snackbar & Undo for the 5s undo window. Beyond it, a deleted DataField is restorable from its node's details panel; every other kind is still cloud-db-only. [Phase 2+]: one in-app view for browsing and restoring deleted elements across the tree.
 
 Purging a row outright is an admin capability, deferred — see LATER.md →
 Destructive Operations. Resetting a *development* client is a separate, local

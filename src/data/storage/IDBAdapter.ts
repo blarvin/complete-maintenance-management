@@ -237,6 +237,26 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
   }
 
+  /**
+   * The **deleted** children, newest tombstone first — the exact complement of
+   * `listChildElements`, and a deliberate second query rather than a flag on the
+   * first. Every display read wants live rows; only the restore list wants these,
+   * and a boolean parameter on the read every view uses would put "show me the
+   * dead ones" one typo away from every card in the app.
+   *
+   * Newest first because a restore list is read as an undo history, not as the
+   * card's row order — which the rows no longer have a place in anyway
+   * (`nextSiblingOrder` releases a deleted row's slot).
+   */
+  async listDeletedChildElements(parentId: string): Promise<StorageResult<Element[]>> {
+    return this.run(async () => {
+      const all = await db.elements.where('parentId').equals(parentId).toArray();
+      const deleted = all.filter((e) => e.deletedAt !== null);
+      deleted.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+      return createResult(deleted);
+    });
+  }
+
   async listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>> {
     return this.run(async () => {
       const all = await db.elements.where('parentId').equals(parentId).toArray();

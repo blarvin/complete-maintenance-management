@@ -20,19 +20,20 @@ dependency between items belongs in the item's prose, where it can say *why*.
 `[auto]` is the one exception, and it is a permission, not a topic: it marks
 items the agent may take end-to-end without checking in — each self-contained and
 verifiable by typecheck/lint/test. One commit per item, which also deletes the
-item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
-#3, #7, #17, #34, #39, #40, #42, #43, #44 — were taken in one pass on 2026-08-22
-and are gone, one commit each, so their numbers are permanent gaps like any
-other.
+item from here. Agreed 2026-08-11; `git push` stays manual.
 
-**One carries it now, set the same day: #9.**
-Every one of them names its decision inline, in a paragraph that says *Decided
-2026-08-22* and what was rejected — which is what makes the tag honest rather
-than a shortcut. A tenth was tagged with no decision attached, which is the one
-case where that is honest: it named a plainly wrong fact, and correcting it was
-not a choice anyone had to make. Four items were closed outright in the same
-round (#6, #14, #41, #45) — the decision there was that the current behaviour is
-right, which is completion, so they went.
+**Nothing carries it right now.** Two rounds have been run and both are spent:
+nine items on 2026-08-22 (#3, #7, #17, #34, #39, #40, #42, #43, #44) and ten
+more the same day (#1, #5, #8, #9, #12, #32, #36, #46, #48, #50). Their numbers
+are permanent gaps like any other, and git log is where they went. Four items
+were closed outright alongside the second round (#6, #14, #41, #45) — the
+decision there was that the current behaviour is right, which is completion.
+
+What made those tags honest is worth keeping for the next round. Every item but
+one named its decision inline, in a paragraph saying *Decided 2026-08-22* and
+what was rejected. The exception carried no decision because there was none to
+make — it named a plainly wrong fact, and correcting it was not a choice anyone
+had to make, which is the one case where a bare tag is honest.
 
 The bar is *no decision left in the item*, not *small*. An item that names a
 product or UX choice — even an easy one — is not `[auto]`, because picking it is
@@ -90,10 +91,6 @@ the comment when the item goes.
 4.) **Left or Right chevrons??** - A/B testing is the only real way to know. Earlier iterations attempted to follow the informational tiers... but who knows?
 
 ## Features
-
-9.) `[auto]` **DataField restoration UI** — soft-deleted fields are invisible once the Snackbar's undo window has passed. The data model supports restoring and so does the command bus: `RESTORE_ELEMENT` is registered and already exercised by every delete's Undo, so this is UI over an existing command, not new storage work. **Decided 2026-08-22: it goes in the node's details panel**, where the item always said it belonged and where #7's metadata block has now given the panel a shape to hang things on — a *Deleted fields* list with a Restore per row, rendered only when there are any, so a node with nothing deleted looks exactly as it does today. Rejected: a collapsed band on every Data Card, which would sit empty on almost every card forever.
-
-The read is the piece that does not exist yet: `listChildElements` filters deleted rows out, so this needs a deliberate deleted-only query rather than a filter flip.
 
 10.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 

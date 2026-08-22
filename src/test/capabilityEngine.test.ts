@@ -38,6 +38,7 @@ function mockQueries(els: Element[]): IElementQueries {
     getRootElements: async () => els.filter((e) => e.parentId === null),
     getElementById: async (id) => byId.get(id) ?? null,
     getChildren: async (pid) => els.filter((e) => e.parentId === pid),
+    getDeletedChildren: async () => [],
     getChildrenByKind: async (pid, kind) => els.filter((e) => e.parentId === pid && e.kind === kind),
     getElementHistory: async () => [],
     nextSiblingOrder: async () => 0,

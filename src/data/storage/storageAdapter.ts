@@ -68,6 +68,8 @@ export interface StorageAdapter {
   listRootElements(): Promise<StorageResult<Element[]>>;
   getElement(id: string): Promise<StorageResult<Element | null>>;
   listChildElements(parentId: string): Promise<StorageResult<Element[]>>;
+  /** The soft-deleted children, newest tombstone first — what the restore list reads. */
+  listDeletedChildElements(parentId: string): Promise<StorageResult<Element[]>>;
   listChildElementsByKind(parentId: string, kind: Kind): Promise<StorageResult<Element[]>>;
   nextSiblingOrder(parentId: string | null, kind?: Kind): Promise<StorageResult<number>>;
   createElement(input: StorageElementCreate): Promise<StorageResult<Element>>;

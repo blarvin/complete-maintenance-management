@@ -86,6 +86,54 @@ export function useElementChildren(
     return { children, isLoading };
 }
 
+/**
+ * The soft-deleted Fields under a node, newest tombstone first — what the
+ * details panel's restore list reads.
+ *
+ * A third function rather than a `deleted` flag on `useElementChildren`: this
+ * reads a different query, wants no `effectiveChildren` overlay (a deleted row
+ * is not part of any viewer's effective card), and is mounted by exactly one
+ * surface. A flag would put "show me the dead ones" one typo away from every
+ * card in the app.
+ *
+ * Same subscribe-and-debounce shape as its live sibling above, because the
+ * events it cares about are the same ones: a delete and a restore both emit
+ * `ELEMENT_WRITTEN` for a child of this node.
+ */
+export function useDeletedFields(
+    parentId: Accessor<string>,
+): { deleted: Accessor<Element[]> } {
+    const [deleted, setDeleted] = createSignal<Element[]>([]);
+
+    createEffect(() => {
+        const pid = parentId();
+        let disposed = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const load = async () => {
+            await initializeStorage();
+            const els = await getElementQueries().getDeletedChildren(pid);
+            if (disposed) return;
+            setDeleted(els.filter((e) => !isReRoot(e.kind)));
+        };
+        const unsub = storageEventBus.subscribe((event) => {
+            if (!affectsChildrenOf(event, pid)) return;
+            if (timer !== null) clearTimeout(timer);
+            timer = setTimeout(() => {
+                timer = null;
+                void load();
+            }, RELOAD_DEBOUNCE_MS);
+        });
+        onCleanup(() => {
+            disposed = true;
+            unsub();
+            if (timer !== null) clearTimeout(timer);
+        });
+        void load();
+    });
+
+    return { deleted };
+}
+
 export function useElementById(
     id: Accessor<string>,
 ): { element: Accessor<Element | null>; isLoading: Accessor<boolean> } {

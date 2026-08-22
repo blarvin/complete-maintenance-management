@@ -166,6 +166,41 @@ describe('IDBAdapter — element operations', () => {
     expect(row!.newValue).toBeNull();
   });
 
+  it('listDeletedChildElements is the exact complement of listChildElements', async () => {
+    await seedLibraryDefinition('fd-c', 'text-kv');
+    await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
+    for (const id of ['f1', 'f2', 'f3']) {
+      await adapter.createElement({ id, kind: 'text-kv', parentId: 'p', name: id, definitionId: 'fd-c' });
+    }
+    await adapter.softDeleteElement('f2');
+
+    const live = await adapter.listChildElements('p');
+    const gone = await adapter.listDeletedChildElements('p');
+    expect(live.data.map(e => e.id)).toEqual(['f1', 'f3']);
+    expect(gone.data.map(e => e.id)).toEqual(['f2']);
+
+    // A restore moves the row back across the same line.
+    await adapter.restoreElement('f2');
+    expect((await adapter.listDeletedChildElements('p')).data).toHaveLength(0);
+    expect((await adapter.listChildElements('p')).data.map(e => e.id)).toEqual(['f1', 'f2', 'f3']);
+  });
+
+  it('listDeletedChildElements returns newest tombstone first', async () => {
+    await seedLibraryDefinition('fd-o', 'text-kv');
+    await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
+    for (const id of ['a', 'b']) {
+      await adapter.createElement({ id, kind: 'text-kv', parentId: 'p', name: id, definitionId: 'fd-o' });
+    }
+    await adapter.softDeleteElement('a');
+    // `now()` is millisecond-resolution, so two deletes in the same tick would
+    // tie; the wait is what makes the ordering assertion mean anything.
+    await new Promise((r) => setTimeout(r, 5));
+    await adapter.softDeleteElement('b');
+
+    const gone = await adapter.listDeletedChildElements('p');
+    expect(gone.data.map(e => e.id)).toEqual(['b', 'a']);
+  });
+
   it('logElementDeleteHistory writes nothing for an element that was restored', async () => {
     await adapter.createElement({ id: 'z', kind: 'node', parentId: null, name: 'Z' });
     await adapter.softDeleteElement('z');
