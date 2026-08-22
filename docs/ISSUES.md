@@ -49,12 +49,13 @@ with jumps in it — expected, and carrying no meaning.
 
 **The high-water mark.** *Highest ever issued* is normally just the highest
 number present, and stops being that the moment the top item is resolved. So
-**deleting the highest-numbered item leaves its bare number behind**: if `#48`
-goes, a lone `48.)` stays, at the foot of the file below the last section —
-it belongs to the sequence, not to a section. No date and no note; completion
-lives in git history, and `git log -S "48.)" -- docs/ISSUES.md` says when and
-why. Gaps in the *middle* get no marker at all — `45, 46, 48` already says 47
-existed, and a column of dead numbers would cost Bugs and Features the one screen
+**deleting the highest-numbered item leaves its bare number behind**: if `#51`
+goes while it is still the top item, a lone `51.)` stays, at the foot of the file
+below the last section — it belongs to the sequence, not to a section. No date
+and no note; completion lives in git history, and `git log -S "51.)" --
+docs/ISSUES.md` says when and why. Gaps in the *middle* get no marker at all —
+`47, 49, 51` already says 48 and 50 existed, and a column of dead numbers would
+cost Bugs and Features the one screen
 they are held to. Nor can a mark accumulate: **any** new item clears it, because
 the new number lands above it and a live item carries the ceiling again.
 
