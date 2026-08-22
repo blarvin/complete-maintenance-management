@@ -25,13 +25,14 @@ item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
 and are gone, one commit each, so their numbers are permanent gaps like any
 other.
 
-**Ten carry it now, set the same day: #1, #5, #8, #9, #12, #32, #36, #46, #48, #50.**
+**Nine carry it now, set the same day: #1, #5, #8, #9, #12, #32, #36, #46, #50.**
 Every one of them names its decision inline, in a paragraph that says *Decided
 2026-08-22* and what was rejected — which is what makes the tag honest rather
-than a shortcut. #48 is the exception that proves the rule: it carries no
-decision because there is none to make, only a wrong fact to correct. Four items
-were closed outright in the same round (#6, #14, #41, #45) — the decision there
-was that the current behaviour is right, which is completion, so they went.
+than a shortcut. A tenth was tagged with no decision attached, which is the one
+case where that is honest: it named a plainly wrong fact, and correcting it was
+not a choice anyone had to make. Four items were closed outright in the same
+round (#6, #14, #41, #45) — the decision there was that the current behaviour is
+right, which is completion, so they went.
 
 The bar is *no decision left in the item*, not *small*. An item that names a
 product or UX choice — even an easy one — is not `[auto]`, because picking it is
@@ -191,5 +192,3 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 46.) `[auto]` **The Add Surface loses its whole draft on reload** — `AddFieldSurface.tsx` has no persistence of any kind: no `localStorage`, no `beforeunload`, no `visibilitychange` (verified by search, 2026-08-22). The composer it replaced persisted ticked rows to `pendingFields:<nodeId>`, so this is a capability the tree-native surface did not inherit — and the loss is larger than the old composer bug, which dropped only uncommitted keystrokes while keeping the ticked rows.
 
 **Decided 2026-08-22: persist the whole draft, keyed by node.** Name, kind, config and value — not a subset — because the thing actually worth losing sleep over is an authored `number-kv` config set knob by knob, and a half-persisted draft raises a question a full one does not (what a stored config means once the kind changed under it). Cleared on Create and on Cancel, the two places `useDefinitionDraft.reset()` already runs. `pendingDraft.ts` is the model to follow and is still live for node construction, so the shape is known — but this is a *new* store for the tree-native surface, not a restoration of the composer's, and it must not resurrect `pendingFields:<nodeId>`. The surviving-collapse case is already covered by `add-surface.cy.ts`; a reload case wants a spec beside it.
-
-48.) `[auto]` `cypress.config.ts` **closes on a comment naming two commands that don't exist** — *Seeding is now done in-browser via cy.seedAndVisit() / cy.seedMinimal()*. Neither is defined: `cypress/support/e2e.ts` registers `clearEmulator`, `freshVisit`, `createNode` and `expandCard`, and nothing else. The claim it makes is still true in substance (seeding is in-browser, no Firestore tasks) — it just names a retired API, so a reader looking either up finds nothing. Read while fixing the specs, 2026-08-22. **Tagged with no decision attached**, which is the one case where that is honest: the comment is simply wrong about a fact, and correcting it to name the four commands that exist is not a choice anyone has to make.
