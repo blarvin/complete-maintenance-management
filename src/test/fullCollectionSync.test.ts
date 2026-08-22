@@ -120,7 +120,7 @@ describe('FullCollectionSync retention', () => {
   });
 
   /**
-   * The Bugs #4 case, stated directly: a row whose push permanently failed has
+   * The *Retention over reconciliation* case, stated directly: a row whose push permanently failed has
    * dropped out of the sync queue and is not on the server. It used to be
    * indistinguishable from a server-side deletion, and got purged. Now it just
    * stays.

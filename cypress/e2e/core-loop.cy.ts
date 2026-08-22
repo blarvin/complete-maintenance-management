@@ -6,7 +6,8 @@
  * Runs offline: local-first UI behavior is the subject here; sync is contract
  * #3 and retention is #4. (It ran offline originally because a startup full
  * sync against a fresh emulator wiped the un-pushed Library seeds. That purge
- * is gone — ISSUES Bugs #4 — so offline is now just scope discipline, not a
+ * is gone (IMPLEMENTATION.md → *Retention over reconciliation*), so offline is
+ * now just scope discipline, not a
  * workaround.)
  *
  * Selectors are aria-labels and visible text only; the SolidJS port must keep
@@ -46,9 +47,9 @@ describe('core loop', () => {
         cy.focused().should('have.value', 'Second value').type('{enter}');
         cy.contains('div[role="button"]', 'Second value').should('be.visible');
 
-        // (The add-a-field-to-an-existing-node leg is gone from this contract
-        // while ENABLED_ADD_FIELD_SURFACES is empty — there is no add surface to
-        // drive. It comes back against the tree-native picker.)
+        // (The add-a-field-to-an-existing-node leg is gone from this contract.
+        // The tree-native Add Surface it comes back against is covered by
+        // add-surface.cy.ts; this spec stays on the create → edit → revert loop.)
 
         // History: field details → history list → select the old value → revert.
         cy.contains('label', 'Description:').parent()

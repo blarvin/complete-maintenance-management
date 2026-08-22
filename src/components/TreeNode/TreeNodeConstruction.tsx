@@ -2,8 +2,10 @@
  * TreeNodeConstruction - Under-construction mode UI for TreeNode.
  *
  * Renders inputs for name/subtitle and mounts FieldList in construction mode
- * for the field batch — which draws nothing while ENABLED_ADD_FIELD_SURFACES
- * is empty. On Save, props.onCreate creates the empty node; the pending draft
+ * for the field batch — which draws nothing under the current roster: the Add
+ * Surface excludes itself in construction (the node does not exist yet, so
+ * nothing can be parented to it) and the other two surfaces are not enabled.
+ * On Save, props.onCreate creates the empty node; the pending draft
  * (persisted in localStorage by nodeId) is seeded-if-empty and committed by
  * useNodeCreation right after the node exists — no handle into any surface.
  */

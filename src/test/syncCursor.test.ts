@@ -1,6 +1,6 @@
 /**
- * The delta-sync cursor is a high-water mark, not the local clock (ISSUES
- * Bugs #3).
+ * The delta-sync cursor is a high-water mark, not the local clock
+ * (IMPLEMENTATION.md → *The delta cursor is a high-water mark, not the clock*).
  *
  * `pullElementsSince` filters on `updatedAt`, which every row carries from
  * `serverTimestamp()`. The cursor used to be written as `now()`, so a client

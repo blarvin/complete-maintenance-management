@@ -6,10 +6,12 @@
  * surfaces — opening one closes the others. Surface contract and roster
  * live in ./addFieldSurfaces.ts.
  *
- * The roster gates construction mode too: with it empty, a node under
- * construction renders its persisted fields only (there are none yet) and the
- * defaults arrive anyway — useNodeCreation seeds and commits the pending draft
- * itself, so nothing here has to be mounted for that to happen.
+ * The roster gates construction mode too, and under the current one no surface
+ * draws there: the Add Surface excludes itself when `isConstruction` and the
+ * other two are not enabled. So a node under construction renders its persisted
+ * fields only (there are none yet) and the defaults arrive anyway —
+ * useNodeCreation seeds and commits the pending draft itself, so nothing here
+ * has to be mounted for that to happen.
  *
  * Data arrives via useElementChildren (writes emit; readers subscribe) —
  * no reload callbacks are threaded to children. Composer orchestration
