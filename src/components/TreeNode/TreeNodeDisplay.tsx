@@ -107,7 +107,8 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
      * The first production caller of `UPDATE_ELEMENT_NAME`. Registered since the
      * command bus landed and exercised only by `elementCommands.test.ts`, which
      * also means this is the first time an `internal-link`'s live pin has a
-     * rename to follow (ISSUES → *Renaming an Element*).
+     * rename to follow. Renaming a *Field* is still undecided, and is what the
+     * ISSUES item now holds.
      *
      * Undo is the same command with the previous text, captured here — the
      * closure-based undo the Snackbar contract asks for, no snapshot.

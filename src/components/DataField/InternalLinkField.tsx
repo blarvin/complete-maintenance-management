@@ -143,7 +143,7 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
      *
      * Rendered as nearest-ancestor-plus-name; the full join goes in the `title`.
      * The whole breadcrumb does not fit the value cell, whose right end already
-     * belongs to the metadata column (ISSUES → UI #3). `TreeBreadcrumbs` is
+     * belongs to the metadata column. `TreeBreadcrumbs` is
      * deliberately not reused: it renders navigable buttons and its own chrome.
      */
     const pathSegments = (): string[] => {
