@@ -25,7 +25,7 @@ item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
 and are gone, one commit each, so their numbers are permanent gaps like any
 other.
 
-**Nine carry it now, set the same day: #1, #5, #8, #9, #12, #32, #36, #46, #50.**
+**Eight carry it now, set the same day: #5, #8, #9, #12, #32, #36, #46, #50.**
 Every one of them names its decision inline, in a paragraph that says *Decided
 2026-08-22* and what was rejected — which is what makes the tag honest rather
 than a shortcut. A tenth was tagged with no decision attached, which is the one
@@ -80,8 +80,6 @@ the comment when the item goes.
 ---
 
 ## Bugs
-
-1.) `[auto]` **number-kv accepts radix literals** — `parseNumber` (numberKvState.ts) uses `Number`, which parses `0x1A` as 26, `0b101` as 5, `0o17` as 15 (verified at a node prompt). Harmless in practice — nobody types hex into a temperature field — and strictly better than the `parseFloat` it replaced, which read `0x1A` as 0. Left in deliberately when the `parseFloat` bug was fixed. **Decided 2026-08-22: reject them.** `parseNumber` gates on a full-string decimal/scientific regex before handing anything to `Number`, so `0x1A` fails the way any other bad input does — the existing error snackbar, nothing typed lost, no new UI. The same `Number` call also accepts word-spellings like `Infinity`; close those off in the same regex rather than leaving a second hole of the same shape. Verification is `numberKvState.test.ts` — pure function, no component reach needed.
 
 2.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
 
