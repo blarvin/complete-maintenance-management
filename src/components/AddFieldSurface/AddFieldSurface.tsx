@@ -36,6 +36,7 @@ import { getInlineManifest, getKindManifest, FIELD_KINDS } from '../../kinds/reg
 import { isInline } from '../../kinds/placement';
 import { valueForKind } from '../../kinds/valueCompat';
 import { generateId } from '../../utils/id';
+import { formatTimestampShort } from '../../utils/time';
 import { ConfigRows } from '../ConfigRows/ConfigRows';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
 import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
@@ -432,19 +433,28 @@ const KindRow = (props: KindRowProps) => {
                         >
                             <For each={props.definitions}>
                                 {(def) => (
-                                    <div class={styles.rowHead}>
-                                        <span class={chevron.chevronSpacer} aria-hidden="true" />
-                                        <button
-                                            type="button"
-                                            classList={{
-                                                [styles.rowName]: true,
-                                                [styles.rowNameSelected]: props.pickedId === def.id,
-                                            }}
-                                            aria-pressed={props.pickedId === def.id}
-                                            onClick={() => props.onPickDefinition(def)}
-                                        >
-                                            {def.label}
-                                        </button>
+                                    <div class={styles.defEntry}>
+                                        <div class={styles.rowHead}>
+                                            <span class={chevron.chevronSpacer} aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                classList={{
+                                                    [styles.rowName]: true,
+                                                    [styles.rowNameSelected]: props.pickedId === def.id,
+                                                }}
+                                                aria-pressed={props.pickedId === def.id}
+                                                onClick={() => props.onPickDefinition(def)}
+                                            >
+                                                {def.label}
+                                            </button>
+                                        </div>
+                                        {/* Provenance, outside the button on purpose: the label is
+                                            the pick target and its accessible name must stay the
+                                            Definition's name. This is information, not an act. */}
+                                        <div class={styles.defMeta}>
+                                            <span>{`Coined ${formatTimestampShort(def.updatedAt)} by ${def.authorId}`}</span>
+                                            <code class={styles.defId}>{def.id}</code>
+                                        </div>
                                     </div>
                                 )}
                             </For>

@@ -94,9 +94,9 @@ the comment when the item goes.
 
 16.) **Change TreeNodeDetails/Config to /"Settings"?** - Decide what, if anything, can be edited from there. If nothing, then why show it? Even though it shows info from config, user-facing idea is "settings".
 
-17.) `[auto]` **A Definition row in the Kind band shows nothing but its label** — the old picker let you expand a Definition to peek at its config before picking; the Kind band drops that, because picking now loads the config into the Config band read-only. Cheaper to compare two same-named Definitions if the row itself carried id, version, createdAt, createdBy, description/byline. Reframed 2026-08-15 when the peek went away (was "Add Field Picker / Option / Expand Chevron should show metadata…"). **Presentation decided 2026-08-22, same answer as #7: a compact paired block**, not one row per fact, reusing existing row styling.
-
 18.) **Single Image Field / History is just the history of the caption.** - Decide composite Field structure and layout. 
+
+47.) **A `Definition` carries no version and no description, so two of the five facts #17 asked a Kind-band row to show could not be shown** — the row now carries `id`, `updatedAt` and `authorId` (rendered *Coined \<when\> by \<who\>*, correct because a Definition is written once — fork-never-mutate, SPEC → *The cascade*). The other two have no home: there is no `version` column, and under forking there is nothing for one to count — a successor is a new Definition with a new id, which is why the id is doing the disambiguating. `description`/`byline` is the same want as #11, which is where it should be decided; adding either is a data-model change, not presentation. Read from `models.ts` while implementing #17, 2026-08-22.
 
 
 
