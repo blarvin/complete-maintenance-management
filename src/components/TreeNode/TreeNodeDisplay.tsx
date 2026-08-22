@@ -102,6 +102,47 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
         }
     };
 
+    /**
+     * The first production caller of `UPDATE_ELEMENT_NAME`. Registered since the
+     * command bus landed and exercised only by `elementCommands.test.ts`, which
+     * also means this is the first time an `internal-link`'s live pin has a
+     * rename to follow (ISSUES → *Renaming an Element*).
+     *
+     * Undo is the same command with the previous text, captured here — the
+     * closure-based undo the Snackbar contract asks for, no snapshot.
+     */
+    const renameNode = async (next: string) => {
+        const id = props.id;
+        const prev = props.name;
+        await commitWithUndo({
+            message: 'Node renamed',
+            execute: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_NAME',
+                payload: { id, name: next },
+            }),
+            undo: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_NAME',
+                payload: { id, name: prev },
+            }),
+        });
+    };
+
+    const resubtitleNode = async (next: string) => {
+        const id = props.id;
+        const prev = props.subtitle;
+        await commitWithUndo({
+            message: 'Subtitle updated',
+            execute: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_SUBTITLE',
+                payload: { id, subtitle: next },
+            }),
+            undo: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_SUBTITLE',
+                payload: { id, subtitle: prev },
+            }),
+        });
+    };
+
     const titleId = () => `node-title-${props.id}`;
     const isClickable = () => !!props.onNodeClick;
     const isParent = () => props.nodeState === 'PARENT';
@@ -186,6 +227,8 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                 onExpand={showDataCard() ? toggleExpand : undefined}
                 onDetailsToggle={() => toggleNodeDetailsExpanded(props.id)}
                 showChevron={showDataCard()}
+                onRenameName={isChrome() ? undefined : renameNode}
+                onRenameSubtitle={isChrome() ? undefined : resubtitleNode}
             />
             <Show when={showDataCard()}>
                 <DataCard isOpen={isExpanded()}>

@@ -100,10 +100,13 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
      * fires, but `resolveEdge` → `getElementById` is a bare `db.elements.get`,
      * which — unlike `getChildren` beside it — returns soft-deleted rows. A
      * deleted target therefore keeps resolving and keeps rendering as live, `→`
-     * and all; only an id that never existed reaches `(unresolved: …)`. And
-     * nothing user-facing renames an Element yet (`UPDATE_ELEMENT_NAME` has no
-     * production caller), so the live pin's headline case is wired but
-     * untriggerable. Both are the resolver-status item in ISSUES → Architecture.
+     * and all; only an id that never existed reaches `(unresolved: …)`. That is
+     * the resolver-status item in ISSUES → Architecture.
+     *
+     * The rename half **is** live as of 2026-08-22: inline node rename gave
+     * `UPDATE_ELEMENT_NAME` its first production caller, and a link's rendered
+     * address follows the target's new name off this subscription (hand-tested
+     * against the demo data).
      *
      * Stale-async guard: an in-flight resolve must not land after the tracked id
      * changed (effects capture their values at run time).
