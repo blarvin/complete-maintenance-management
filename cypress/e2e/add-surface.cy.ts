@@ -1,12 +1,13 @@
 /**
  * Behavior contract — the Add Surface (SPEC → The Add Surface).
  *
- * The first coverage this surface has ever had (ISSUES → Tech Debt): everything
- * before it was hand-tested only, and `core-loop.cy.ts` runs on construction
- * defaults so it never touches an add affordance at all.
+ * The first coverage this surface has ever had: everything before it was
+ * hand-tested only, and `core-loop.cy.ts` runs on construction defaults so it
+ * never touches an add affordance at all.
  *
- * Click-path only. The keyboard model is deliberately out of scope for this
- * pass, here as in the surface itself.
+ * Click-path only. The keyboard model is deliberately out of scope — there is
+ * no keyboard model in the surface yet to test (SPEC → Keyboard &
+ * Accessibility), so this is a decision, not a gap.
  *
  * Selectors are aria-labels and visible text only, per the support contract.
  * Everything is `:visible`-scoped because a re-rooted node shows three add
@@ -21,6 +22,17 @@ const NAME = 'input[aria-label="New field name"]:visible';
 /** Click a visible button by its exact label. */
 const clickButton = (label: string | RegExp) =>
     cy.get('button:visible').contains(label).click();
+
+/** The draft row itself — the name input's own wrapper, which is also the row
+ *  the value slot renders into. Scoping through it keeps the value-slot
+ *  assertions off the persisted fields in the same card. */
+const draftRow = () => cy.get(NAME).first().parent();
+
+/** The nth `Options` row's text entry in the Config band. `ListRows` gives the
+ *  row a plain `<span>` label rather than a `<label for>`, so the row is reached
+ *  through the one thing on it that carries an aria-label: its remove button. */
+const optionEntry = (n: number) =>
+    cy.get(`[aria-label="Remove option ${n}"]:visible`).parent().find('input[type="text"]');
 
 describe('the Add Surface', () => {
     const name = `Pump ${Date.now()}`;
@@ -76,5 +88,74 @@ describe('the Add Surface', () => {
 
         cy.get(EXPAND).first().click();
         cy.get(NAME).first().should('have.value', 'Half Written');
+    });
+
+    it('discards the draft on Cancel', () => {
+        cy.get(EXPAND).first().click();
+        cy.get(NAME).first().type('Scratch');
+
+        clickButton(/^Cancel$/);
+
+        // Cancel closes the row *and* empties it — the opposite of a collapse,
+        // which keeps everything (see the spec above).
+        cy.get(EXPAND).should('exist');
+        cy.get(NAME).first().should('have.value', '');
+        cy.contains('label', 'Scratch:').should('not.exist');
+        cy.contains('[role="status"]', 'Field added').should('not.exist');
+    });
+
+    it('carries typed enum options into the value slot', () => {
+        cy.get(EXPAND).first().click();
+        cy.get(NAME).first().type('Condition');
+        clickButton(/^Enum$/);
+
+        // The draft opens with two blank option rows — an enum needs two to be a
+        // choice at all — so filling them in is the whole authoring act.
+        optionEntry(1).type('Good');
+        optionEntry(2).type('Bad');
+
+        // The value slot is the real EnumKvField in pendingMode, so it offers
+        // what the Config band says right now, with nothing persisted anywhere.
+        draftRow().find('[aria-haspopup="listbox"]').click();
+        draftRow().contains('[role="option"]', 'Good').click();
+        draftRow().find('[aria-haspopup="listbox"]').should('contain.text', 'Good');
+
+        // The `default` knob and the slot are two views of one thing while
+        // authoring: choosing in the slot sets the default.
+        cy.contains('label', 'Default').parent().find('select').should('have.value', 'Good');
+
+        clickButton(/^Create$/);
+        cy.contains('[role="status"]', 'Field added').should('be.visible');
+        cy.contains('label', 'Condition:').parent().contains('Good').should('be.visible');
+    });
+
+    it('swaps the config and the value slot when the kind changes mid-draft', () => {
+        cy.get(EXPAND).first().click();
+        cy.get(NAME).first().type('Reading');
+        // The draft starts as text-kv, so its knobs are on screen before the swap.
+        cy.contains('label', 'Multiline').should('be.visible');
+
+        clickButton(/^Number$/);
+
+        // The name is the user's; the config is the kind's, and is replaced whole.
+        cy.get(NAME).first().should('have.value', 'Reading');
+        cy.contains('Creating a Number field').should('be.visible');
+        cy.contains('label', 'Units symbol').should('be.visible');
+        cy.contains('label', 'Multiline').should('not.exist');
+
+        clickButton(/^Create$/);
+        cy.contains('[role="status"]', 'Field added').should('be.visible');
+        cy.contains('label', 'Reading:').should('be.visible');
+    });
+
+    it('undoes the mint from the Field added toast', () => {
+        cy.get(EXPAND).first().click();
+        cy.get(NAME).first().type('Fleeting');
+        clickButton(/^Create$/);
+
+        cy.contains('label', 'Fleeting:').should('be.visible');
+        cy.get('[role="status"]').contains('button', 'Undo').click();
+
+        cy.contains('label', 'Fleeting:').should('not.exist');
     });
 });
