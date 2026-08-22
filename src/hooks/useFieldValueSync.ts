@@ -13,7 +13,8 @@
  * during an in-progress edit don't disturb the user's input — only the
  * underlying committed value updates.
  *
- * Consumed by the five field renderers. `fieldId` is deliberately
+ * Consumed by `useValueSlot` for the five `useFieldEdit`-driven kinds, and
+ * directly by `EnumKvField`, which is not one of them. `fieldId` is deliberately
  * non-reactive — renderers mount per field. Nothing is tracked, so the
  * subscription is made at hook call and torn down via onCleanup.
  */

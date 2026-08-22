@@ -6,7 +6,9 @@
  * option list for an inline text input so the user can type a custom value.
  *
  * Does NOT use useFieldEdit — the popover lifecycle is its own state machine
- * over the same FSM seams (startFieldEdit/stopFieldEdit). Positioning and
+ * over the same FSM seams (startFieldEdit/stopFieldEdit). It shares the one
+ * thing that isn't lifecycle: `commitFieldValue`, the buffered-vs-persisted
+ * branch every value-bearing kind makes. Positioning and
  * focus run from effects, never from timeouts: the open-transition effect
  * deliberately also tracks the options resource, so first-open focus lands
  * after the IDB config fetch rather than racing it; the activeElement guard
@@ -15,12 +17,12 @@
 
 import { Show, For, createSignal, createEffect, createMemo, createResource, onMount, onCleanup, type Accessor } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
-import { getCommandBus } from '../../data/commands';
-import { commitWithUndo } from '../../data/services/commitWithUndo';
+import { commitFieldValue } from '../../data/services/commitFieldValue';
 import { useDoubleTap } from '../../hooks/useDoubleTap';
 import { useFieldValueSync } from '../../hooks/useFieldValueSync';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import type { EnumKvConfig } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import styles from './DataField.module.css';
 import dropdownStyles from '../CreateDataField/CreateDataField.module.css';
 import enumStyles from './EnumKvField.module.css';
@@ -34,10 +36,8 @@ export type EnumKvFieldProps = {
      *  This is the kind where preview fidelity matters most — without it a draft
      *  enum would offer no options at all. */
     config?: EnumKvConfig;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange.
-     *  `autoFocus` flags the row as just-ticked-by-user so the popover should
-     *  auto-open and focus its first option; seeded rows leave it false. */
-    pendingMode?: { onChange: (value: string | null) => void | Promise<void>; autoFocus?: boolean };
+    /** `autoFocus` auto-opens the popover and focuses its first option. */
+    pendingMode?: PendingMode<string>;
 };
 
 export const EnumKvField = (props: EnumKvFieldProps) => {
@@ -122,18 +122,11 @@ export const EnumKvField = (props: EnumKvFieldProps) => {
     };
 
     const pick = async (option: string) => {
-        const fieldId = props.id;
-        const prev = currentValue();
-        if (props.pendingMode) {
-            await props.pendingMode.onChange(option);
-            setCurrentValue(option);
-            close();
-            return;
-        }
-        const ok = await commitWithUndo({
-            message: 'Field updated',
-            execute: () => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: option } }),
-            undo: () => getCommandBus().execute({ type: 'UPDATE_ELEMENT_VALUE', payload: { id: fieldId, value: prev } }),
+        const ok = await commitFieldValue<string>({
+            fieldId: props.id,
+            prev: currentValue(),
+            next: option,
+            pendingMode: props.pendingMode,
         });
         if (ok) {
             setCurrentValue(option);

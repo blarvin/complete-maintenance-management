@@ -12,9 +12,9 @@
  */
 
 import { Show, createSignal, type Accessor } from 'solid-js';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
-import { useFieldValueSync } from '../../hooks/useFieldValueSync';
+import { useValueSlot } from '../../hooks/useValueSlot';
 import type { SingleImageValue } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import styles from './DataField.module.css';
 import imageStyles from './SingleImageField.module.css';
 
@@ -34,9 +34,8 @@ export type SingleImageFieldProps = {
     id: string;
     value: SingleImageValue | null;
     rootRef: Accessor<HTMLElement | undefined>;
-    /** `autoFocus` is set only for the row the user just ticked — focuses the
-     *  caption input on mount; seeded rows leave it false. */
-    pendingMode?: { onChange: (value: SingleImageValue | null) => void | Promise<void>; autoFocus?: boolean };
+    /** `autoFocus` focuses the caption input on mount. */
+    pendingMode?: PendingMode<SingleImageValue>;
 };
 
 const formatCaption = (v: SingleImageValue | null): string => v?.caption ?? '';
@@ -57,13 +56,11 @@ export const SingleImageField = (props: SingleImageFieldProps) => {
         setTimeout(() => setFlashing(false), 180);
     };
 
-    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        setCurrentValue,
         setEditInputRef,
         valuePointerDown,
         valueKeyDown,
@@ -71,17 +68,7 @@ export const SingleImageField = (props: SingleImageFieldProps) => {
         inputBlur,
         inputKeyDown,
         inputChange,
-    } = useFieldEdit<SingleImageValue>({
-        fieldId: props.id,
-        initialValue: props.value,
-        format: formatCaption,
-        parse: parseCaption,
-        rootRef: props.rootRef,
-        pendingMode: props.pendingMode,
-    });
-
-    useFieldValueSync<SingleImageValue>(props.id, setCurrentValue);
-    /* eslint-enable solid/reactivity */
+    } = useValueSlot<SingleImageValue>(props, { format: formatCaption, parse: parseCaption });
 
     const labelId = () => `field-label-${props.id}`;
 

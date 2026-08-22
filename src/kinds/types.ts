@@ -97,6 +97,25 @@ export type ConfigSubFieldMember = {
 };
 
 /**
+ * Buffered-edit mode: a row whose value is not persisted yet. Edits are handed
+ * to `onChange` and nothing reaches the command bus or sync — the Add Surface's
+ * draft row, the Library's preview microcosms, and the dormant composer's rows
+ * all run this way.
+ *
+ * `autoFocus` is true only for the row the user just *ticked*: it opens itself
+ * ready to type (or, for `enum-kv`, opens its popover). Seeded rows — the
+ * construction defaults, an Undo restore — pass false so nothing steals focus.
+ *
+ * Declared once here because every value-bearing renderer takes it, narrowed to
+ * its own value type; `FieldRendererProps` carries the widened form the registry
+ * dispatches through.
+ */
+export type PendingMode<T> = {
+    onChange: (value: T | null) => void | Promise<void>;
+    autoFocus?: boolean;
+};
+
+/**
  * Uniform prop contract every field renderer is invoked with. The concrete
  * components declare narrower `value`/`pendingMode` types per kind and are
  * bridged into this shape by a localized cast in each manifest — the runtime
@@ -122,7 +141,7 @@ export type FieldRendererProps = {
      *  row (chevron, label, value), not just the value column. */
     rootRef: Accessor<HTMLElement | undefined>;
     updatedAt?: number;
-    pendingMode?: { onChange: (value: DataFieldValue | null) => void; autoFocus?: boolean };
+    pendingMode?: PendingMode<DataFieldValue>;
 };
 
 /**

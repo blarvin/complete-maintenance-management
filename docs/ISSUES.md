@@ -20,9 +20,9 @@ dependency between items belongs in the item's prose, where it can say *why*.
 `[auto]` is the one exception, and it is a permission, not a topic: it marks
 items the agent may take end-to-end without checking in — each self-contained and
 verifiable by typecheck/lint/test. One commit per item, which also deletes the
-item from here. Agreed 2026-08-11; `git push` stays manual. **Nine carry it as of
-2026-08-22: #3, #7, #17, #34, #39, #40, #42, #43, #44.** Five of those needed a
-decision first; each records it inline, so the tag stays honest.
+item from here. Agreed 2026-08-11; `git push` stays manual. **Nine carried it as
+of 2026-08-22: #3, #7, #17, #34, #39, #40, #42, #43, #44.** Five of those needed
+a decision first; each records it inline, so the tag stays honest.
 
 The bar is *no decision left in the item*, not *small*. An item that names a
 product or UX choice — even an easy one — is not `[auto]`, because picking it is
@@ -140,12 +140,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 33.) **`per-user` config sync is declared but collapses to shared** — `treeSyncMode('config')` returns `'per-user'` (`treePolicy.ts:35`), and the only consumer is `shouldSyncTreeType`, which asks "does it sync at all" and gets `true`. Nothing scopes the push, so the first `config`-tree row would ride the same shared lane as business content — a user's private prefs pushed to everyone, which is the one failure mode the typed-trees seam exists to prevent. Inert today only because Phase 1 has no `config` producer (the module docblock says so), which means **the first config producer is also the first test of this routing**: land those rows local-only and turn sync on deliberately rather than discovering the guard and the feature at once. Read from `treePolicy.ts` while scoping the per-population bootstrap, 2026-08-21.
 
 ## Tech Debt
-
-34.) `[auto]` **Extract the repeated `pendingMode` wiring out of the DataField renderers** — near-identical `pendingMode` plumbing into `useFieldEdit`, repeated per renderer. **The deferral has expired**: the original item said "don't abstract until a 5th component lands", and there are now seven carriers — `TextKvField`, `EnumKvField`, `NumberKvField`, `SingleImageField`, `InternalLinkField`, `ExternalLinkField` and `ConfigValueFields`. The two link kinds arrived with the Edges family and `ConfigValueFields` with config-as-Elements, so the growth is structural, not incidental, and the Library's archetype previews (`KindsIndex`) now drive the same path from outside `FieldList` entirely.
-
-**Absorbed the former `useFieldEdit` size item 2026-08-22** — they were one seam described from two ends. That item recorded a fat hook (272 lines now, up from the "200+" it was written against) with a 21-prop return, and a 2026-08-15 verdict of "no change wanted", reasoning that the Add Surface's value slot uses the existing lifecycle exactly as intended (SPEC → The Add Surface → The row). That verdict stands on its own terms — nothing needs a *different* edit lifecycle — but it answered the wrong question: the return surface is wide because seven callers each rebuild the same wiring from its parts, so **extracting the wiring is the change that shrinks the hook**, and doing it from the caller side is the better call than refactoring `useFieldEdit` for its own sake.
-
-One constraint on the work: the dormant composer stack (`FieldComposer/`, `CreateDataField/`, `usePendingForms` — unreachable since the Add Surface took over, kept deliberately and not filed as an issue) rides this same path, so the refactor either keeps it compiling or forces the decision to delete it. **Decided 2026-08-22: keep it compiling** — the composer is not being purged, so the extraction must leave `FieldComposer/`, `CreateDataField/` and `usePendingForms` building and the suite green. **Scope decided too: one pass, all seven renderers.** A half-migrated tree is worse than an unmigrated one, because it leaves two ways to write a renderer; typecheck, lint and the 571-test suite are real verification for a diff this wide.
 
 35.) **Single 605 kB bundle, precached atomically** — one chunk (168 kB gzip, Firebase-dominated) trips Rollup's size warning, and the SW precaches via `cache.addAll`, which is all-or-nothing: one failed fetch on a cold install caches nothing. Fine at prototype scale; split the vendor chunk if offline install ever proves flaky. Untouched deliberately — code-splitting is a real decision, not a mop-up nicety: this is a route-less FSM app, so the natural seams are the kind renderers and the Firebase SDK. (Consolidated 2026-08-14 from a duplicate LATER entry under *PWA & Build*.)
 

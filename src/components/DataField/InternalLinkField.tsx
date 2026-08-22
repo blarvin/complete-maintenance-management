@@ -37,9 +37,9 @@
 
 import { Show, createSignal, createEffect, onCleanup, type Accessor } from 'solid-js';
 import { useAppTransitions } from '../../state/appState';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
-import { useFieldValueSync } from '../../hooks/useFieldValueSync';
+import { useValueSlot } from '../../hooks/useValueSlot';
 import type { Element, InternalLinkValue } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { storageEventBus } from '../../data/storageEventBus';
@@ -53,7 +53,7 @@ export type InternalLinkFieldProps = {
     id: string;
     value: InternalLinkValue | null;
     rootRef: Accessor<HTMLElement | undefined>;
-    pendingMode?: { onChange: (value: InternalLinkValue | null) => void | Promise<void>; autoFocus?: boolean };
+    pendingMode?: PendingMode<InternalLinkValue>;
 };
 
 const formatTarget = (v: InternalLinkValue | null): string => v?.targetId ?? '';
@@ -66,13 +66,11 @@ const parseTarget = (raw: string): InternalLinkValue | null => {
 export const InternalLinkField = (props: InternalLinkFieldProps) => {
     const { revealElement } = useAppTransitions();
 
-    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        setCurrentValue,
         setEditInputRef,
         valuePointerDown,
         valueKeyDown,
@@ -80,18 +78,7 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
         inputBlur,
         inputKeyDown,
         inputChange,
-    } = useFieldEdit<InternalLinkValue>({
-        fieldId: props.id,
-        initialValue: props.value,
-        format: formatTarget,
-        parse: parseTarget,
-        rootRef: props.rootRef,
-        pendingMode: props.pendingMode,
-    });
-    /* eslint-enable solid/reactivity */
-
-    // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
-    useFieldValueSync<InternalLinkValue>(props.id, setCurrentValue);
+    } = useValueSlot<InternalLinkValue>(props, { format: formatTarget, parse: parseTarget });
 
     /** The whole resolved Element, not just its name: the path needs `parentId`
      *  and `kind`, and `→` needs `parentId` to know where to stand. */
