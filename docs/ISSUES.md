@@ -76,8 +76,6 @@ the comment when the item goes.
 
 ## Features
 
-7.) `[auto]` **Node metadata in TreeNodeDetails/Config** — show `createdAt`, last `updatedAt`, last `updatedBy`, 'id', 'version', and description/byline. It already shows "from <libraryField>". **Presentation decided 2026-08-22: a compact block, not one row per fact** — pair them up (`id` + `version` on one line, the two dates on another) reusing the existing Details/Config row styling, no new component and no new tokens. The Config band is already deeply nested (#38), so row count is the thing to spend sparingly.
-
 8.) **Inline rename of NodeTitle and NodeSubtitle** — decide UX (double-tap like DataFields? edit button?), then wire up. Nodes are rename-less after creation.
 
 9.) **DataField restoration UI** — surface soft-deleted fields (recycle bin? details view?) and allow clearing `deletedAt`. Data model supports it; UI doesn't. This feature belongs to the NodeDetails section.

@@ -43,6 +43,20 @@
     transform: none;
 }
 
+/* Metadata: a compact block rather than a row per fact. Same muted, small
+   treatment the placeholder it replaced carried inline. */
+.metaBlock {
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+}
+
+/* The byline reads as the node's own words, so it keeps the body colour while
+   the stamps below stay muted. */
+.metaByline {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-1);
+}
+
 /* The id line sits above the actions, sharing their separator so the two read
    as one Tools region rather than two stacked strips. */
 .idRow {

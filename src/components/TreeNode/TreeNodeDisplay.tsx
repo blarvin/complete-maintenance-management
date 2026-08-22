@@ -5,7 +5,7 @@
  * Field logic is delegated to FieldList component.
  */
 
-import { Show, createSignal } from 'solid-js';
+import { Show, createResource, createSignal } from 'solid-js';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
@@ -16,6 +16,9 @@ import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import { getCommandBus } from '../../data/commands';
+import { getElementQueries } from '../../data/queries';
+import { compareHistory } from '../../data/storage/historyHelpers';
+import { formatTimestampShort } from '../../utils/time';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
 import { isLibraryChrome } from '../../data/libraryChrome';
@@ -53,6 +56,35 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
         e?.stopPropagation();
         toggleCardExpanded(props.id);
     };
+
+    /**
+     * The node's own metadata, read from its history: the `create` row dates it,
+     * the newest row says who touched it last and when, and that row's `rev` is
+     * the version. Sourced here rather than from the Element because the Element
+     * carries no `createdAt` and no revision at all — both live only in the log.
+     *
+     * **Gated on the panel being open.** `TreeNodeDetails` animates rather than
+     * unmounts, so its children are mounted for every node on screen; an ungated
+     * fetch would be one history read per visible node per paint of the tree.
+     * Error-catching fetcher, the idiom the field renderers use: a failed read
+     * degrades to "—", never to an unhandled rejection.
+     */
+    const [meta] = createResource(
+        () => (isDetailsExpanded() ? props.id : null),
+        async (id) => {
+            try {
+                const rows = (await getElementQueries().getElementHistory(id)).sort(compareHistory);
+                return {
+                    createdAt: rows.find((r) => r.action === 'create')?.updatedAt ?? null,
+                    latest: rows.length ? rows[rows.length - 1] : null,
+                };
+            } catch {
+                return null;
+            }
+        },
+    );
+
+    const stamp = (at: number | null | undefined) => (at ? formatTimestampShort(at) : '—');
 
     const handleDeleteNode = async () => {
         const nodeId = props.id;
@@ -104,15 +136,23 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                     <h3 style={{ margin: '0 0 var(--space-3) 0', 'font-size': 'var(--text-base)', 'font-weight': 600 }}>
                         Node Details
                     </h3>
-                    <div style={{ color: 'var(--text-muted)', 'font-size': 'var(--text-sm)' }}>
-                        {/* Future: Metadata section */}
-                        {/* CreatedAt, UpdatedAt, UpdatedBy */}
-
-                        {/* Future: Breadcrumb hierarchy */}
-                        {/* Path: Root > Parent > Current */}
+                    {/* A compact block, not one row per fact: the byline, then
+                        both dates and the last hand on one line. The id and the
+                        version pair up on the row below, which was already
+                        there. */}
+                    <div class={detailsStyles.metaBlock}>
+                        <Show when={props.subtitle}>
+                            <div class={detailsStyles.metaByline}>{props.subtitle}</div>
+                        </Show>
+                        <div>
+                            {`Created ${stamp(meta()?.createdAt)} · Updated ${stamp(meta()?.latest?.updatedAt)}`}
+                            <Show when={meta()?.latest?.updatedBy}>
+                                {(by) => ` by ${by()}`}
+                            </Show>
+                        </div>
                     </div>
                     <div class={detailsStyles.idRow}>
-                        <ElementIdRow id={props.id} />
+                        <ElementIdRow id={props.id} version={meta()?.latest?.rev} />
                     </div>
                     <Show when={!isChrome()}>
                         <div class={detailsStyles.actionsRow}>
