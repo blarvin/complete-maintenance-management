@@ -116,9 +116,9 @@ export const clearPendingDraft = (nodeId: string): void => {
  * Read the draft for nodeId, create a DataField per row via the command bus,
  * then clear the draft. Returns the number of fields created.
  *
- * baseOrder is the max cardOrder among already-persisted fields; the first new
- * field lands at baseOrder + 1. Pass -1 for a brand-new node so its first field
- * starts at siblingOrder 0.
+ * baseOrder is the max `siblingOrder` among already-persisted fields; the first
+ * new field lands at baseOrder + 1. Pass -1 for a brand-new node so its first
+ * field starts at siblingOrder 0.
  */
 export const commitPendingDraft = async (nodeId: string, baseOrder: number): Promise<number> => {
     // Drop malformed entries (e.g. legacy localStorage drafts from the old
@@ -134,7 +134,7 @@ export const commitPendingDraft = async (nodeId: string, baseOrder: number): Pro
     const commandBus = getCommandBus();
     for (let i = 0; i < batch.length; i++) {
         const row = batch[i];
-        const cardOrder = baseOrder + i + 1;
+        const siblingOrder = baseOrder + i + 1;
         // Pass initialValue through so creation writes a single history row
         // carrying the user-entered value, instead of a null create followed
         // by an update (which produced an "Empty" history row).
@@ -143,7 +143,7 @@ export const commitPendingDraft = async (nodeId: string, baseOrder: number): Pro
             payload: {
                 parentId: nodeId,
                 definitionId: row.definitionId,
-                siblingOrder: cardOrder,
+                siblingOrder,
                 initialValue: row.value ?? null,
             },
         });

@@ -50,7 +50,7 @@ export type FieldListProps = {
 export const FieldList = (props: FieldListProps) => {
     const { children: fields } = useElementChildren(() => props.nodeId, 'fields');
 
-    const maxPersistedCardOrder = createMemo(() => {
+    const maxPersistedSiblingOrder = createMemo(() => {
         if (fields().length === 0) return -1;
         return Math.max(...fields().map(f => f.siblingOrder));
     });
@@ -100,7 +100,7 @@ export const FieldList = (props: FieldListProps) => {
                 <AddFieldSurface
                     nodeId={props.nodeId}
                     admittedKinds={admittedFieldKinds()}
-                    baseOrder={maxPersistedCardOrder()}
+                    baseOrder={maxPersistedSiblingOrder()}
                     activeSurface={activeSurface}
                     setActiveSurface={setActiveSurface}
                 />
@@ -110,7 +110,7 @@ export const FieldList = (props: FieldListProps) => {
                 <FieldComposerSlot
                     nodeId={props.nodeId}
                     mode={mode()}
-                    currentMaxCardOrder={maxPersistedCardOrder()}
+                    currentMaxCardOrder={maxPersistedSiblingOrder()}
                     initialDefinitionIds={props.initialDefinitionIds}
                     activeSurface={activeSurface}
                     setActiveSurface={setActiveSurface}
@@ -120,7 +120,7 @@ export const FieldList = (props: FieldListProps) => {
             <Show when={!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction}>
                 <CreateDataField
                     nodeId={props.nodeId}
-                    currentMaxCardOrder={maxPersistedCardOrder()}
+                    currentMaxCardOrder={maxPersistedSiblingOrder()}
                     activeSurface={activeSurface}
                     setActiveSurface={setActiveSurface}
                 />
