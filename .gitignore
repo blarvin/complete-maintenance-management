@@ -164,6 +164,13 @@ config.local.json
 test-results/
 coverage/
 
+# Cypress run output. Screenshots are written on every failing spec
+# (screenshotOnRunFailure), so a red run would otherwise leave an untracked
+# directory behind. Videos are off in cypress.config.ts; ignored anyway so
+# turning them on costs nothing.
+cypress/screenshots/
+cypress/videos/
+
 # Package manager lock files (uncomment if you want to ignore them)
 # package-lock.json
 # yarn.lock
