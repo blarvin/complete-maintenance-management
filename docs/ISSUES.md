@@ -25,7 +25,7 @@ item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
 and are gone, one commit each, so their numbers are permanent gaps like any
 other.
 
-**Nine carry it now, set the same day: #1, #5, #8, #9, #12, #32, #36, #46, #48.**
+**Ten carry it now, set the same day: #1, #5, #8, #9, #12, #32, #36, #46, #48, #50.**
 Every one of them names its decision inline, in a paragraph that says *Decided
 2026-08-22* and what was rejected — which is what makes the tag honest rather
 than a shortcut. #48 is the exception that proves the rule: it carries no
@@ -86,7 +86,17 @@ the comment when the item goes.
 
 49.) **On DuckDuckGo browser: right edge is smashed against the window edge.**
 
-50.) **On mobile (Chrome, DDG, PWA) cannot persist Field value.** - OSK 'enter' exits and jumps focus instead.
+50.) `[auto]` **On mobile (Chrome, DDG, PWA) cannot persist Field value.** - OSK 'enter' exits and jumps focus instead.
+
+**Diagnosed 2026-08-22, and it is not the keyboard.** `useFieldEdit.inputBlur` branches: a `pendingMode` row calls `save()`, a *persisted* row calls `stopFieldEdit()` and resets the buffer — **blur discards the edit**. On a desktop the only way to blur is to click away, so that reads as "cancel" and nobody noticed. On a phone the OSK action key *is* a blur, so there is no reachable way to commit at all. `onDocumentPointerDown` (outside-click) carries the same two-branch shape for the same reason.
+
+Proven with a throwaway Cypress spec at the config's 375×667, five cases, deleted after: **A** Enter commits ✅ · **D** the *same* blur on a draft row keeps the value ✅ (that is the other branch) · **E** tapping outside the row still cancels ✅ · **B** blur alone loses it ❌ · **C** an OSK-shaped `keydown` (`key: 'Unidentified'`, `keyCode: 229`) then blur loses it ❌. **B is red with no keydown at all**, which rules out the obvious theory — key-code handling is not the hole, so do not go chasing `keyCode 229` or `compositionend`. `BLUR_SUPPRESS_WINDOW_MS` (220ms, armed only by `inputPointerDown`) is not implicated either.
+
+Hits the five text-buffer kinds — `text-kv`, `number-kv`, `single-image`, `internal-link`, `external-link` — i.e. everything through `useValueSlot`. **Not** `enum-kv`, which commits on the option tap and never holds an edit buffer, and not the Config band, whose `LeafRow` already commits on native `change` (blur or Enter) — the band was right all along.
+
+**Decided 2026-08-22: blur saves, plus `enterkeyhint="done"`.** The persisted arm of `inputBlur` calls `save()`, exactly as the `pendingMode` arm already does; the no-op gate means an unchanged value still dispatches nothing. `enterkeyhint="done"` goes on the edit inputs so the action key reads Done and dismisses rather than advancing, which answers the *jumps focus* half of the report (`NumberKvField` already sets `inputMode`, so keyboard hints have precedent here).
+
+Two things the fix must not disturb, both already pinned by the cases above. **Outside-click must keep cancelling** — it survives because `pointerdown` lands before `blur`, so the document listener closes the FSM and blur's own `editingElementId` guard then fails; case E is the guard, and it must stay green. And **Enter must not double-save** for the same reason. Rebuild A–E as the regression spec and land it green rather than committing it red (the rule #39 set). Leave the textarea's Enter-saves-instead-of-newline behaviour alone — that is deliberate, and `TextKvField`'s docblock says why the textarea exists at all.
 
 ## UI, styling, layout
 
