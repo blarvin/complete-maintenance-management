@@ -99,43 +99,55 @@ export function useNodeCreation(parentId: Accessor<string | null>): UseNodeCreat
         const ucData = appState.underConstruction;
         if (!ucData) return;
 
-        const bus = getCommandBus();
-        await bus.execute({
-            type: 'CREATE_ELEMENT',
-            payload: {
-                id: ucData.id,
-                kind: ucData.kind,
-                parentId: ucData.parentId,
-                name: payload.name || 'Untitled',
-                subtitle: payload.subtitle || null,
-            },
-        });
+        try {
+            const bus = getCommandBus();
+            await bus.execute({
+                type: 'CREATE_ELEMENT',
+                payload: {
+                    id: ucData.id,
+                    kind: ucData.kind,
+                    parentId: ucData.parentId,
+                    name: payload.name || 'Untitled',
+                    subtitle: payload.subtitle || null,
+                },
+            });
 
-        // The construction defaults are a node-creation policy, not a side
-        // effect of rendering a picker: seed them here so a new node is born
-        // with them even when every add-field surface is switched off
-        // (ENABLED_ADD_FIELD_SURFACES). Which Definitions those are is pack
-        // data, resolved at call time. Stored-draft-wins, so when a surface
-        // *is* mounted it has already seeded the same rows and this is a no-op.
-        const { missingIds } = await seedPendingDraft(ucData.id, constructionDefaults());
+            // The construction defaults are a node-creation policy, not a side
+            // effect of rendering a picker: seed them here so a new node is born
+            // with them even when every add-field surface is switched off
+            // (ENABLED_ADD_FIELD_SURFACES). Which Definitions those are is pack
+            // data, resolved at call time. Stored-draft-wins, so when a surface
+            // *is* mounted it has already seeded the same rows and this is a no-op.
+            const { missingIds } = await seedPendingDraft(ucData.id, constructionDefaults());
 
-        // Commit the in-flight draft (localStorage, keyed by nodeId) against the
-        // freshly-created node. -1 so the first field lands at siblingOrder 0.
-        // Clears the draft internally.
-        await commitPendingDraft(ucData.id, -1);
+            // Commit the in-flight draft (localStorage, keyed by nodeId) against the
+            // freshly-created node. -1 so the first field lands at siblingOrder 0.
+            // Clears the draft internally.
+            await commitPendingDraft(ucData.id, -1);
 
-        // A default that didn't resolve is a field the node should have and
-        // doesn't — the commit above clears the draft, so nothing will retry it.
-        // Report the loss rather than lose it silently; no retry machinery in
-        // Phase 1 (the node itself was created either way).
-        if (missingIds.length > 0) {
+            // A default that didn't resolve is a field the node should have and
+            // doesn't — the commit above clears the draft, so nothing will retry it.
+            // Report the loss rather than lose it silently; no retry machinery in
+            // Phase 1 (the node itself was created either way).
+            if (missingIds.length > 0) {
+                getSnackbarService().show({
+                    variant: 'error',
+                    message: `${missingIds.length} default field(s) couldn't be added — Library unavailable`,
+                });
+            }
+
+            completeConstruction();
+        } catch (err) {
+            // Nothing above was reporting: this is an async handler the caller
+            // used to drop on the floor, so a Create dispatched before the bus
+            // existed became an uncaught rejection and a silently lost node.
+            // `completeConstruction()` is deliberately skipped — the card stays
+            // open with everything the user typed, so retrying is one tap.
             getSnackbarService().show({
                 variant: 'error',
-                message: `${missingIds.length} default field(s) couldn't be added — Library unavailable`,
+                message: err instanceof Error ? err.message : 'Could not create the asset',
             });
         }
-
-        completeConstruction();
     };
 
     return {

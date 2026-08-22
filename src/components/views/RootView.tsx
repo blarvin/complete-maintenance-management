@@ -3,12 +3,13 @@
  * Uses centralized FSM state for navigation and construction.
  */
 
-import { createMemo, For, Show } from 'solid-js';
+import { createMemo, createResource, For, Show } from 'solid-js';
 import { TreeNode } from '../TreeNode/TreeNode';
 import { CreateNodeButton } from '../CreateNodeButton/CreateNodeButton';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useNodeCreation } from '../../hooks/useNodeCreation';
 import { useElementChildren } from '../../hooks/useElementChildren';
+import { initializeStorage } from '../../data/storage/initStorage';
 import { isLensSurfaced } from '../../kinds/childrenPolicy';
 import { RE_ROOT_CREATE_KINDS } from '../../kinds/registry';
 
@@ -20,6 +21,19 @@ export const RootView = () => {
     const { children: nodes, isLoading } = useElementChildren(() => null, 'nodes');
 
     const { ucNode, start, cancel, complete } = useNodeCreation(() => null);
+
+    /**
+     * Whether there is a command bus yet for a Create to reach.
+     *
+     * Not `isLoading()`, which cannot answer this: `useElementChildren` sets it
+     * only *after* `await initializeStorage()`, so through the whole init window
+     * it reads false — the same false as "finished". That is exactly the window
+     * this guards, so it needs the promise itself. `initializeStorage()` resolves
+     * on failure too, so a broken boot re-enables the button rather than
+     * stranding it; the Create then fails loudly through `complete()`'s own
+     * error path.
+     */
+    const [storageReady] = createResource(() => initializeStorage().then(() => true));
 
     // Filter out the UC node from the list to prevent dual rendering — the bus
     // reload can land the newly created node in `nodes` while `underConstruction`
@@ -66,10 +80,13 @@ export const RootView = () => {
                         />
                     )}
                 </Show>
+                {/* Disabled, not withheld, until storage is up: the tree keeps
+                    painting immediately and this is the only thing that waits. */}
                 <CreateNodeButton
                     variant="root"
                     availableKinds={RE_ROOT_CREATE_KINDS.filter((k) => !isLensSurfaced(k))}
                     onClick={start}
+                    disabled={!storageReady()}
                 />
             </main>
         </Show>

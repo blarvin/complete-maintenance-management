@@ -13,13 +13,23 @@ export type CreateNodeButtonProps = {
     availableKinds: Kind[];
     /** Receives the kind chosen in the picker (re-root kinds; defaults to the first available). */
     onClick?: (kind: Kind) => void;
+    /**
+     * Offered but not yet usable — storage is still initializing, so there is no
+     * command bus for the Create this opens to reach. Shown disabled rather than
+     * withheld: the affordance is where the reader expects it and arrives a beat
+     * later, where a button that pops into existence reads as a glitch.
+     */
+    disabled?: boolean;
 };
 
 export const CreateNodeButton = (props: CreateNodeButtonProps) => {
     // eslint-disable-next-line solid/reactivity -- seeds once and never reseeds on prop change, matching the pre-migration useSignal(initial) semantics
     const [selectedKind, setSelectedKind] = createSignal<Kind>(props.availableKinds[0] ?? 'node');
 
-    const handleClick = () => props.onClick?.(selectedKind());
+    const handleClick = () => {
+        if (props.disabled) return;
+        props.onClick?.(selectedKind());
+    };
 
     // Picker over the parent's admitted re-root kinds. Shown only when there's a
     // real choice; otherwise the lone kind is implied by the button.
@@ -48,6 +58,7 @@ export const CreateNodeButton = (props: CreateNodeButtonProps) => {
                         type="button"
                         classList={{ [styles.createNode]: true, 'no-caret': true }}
                         onClick={handleClick}
+                        disabled={props.disabled}
                         aria-label="Create New Asset"
                     >
                         Create New Asset
@@ -66,6 +77,7 @@ export const CreateNodeButton = (props: CreateNodeButtonProps) => {
                             'no-caret': true,
                         }}
                         onClick={handleClick}
+                        disabled={props.disabled}
                         aria-label="Add Sub-Asset"
                     >
                         + Add Sub-Asset

@@ -28,7 +28,9 @@ export type TreeNodeConstructionProps = {
     /** When true, this is a child construction (inside branch-children, DataCard extends wider) */
     isChildConstruction?: boolean;
     onCancel: () => void;
-    onCreate: (payload: CreateNodePayload) => void;
+    /** Async in every caller (`useNodeCreation.complete`); awaited, so a failure
+     *  cannot become an uncaught rejection. */
+    onCreate: (payload: CreateNodePayload) => void | Promise<void>;
 };
 
 export const TreeNodeConstruction = (props: TreeNodeConstructionProps) => {
@@ -45,13 +47,16 @@ export const TreeNodeConstruction = (props: TreeNodeConstructionProps) => {
         nameInputEl?.focus();
     });
 
-    const handleCreate = () => {
+    const handleCreate = async () => {
         const name = nameInputEl?.value || '';
         // Guard: Name is required. The button is also disabled, but Enter can reach here.
         if (name.trim() === '') return;
         const subtitle = subtitleInputEl?.value || '';
 
-        props.onCreate({ name, subtitle });
+        // Awaited: `complete()` is async and reports its own failures, so
+        // dropping the promise here is what turned a failed Create into a
+        // console rejection and a lost node.
+        await props.onCreate({ name, subtitle });
     };
 
     const handleCancel = () => {
@@ -62,7 +67,7 @@ export const TreeNodeConstruction = (props: TreeNodeConstructionProps) => {
     const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            handleCreate();
+            void handleCreate();
         } else if (e.key === 'Escape') {
             e.preventDefault();
             handleCancel();
@@ -96,7 +101,7 @@ export const TreeNodeConstruction = (props: TreeNodeConstructionProps) => {
                         <button type="button" onClick={handleCancel}>Cancel</button>
                         <button
                             type="button"
-                            onClick={handleCreate}
+                            onClick={() => void handleCreate()}
                             disabled={!nameValue().trim()}
                         >
                             Create

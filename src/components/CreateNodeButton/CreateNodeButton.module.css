@@ -52,6 +52,16 @@
     background: var(--bg-muted);
 }
 
+/* Not yet usable (storage still initializing). Deliberately quiet — this state
+   lasts a beat, so it must not read as a surface that is broken. `:hover` is
+   scoped past it so the affordance stops responding as well as stops working. */
+.createNode:disabled,
+.createNode:disabled:hover {
+    background: var(--bg-surface);
+    color: var(--text-disabled);
+    cursor: default;
+}
+
 /* Child variant */
 .createNodeChild {
     height: var(--node-child-height);

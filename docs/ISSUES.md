@@ -62,8 +62,6 @@ the comment when the item goes.
 
 2.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
 
-3.) `[auto]` **Create surfaces are live before the command bus exists** — `RootView`'s guard is `isLoading() && nodes().length === 0`, and `useElementChildren` only sets `isLoading` *after* `await initializeStorage()` (`useElementChildren.ts:51-52`), so first paint renders the whole view, `CreateNodeButton` included, while init is still in flight. `start()` is harmless (no bus), but the Create it opens calls `getCommandBus()` (`useNodeCreation.ts:101`) inside an un-awaited `complete()` — so a fast click on a slow boot is an uncaught rejection and a silently lost node. Read from the code 2026-08-21. **Decided 2026-08-22: disable the Create affordance while `isLoading()`, don't gate the view.** The tree keeps painting immediately — no empty first frame — and only `CreateNodeButton` carries a disabled state until init resolves. Await `complete()` as well so any surviving rejection reaches the error snackbar instead of the console.
-
 
 ## UI, styling, layout
 
