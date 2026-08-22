@@ -6,19 +6,30 @@ for, and what each test layer actually owns.
 
 ## The three run modes
 
-One `vite build` artifact is served three ways, and they differ only in whether
-the **dev gate** (`DEV_TOOLS_ENABLED` = `import.meta.env.DEV || isEmulatorTarget`)
-is open. The gate governs `devLog` tracing and the `window.__*` helpers.
+One `vite build` artifact is served several ways, and they differ only in whether
+the **dev gate** (`DEV_TOOLS_ENABLED` = `import.meta.env.DEV || isEmulatorTarget
+|| devToolsRequested()`) is open. The gate governs `devLog` tracing and the
+`window.__*` helpers.
+
+**Which remote and whether the tools are open are two axes, not one.**
 
 | Mode | Command | Syncs against | Dev gate |
 |---|---|---|---|
 | Dev server | `npm run dev` → :5173 | production Firestore | **open** |
 | Built app | `npm run preview:pwa` → :4173 | production Firestore | **shut** |
 | Built app, emulator | same, + `?emulator=true` | emulator :8080 | **open** |
+| Deployed app | Netlify | production Firestore | **shut** |
+| Deployed app, tools | same, + `?devtools=true` | production Firestore | **open** |
+
+`?devtools=true` (or `localStorage.setItem('DEV_TOOLS','true')`) opens the gate
+and nothing else — it is the one to reach for on the deploy. Do **not** use
+`?emulator=true` for that: it is not a hatch but a move, renaming the Dexie
+database and repointing sync at a :8080 that isn't running out there.
 
 `npm run dev` registers no service worker — `preview:pwa` is the only way to
-exercise the PWA. An installed PWA's `start_url` carries no query string, so
-emulator mode there needs `localStorage.setItem('USE_FIRESTORE_EMULATOR','true')`.
+exercise the PWA. An installed PWA's `start_url` carries no query string, so both
+flags need their localStorage form there
+(`USE_FIRESTORE_EMULATOR` / `DEV_TOOLS`).
 The **EMULATOR** badge is on screen whenever you are pointed at :8080; if you
 expected it and don't see it, you are talking to production.
 
@@ -40,7 +51,13 @@ is the point: pick the one you actually mean.
 | Fully clean slate | `npm run wipe:emulator`, then `__wipeLocal()` |
 | A tree to look at, on a clean slate | `__wipeLocal()`, then `await window.__mintDemoTree()` |
 
-The console helpers need the gate open, so run them on :5173 or in emulator mode.
+The console helpers need the gate open, so run them on :5173, in emulator mode,
+or on the deploy with `?devtools=true`. **That last one is the only way to reset
+the deployed app properly** — without it there are no `window.__*` globals to
+call, and the nearest hand equivalent
+(`indexedDB.deleteDatabase('complete-maintenance-management')`) reaches
+`__wipeLocal()` but nothing else: `__mintDemoTree()` is bundled module code with
+no console handle in a minified build.
 
 **One wipe you don't ask for: `npm run test`.** `firestoreAdapter.test.ts` clears
 the whole emulator project in `beforeEach`, and it sits in the default suite —
