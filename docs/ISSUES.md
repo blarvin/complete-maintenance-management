@@ -8,7 +8,7 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **One-line outcomes**, not task breakdowns. "Delete with undo" beats five bullets about dialogs + snackbars + cascades. Say where it came from — "surfaced in the Phase IV hand-test", "same in the Qwik original". An item with no provenance is a guess.
 - **One screen where it counts.** Bugs and Features stay scannable — prune to LATER.md or delete. The themed sections and Tech Debt are long tails; sweep them when they stop being read.
 - **Sections group; position is a hint, not a queue.** Work is picked by what's worth doing, not by order. No statuses. Section membership is a label, not part of an item's identity — moving one between sections changes nothing about it.
-- **Agents append to the bottom** of a section, taking the next unused number *in the file*, and only file what they observed. Reordering is the dev's.
+- **Agents append to the bottom** of a section, taking one past the highest number ever issued (see *Item numbers* below), and only file what they observed. Reordering is the dev's.
 - **Bugs first**, then Features, then Tech Debt.
 - For deferred ideas see LATER.md. For product scope see SPECIFICATION.md.
 
@@ -32,8 +32,22 @@ the dev's call and a commit is the wrong place to discover the pick was wrong.
 
 **Item numbers are stable ids, unique across the whole file.** One sequence runs
 through every section; deletions leave gaps and nothing ever renumbers. A new
-item takes the next unused number in the file, not in its section, so a section
-reads with jumps in it — that is expected and carries no meaning.
+item takes **one past the highest number ever issued** — never the lowest unused
+one. Gaps are permanent on purpose: refilling `#7` would silently repoint every
+citation the old `#7` ever earned, which is the rot stable ids exist to prevent.
+The number comes from the file rather than from the section, so a section reads
+with jumps in it — expected, and carrying no meaning.
+
+**The high-water mark.** *Highest ever issued* is normally just the highest
+number present, and stops being that the moment the top item is resolved. So
+**deleting the highest-numbered item leaves its bare number behind**: if `#48`
+goes, a lone `48.)` stays, at the foot of the file below the last section —
+it belongs to the sequence, not to a section. No date and no note; completion
+lives in git history, and `git log -S "48.)" -- docs/ISSUES.md` says when and
+why. Gaps in the *middle* get no marker at all — `45, 46, 48` already says 47
+existed, and a column of dead numbers would cost Bugs and Features the one screen
+they are held to. Nor can a mark accumulate: **any** new item clears it, because
+the new number lands above it and a live item carries the ceiling again.
 
 Set 2026-08-22, replacing per-section numbers that restarted at 1 and a rule that
 renumbered on every delete. Two things forced it. **`#12` used to be ambiguous
@@ -44,7 +58,7 @@ without changing its number**, which is the same rot the stable-id rule exists t
 prevent; reclassification is common here, so per-section ids were only
 half-stable. A global id survives both.
 
-So **citing `ISSUES #40` from a code comment is legitimate**, and the section name
+So **citing `ISSUES #33` from a code comment is legitimate**, and the section name
 is optional garnish. But it is legitimate *rarely*, and the sweep that repointed
 the eleven pre-existing citations on 2026-08-22 is why: **every one of them
 described work that had already landed** — the sync purge, the delta cursor, the
