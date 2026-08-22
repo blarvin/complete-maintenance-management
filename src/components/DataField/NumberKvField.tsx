@@ -182,6 +182,9 @@ const NumberKvBody = (props: NumberKvFieldProps & { config: NumberKvConfig }) =>
                     ref={setEditInputRef}
                     type="text"
                     inputMode="decimal"
+                    // The action key commits and dismisses — it does not advance
+                    // to a next field. See useFieldEdit → inputBlur.
+                    enterkeyhint="done"
                     classList={{
                         [styles.datafieldValue]: true,
                         [numberStyles.input]: true,

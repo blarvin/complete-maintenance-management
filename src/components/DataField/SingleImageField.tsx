@@ -120,6 +120,9 @@ export const SingleImageField = (props: SingleImageFieldProps) => {
                 >
                     <input
                         ref={setEditInputRef}
+                        // The action key commits and dismisses — it does not
+                        // advance to a next field. See useFieldEdit → inputBlur.
+                        enterkeyhint="done"
                         classList={{
                             [styles.datafieldValue]: true,
                             [imageStyles.captionInput]: true,

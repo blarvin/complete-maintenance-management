@@ -9,6 +9,7 @@
  * Handles:
  * - Edit mode state (via appState FSM)
  * - Double-tap to edit; double-tap-while-editing cancels
+ * - Commit on Enter or blur; cancel on Escape, outside-click, or double-tap
  * - Focus management + outside-click cancel
  * - No-op gate: identical newVal/prevVal skips dispatch (no history, no sync)
  * - Snackbar + error handling on save
@@ -129,37 +130,52 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         startFieldEdit(options.fieldId);
     };
 
+    /**
+     * Re-entrancy latch. The FSM guard on the first line of `save` is what stops
+     * a second commit, but it reads state `stopFieldEdit` only writes *after*
+     * the await — so two events landing in that window would both commit. The
+     * window became reachable when blur started saving: a phone's action key can
+     * deliver an `Enter` keydown *and* a blur, and each calls `save`.
+     */
+    let saving = false;
+
     const save = async () => {
+        if (saving) return;
         if (appState.editingElementId !== options.fieldId) return;
-        const fieldId = options.fieldId;
-        const prevVal = currentValue();
-        let newVal: T | null;
+        saving = true;
         try {
-            newVal = options.parse(editValue());
-            if (options.validate) options.validate(newVal);
-        } catch (err) {
-            getSnackbarService().show({
-                variant: 'error',
-                message: err instanceof Error ? err.message : 'Invalid value',
+            const fieldId = options.fieldId;
+            const prevVal = currentValue();
+            let newVal: T | null;
+            try {
+                newVal = options.parse(editValue());
+                if (options.validate) options.validate(newVal);
+            } catch (err) {
+                getSnackbarService().show({
+                    variant: 'error',
+                    message: err instanceof Error ? err.message : 'Invalid value',
+                });
+                return;
+            }
+            // No-op gate: identical value skips dispatch (no history, no sync, no
+            // snackbar). Ahead of the commit because only a persisted row can
+            // produce one — a buffered row's host wants every keystroke it settles.
+            if (!options.pendingMode && newVal === prevVal) {
+                stopFieldEdit();
+                return;
+            }
+            const ok = await commitFieldValue<T>({
+                fieldId,
+                prev: prevVal,
+                next: newVal,
+                pendingMode: options.pendingMode,
             });
-            return;
-        }
-        // No-op gate: identical value skips dispatch (no history, no sync, no
-        // snackbar). Ahead of the commit because only a persisted row can
-        // produce one — a buffered row's host wants every keystroke it settles.
-        if (!options.pendingMode && newVal === prevVal) {
-            stopFieldEdit();
-            return;
-        }
-        const ok = await commitFieldValue<T>({
-            fieldId,
-            prev: prevVal,
-            next: newVal,
-            pendingMode: options.pendingMode,
-        });
-        if (ok) {
-            setCurrentValue(newVal);
-            stopFieldEdit();
+            if (ok) {
+                setCurrentValue(newVal);
+                stopFieldEdit();
+            }
+        } finally {
+            saving = false;
         }
     };
 
@@ -201,16 +217,25 @@ export function useFieldEdit<T extends DataFieldValue>(options: UseFieldEditOpti
         setEdit(value);
     };
 
+    /**
+     * Blur **saves**, on a persisted row exactly as on a `pendingMode` one.
+     *
+     * It used to branch: `pendingMode` saved, persisted discarded the buffer.
+     * On a desktop the only way to blur is to click away, so discarding read as
+     * "cancel" and nobody noticed — but on a phone the on-screen keyboard's
+     * action key *is* a blur, which left no reachable way to commit at all
+     * (the mobile-cannot-persist report). Cancel is still reachable, by the two
+     * gestures that always meant it: Escape, and tapping outside the row.
+     *
+     * Tapping outside keeps cancelling because `pointerdown` lands before
+     * `blur`: `onDocumentPointerDown` closes the FSM first, so the guard below
+     * fails and this never saves. That ordering is the whole mechanism — don't
+     * move the outside-click listener to `click`.
+     */
     const inputBlur = () => {
         if (Date.now() < suppressBlurUntil.value) return;
-        if (appState.editingElementId === options.fieldId) {
-            if (options.pendingMode) {
-                void save();
-            } else {
-                stopFieldEdit();
-                setEdit(options.format(currentValue()));
-            }
-        }
+        if (appState.editingElementId !== options.fieldId) return;
+        void save();
     };
 
     const inputKeyDown = (e: KeyboardEvent) => {

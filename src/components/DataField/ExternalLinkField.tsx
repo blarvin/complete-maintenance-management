@@ -117,6 +117,9 @@ export const ExternalLinkField = (props: ExternalLinkFieldProps) => {
             <input
                 ref={setEditInputRef}
                 type="url"
+                // The action key commits and dismisses — it does not advance to
+                // a next field. See useFieldEdit → inputBlur.
+                enterkeyhint="done"
                 classList={{
                     [styles.datafieldValue]: true,
                     [styles.datafieldValueUnderlined]: !!editValue(),

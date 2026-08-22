@@ -25,7 +25,7 @@ item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
 and are gone, one commit each, so their numbers are permanent gaps like any
 other.
 
-**Six carry it now, set the same day: #8, #9, #12, #36, #46, #50.**
+**Five carry it now, set the same day: #8, #9, #12, #36, #46.**
 Every one of them names its decision inline, in a paragraph that says *Decided
 2026-08-22* and what was rejected — which is what makes the tag honest rather
 than a shortcut. A tenth was tagged with no decision attached, which is the one
@@ -84,18 +84,6 @@ the comment when the item goes.
 2.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
 
 49.) **On DuckDuckGo browser: right edge is smashed against the window edge.**
-
-50.) `[auto]` **On mobile (Chrome, DDG, PWA) cannot persist Field value.** - OSK 'enter' exits and jumps focus instead.
-
-**Diagnosed 2026-08-22, and it is not the keyboard.** `useFieldEdit.inputBlur` branches: a `pendingMode` row calls `save()`, a *persisted* row calls `stopFieldEdit()` and resets the buffer — **blur discards the edit**. On a desktop the only way to blur is to click away, so that reads as "cancel" and nobody noticed. On a phone the OSK action key *is* a blur, so there is no reachable way to commit at all. `onDocumentPointerDown` (outside-click) carries the same two-branch shape for the same reason.
-
-Proven with a throwaway Cypress spec at the config's 375×667, five cases, deleted after: **A** Enter commits ✅ · **D** the *same* blur on a draft row keeps the value ✅ (that is the other branch) · **E** tapping outside the row still cancels ✅ · **B** blur alone loses it ❌ · **C** an OSK-shaped `keydown` (`key: 'Unidentified'`, `keyCode: 229`) then blur loses it ❌. **B is red with no keydown at all**, which rules out the obvious theory — key-code handling is not the hole, so do not go chasing `keyCode 229` or `compositionend`. `BLUR_SUPPRESS_WINDOW_MS` (220ms, armed only by `inputPointerDown`) is not implicated either.
-
-Hits the five text-buffer kinds — `text-kv`, `number-kv`, `single-image`, `internal-link`, `external-link` — i.e. everything through `useValueSlot`. **Not** `enum-kv`, which commits on the option tap and never holds an edit buffer, and not the Config band, whose `LeafRow` already commits on native `change` (blur or Enter) — the band was right all along.
-
-**Decided 2026-08-22: blur saves, plus `enterkeyhint="done"`.** The persisted arm of `inputBlur` calls `save()`, exactly as the `pendingMode` arm already does; the no-op gate means an unchanged value still dispatches nothing. `enterkeyhint="done"` goes on the edit inputs so the action key reads Done and dismisses rather than advancing, which answers the *jumps focus* half of the report (`NumberKvField` already sets `inputMode`, so keyboard hints have precedent here).
-
-Two things the fix must not disturb, both already pinned by the cases above. **Outside-click must keep cancelling** — it survives because `pointerdown` lands before `blur`, so the document listener closes the FSM and blur's own `editingElementId` guard then fails; case E is the guard, and it must stay green. And **Enter must not double-save** for the same reason. Rebuild A–E as the regression spec and land it green rather than committing it red (the rule #39 set). Leave the textarea's Enter-saves-instead-of-newline behaviour alone — that is deliberate, and `TextKvField`'s docblock says why the textarea exists at all.
 
 ## UI, styling, layout
 
@@ -178,3 +166,5 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 46.) `[auto]` **The Add Surface loses its whole draft on reload** — `AddFieldSurface.tsx` has no persistence of any kind: no `localStorage`, no `beforeunload`, no `visibilitychange` (verified by search, 2026-08-22). The composer it replaced persisted ticked rows to `pendingFields:<nodeId>`, so this is a capability the tree-native surface did not inherit — and the loss is larger than the old composer bug, which dropped only uncommitted keystrokes while keeping the ticked rows.
 
 **Decided 2026-08-22: persist the whole draft, keyed by node.** Name, kind, config and value — not a subset — because the thing actually worth losing sleep over is an authored `number-kv` config set knob by knob, and a half-persisted draft raises a question a full one does not (what a stored config means once the kind changed under it). Cleared on Create and on Cancel, the two places `useDefinitionDraft.reset()` already runs. `pendingDraft.ts` is the model to follow and is still live for node construction, so the shape is known — but this is a *new* store for the tree-native surface, not a restoration of the composer's, and it must not resurrect `pendingFields:<nodeId>`. The surviving-collapse case is already covered by `add-surface.cy.ts`; a reload case wants a spec beside it.
+
+50.)

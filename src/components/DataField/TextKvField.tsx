@@ -136,6 +136,9 @@ const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
                 fallback={
                     <input
                         ref={setEditInputRef}
+                        // The action key commits and dismisses — it does not
+                        // advance to a next field. See useFieldEdit → inputBlur.
+                        enterkeyhint="done"
                         classList={{
                             [styles.datafieldValue]: true,
                             [styles.datafieldValueUnderlined]: !!editValue(),
@@ -152,6 +155,9 @@ const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
             >
                 <textarea
                     ref={setEditInputRef}
+                    // Truthful here too: this textarea's Enter saves rather than
+                    // inserting a newline (deliberate — see the docblock above).
+                    enterkeyhint="done"
                     classList={{
                         [styles.datafieldValue]: true,
                         [styles.datafieldTextarea]: true,
