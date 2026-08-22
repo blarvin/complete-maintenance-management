@@ -4,7 +4,7 @@
  * testable and usable from any layer).
  *
  * A lens Element may carry a `definitionId` bound at provision time
- * (stamp-if-resolvable, handlers.ts). Its Definition's config supplies the
+ * (stamp-if-resolvable, provisionLenses.ts). Its Definition's config supplies the
  * policy; a lens with no binding (jobs, pre-existing lenses) falls back to the
  * target kind's `pickerLabel`, which the caller passes in.
  */

@@ -13,7 +13,7 @@ import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import type { CreateNodePayload } from './types';
-import { CONSTRUCTION_DEFAULT_DEFINITION_IDS } from '../../data/definitionIds';
+import { constructionDefaults } from '../../data/packs/activePack';
 import styles from './TreeNode.module.css';
 
 // Re-export for backwards compatibility
@@ -105,7 +105,7 @@ export const TreeNodeConstruction = (props: TreeNodeConstructionProps) => {
                 <FieldList
                     nodeId={props.id}
                     isConstruction={true}
-                    initialDefinitionIds={CONSTRUCTION_DEFAULT_DEFINITION_IDS}
+                    initialDefinitionIds={constructionDefaults()}
                 />
             </DataCard>
         </div>

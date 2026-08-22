@@ -52,3 +52,13 @@ export const DEFAULT_DURATIONS: Record<SnackbarVariant, number> = {
     info: 5000,
     error: 8000,
 };
+
+/**
+ * `durationMs` for a toast that must not time out — a condition the user has to
+ * act on, not an event that has passed (today: a degraded boot).
+ *
+ * The largest delay `setTimeout` accepts rather than `Infinity`: a 32-bit
+ * overflow fires the timer *immediately*, which would make "persistent" the one
+ * value that dismisses fastest. ~24 days outlives any session.
+ */
+export const PERSISTENT_DURATION = 2_147_483_647;

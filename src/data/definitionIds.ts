@@ -30,13 +30,9 @@ export const LIBRARY_CHROME_IDS = {
   kinds: 'lib_kinds',
 } as const;
 
-/**
- * The Definitions every new node is born with (SPEC → *Default DataFields at
- * Node Creation*). Owned here rather than by a picker component: node creation
- * seeds them whether or not any add-field surface is mounted.
+/*
+ * Which Definitions a new node is born with is no longer here: it is pack data,
+ * read through `constructionDefaults()` (`src/data/packs/activePack.ts`). This
+ * module stays a pure id vocabulary — the ids other layers name, nothing about
+ * how they are used.
  */
-export const CONSTRUCTION_DEFAULT_DEFINITION_IDS = [
-  DEFINITION_IDS.typeOf,
-  DEFINITION_IDS.description,
-  DEFINITION_IDS.tags,
-] as const;

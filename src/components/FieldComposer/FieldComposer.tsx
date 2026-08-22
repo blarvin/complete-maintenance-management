@@ -60,8 +60,9 @@ export const FieldComposer = (props: FieldComposerProps) => {
         }
         if (props.mode === 'construction' && props.lockedDefinitionIds && props.lockedDefinitionIds.length > 0) {
             // The draft store owns seeding, so node creation can seed the same
-            // rows with no composer mounted (see useNodeCreation.complete).
-            return seedPendingDraft(props.nodeId, props.lockedDefinitionIds);
+            // rows with no composer mounted (see useNodeCreation.complete),
+            // which is also where the unresolved ids are reported.
+            return (await seedPendingDraft(props.nodeId, props.lockedDefinitionIds)).forms;
         }
         return [];
     };

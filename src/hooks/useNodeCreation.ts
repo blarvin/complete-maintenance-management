@@ -15,7 +15,8 @@ import type { Accessor } from 'solid-js';
 import { useAppState, useAppTransitions } from '../state/appState';
 import { getCommandBus } from '../data/commands';
 import { commitPendingDraft, discardPendingDraft, seedPendingDraft } from '../data/services/pendingDraft';
-import { CONSTRUCTION_DEFAULT_DEFINITION_IDS } from '../data/definitionIds';
+import { constructionDefaults } from '../data/packs/activePack';
+import { getSnackbarService } from '../services/snackbar';
 import { generateId } from '../utils/id';
 import type { Kind } from '../data/models';
 import type { UnderConstructionData } from '../state/appState.types';
@@ -113,14 +114,26 @@ export function useNodeCreation(parentId: Accessor<string | null>): UseNodeCreat
         // The construction defaults are a node-creation policy, not a side
         // effect of rendering a picker: seed them here so a new node is born
         // with them even when every add-field surface is switched off
-        // (ENABLED_ADD_FIELD_SURFACES). Stored-draft-wins, so when a surface
+        // (ENABLED_ADD_FIELD_SURFACES). Which Definitions those are is pack
+        // data, resolved at call time. Stored-draft-wins, so when a surface
         // *is* mounted it has already seeded the same rows and this is a no-op.
-        await seedPendingDraft(ucData.id, CONSTRUCTION_DEFAULT_DEFINITION_IDS);
+        const { missingIds } = await seedPendingDraft(ucData.id, constructionDefaults());
 
         // Commit the in-flight draft (localStorage, keyed by nodeId) against the
         // freshly-created node. -1 so the first field lands at siblingOrder 0.
         // Clears the draft internally.
         await commitPendingDraft(ucData.id, -1);
+
+        // A default that didn't resolve is a field the node should have and
+        // doesn't — the commit above clears the draft, so nothing will retry it.
+        // Report the loss rather than lose it silently; no retry machinery in
+        // Phase 1 (the node itself was created either way).
+        if (missingIds.length > 0) {
+            getSnackbarService().show({
+                variant: 'error',
+                message: `${missingIds.length} default field(s) couldn't be added — Library unavailable`,
+            });
+        }
 
         completeConstruction();
     };

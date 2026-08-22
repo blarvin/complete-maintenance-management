@@ -7,11 +7,11 @@
  * production Firestore database. Since config-as-Elements, Library Definitions
  * are `treeType: 'library'` rows in the `elements` collection, so any synced
  * Definitions are wiped too — the client reseeds its Library locally on next
- * launch (seedDefinitions, version-gated). The legacy `fieldDefinitions`
+ * launch (the `library-*` bootstrap populations, revision-gated). The legacy `fieldDefinitions`
  * collection is not in the list; scripts/wipe-field-definitions.ts clears it.
  *
  * Wiping the server no longer clears any client: full sync stopped purging
- * local rows (ISSUES Bugs #4), so clients keep everything they hold. That is
+ * local rows (IMPLEMENTATION.md → *Retention over reconciliation*), so clients keep everything they hold. That is
  * the point — but it means this script alone will not give you a clean slate.
  * For that, prefer `npm run wipe:emulator` plus `window.__wipeLocal()`.
  */

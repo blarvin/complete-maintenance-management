@@ -36,8 +36,9 @@ is the point: pick the one you actually mean.
 |---|---|
 | Clear this browser's data | `await window.__wipeLocal()` (deletes the DB, reloads) |
 | Clear the emulator | `npm run wipe:emulator` |
-| Factory-reset the Library only | `await window.__wipeDefinitions()`, then reload to re-seed |
+| Re-seed the Library from the pack | `await window.__wipeDefinitions()` (drops the Library, reloads) |
 | Fully clean slate | `npm run wipe:emulator`, then `__wipeLocal()` |
+| A tree to look at, on a clean slate | `__wipeLocal()`, then `await window.__mintDemoTree()` |
 
 The console helpers need the gate open, so run them on :5173 or in emulator mode.
 
@@ -57,6 +58,43 @@ care about sitting there while you run the suite. Cypress is the same bargain
 item's status, retry count and last error — the first thing to check when a
 "changes failed to sync" toast appears. `__wipeDefinitions()` and `__wipeLocal()`
 are the resets above.
+
+### The two you'll reach for most: wipe, then mint
+
+```js
+await window.__wipeLocal()     // deletes this browser's DB and reloads
+await window.__mintDemoTree()  // ~60 Elements: three roots of example assets
+```
+
+**`__wipeLocal()`** is the honest fresh-profile test. It deletes the whole local
+database and reloads, so the app re-inits from nothing: the bundled pack re-seeds
+(30 Definitions + the Library chrome), the node index rebuilds, lenses get
+provisioned as nodes arrive. Reach for it after **anything that changes seeded
+data** — a population `revision` bump, an edit to `src/data/packs/defaultPack.ts`,
+a new kind — because each bootstrap population is revision-gated and an unchanged
+revision means your edit is simply never written. It **never touches the server**: a local reset and
+a remote wipe are different intentions (see the table above). Each sync target
+has its own database, so wiping in emulator mode leaves your production-mode data
+alone, and vice versa.
+
+**`__mintDemoTree()`** fills the empty tree with something worth looking at:
+Workshop & Utilities, Production Line and Farm Machinery, ~8 assets with filled
+fields, a few jobs and logbook entries, one nested child on two of them. Use it
+when you want a populated app in one command — checking a rendering change,
+demoing, or eyeballing a pack edit against real values instead of "Empty" rows.
+
+It mints through the **command bus**, exactly like the UI: lenses provision
+themselves, the logbook policy gets stamped, each field snapshots its
+Definition's label. So it is also a smoke test — if `__mintDemoTree()` throws,
+something on the create path is broken. Fixture data, deliberately *not* part of
+the pack format (`src/data/fixtures/demoTree.ts` says why).
+
+Ids are deterministic (`demo_*`), so it is idempotent by refusing: a second call
+returns *"already minted — run `__wipeLocal()` to re-mint"* rather than
+duplicating or overwriting rows you may have edited. To get the tree back to its
+authored state, wipe first. Demo rows **do** enqueue sync, which is correct —
+they are ordinary user-shaped data — so mint in emulator mode unless you actually
+want them in production Firestore.
 
 ## Tests
 
