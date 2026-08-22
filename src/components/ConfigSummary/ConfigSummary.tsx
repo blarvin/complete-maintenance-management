@@ -20,6 +20,8 @@
 
 import { For, Show, createMemo } from 'solid-js';
 import { useElementChildren } from '../../hooks/useElementChildren';
+import { useAppTransitions } from '../../state/appState';
+import { LIBRARY_CHROME_IDS } from '../../data/definitionIds';
 import { getInlineManifest } from '../../kinds/registry';
 import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
 import { configChildId } from '../../kinds/configElements';
@@ -30,9 +32,11 @@ export type ConfigSummaryProps = {
     definitionId: string;
     /**
      * Where these values come from — the Definition's label. Rendered as a
-     * provenance line so a reader can tell that the config belongs to the
-     * Definition rather than to this instance. Omitted by the picker, where the
-     * rows already sit inside the Definition's own row.
+     * provenance line, and *as the link to the Library*: the line already names
+     * the Definition, so making it the affordance costs the Config band no new
+     * row (it is already deeply nested, ISSUES #38). Omitted by the picker,
+     * where the rows already sit inside the Definition's own row — and where
+     * there is nowhere to travel to.
      */
     source?: string;
     /**
@@ -48,6 +52,25 @@ type SummaryRow = { label: string; text: string };
 
 export const ConfigSummary = (props: ConfigSummaryProps) => {
     const { children: subFields } = useElementChildren(() => props.definitionId, 'fields');
+    const { revealElement } = useAppTransitions();
+
+    /**
+     * Travel to the Definition in the Library's Definitions lens — a reveal, not
+     * a re-root to the Library, so it costs nothing if it wasn't what you
+     * wanted. The same transition `internal-link`'s `→` uses, hence a button
+     * rather than a URL.
+     *
+     * `branchId` is the `definitions` chrome element, not the Definition's own
+     * `parentId`: a Definition is a `library`-tree *root* (parentId null), and
+     * null would land on the ROOT view of the business tree instead of the lens
+     * that draws it.
+     */
+    const showInLibrary = () => {
+        revealElement({
+            elementId: props.definitionId,
+            branchId: LIBRARY_CHROME_IDS.definitions,
+        });
+    };
 
     const rows = createMemo((): SummaryRow[] => {
         const stored = subFields();
@@ -83,7 +106,16 @@ export const ConfigSummary = (props: ConfigSummaryProps) => {
                     )}
                 </For>
                 <Show when={props.source}>
-                    <div class={styles.source}>from {props.source}</div>
+                    {(source) => (
+                        <button
+                            type="button"
+                            class={styles.source}
+                            onClick={showInLibrary}
+                            aria-label={`Show ${source()} in the Field Library`}
+                        >
+                            from {source()}
+                        </button>
+                    )}
                 </Show>
             </Show>
         </div>

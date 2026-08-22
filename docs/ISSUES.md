@@ -25,7 +25,7 @@ item from here. Agreed 2026-08-11; `git push` stays manual. An earlier nine —
 and are gone, one commit each, so their numbers are permanent gaps like any
 other.
 
-**Three carry it now, set the same day: #8, #9, #12.**
+**Two carry it now, set the same day: #8, #9.**
 Every one of them names its decision inline, in a paragraph that says *Decided
 2026-08-22* and what was rejected — which is what makes the tag honest rather
 than a shortcut. A tenth was tagged with no decision attached, which is the one
@@ -103,11 +103,7 @@ The read is the piece that does not exist yet: `listChildElements` filters delet
 
 11.) **Decide namespace collision scheme for libraryFields with same display name to coexist** — when two libraryFields have the same display name, they will need to coexist in the library. We need to decide how to handle this. They each already have a unique id and version, but that is not UX friendly. They may need byline or description like a subtitle (displayed in Tools section).
 
-12.) `[auto]` **Active link to FieldLibrary from Config section of a Field** — now has a destination to point at (the Definition's entry in the Library lens, built 2026-08-20), and the reveal machinery landed (`useRevealOnArrival`), so the shape is reveal-the-Definition rather than re-root-to-the-Library. Read-only at the far end: the lens writes nothing.
-
-**Decided 2026-08-22: no new row anywhere — the existing provenance line becomes the link.** `ConfigSummary` already renders `from Weight` (its `source` prop), and it is the *same component* mounted by both callers: a persisted Field's Config band, and the Add Surface's band when a Definition has been picked. Making that line the affordance therefore satisfies this item and LATER → *Editing a picked Definition's config from the Add Surface* in one change, with nothing added to a Config band that #38 already flags as deeply nested. `revealElement({ elementId: definitionId, branchId: … })` is the transition, the same one `InternalLinkField`'s `→` uses — a button, not a URL.
-
-13.) **Decide Field "re-configure" UX** — **re-opened 2026-08-20**: the 2026-08-17 edit-in-place answer died with the rejected place-design (SUPERSEDED). Under fork-never-mutate (SPEC → *Edit / Delete Semantics*), "re-configure" means minting a successor Definition and rebinding the instance — the affordance for that is undecided. A Field's Config band still wants a live link to its Definition (same want as Features → *Active link to FieldLibrary from Config section of a Field*); the Library lens gives it a read-only destination.
+13.) **Decide Field "re-configure" UX** — **re-opened 2026-08-20**: the 2026-08-17 edit-in-place answer died with the rejected place-design (SUPERSEDED). Under fork-never-mutate (SPEC → *Edit / Delete Semantics*), "re-configure" means minting a successor Definition and rebinding the instance — the affordance for that is undecided. The *link* half is no longer part of this: the Config band's provenance line reveals the Definition in the Library lens as of 2026-08-22, so what is left here is purely the fork.
 
 15.) **Should TreeNodeDetails' subsections be reorderable?** - It could easily be part of the authoring config. But should it?
 
