@@ -20,9 +20,11 @@ dependency between items belongs in the item's prose, where it can say *why*.
 `[auto]` is the one exception, and it is a permission, not a topic: it marks
 items the agent may take end-to-end without checking in — each self-contained and
 verifiable by typecheck/lint/test. One commit per item, which also deletes the
-item from here. Agreed 2026-08-11; `git push` stays manual. **Nine carried it as
-of 2026-08-22: #3, #7, #17, #34, #39, #40, #42, #43, #44.** Five of those needed
-a decision first; each records it inline, so the tag stays honest.
+item from here. Agreed 2026-08-11; `git push` stays manual. **Nothing carries it
+right now**: the nine that did on 2026-08-22 — #3, #7, #17, #34, #39, #40, #42,
+#43, #44 — were all taken in one pass and are gone, one commit each, so their
+numbers are permanent gaps like any other. Five of them had needed a decision
+first and recorded it inline, which is what kept the tag honest.
 
 The bar is *no decision left in the item*, not *small*. An item that names a
 product or UX choice — even an easy one — is not `[auto]`, because picking it is
