@@ -79,6 +79,13 @@ export function registerAllHandlers(bus: CommandBus, adapter: StorageAdapter): v
     await adapter.softDeleteElement(cmd.payload.id);
   });
 
+  // The delete's audit row, once the undo window has passed without an undo.
+  // Separate command because it is a separate act in time — the tombstone is
+  // immediate, this is not (SPEC → Undo semantics → *History entry deferral*).
+  bus.register('LOG_ELEMENT_DELETE', async (cmd) => {
+    await adapter.logElementDeleteHistory(cmd.payload.id);
+  });
+
   bus.register('RESTORE_ELEMENT', async (cmd) => {
     await adapter.restoreElement(cmd.payload.id);
   });

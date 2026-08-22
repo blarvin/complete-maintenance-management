@@ -46,7 +46,11 @@ describe('IDBAdapter history-rev sequencing', () => {
     await adapter.updateElement('n1', { name: 'A' });
     await adapter.updateElement('n1', { name: 'B' });
     await adapter.softDeleteElement('n1');
+    // The tombstone writes no history; the delete's row is the deferred tail
+    // that lands when the undo window elapses.
+    expect(await revsFor('n1')).toEqual([0, 1, 2]);
 
+    await adapter.logElementDeleteHistory('n1');
     expect(await revsFor('n1')).toEqual([0, 1, 2, 3]);
   });
 

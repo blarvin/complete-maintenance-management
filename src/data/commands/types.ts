@@ -9,6 +9,8 @@ export type Command =
   | { type: 'UPDATE_ELEMENT_VALUE'; payload: { id: string; value: DataFieldValue | null } }
   | { type: 'MOVE_ELEMENT'; payload: { id: string; parentId?: string | null; siblingOrder?: number } }
   | { type: 'DELETE_ELEMENT'; payload: { id: string } }
+  /** The deferred tail of a delete — see SPEC → Undo semantics → *History entry deferral*. */
+  | { type: 'LOG_ELEMENT_DELETE'; payload: { id: string } }
   | { type: 'RESTORE_ELEMENT'; payload: { id: string } };
 
 export type CommandResultMap = {
@@ -20,5 +22,6 @@ export type CommandResultMap = {
   UPDATE_ELEMENT_VALUE: void;
   MOVE_ELEMENT: void;
   DELETE_ELEMENT: void;
+  LOG_ELEMENT_DELETE: void;
   RESTORE_ELEMENT: void;
 };

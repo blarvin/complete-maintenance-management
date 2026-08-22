@@ -73,6 +73,13 @@ export interface StorageAdapter {
   createElement(input: StorageElementCreate): Promise<StorageResult<Element>>;
   updateElement(id: string, updates: StorageElementUpdate): Promise<StorageResult<void>>;
   softDeleteElement(id: string): Promise<StorageResult<void>>;
+  /**
+   * Write the `delete` history row for an already-tombstoned element. Split
+   * from `softDeleteElement` because the tombstone is immediate and the audit
+   * row is deferred to the end of the undo window (SPEC → Undo semantics →
+   * *History entry deferral*), so an undone delete leaves no trace.
+   */
+  logElementDeleteHistory(id: string): Promise<StorageResult<void>>;
   restoreElement(id: string): Promise<StorageResult<void>>;
   getElementHistory(elementId: string): Promise<StorageResult<ElementHistory[]>>;
 }

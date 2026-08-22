@@ -93,6 +93,9 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             message: 'Node deleted',
             execute: () => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: nodeId } }),
             undo: () => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: nodeId } }),
+            // Same deferral as a Field delete: the tombstone is immediate, the
+            // audit row waits out the undo window (SPEC → Undo semantics).
+            onExpire: () => getCommandBus().execute({ type: 'LOG_ELEMENT_DELETE', payload: { id: nodeId } }),
         });
         if (ok) {
             props.onNavigateUp?.(parentId ?? null);

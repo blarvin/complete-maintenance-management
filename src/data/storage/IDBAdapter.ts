@@ -382,6 +382,13 @@ export class IDBAdapter implements SyncableStorageAdapter {
     });
   }
 
+  /**
+   * The tombstone only. The `delete` history row is **not** written here — it
+   * lands from `logElementDeleteHistory`, called when the undo window elapses
+   * (SPEC → Undo semantics → *History entry deferral*). Splitting them is what
+   * makes an undone delete leave no audit trace: the tombstone is immediate and
+   * reversible, the audit row is not.
+   */
   async softDeleteElement(id: string): Promise<StorageResult<void>> {
     return this.run(async () => {
       const existing = await db.elements.get(id);
@@ -390,24 +397,12 @@ export class IDBAdapter implements SyncableStorageAdapter {
       const timestamp = now();
       const userId = getCurrentUserId();
 
-      await db.transaction('rw', db.elements, db.elementHistory, db.syncQueue, async () => {
+      await db.transaction('rw', db.elements, db.syncQueue, async () => {
         await db.elements.update(id, {
           deletedAt: timestamp,
           updatedAt: timestamp,
           updatedBy: userId,
         });
-
-        if (shouldLogHistory(existing.treeType)) {
-          const rev = await this.nextElementRev(id);
-          await this.writeHistory(existing.treeType, {
-            elementId: id,
-            rev,
-            action: 'delete',
-            property: 'value',
-            prevValue: existing.value,
-            newValue: null,
-          });
-        }
 
         const updated = await db.elements.get(id);
         if (updated) {
@@ -425,6 +420,36 @@ export class IDBAdapter implements SyncableStorageAdapter {
         origin: 'local',
         element: { id, kind: existing.kind, parentId: existing.parentId, name: existing.name, value: existing.value, treeType: existing.treeType, deletedAt: timestamp },
       });
+      return createResult(undefined);
+    });
+  }
+
+  /**
+   * The deferred half of a delete. Reads the row rather than taking a captured
+   * copy: a soft delete leaves `value` intact, so `prevValue` is still there to
+   * read when the window elapses. A restored element writes nothing — the
+   * caller only reaches here when the undo did *not* happen, but a `RESTORE`
+   * from elsewhere in that window would otherwise log a delete that no longer
+   * describes anything.
+   */
+  async logElementDeleteHistory(id: string): Promise<StorageResult<void>> {
+    return this.run(async () => {
+      const existing = await db.elements.get(id);
+      if (!existing || existing.deletedAt === null) return createResult(undefined);
+      if (!shouldLogHistory(existing.treeType)) return createResult(undefined);
+
+      await db.transaction('rw', db.elementHistory, db.syncQueue, async () => {
+        const rev = await this.nextElementRev(id);
+        await this.writeHistory(existing.treeType, {
+          elementId: id,
+          rev,
+          action: 'delete',
+          property: 'value',
+          prevValue: existing.value,
+          newValue: null,
+        });
+      });
+
       return createResult(undefined);
     });
   }
