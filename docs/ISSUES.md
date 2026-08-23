@@ -32,10 +32,6 @@ number present, and stops being that the moment the top item is resolved. So
 
 56.) **NodeInfo/recycle bin should follow the app's tree patterns** - Claude, pay attention my friend. It should look and act as close as possible to the existing history/restore UI. Sligthly different columns though
 
-54.) **Field/CONFIG/from_link would be better if it showed its Kind as well** - Like "from text-kv / description" - two different links!
-
-55.) **Field Definition's CONFIG/from_link in library should link to their Kind, not to themselves**
-
 10.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
 11.) **Decide namespace collision scheme for libraryFields with same display name to coexist** — when two libraryFields have the same display name, they will need to coexist in the library. We need to decide how to handle this. They each already have a unique id and version, but that is not UX friendly. They may need byline or description like a subtitle (displayed in Tools section).

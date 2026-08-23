@@ -26,6 +26,8 @@ import { ConfigRows } from '../ConfigRows/ConfigRows';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
+import { kindArchetypeId } from '../../data/definitionIds';
 import { isUnfilled } from '../../data/models';
 import type { DataFieldValue, DefinitionConfig, Kind } from '../../data/models';
 import nodeStyles from '../TreeNode/TreeNode.module.css';
@@ -39,8 +41,9 @@ const KindNode = (props: { kind: Kind }) => {
 
     const manifest = () => getInlineManifest(props.kind);
     // One archetype id per kind: `useFieldEdit` tracks edit state by element id,
-    // so two kind rows must not share one.
-    const rowId = () => `library-kind::${props.kind}`;
+    // so two kind rows must not share one. Shared with the Config band's
+    // *from <Kind>* link, which aims a reveal at exactly this id.
+    const rowId = () => kindArchetypeId(props.kind);
     const isExpanded = () => selectors.getDataCardState(appState, rowId()) === 'EXPANDED';
 
     // Local from mount on: the archetype's whole point is that turning a knob
@@ -50,12 +53,27 @@ const KindNode = (props: { kind: Kind }) => {
 
     const [rowEl, setRowEl] = createSignal<HTMLElement>();
 
+    // The receiving half of a Field's *from <Kind>* line, the same wiring
+    // `DefinitionNode` has for the Definition half. `rowId()` is a synthetic
+    // archetype id rather than an Element id — which the reveal does not mind:
+    // `revealedElementId` is a string compared in a selector, and a kind is an
+    // archetype with no row in storage to point at.
+    const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
+    const isRevealed = useRevealOnArrival(rowId, wrapperEl);
+
     // The arrangement law, read the same way DataField reads it: composite
     // renderers own their sub-structure, so the generic label is suppressed.
     const shape = () => manifest().ownValue?.shape ?? 'scalar';
 
     return (
-        <div class={nodeStyles.nodeWrapper} style={{ '--datacard-indent': '18px' }}>
+        <div
+            ref={setWrapperEl}
+            classList={{
+                [nodeStyles.nodeWrapper]: true,
+                [nodeStyles.nodeWrapperRevealed]: isRevealed(),
+            }}
+            style={{ '--datacard-indent': '18px' }}
+        >
             <NodeHeader
                 id={rowId()}
                 titleId={`node-title-${rowId()}`}

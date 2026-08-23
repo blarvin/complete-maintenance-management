@@ -187,7 +187,13 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
                         {/* Read-only by contract: config is `delegated`, so
                             altering what an existing Definition means is not this
                             surface's job (SPEC → The bands). */}
-                        {(def) => <ConfigSummary definitionId={def().id} source={def().label} />}
+                        {(def) => (
+                            <ConfigSummary
+                                definitionId={def().id}
+                                kind={def().kind}
+                                source={def().label}
+                            />
+                        )}
                     </Show>
                 </div>
             ),

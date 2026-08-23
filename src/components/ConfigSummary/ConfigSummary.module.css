@@ -24,36 +24,47 @@
     color: var(--text-metadata);
 }
 
-/* Provenance, and the way to the Library: these values belong to the Definition,
-   not to the instance showing them, and the line that says so is also the button
-   that goes there. Reads as an aside rather than another row, because it is
-   about the rows above rather than one of them.
+/* Provenance, and the ways to the Library: these values belong to the Kind and
+   the Definition, not to the instance showing them, and the line that says so
+   carries the links to both. Reads as an aside rather than another row, because
+   it is about the rows above rather than one of them.
 
-   Deliberately keeps the aside's weight rather than wearing `--accent` like the
-   link kinds' `↗` / `→` glyphs: it is a *place to go back to*, not one of the
-   row's two acts, and colouring it would promote a footnote to a control. The
-   underline on hover/focus is the whole affordance. */
-.source {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
+   The line owns the aside's voice — size, colour, italic — and the buttons
+   inherit it, so the separator and the two names read as one sentence instead
+   of three differently-styled things.
+
+   **Ordinary inline flow, deliberately not flex.** This is prose with two words
+   that happen to be buttons, and flex would make each child a flex item, which
+   drops the whitespace-only text between them — `from` ran into the kind name
+   and the `/` touched both names on either side. Inline flow also wraps at the
+   spaces, which is the right break for a line that can outrun a deeply nested
+   Config band at phone width (ISSUES #38). */
+.provenance {
     font-size: var(--text-xs);
     color: var(--text-placeholder);
     font-style: italic;
     margin-top: var(--space-1);
+}
+
+/* Deliberately keeps the aside's weight rather than wearing `--accent` like the
+   link kinds' `↗` / `→` glyphs: these are *places to go back to*, not one of the
+   row's two acts, and colouring them would promote a footnote to a control. The
+   underline on hover/focus is the whole affordance. */
+.sourceLink {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
     cursor: pointer;
 }
 
-.source:hover {
+.sourceLink:hover {
     color: var(--text-metadata);
     text-decoration: underline;
 }
 
-.source:focus-visible {
+.sourceLink:focus-visible {
     outline: var(--focus-ring);
     outline-offset: var(--focus-offset);
     border-radius: var(--radius-sm);

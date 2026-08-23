@@ -167,10 +167,15 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
             // without the arbiter — an edit here would mutate shared meaning.
             body: () => (
                 <div class={bands.sectionBody}>
+                    {/* `source` is dropped in preview: the Library's own card
+                        *is* the Definition, so naming it there would offer a
+                        link back to the row you are reading (ISSUES #55). The
+                        Kind half still travels — one lens over. */}
                     <ConfigSummary
                         definitionId={props.definitionId}
-                        source={definition()?.label}
-                        schemaKind={props.preview ? props.kind : undefined}
+                        kind={props.kind}
+                        source={props.preview ? undefined : definition()?.label}
+                        schemaComplete={props.preview}
                     />
                 </div>
             ),

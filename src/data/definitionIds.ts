@@ -1,11 +1,13 @@
 /**
- * Stable seeded-Definition ids — pure literals, zero imports, so any layer
+ * Stable seeded-Definition ids — pure literals, no runtime imports, so any layer
  * (the component-free kind policies, the seed, UI) can reference a canonical
  * Definition without dragging in the seed module (which imports the db).
  *
  * The `fd_` prefix is historical (FieldDefinition) and deliberately kept:
  * ids are opaque, and churning them buys nothing (see the WP1 rename note).
  */
+
+import type { Kind } from './models';
 export const DEFINITION_IDS = {
   description: 'fd_description',
   typeOf: 'fd_type_of',
@@ -29,6 +31,17 @@ export const LIBRARY_CHROME_IDS = {
   definitions: 'lib_definitions',
   kinds: 'lib_kinds',
 } as const;
+
+/**
+ * The Kinds lens's row id for one kind. **Not an Element id** — a kind is an
+ * archetype with nothing in storage (KindsIndex → *a kind is an archetype, not
+ * an object*), so this is a synthetic row identity: what `useFieldEdit` keys the
+ * archetype's edit state by, and what a `revealElement` aims at to send someone
+ * to that Kind's card. Lives here, beside `LIBRARY_CHROME_IDS.kinds`, because
+ * the reveal needs both halves and two copies of the template would let the
+ * target and the row drift apart in silence.
+ */
+export const kindArchetypeId = (kind: Kind): string => `library-kind::${kind}`;
 
 /*
  * Which Definitions a new node is born with is no longer here: it is pack data,

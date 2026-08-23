@@ -21,8 +21,8 @@
 import { For, Show, createMemo } from 'solid-js';
 import { useElementChildren } from '../../hooks/useElementChildren';
 import { useAppTransitions } from '../../state/appState';
-import { LIBRARY_CHROME_IDS } from '../../data/definitionIds';
-import { getInlineManifest } from '../../kinds/registry';
+import { LIBRARY_CHROME_IDS, kindArchetypeId } from '../../data/definitionIds';
+import { getInlineManifest, getKindManifest } from '../../kinds/registry';
 import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
 import { configChildId } from '../../kinds/configElements';
 import type { Kind } from '../../data/models';
@@ -31,20 +31,27 @@ import styles from './ConfigSummary.module.css';
 export type ConfigSummaryProps = {
     definitionId: string;
     /**
-     * Where these values come from — the Definition's label. Rendered as a
-     * provenance line, and *as the link to the Library*: the line already names
-     * the Definition, so making it the affordance costs the Config band no new
-     * row (it is already deeply nested, ISSUES #38). Optional so a caller with
-     * no Definition to name can still show the rows; every caller today has one.
+     * The Definition's kind — the other half of the provenance line, and always
+     * known: a Field's kind *is* its Definition's kind. Named by the manifest's
+     * `pickerLabel` ("Text"), the same word the Add Surface offered when the
+     * Definition was picked, rather than the raw slug the Kind card wears as a
+     * subtitle.
+     */
+    kind: Kind;
+    /**
+     * The Definition's label — the second half of the provenance line. Omitted
+     * where the Definition is *where you already are* (the Library's own
+     * preview), which leaves the line naming only the Kind: a link back to the
+     * row drawing it would go nowhere (ISSUES #55).
      */
     source?: string;
     /**
      * Schema-complete mode (the Library's Definition preview): render one row
-     * per entry of this kind's config schema, with "—" where the Definition
+     * per entry of the kind's config schema, with "—" where the Definition
      * stores no sub-field — instead of only the stored sub-fields. Display-level
      * only; nothing is materialized into storage.
      */
-    schemaKind?: Kind;
+    schemaComplete?: boolean;
 };
 
 type SummaryRow = { label: string; text: string };
@@ -71,9 +78,24 @@ export const ConfigSummary = (props: ConfigSummaryProps) => {
         });
     };
 
+    /**
+     * The same travel, one lens over: the Kinds index, where the archetype this
+     * Definition was cut from lives. `kindArchetypeId` rather than an Element id
+     * — a kind has no row in storage — and the reveal does not care, since it
+     * matches on a string.
+     */
+    const showKindInLibrary = () => {
+        revealElement({
+            elementId: kindArchetypeId(props.kind),
+            branchId: LIBRARY_CHROME_IDS.kinds,
+        });
+    };
+
+    const kindLabel = () => getKindManifest(props.kind).pickerLabel;
+
     const rows = createMemo((): SummaryRow[] => {
         const stored = subFields();
-        if (!props.schemaKind) {
+        if (!props.schemaComplete) {
             return stored.map((sub) => ({
                 label: sub.name,
                 text: getInlineManifest(sub.kind).displayPreview(sub.value) ?? '—',
@@ -81,7 +103,7 @@ export const ConfigSummary = (props: ConfigSummaryProps) => {
         }
         // Schema-complete: every knob the kind declares, stored value or "—".
         const byId = new Map(stored.map((sub) => [sub.id, sub]));
-        return (CONFIG_SCHEMAS[props.schemaKind] ?? []).map((entry) => {
+        return (CONFIG_SCHEMAS[props.kind] ?? []).map((entry) => {
             const sub = byId.get(configChildId(props.definitionId, entry.key));
             return {
                 label: entry.label,
@@ -105,7 +127,13 @@ export const ConfigSummary = (props: ConfigSummaryProps) => {
                     )}
                 </For>
             </Show>
-            {/* Outside the rows gate on purpose. A Definition that stores no
+            {/* Provenance, and the two ways back — *from Text / Description*.
+                Both halves are links because both name somewhere that exists:
+                the Kind's archetype card and the Definition's own card, one
+                Library lens apart. Making only one of them travel would leave
+                the same word clickable in one lens and inert in another.
+
+                Outside the rows gate on purpose. A Definition that stores no
                 config sub-field is still a Definition, and those are precisely
                 the Fields that most need the way back to it: `serializeConfig`
                 writes a child only for a knob that is set, and `text-kv`'s
@@ -113,18 +141,35 @@ export const ConfigSummary = (props: ConfigSummaryProps) => {
                 without opening the Config band has an empty subtree. Gating the
                 line on the rows meant "No configuration" also meant "no way
                 back", which is the one case where provenance is all there is. */}
-            <Show when={props.source}>
-                {(source) => (
-                    <button
-                        type="button"
-                        class={styles.source}
-                        onClick={showInLibrary}
-                        aria-label={`Show ${source()} in the Field Library`}
-                    >
-                        from {source()}
-                    </button>
-                )}
-            </Show>
+            <div class={styles.provenance}>
+                {/* Explicit space expressions, not literal whitespace between
+                    JSX elements: that whitespace is trimmed at the newline, so
+                    the separators have to be written as text to survive. */}
+                {'from '}
+                <button
+                    type="button"
+                    class={styles.sourceLink}
+                    onClick={showKindInLibrary}
+                    aria-label={`Show the ${kindLabel()} kind in the Field Library`}
+                >
+                    {kindLabel()}
+                </button>
+                <Show when={props.source}>
+                    {(source) => (
+                        <>
+                            {' / '}
+                            <button
+                                type="button"
+                                class={styles.sourceLink}
+                                onClick={showInLibrary}
+                                aria-label={`Show ${source()} in the Field Library`}
+                            >
+                                {source()}
+                            </button>
+                        </>
+                    )}
+                </Show>
+            </div>
         </div>
     );
 };
