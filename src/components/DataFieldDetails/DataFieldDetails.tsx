@@ -33,7 +33,6 @@ import { formatTimestampShort } from '../../utils/time';
 import { storageEventBus } from '../../data/storageEventBus';
 import { compareHistory } from '../../data/storage/historyHelpers';
 import { storesOwnValue } from '../../kinds/childrenPolicy';
-import { CONFIG_SCHEMAS } from '../../kinds/configSchema';
 import type { Kind, Definition, ElementHistory } from '../../data/models';
 import { DataFieldHistory } from '../DataFieldHistory/DataFieldHistory';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
@@ -54,11 +53,6 @@ export type DataFieldDetailsProps = {
      */
     preview?: boolean;
 };
-
-/** Whether this kind has config at all. Genuinely discriminating today: the two
- *  link kinds declare no schema, so they show two sections rather than an empty
- *  third one. */
-const hasConfig = (kind: Kind): boolean => (CONFIG_SCHEMAS[kind]?.length ?? 0) > 0;
 
 export const DataFieldDetails = (props: DataFieldDetailsProps) => {
     const [history, setHistory] = createSignal<ElementHistory[]>([]);
@@ -154,7 +148,16 @@ export const DataFieldDetails = (props: DataFieldDetailsProps) => {
         {
             id: 'config',
             title: 'Config',
-            present: hasConfig(props.kind),
+            // Present for every Field, not only the kinds that declare a schema.
+            // The band carries two things and only the first is kind-dependent:
+            // the config rows, and the provenance line that is the way back to
+            // the Definition. Every Field has a Definition, so gating the band on
+            // the schema left `internal-link`/`external-link` instances with no
+            // route to theirs anywhere in the card — the Tools band shows only
+            // the field's own id. A schema-less kind now reads "No configuration"
+            // above that line, which is the truth about it rather than an empty
+            // section.
+            present: true,
             collapsible: true,
             defaultOpen: false,
             // Inert on purpose. Every config sub-field is `delegated` in Phase 1:

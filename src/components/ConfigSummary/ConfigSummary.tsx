@@ -2,10 +2,10 @@
  * ConfigSummary — a Definition's config, read-only.
  *
  * One component for the two surfaces that show config without editing it: the
- * Library picker's row peek (where it disambiguates two same-named Definitions)
- * and a Field's Details → Config section (where it says what the field *means*).
- * Shared deliberately — they render the same thing for the same reason, and two
- * copies would drift.
+ * Add Surface's band once a Library Definition is picked, and a Field's
+ * Details → Config section (where it says what the field *means*). Shared
+ * deliberately — they render the same thing for the same reason, and two copies
+ * would drift.
  *
  * **Read-only by construction.** Values go through each kind's `displayPreview`,
  * never its `Renderer`: a Renderer *is* the editable surface, so mounting
@@ -34,9 +34,8 @@ export type ConfigSummaryProps = {
      * Where these values come from — the Definition's label. Rendered as a
      * provenance line, and *as the link to the Library*: the line already names
      * the Definition, so making it the affordance costs the Config band no new
-     * row (it is already deeply nested, ISSUES #38). Omitted by the picker,
-     * where the rows already sit inside the Definition's own row — and where
-     * there is nowhere to travel to.
+     * row (it is already deeply nested, ISSUES #38). Optional so a caller with
+     * no Definition to name can still show the rows; every caller today has one.
      */
     source?: string;
     /**
@@ -105,18 +104,26 @@ export const ConfigSummary = (props: ConfigSummaryProps) => {
                         </div>
                     )}
                 </For>
-                <Show when={props.source}>
-                    {(source) => (
-                        <button
-                            type="button"
-                            class={styles.source}
-                            onClick={showInLibrary}
-                            aria-label={`Show ${source()} in the Field Library`}
-                        >
-                            from {source()}
-                        </button>
-                    )}
-                </Show>
+            </Show>
+            {/* Outside the rows gate on purpose. A Definition that stores no
+                config sub-field is still a Definition, and those are precisely
+                the Fields that most need the way back to it: `serializeConfig`
+                writes a child only for a knob that is set, and `text-kv`'s
+                `defaultConfig()` is `{}`, so every text-kv Definition authored
+                without opening the Config band has an empty subtree. Gating the
+                line on the rows meant "No configuration" also meant "no way
+                back", which is the one case where provenance is all there is. */}
+            <Show when={props.source}>
+                {(source) => (
+                    <button
+                        type="button"
+                        class={styles.source}
+                        onClick={showInLibrary}
+                        aria-label={`Show ${source()} in the Field Library`}
+                    >
+                        from {source()}
+                    </button>
+                )}
             </Show>
         </div>
     );

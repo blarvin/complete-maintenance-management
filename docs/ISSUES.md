@@ -11,87 +11,30 @@ Live queue of open work, ordered by priority within each section. Completion liv
 - **Agents append to the bottom** of a section, taking one past the highest number ever issued (see *Item numbers* below), and only file what they observed. Reordering is the dev's.
 - **Bugs first**, then Features, then Tech Debt.
 - For deferred ideas see LATER.md. For product scope see SPECIFICATION.md.
-
-**No tags.** The file carried a per-pass `[tag]` convention for a while; the last
-one (`[Fields UI]`) drifted until it marked four items none of which matched its
-own definition, so it was retired along with the convention on 2026-08-22. A
-dependency between items belongs in the item's prose, where it can say *why*.
-
-`[auto]` is the one exception, and it is a permission, not a topic: it marks
-items the agent may take end-to-end without checking in — each self-contained and
-verifiable by typecheck/lint/test. One commit per item, which also deletes the
-item from here. Agreed 2026-08-11; `git push` stays manual.
-
-**Nothing carries it right now.** Two rounds have been run and both are spent:
-nine items on 2026-08-22 (#3, #7, #17, #34, #39, #40, #42, #43, #44) and ten
-more the same day (#1, #5, #8, #9, #12, #32, #36, #46, #48, #50). Their numbers
-are permanent gaps like any other, and git log is where they went. Four items
-were closed outright alongside the second round (#6, #14, #41, #45) — the
-decision there was that the current behaviour is right, which is completion.
-
-What made those tags honest is worth keeping for the next round. Every item but
-one named its decision inline, in a paragraph saying *Decided 2026-08-22* and
-what was rejected. The exception carried no decision because there was none to
-make — it named a plainly wrong fact, and correcting it was not a choice anyone
-had to make, which is the one case where a bare tag is honest.
-
-The bar is *no decision left in the item*, not *small*. An item that names a
-product or UX choice — even an easy one — is not `[auto]`, because picking it is
-the dev's call and a commit is the wrong place to discover the pick was wrong.
-
-**Item numbers are stable ids, unique across the whole file.** One sequence runs
+- **Item numbers are stable ids, unique across the whole file.** One sequence runs
 through every section; deletions leave gaps and nothing ever renumbers. A new
-item takes **one past the highest number ever issued** — never the lowest unused
-one. Gaps are permanent on purpose: refilling `#7` would silently repoint every
-citation the old `#7` ever earned, which is the rot stable ids exist to prevent.
-The number comes from the file rather than from the section, so a section reads
-with jumps in it — expected, and carrying no meaning.
-
-**The high-water mark.** *Highest ever issued* is normally just the highest
+item takes **one past the highest number ever issued** 
+- **The high-water mark.** *Highest ever issued* is normally just the highest
 number present, and stops being that the moment the top item is resolved. So
-**deleting the highest-numbered item leaves its bare number behind**: if `#51`
-goes while it is still the top item, a lone `51.)` stays, at the foot of the file
-below the last section — it belongs to the sequence, not to a section. No date
-and no note; completion lives in git history, and `git log -S "51.)" --
-docs/ISSUES.md` says when and why. Gaps in the *middle* get no marker at all —
-`47, 49, 51` already says 48 and 50 existed, and a column of dead numbers would
-cost Bugs and Features the one screen
-they are held to. Nor can a mark accumulate: **any** new item clears it, because
-the new number lands above it and a live item carries the ceiling again.
-
-Set 2026-08-22, replacing per-section numbers that restarted at 1 and a rule that
-renumbered on every delete. Two things forced it. `#12` **used to be ambiguous
-across five sections**, so every citation had to carry a section name, and when
-one didn't it broke — a bare "see #14" inside a Tech Debt item meant an item in
-the same section that had since moved. **And an item could not change sections
-without changing its number**, which is the same rot the stable-id rule exists to
-prevent; reclassification is common here, so per-section ids were only
-half-stable. A global id survives both.
-
-So **citing** `ISSUES #33` **from a code comment is legitimate**, and the section name
-is optional garnish. But it is legitimate *rarely*, and the sweep that repointed
-the eleven pre-existing citations on 2026-08-22 is why: **every one of them
-described work that had already landed** — the sync purge, the delta cursor, the
-history-id collision — so none belonged in a queue of open work at all, whatever
-its numbering. A code comment almost always explains what the code *does*, and
-that is IMPLEMENTATION.md's job (`IMPLEMENTATION.md → *Retention over reconciliation*`); a phrase also says what it means without a lookup. Cite an
-ISSUES number only when the comment genuinely points at work still queued —
-a known gap the reader might otherwise "fix" by accident — and expect to delete
-the comment when the item goes.
+**deleting the highest-numbered item leaves its bare number behind**
 
 ---
 
 ## Bugs
 
-2.) **Internal Link does not admit value edit.** - Decide UX: Name of link should be fixed at mint-time, only editable through the library? (Or maybe Settings with back-propagation to the Library??) But either way, the actual kv value should be editable.
-
-49.) **On DuckDuckGo browser: right edge is smashed against the window edge.**
+53.) **Refreshing page whilst down-tree returns view to ROOT** - Stable refresh required.
 
 ## UI, styling, layout
 
 4.) **Left or Right chevrons??** - A/B testing is the only real way to know. Earlier iterations attempted to follow the informational tiers... but who knows?
 
 ## Features
+
+56.) **NodeInfo/recycle bin should follow the app's tree patterns** - Claude, pay attention my friend. It should look and act as close as possible to the existing history/restore UI. Sligthly different columns though
+
+54.) **Field/CONFIG/from_link would be better if it showed its Kind as well** - Like "from text-kv / description" - two different links!
+
+55.) **Field Definition's CONFIG/from_link in library should link to their Kind, not to themselves**
 
 10.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
