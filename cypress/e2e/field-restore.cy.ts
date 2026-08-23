@@ -3,8 +3,9 @@
  *
  * Undo inside the Snackbar's window was the only way back; past it the field was
  * invisible with no affordance, even though `RESTORE_ELEMENT` has been the
- * command that Undo itself runs all along. The restore list lives in the node's
- * details panel, and renders only when the node has deleted fields.
+ * command that Undo itself runs all along. The restore list is a band inside the
+ * node panel's Node Tools band, and is absent entirely unless the node has
+ * deleted fields.
  *
  * The test deliberately lets the toast expire rather than pressing Undo — that
  * *is* the case, and the delete-history row lands on the same expiry.
@@ -29,7 +30,10 @@ describe('restoring a deleted field', () => {
 
         cy.contains('label', 'Description:').parent()
             .find('[aria-label="Expand field details"]').click();
-        cy.contains('button', 'Tools').click();
+        // Scoped to the field row: `cy.contains` matches substrings, so a bare
+        // 'Tools' also matches the node panel's 'Node Tools' band.
+        cy.contains('label', 'Description:').parent()
+            .contains('button', 'Tools').click();
         cy.get('[aria-label="Delete this field"]').click();
         cy.contains('label', 'Description:').should('not.exist');
 
@@ -38,17 +42,33 @@ describe('restoring a deleted field', () => {
         cy.contains('[role="status"]', 'Field deleted', { timeout: 12000 })
             .should('not.exist');
 
-        // Enter on the ellipsis opens the details panel single-press.
+        // Enter on the ellipsis opens the details panel single-press. The list is
+        // a band inside the Node Tools band, which is closed by default.
+        //
+        // Scoped to this node's wrapper (the article's parent). Every node on
+        // screen carries a panel, and a *closed* one is not hidden — it sits at
+        // translateY(100%) behind its own node header, so it has real size and
+        // passes jQuery `:visible` while being unclickable. Identity is the only
+        // sound filter here; visibility is not.
         cy.contains('article', name).find('[aria-label="Expand node details"]')
             .focus().trigger('keydown', { key: 'Enter' });
-        cy.contains('Deleted fields').should('be.visible');
+        cy.contains('article', name).parent()
+            .contains('button', 'Node Tools').click();
+        cy.contains('article', name).parent()
+            .contains('button', 'Deleted Fields').should('be.visible');
 
+        // Select the row, then restore — the same two-step DataFieldHistory
+        // uses, and the reason the action is not on every row at rest. Scoped to
+        // the list itself: `[role="listitem"]` is also what history entries are.
+        cy.get('[aria-label="Deleted fields"]')
+            .contains('[role="listitem"]', 'Description').click();
         cy.get('[aria-label="Restore Description"]').click();
         cy.contains('[role="status"]', 'Field restored').should('be.visible');
         cy.contains('label', 'Description:').should('be.visible');
         cy.contains('div[role="button"]', 'Worth keeping').should('be.visible');
 
-        // The list empties with it — nothing is deleted any more.
-        cy.contains('Deleted fields').should('not.exist');
+        // The band goes with the last tombstone — nothing is deleted any more.
+        cy.contains('article', name).parent()
+            .contains('button', 'Deleted Fields').should('not.exist');
     });
 });

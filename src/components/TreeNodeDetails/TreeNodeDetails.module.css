@@ -57,52 +57,89 @@
     margin-bottom: var(--space-1);
 }
 
-/* The id line sits above the actions, sharing their separator so the two read
-   as one Tools region rather than two stacked strips. */
+/* The id line closes the always-visible half of the panel, above the bands. */
 .idRow {
     margin-top: var(--space-3);
     padding-top: var(--space-2);
     border-top: var(--border-width-thin) solid var(--border-default);
 }
 
-/* Actions row - delete button. No top border when the id line already drew one
-   directly above it. */
-.idRow + .actionsRow {
+/* ─── Bands ───────────────────────────────────────────────────────────────────
+   `DetailBands` is `display: contents` and every rule in it positions between
+   the named `label` and `end` grid lines, because it was written for a Field
+   row's subgrid. The node panel is a plain block, so a host here declares those
+   two lines itself and the band chrome drops in unchanged — same headings, same
+   chevrons, same persistence — rather than being reimplemented.
+
+   A nested host redeclares them for its own children, which is what lets
+   Deleted Fields be a band *inside* the Node Tools band. */
+.bandHost,
+.toolsBody {
+    display: grid;
+    grid-template-columns: [label] 1fr [end];
+}
+
+.bandHost {
     margin-top: var(--space-2);
-    padding-top: 0;
-    border-top: none;
+}
+
+/* The panel's only indent, and the thing that makes Deleted Fields read as
+   inside Node Tools rather than beside it. One step only: the nesting is two
+   deep and a second indent at this type size stops being legible (the same
+   worry ISSUES logs about config depth). */
+.toolsBody {
+    grid-column: label / end;
+    padding-left: var(--space-4);
 }
 
 .actionsRow {
-    margin-top: var(--space-3);
-    padding-top: var(--space-2);
-    border-top: var(--border-width-thin) solid var(--border-default);
+    grid-column: label / end;
+    padding: var(--space-2) 0;
 }
 
-/* The restore list. Shares the separator idiom of the id and actions rows above
-   it, so the panel reads as one column of regions rather than a stack of cards.
-   Rendered only when something is deleted (DeletedFields), so this whole region
-   is absent on almost every node. */
-.deletedRegion {
-    margin-top: var(--space-3);
-    padding-top: var(--space-2);
-    border-top: var(--border-width-thin) solid var(--border-default);
+/* ─── The restore list ────────────────────────────────────────────────────────
+   Built to `DataFieldHistory`'s law rather than a shape of its own: a row is a
+   selectable thing, and its action appears in the left gutter only once the row
+   is selected — so a list of tombstones does not read as a row of buttons. Same
+   circle glyph, same right-aligned metadata, same hover/selected tints.
+
+   What genuinely differs is beneath it. History entries are subgrid children of
+   a Field row and inherit its tracks; these have nobody to align with, so the
+   row owns a two-track grid (name | when-and-who) instead of a subgrid. */
+.deletedList {
+    grid-column: label / end;
+    /* Reserves the gutter `.restoreButton` floats into: the 1rem button plus
+       its 6px offset. A literal width because the space tokens here are far
+       too small (`--space-4` is 8px) to add up to it. */
+    padding-left: 22px;
+    padding-bottom: var(--space-2);
 }
 
-.deletedHeading {
-    font-size: var(--text-xs);
-    color: var(--text-muted);
-    margin-bottom: var(--space-1);
-}
-
-/* Name, then the tombstone's time, then the action — the elastic middle pushes
-   Restore flush right so the buttons line up down the list. */
 .deletedRow {
-    display: flex;
-    align-items: baseline;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-2);
-    font-size: var(--text-xs);
+    align-items: baseline;
+    position: relative;
     padding: var(--space-1) 0;
+    font-size: var(--text-xs);
+    border-top: var(--border-width-thin) solid var(--border-subtle);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.deletedRow:hover {
+    background: var(--bg-hover-subtle);
+}
+
+.deletedRowSelected {
+    background: var(--bg-selected);
+}
+
+.deletedRowSelected:hover {
+    background: var(--bg-selected-hover);
 }
 
 .deletedName {
@@ -112,33 +149,45 @@
     white-space: nowrap;
 }
 
-.deletedStamp {
-    flex: 1 1 auto;
-    color: var(--text-placeholder);
+.deletedMeta {
+    justify-self: end;
+    text-align: right;
+    color: var(--text-metadata);
 }
 
-/* Quiet, and deliberately not the delete button's mirror image: restoring is
-   ordinary, so it gets no destructive colour and no border of its own. */
+/* Floats out of flow into the gutter, so the row's height is unchanged when it
+   appears and no column has to be reserved for it — `.revertButton`'s trick in
+   DataFieldHistory, and deliberately the same circle. */
 .restoreButton {
-    flex: none;
-    background: none;
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
+    margin-right: 6px;
+    appearance: none;
+    background: var(--bg-surface);
     border: var(--border-width-thin) solid var(--border-default);
-    color: var(--text-secondary);
-    padding: 0 var(--space-2);
-    font-size: var(--text-xs);
-    font-family: inherit;
+    border-radius: 50%;
+    width: 1rem;
+    height: 1rem;
+    line-height: 1;
+    padding: 0;
+    font-size: 0.7rem;
+    color: var(--text-primary);
     cursor: pointer;
-    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
 }
 
 .restoreButton:hover {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
+    background: var(--bg-hover-subtle);
 }
 
 .restoreButton:focus-visible {
-    outline: var(--focus-ring);
-    outline-offset: var(--focus-offset);
+    outline: var(--border-width-thin) solid var(--border-default);
+    outline-offset: 1px;
 }
 
 .deleteButton {

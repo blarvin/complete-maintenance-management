@@ -64,8 +64,12 @@ describe('core loop', () => {
         cy.contains('div[role="button"]', 'First value').should('be.visible');
 
         // Delete the field; Undo restores it with its value intact. Delete lives
-        // in the Tools band, which is collapsible and closed by default.
-        cy.contains('button', 'Tools').click();
+        // in the Tools band, which is collapsible and closed by default. Scoped
+        // to the field row: `cy.contains` matches substrings, so a bare 'Tools'
+        // also matches the node panel's 'Node Tools' band — and that panel comes
+        // first in DOM order.
+        cy.contains('label', 'Description:').parent()
+            .contains('button', 'Tools').click();
         cy.get('[aria-label="Delete this field"]').click();
         cy.contains('label', 'Description:').should('not.exist');
         cy.contains('[role="status"]', 'Field deleted').should('be.visible');
@@ -74,10 +78,21 @@ describe('core loop', () => {
         cy.contains('div[role="button"]', 'First value').should('be.visible');
 
         // Delete the node from its details panel (Enter on the ellipsis opens
-        // it single-press); Undo restores it at ROOT.
+        // it single-press); Undo restores it at ROOT. Delete lives in the Node
+        // Tools band, closed by default.
+        //
+        // Everything here is scoped to this node's wrapper (the article's
+        // parent, which holds the panel, the header and the card). Every node on
+        // screen carries a panel, and a *closed* one is not hidden — it sits at
+        // translateY(100%) behind its own node header, so it has real size and
+        // passes jQuery `:visible` while being unclickable. Identity is the only
+        // sound filter here; visibility is not.
         cy.contains('article', name).find('[aria-label="Expand node details"]')
             .focus().trigger('keydown', { key: 'Enter' });
-        cy.contains('button', 'Delete Asset').click();
+        cy.contains('article', name).parent()
+            .contains('button', 'Node Tools').click();
+        cy.contains('article', name).parent()
+            .contains('button', 'Delete Asset').click();
         cy.contains('button', 'Create New Asset').should('be.visible');
         cy.contains('article', name).should('not.exist');
         cy.contains('[role="status"]', 'Node deleted').should('be.visible');

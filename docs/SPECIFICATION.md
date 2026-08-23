@@ -280,7 +280,7 @@ A module-level service registry, matching the `getNodeService()` / `getFieldServ
 ```ts
 interface SnackbarService {
   show(toast: ToastInput): void;
-  dismiss(): void; // dismisses current toast without running handlers
+  dismiss(): void; // closes the current toast without running its `action`; its `onExpire` still runs
 }
 
 interface ToastInput {
@@ -291,13 +291,14 @@ interface ToastInput {
     label: string; // e.g. "Undo", "Retry"
     handler: () => void | Promise<void>;
   };
-  onExpire?: () => void | Promise<void>; // runs if the toast auto-dismisses WITHOUT the action being invoked; used for deferred-write tails (see Undo semantics)
+  onExpire?: () => void | Promise<void>; // runs when the undo window CLOSES WITHOUT the action being invoked; used for deferred-write tails (see Undo semantics)
 }
 ```
 
 - Access via `getSnackbarService()`; call at handler time, not at component setup (same rule as other services).
 - State is held in a store object inside the service. The app renders exactly one `<SnackbarHost>` near the app root, which registers a signal-backed accessor object as that store — so the service's plain property assignments stay reactive without the service knowing about the framework.
-- Replacement: `show()` while a toast is visible immediately runs the prior toast's `onExpire` (if any), cancels its timer, and renders the new one.
+- Replacement: `show()` while a toast is visible immediately runs the prior toast's `onExpire` (if any), cancels its timer, and renders the new one. **Coalescing is the exception**: an extension is the same toast saying something new, so the prior `onExpire` is superseded by the incoming one rather than run — the same treatment its `action` gets.
+- **`onExpire` fires whenever the undo window closes with the action untaken** — timeout, replacement, *and* `dismiss()` (Esc). The one path that skips it is the user invoking the action, because then the tail is work that should never have happened. Anything else would let a deferred write be lost by an unrelated toast or a keypress, which is the failure this rule exists to prevent.
 
 ### Undo semantics
 
@@ -305,7 +306,7 @@ interface ToastInput {
 - **Closure-based undo, not record snapshot**: The Snackbar holds only the reversal closure the caller passed in (`action.handler`) plus the minimum data the caller captured for that closure (e.g. the previous `value` for a value edit, or just the entity id for a delete). There is no snapshot service and no whole-record copy.
 - **Scope**: Undo is available across in-app navigation but not across page reloads. Only the latest action can be undone (new toasts replace older ones).
 - **Coalescing**: a repeated same-kind action extends the current toast instead of replacing it, accumulating into one reversal closure ("3 fields added" undoes all three). This exists because single-slot replacement would otherwise make every action but the last irreversible. Coalescing is per action-kind and ends when the toast expires or any other action fires. It is generic; the Add Surface no longer commits in runs (see The Add Surface → *Picking is committing* under Deferred), so today a Create raises a single "Field added" and coalescing waits for its next consumer.
-- **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written via `onExpire` — only after the undo window elapses without undo — so that undone deletes leave no audit trace.
+- **History entry deferral**: For DataField deletes, the `DataFieldHistory` entry with `action: "delete"` is written via `onExpire` — only once the undo window closes without undo — so that undone deletes leave no audit trace. Node deletes defer the same way. Because the row rides `onExpire`, "closes" has to mean *every* way the window ends untaken (see Replacement above): a delete followed by any other toast, or by Esc, must still leave its audit row, or the tombstone outlives its own history.
 
 ### Placement & animation
 

@@ -1,11 +1,11 @@
 /**
  * Behavior contract — a Field points back at its Definition.
  *
- * The Config band's provenance line (*from Description*) is the affordance: it
- * already names the Definition, so it doubles as the way there rather than the
- * band growing a row. Travel is a **reveal**, not a re-root to the Library — the
- * same transition `internal-link`'s `→` uses — so it lands in the Definitions
- * lens with the Definition's own card on screen.
+ * The Config band's provenance line (*from Text / Description*) is the
+ * affordance: it already names the Kind and the Definition, so it doubles as the
+ * way to each rather than the band growing a row. Travel is a **reveal**, not a
+ * re-root to the Library — the same transition `internal-link`'s `→` uses — so
+ * it lands in the Definitions lens with the Definition's own card on screen.
  *
  * Runs offline; selectors are aria-labels and visible text only.
  */
@@ -23,8 +23,18 @@ describe('a Field points back at its Definition', () => {
         // `fd_description` Definition — so the band has a real provenance.
         cy.contains('label', 'Description:').parent()
             .find('[aria-label="Expand field details"]').click();
-        cy.contains('button', 'Config').click();
-        cy.contains('from Description').should('be.visible');
+        cy.contains('label', 'Description:').parent()
+            .contains('button', 'Config').click();
+
+        // The line names both halves — *from Text / Description* — and both are
+        // links (#54/#55). Asserted as one string because the prose is the
+        // point: the separators are what make it read as provenance rather than
+        // two bare buttons, and they are explicit text expressions in
+        // `ConfigSummary` precisely so they survive JSX whitespace trimming.
+        cy.contains('from Text / Description').should('be.visible');
+        // The Kind half travels too, and nothing else exercises it.
+        cy.get('[aria-label="Show the Text kind in the Field Library"]')
+            .should('be.visible');
 
         cy.get('[aria-label="Show Description in the Field Library"]').click();
 

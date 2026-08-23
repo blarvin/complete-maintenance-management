@@ -20,8 +20,9 @@ export type CommitWithUndoOptions = {
     /** Static success message, or a fn of the execute result (return null to suppress the toast). */
     message: string | null | ((result: unknown) => string | null);
     /**
-     * The deferred tail: runs when the undo window elapses *without* Undo being
-     * pressed. Today that is a delete's history row (SPEC → Undo semantics →
+     * The deferred tail: runs when the undo window *closes* without Undo being
+     * pressed — timing out, being replaced by another toast, or being dismissed
+     * with Esc. Today that is a delete's history row (SPEC → Undo semantics →
      * *History entry deferral*) — the work an undo should make never have
      * happened, rather than happen and be reversed.
      *

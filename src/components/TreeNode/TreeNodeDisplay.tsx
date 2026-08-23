@@ -12,6 +12,7 @@ import { FieldList } from '../FieldList/FieldList';
 import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
 import { DeletedFields } from '../TreeNodeDetails/DeletedFields';
+import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
 import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
@@ -167,6 +168,50 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     const isChrome = () => isLibraryChrome(props.kind);
     const showDataCard = () => !isChrome() && (ownsChildren() || isLens());
 
+    /**
+     * The node panel's bands, in the shape a Field's details already use
+     * (`DetailBands` — headings that are their own chevrons, open state
+     * persisted in `uiPrefs`). One band today: everything that acts on the node
+     * rather than describing it.
+     *
+     * Titled **Node Tools** rather than `Tools` on purpose. A Field's Tools band
+     * is frequently on screen at the same time — a card's fields expanded above
+     * an open node panel — and two identically-titled headings is a real
+     * ambiguity for a reader before it is one for a test selector.
+     */
+    const detailBands = (): DetailBand[] => [
+        {
+            id: 'tools',
+            title: 'Node Tools',
+            // Library chrome owns no Fields and offers no delete, so the band
+            // would be a heading over nothing.
+            present: !isChrome(),
+            collapsible: true,
+            // Closed. Deleting an asset is the most destructive act in the app;
+            // it should cost a deliberate tap rather than sit under the cursor
+            // every time the panel opens.
+            defaultOpen: false,
+            body: () => (
+                <div class={detailsStyles.toolsBody}>
+                    {/* Renders nothing at all unless this node has deleted
+                        Fields, so a clean node's Tools band is just the
+                        delete action, as it was before. */}
+                    <DeletedFields nodeId={props.id} />
+                    <div class={detailsStyles.actionsRow}>
+                        <button
+                            type="button"
+                            class={detailsStyles.deleteButton}
+                            onClick={() => void handleDeleteNode()}
+                            aria-label="Delete this asset"
+                        >
+                            Delete Asset
+                        </button>
+                    </div>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div
             ref={setWrapperEl}
@@ -177,11 +222,14 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             style={{ '--datacard-indent': indentVar() }}
         >
             <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded()}>
+                {/* No heading. The panel opens from the node's own header, one
+                    row above — a "Node Details" title only restated where the
+                    reader already is, and cost the breadcrumb its place at the
+                    top. The panel now reads top-down as: where this node is,
+                    what it says, when and by whom, its id, then what can be
+                    done to it. */}
                 <div>
                     <TreeBreadcrumbs nodeId={props.id} />
-                    <h3 style={{ margin: '0 0 var(--space-3) 0', 'font-size': 'var(--text-base)', 'font-weight': 600 }}>
-                        Node Details
-                    </h3>
                     {/* A compact block, not one row per fact: the byline, then
                         both dates and the last hand on one line. The id and the
                         version pair up on the row below, which was already
@@ -200,23 +248,9 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                     <div class={detailsStyles.idRow}>
                         <ElementIdRow id={props.id} version={meta()?.latest?.rev} />
                     </div>
-                    {/* Renders nothing unless this node has deleted Fields, so
-                        a clean node's panel is unchanged. */}
-                    <Show when={!isChrome()}>
-                        <DeletedFields nodeId={props.id} />
-                    </Show>
-                    <Show when={!isChrome()}>
-                        <div class={detailsStyles.actionsRow}>
-                            <button
-                                type="button"
-                                class={detailsStyles.deleteButton}
-                                onClick={() => void handleDeleteNode()}
-                                aria-label="Delete this asset"
-                            >
-                                Delete Asset
-                            </button>
-                        </div>
-                    </Show>
+                    <div class={detailsStyles.bandHost}>
+                        <DetailBands bands={detailBands()} persistKey={props.id} />
+                    </div>
                 </div>
             </TreeNodeDetails>
             <NodeHeader

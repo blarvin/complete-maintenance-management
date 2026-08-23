@@ -30,8 +30,6 @@ number present, and stops being that the moment the top item is resolved. So
 
 ## Features
 
-56.) **NodeInfo/recycle bin should follow the app's tree patterns** - Claude, pay attention my friend. It should look and act as close as possible to the existing history/restore UI. Sligthly different columns though
-
 10.) **Copy-As-Template** — node-details affordance cloning skeleton-only (no history/readings/memberships), org-scoped, persisted on demonstrated reuse.
 
 11.) **Decide namespace collision scheme for libraryFields with same display name to coexist** — when two libraryFields have the same display name, they will need to coexist in the library. We need to decide how to handle this. They each already have a unique id and version, but that is not UX friendly. They may need byline or description like a subtitle (displayed in Tools section).
@@ -90,4 +88,6 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 38.) **Config nesting depth, at phone width** — a `number-kv` goes band → group → compound → member, each indent one `--chevron-col-width`, inside a Data Card already indented under a node. Re-checked 2026-08-15 after the rework, at a 638px card (≈ `--container-max`): it reads comfortably, and the retired picker's `border-left` plus its `space-4 + space-2` indent are gone, so a level came off. **Actual phone width is still unverified** — Chrome would not shrink below ~674px inner width, so this stayed a hand-test on a real device. Cheapest fixes if it ever bites: drop the indent for the innermost level, or let a group row's children align with the group label rather than past it.
 
-51.) **SPEC and the Snackbar disagree about `onExpire` on replacement, and the delete-history deferral now rides on it** — SPECIFICATION.md → Snackbar & Undo §300 says a `show()` over a visible toast "immediately runs the prior toast's `onExpire`". The service does the opposite: `snackbar/index.ts` drops it, saying *does NOT fire on replace (per spec)* in a comment, and `snackbarService.test.ts` pins that behaviour in two tests (*replacement drops prior toast without running its onExpire*, and the same for `dismiss()`). One of the three is wrong and they cite each other. **The consequence is now real**: with the deferral built, a delete's audit row lands only from `onExpire`, so deleting a field and then doing anything else that toasts — or pressing Esc — loses that row permanently, while the tombstone stays. The undone-delete case the deferral was built for works; the interrupted-delete case silently doesn't. Deciding this is a spec call, not an implementation detail: either replacement/dismiss flush the tail (SPEC's reading) or the tail needs a home that isn't the toast. Read from all three while implementing the deferral, 2026-08-22.
+---
+
+56.)
