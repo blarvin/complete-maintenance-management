@@ -19,6 +19,22 @@ function clearTimer(): void {
     remainingMs = null;
 }
 
+/**
+ * Run a toast's deferred tail. Called wherever the undo window **closes without
+ * Undo having been pressed** — timeout, replacement, or dismissal — which is the
+ * whole meaning of `onExpire` (SPEC → Snackbar & Undo). The one path that must
+ * not call it is `invokeActionAndDismiss`: there the user *did* take the Undo,
+ * so the tail is work that should never have happened.
+ *
+ * Fire-and-forget by design: the tail is an audit write, and a caller closing a
+ * toast must not wait on storage.
+ */
+function releaseTail(toast: ActiveToast | null | undefined): void {
+    if (toast?.onExpire) {
+        void toast.onExpire();
+    }
+}
+
 function scheduleExpiry(durationMs: number): void {
     clearTimer();
     remainingMs = durationMs;
@@ -27,9 +43,7 @@ function scheduleExpiry(durationMs: number): void {
         if (!toast) return;
         registeredStore!.current = null;
         clearTimer();
-        if (toast.onExpire) {
-            void toast.onExpire();
-        }
+        releaseTail(toast);
     }, durationMs);
 }
 
@@ -37,6 +51,11 @@ export function registerSnackbarStore(store: SnackbarStore): void {
     registeredStore = store;
 }
 
+/**
+ * Teardown, not a dismissal: the tail is deliberately *not* released. This tears
+ * the service down rather than closing a window the user was looking at, and its
+ * callers are test `afterEach` hooks.
+ */
 export function resetSnackbarService(): void {
     clearTimer();
     if (registeredStore) registeredStore.current = null;
@@ -51,8 +70,6 @@ const realService: SnackbarService = {
             console.warn('[Snackbar] show() called before store registered; dropping toast:', toast.message);
             return;
         }
-        // Replacement: prior toast's onExpire does NOT fire on replace (per spec — user didn't wait out the timer, and the new toast is a fresh interaction). We just drop it.
-        clearTimer();
         const variant = toast.variant ?? 'success';
         const duration = toast.durationMs ?? DEFAULT_DURATIONS[variant];
         // Coalescing: a matching key means this is the *same* toast saying
@@ -63,6 +80,16 @@ const realService: SnackbarService = {
         const prior = registeredStore.current;
         const extends_ =
             toast.coalesceKey !== undefined && prior?.coalesceKey === toast.coalesceKey;
+        clearTimer();
+        // Replacement ends the prior toast's undo window with the Undo untaken,
+        // so its tail commits (SPEC → Snackbar & Undo → Replacement). Without
+        // this a delete's audit row was lost outright the moment anything else
+        // toasted, leaving a tombstone with no history behind it.
+        //
+        // An *extension* is exempt: it is the same toast saying something new, so
+        // its tail is superseded by the incoming one exactly as its action is —
+        // running the old tail here would double-write the run being coalesced.
+        if (!extends_) releaseTail(prior);
         const active: ActiveToast = {
             id: extends_ ? prior!.id : ++sequence,
             message: toast.message,
@@ -78,8 +105,13 @@ const realService: SnackbarService = {
     },
     dismiss(): void {
         if (!registeredStore) return;
+        const toast = registeredStore.current;
         clearTimer();
         registeredStore.current = null;
+        // Esc (SnackbarHost's only caller) closes the window without taking the
+        // Undo — the same case as timing out, reached faster. Cleared before the
+        // tail runs, matching the timeout path.
+        releaseTail(toast);
     },
     pauseTimer(): void {
         if (timerId === null || remainingMs === null) return;

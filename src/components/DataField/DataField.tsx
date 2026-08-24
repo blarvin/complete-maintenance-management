@@ -55,6 +55,9 @@ export const DataField = (props: DataFieldProps) => {
             message: 'Field deleted',
             execute: () => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: fieldId } }),
             undo: () => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: fieldId } }),
+            // The audit row lands only if the window closes without an Undo —
+            // an undo inside it is a slip, not an event (SPEC → Undo semantics).
+            onExpire: () => getCommandBus().execute({ type: 'LOG_ELEMENT_DELETE', payload: { id: fieldId } }),
         });
     };
 
@@ -102,7 +105,9 @@ export const DataField = (props: DataFieldProps) => {
             />
 
             {shape() !== 'composite' && (
-                <label class={styles.datafieldLabel} id={labelId()}>{props.name}:</label>
+                // `title` because the `label` track is fixed and long names
+                // ellipsize (DataField.module.css → .datafieldLabel).
+                <label class={styles.datafieldLabel} id={labelId()} title={props.name}>{props.name}:</label>
             )}
 
             <Dynamic

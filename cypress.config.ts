@@ -11,7 +11,7 @@ export default defineConfig({
         viewportHeight: 667,
         video: false,
         screenshotOnRunFailure: true,
-        // Seeding is now done in-browser via cy.seedAndVisit() / cy.seedMinimal()
-        // No Firestore tasks needed
+        // Seeding is done in-browser by the commands in cypress/support/e2e.ts —
+        // clearEmulator, freshVisit, createNode, expandCard. No Firestore tasks needed.
     },
 });

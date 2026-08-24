@@ -93,7 +93,7 @@ describe('the log merges by union', () => {
   });
 
   /**
-   * The Tech Debt #4 case end to end: two same-rev appends land in the same
+   * The *History ID Scheme* case end to end: two same-rev appends land in the same
    * store — one written locally, one arriving from a pull — and both remain.
    * Before the fix this store held one row.
    */

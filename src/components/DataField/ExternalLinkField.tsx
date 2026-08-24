@@ -22,9 +22,9 @@
  */
 
 import { Show, createMemo, type Accessor } from 'solid-js';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
-import { useFieldValueSync } from '../../hooks/useFieldValueSync';
+import { useValueSlot } from '../../hooks/useValueSlot';
 import type { ExternalLinkValue } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import { safeHttpUrl, displayUrl } from '../../utils/url';
 import styles from './DataField.module.css';
 
@@ -32,7 +32,7 @@ export type ExternalLinkFieldProps = {
     id: string;
     value: ExternalLinkValue | null;
     rootRef: Accessor<HTMLElement | undefined>;
-    pendingMode?: { onChange: (value: ExternalLinkValue | null) => void | Promise<void>; autoFocus?: boolean };
+    pendingMode?: PendingMode<ExternalLinkValue>;
 };
 
 const formatUrl = (v: ExternalLinkValue | null): string => v?.url ?? '';
@@ -45,13 +45,11 @@ const parseUrl = (raw: string): ExternalLinkValue | null => {
 };
 
 export const ExternalLinkField = (props: ExternalLinkFieldProps) => {
-    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        setCurrentValue,
         setEditInputRef,
         valuePointerDown,
         valueKeyDown,
@@ -59,18 +57,7 @@ export const ExternalLinkField = (props: ExternalLinkFieldProps) => {
         inputBlur,
         inputKeyDown,
         inputChange,
-    } = useFieldEdit<ExternalLinkValue>({
-        fieldId: props.id,
-        initialValue: props.value,
-        format: formatUrl,
-        parse: parseUrl,
-        rootRef: props.rootRef,
-        pendingMode: props.pendingMode,
-    });
-    /* eslint-enable solid/reactivity */
-
-    // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
-    useFieldValueSync<ExternalLinkValue>(props.id, setCurrentValue);
+    } = useValueSlot<ExternalLinkValue>(props, { format: formatUrl, parse: parseUrl });
 
     // Derived from the live edit state, not `props.value`, so the `↗` follows an
     // edit the moment it commits.
@@ -130,6 +117,9 @@ export const ExternalLinkField = (props: ExternalLinkFieldProps) => {
             <input
                 ref={setEditInputRef}
                 type="url"
+                // The action key commits and dismisses — it does not advance to
+                // a next field. See useFieldEdit → inputBlur.
+                enterkeyhint="done"
                 classList={{
                     [styles.datafieldValue]: true,
                     [styles.datafieldValueUnderlined]: !!editValue(),

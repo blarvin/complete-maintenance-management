@@ -5,9 +5,17 @@
    subgrid` and reference columns by name (e.g. `grid-column: value` or
    `grid-column: value / history-chevron`).
 
+   The track list itself is `--field-grid-tracks` (tokens.css), because two other
+   containers mount DataField rows outside a FieldList and need the identical
+   contract. This is still its home: the notes below describe the token, and a
+   change to either belongs in both.
+
    Track sizing notes:
-   - `label` is `minmax(--label-width, auto)` so the column sizes to the widest
-     label across all participating rows (rather than truncating long labels).
+   - `label` is a fixed `--label-width`, and long labels ellipsize. It used to be
+     `minmax(--label-width, auto)` — sized to the widest label across all
+     participating rows — but "widest" is a live measurement, so typing a name
+     into the add surface moved every other row's value column per keystroke.
+     A fixed track is the only shape that never moves.
    - `value` and `spacer` are both `minmax(0, 1fr)` and split remaining
      width 50/50. `spacer` lives BETWEEN `value` and `metadata` — the
      elastic spacer pushes `metadata` flush against the trailing chevron
@@ -29,14 +37,7 @@
    under live value and entry metadata sits under live metadata. */
 .fieldList {
     display: grid;
-    grid-template-columns:
-        [details-chevron] var(--chevron-col-width)
-        [label]           minmax(var(--label-width), auto)
-        [value]           minmax(0, 1fr)
-        [spacer]          minmax(0, 1fr)
-        [metadata]        auto
-        [history-chevron] var(--chevron-col-width)
-        [end];
+    grid-template-columns: var(--field-grid-tracks);
     row-gap: var(--space-3);
     column-gap: var(--space-2);
     align-items: baseline;

@@ -36,6 +36,7 @@ import { getInlineManifest, getKindManifest, FIELD_KINDS } from '../../kinds/reg
 import { isInline } from '../../kinds/placement';
 import { valueForKind } from '../../kinds/valueCompat';
 import { generateId } from '../../utils/id';
+import { formatTimestampShort } from '../../utils/time';
 import { ConfigRows } from '../ConfigRows/ConfigRows';
 import { ConfigSummary } from '../ConfigSummary/ConfigSummary';
 import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
@@ -59,7 +60,8 @@ export type AddFieldSurfaceProps = {
 
 const SURFACE_ID = 'add-surface' as const;
 
-const NAME_MAX = 50;
+/** Mirrors `LABEL_MAX` in useDefinitionDraft, which is the enforcing half. */
+const NAME_MAX = 40;
 
 /**
  * Sentinel for a failed fetch. Not because `createResource` lacks an error
@@ -75,7 +77,8 @@ const FAILED = Symbol('failed');
 export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
     const isOpen = () => props.activeSurface() === SURFACE_ID;
 
-    const draft = useDefinitionDraft();
+    // Keyed by node: the draft outlives a reload, and each card keeps its own.
+    const draft = useDefinitionDraft(() => props.nodeId);
 
     // The row ref is owned here so outside-click detection inside the value
     // Renderer covers the whole row, exactly as DataField does it.
@@ -184,7 +187,13 @@ export const AddFieldSurface = (props: AddFieldSurfaceProps) => {
                         {/* Read-only by contract: config is `delegated`, so
                             altering what an existing Definition means is not this
                             surface's job (SPEC → The bands). */}
-                        {(def) => <ConfigSummary definitionId={def().id} source={def().label} />}
+                        {(def) => (
+                            <ConfigSummary
+                                definitionId={def().id}
+                                kind={def().kind}
+                                source={def().label}
+                            />
+                        )}
                     </Show>
                 </div>
             ),
@@ -432,19 +441,28 @@ const KindRow = (props: KindRowProps) => {
                         >
                             <For each={props.definitions}>
                                 {(def) => (
-                                    <div class={styles.rowHead}>
-                                        <span class={chevron.chevronSpacer} aria-hidden="true" />
-                                        <button
-                                            type="button"
-                                            classList={{
-                                                [styles.rowName]: true,
-                                                [styles.rowNameSelected]: props.pickedId === def.id,
-                                            }}
-                                            aria-pressed={props.pickedId === def.id}
-                                            onClick={() => props.onPickDefinition(def)}
-                                        >
-                                            {def.label}
-                                        </button>
+                                    <div class={styles.defEntry}>
+                                        <div class={styles.rowHead}>
+                                            <span class={chevron.chevronSpacer} aria-hidden="true" />
+                                            <button
+                                                type="button"
+                                                classList={{
+                                                    [styles.rowName]: true,
+                                                    [styles.rowNameSelected]: props.pickedId === def.id,
+                                                }}
+                                                aria-pressed={props.pickedId === def.id}
+                                                onClick={() => props.onPickDefinition(def)}
+                                            >
+                                                {def.label}
+                                            </button>
+                                        </div>
+                                        {/* Provenance, outside the button on purpose: the label is
+                                            the pick target and its accessible name must stay the
+                                            Definition's name. This is information, not an act. */}
+                                        <div class={styles.defMeta}>
+                                            <span>{`Coined ${formatTimestampShort(def.updatedAt)} by ${def.authorId}`}</span>
+                                            <code class={styles.defId}>{def.id}</code>
+                                        </div>
                                     </div>
                                 )}
                             </For>

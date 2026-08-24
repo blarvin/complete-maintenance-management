@@ -42,6 +42,19 @@ describe('parseNumber', () => {
 
     it('rejects Infinity', () => {
         expect(() => parseNumber('Infinity')).toThrow(/not a valid number/);
+        expect(() => parseNumber('-Infinity')).toThrow(/not a valid number/);
+        expect(() => parseNumber('+Infinity')).toThrow(/not a valid number/);
+    });
+
+    it('rejects radix literals rather than reading them as Number does', () => {
+        // Number('0x1A') === 26, Number('0b101') === 5, Number('0o17') === 15.
+        expect(() => parseNumber('0x1A')).toThrow(/not a valid number/);
+        expect(() => parseNumber('0b101')).toThrow(/not a valid number/);
+        expect(() => parseNumber('0o17')).toThrow(/not a valid number/);
+    });
+
+    it('rejects a well-formed literal that overflows to Infinity', () => {
+        expect(() => parseNumber('1e999')).toThrow(/not a valid number/);
     });
 
     it('returns null for empty / whitespace-only input', () => {

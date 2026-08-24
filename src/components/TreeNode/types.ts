@@ -70,7 +70,7 @@ export type TreeNodeConstructionProps = TreeNodeBaseProps & {
     /** When true, this is a child construction (inside branch-children) */
     isChildConstruction?: boolean;
     onCancel: () => void;
-    onCreate: (payload: CreateNodePayload) => void;
+    onCreate: (payload: CreateNodePayload) => void | Promise<void>;
 };
 
 /**

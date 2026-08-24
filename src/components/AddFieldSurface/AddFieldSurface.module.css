@@ -69,17 +69,18 @@
 /* The name is an input at rest: no border, no background, no padding — it reads
    as the label it is about to become.
 
-   `field-sizing: content` (Chromium 123+, already relied on by
-   `textarea.datafieldTextarea`) is what makes the card reflow to the finished
-   width as the name is typed, rather than to a placeholder. Without it the
-   `size={1}` attribute in the JSX collapses the intrinsic width and `min-width`
-   takes over — the shared `label` track must never be widened by this input's
-   default ~20ch. */
+   It fills the `label` track and stops there. It used to carry
+   `field-sizing: content` so the row would grow to the finished width as the
+   name was typed — but the track was `minmax(--label-width, auto)` then, so that
+   growth moved every other field's value column, per keystroke. The track is
+   fixed now, so the input takes the track's width and a long name scrolls inside
+   it. `width: 100%` (not the `size={1}` intrinsic width) is what pins it: an
+   `<input>` grid item does not stretch on its own. */
 .nameInput {
     grid-column: label;
     grid-row: 1;
-    field-sizing: content;
-    min-width: var(--label-width);
+    width: 100%;
+    min-width: 0;
     appearance: none;
     -webkit-appearance: none;
     border: 0;
@@ -172,6 +173,34 @@
     font-size: var(--text-xs);
     color: var(--text-placeholder);
     font-style: italic;
+}
+
+/* ── A Definition row ──────────────────────────────────────────────────────
+
+   Label plus its provenance, because a label alone cannot separate two
+   same-named Definitions — which is exactly when this list is hardest to read.
+   A compact block, not a row per fact: when and by whom on one line, the id
+   (the only true discriminator) on the next.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.defEntry {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Indented past the chevron column so the provenance hangs under the label
+   rather than under the disclosure gutter — the same measure `.nested` uses. */
+.defMeta {
+    display: flex;
+    flex-direction: column;
+    padding-left: var(--chevron-col-width);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+.defId {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    overflow-wrap: anywhere;
 }
 
 /* One indent per level, matching ConfigRows so depth reads consistently whether

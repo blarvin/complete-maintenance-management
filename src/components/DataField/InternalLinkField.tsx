@@ -37,9 +37,9 @@
 
 import { Show, createSignal, createEffect, onCleanup, type Accessor } from 'solid-js';
 import { useAppTransitions } from '../../state/appState';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
-import { useFieldValueSync } from '../../hooks/useFieldValueSync';
+import { useValueSlot } from '../../hooks/useValueSlot';
 import type { Element, InternalLinkValue } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import { getElementQueries } from '../../data/queries';
 import { initializeStorage } from '../../data/storage/initStorage';
 import { storageEventBus } from '../../data/storageEventBus';
@@ -53,7 +53,7 @@ export type InternalLinkFieldProps = {
     id: string;
     value: InternalLinkValue | null;
     rootRef: Accessor<HTMLElement | undefined>;
-    pendingMode?: { onChange: (value: InternalLinkValue | null) => void | Promise<void>; autoFocus?: boolean };
+    pendingMode?: PendingMode<InternalLinkValue>;
 };
 
 const formatTarget = (v: InternalLinkValue | null): string => v?.targetId ?? '';
@@ -66,13 +66,11 @@ const parseTarget = (raw: string): InternalLinkValue | null => {
 export const InternalLinkField = (props: InternalLinkFieldProps) => {
     const { revealElement } = useAppTransitions();
 
-    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        setCurrentValue,
         setEditInputRef,
         valuePointerDown,
         valueKeyDown,
@@ -80,18 +78,7 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
         inputBlur,
         inputKeyDown,
         inputChange,
-    } = useFieldEdit<InternalLinkValue>({
-        fieldId: props.id,
-        initialValue: props.value,
-        format: formatTarget,
-        parse: parseTarget,
-        rootRef: props.rootRef,
-        pendingMode: props.pendingMode,
-    });
-    /* eslint-enable solid/reactivity */
-
-    // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
-    useFieldValueSync<InternalLinkValue>(props.id, setCurrentValue);
+    } = useValueSlot<InternalLinkValue>(props, { format: formatTarget, parse: parseTarget });
 
     /** The whole resolved Element, not just its name: the path needs `parentId`
      *  and `kind`, and `→` needs `parentId` to know where to stand. */
@@ -113,10 +100,13 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
      * fires, but `resolveEdge` → `getElementById` is a bare `db.elements.get`,
      * which — unlike `getChildren` beside it — returns soft-deleted rows. A
      * deleted target therefore keeps resolving and keeps rendering as live, `→`
-     * and all; only an id that never existed reaches `(unresolved: …)`. And
-     * nothing user-facing renames an Element yet (`UPDATE_ELEMENT_NAME` has no
-     * production caller), so the live pin's headline case is wired but
-     * untriggerable. Both are the resolver-status item in ISSUES → Architecture.
+     * and all; only an id that never existed reaches `(unresolved: …)`. That is
+     * the resolver-status item in ISSUES → Architecture.
+     *
+     * The rename half **is** live as of 2026-08-22: inline node rename gave
+     * `UPDATE_ELEMENT_NAME` its first production caller, and a link's rendered
+     * address follows the target's new name off this subscription (hand-tested
+     * against the demo data).
      *
      * Stale-async guard: an in-flight resolve must not land after the tracked id
      * changed (effects capture their values at run time).
@@ -153,7 +143,7 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
      *
      * Rendered as nearest-ancestor-plus-name; the full join goes in the `title`.
      * The whole breadcrumb does not fit the value cell, whose right end already
-     * belongs to the metadata column (ISSUES → UI #3). `TreeBreadcrumbs` is
+     * belongs to the metadata column. `TreeBreadcrumbs` is
      * deliberately not reused: it renders navigable buttons and its own chrome.
      */
     const pathSegments = (): string[] => {
@@ -228,6 +218,9 @@ export const InternalLinkField = (props: InternalLinkFieldProps) => {
             <input
                 ref={setEditInputRef}
                 type="text"
+                // The action key commits and dismisses — it does not advance to
+                // a next field. See useFieldEdit → inputBlur.
+                enterkeyhint="done"
                 classList={{
                     [styles.datafieldValue]: true,
                     [styles.datafieldValueUnderlined]: !!editValue(),

@@ -29,6 +29,13 @@
     user-select: all;
 }
 
+/* Shares the id's line rather than taking one — same fact, same row. */
+.version {
+    flex: none;
+    color: var(--text-muted);
+    font-family: var(--font-mono, ui-monospace, monospace);
+}
+
 .copyButton {
     flex: none;
     background: none;

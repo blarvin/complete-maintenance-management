@@ -3,8 +3,11 @@
  *
  * Distinct from `usePendingForms`: a pending Definition draft has no
  * DataField anchor yet — the Definition has to commit (Save → IDB +
- * sync queue) before a DataField draft can attach to it. No localStorage
- * persistence: dismissing the surface drops the draft.
+ * sync queue) before a DataField draft can attach to it.
+ *
+ * Pass `persistFor` (a node id) and the draft survives a reload, via
+ * `addFieldDraft.ts`. Without it the draft is session-only, which is what the
+ * dormant composer's `DefinitionAuthoringForm` has always had.
  *
  * Save returns the newly-created Definition so the caller can pre-check
  * a Composer row for it (per SPEC: "immediately materialises a checked
@@ -16,8 +19,14 @@
  * branches (author-then-mint / mint-only) written once.
  */
 
-import { batch, createSignal, type Accessor } from 'solid-js';
+import { batch, createEffect, createSignal, type Accessor } from 'solid-js';
 import { getCommandBus } from '../data/commands';
+import { getDefinitionQueries } from '../data/queries';
+import {
+    clearAddFieldDraft,
+    loadAddFieldDraft,
+    saveAddFieldDraft,
+} from '../data/services/addFieldDraft';
 import { generateId } from '../utils/id';
 import { getDefinitionAuthoring } from '../kinds/registry';
 import { CONFIG_SCHEMAS, CONFIG_VALIDATORS } from '../kinds/configSchema';
@@ -51,7 +60,15 @@ export function defaultConfigFor(kind: Kind): DefinitionConfig {
     return authoring.defaultConfig();
 }
 
-const LABEL_MAX = 50;
+/**
+ * The hard stop, behind `AddFieldSurface`'s matching `maxLength` — paste and
+ * programmatic writes don't go through the input attribute. Keep the two equal.
+ *
+ * Not the same number as `--label-width`: the column is a width and this is a
+ * character count, and the two only coincide for one string. 40 M's render ~370px
+ * at `--text-sm`, 40 spaces ~120px.
+ */
+const LABEL_MAX = 40;
 
 export type UseDefinitionDraftResult = {
     kind: Accessor<Kind>;
@@ -97,18 +114,57 @@ export type UseDefinitionDraftResult = {
     commit: (parentId: string, siblingOrder: number) => Promise<Element | null>;
 };
 
-export function useDefinitionDraft(): UseDefinitionDraftResult {
-    const [kind, setKind] = createSignal<Kind>(DEFAULT_KIND);
-    const [label, setLabelSignal] = createSignal<string>('');
-    const [config, setConfigSignal] = createSignal<DefinitionConfig>(defaultConfigFor(DEFAULT_KIND));
+/**
+ * Read a stored draft back, or null. A kind that has left the registry cannot
+ * seed one — `defaultConfigFor` would throw and the surface would never mount —
+ * so a stale draft is dropped rather than carried.
+ */
+function restoreDraft(nodeId: string) {
+    const stored = loadAddFieldDraft(nodeId);
+    if (!stored) return null;
+    if (!getDefinitionAuthoring(stored.kind)) {
+        clearAddFieldDraft(nodeId);
+        return null;
+    }
+    return stored;
+}
+
+/**
+ * @param persistFor The node whose Add Surface this draft belongs to. Given
+ * one, the draft is written to localStorage on every change and read back at
+ * mount; omitted, nothing is stored.
+ */
+export function useDefinitionDraft(persistFor?: Accessor<string>): UseDefinitionDraftResult {
+    // Read once, before the signals exist, so the slot's Renderer mounts against
+    // the restored value rather than seeding empty and being corrected.
+    const restored = persistFor ? restoreDraft(persistFor()) : null;
+
+    const [kind, setKind] = createSignal<Kind>(restored?.kind ?? DEFAULT_KIND);
+    const [label, setLabelSignal] = createSignal<string>(restored?.label ?? '');
+    const [config, setConfigSignal] = createSignal<DefinitionConfig>(
+        restored?.config ?? defaultConfigFor(DEFAULT_KIND),
+    );
     /** Derived: the same call `ConfigRows` used to make and hand back on every
      *  write, which meant two copies of one fact and a stale window between them. */
     const configError = (): string | null =>
         CONFIG_VALIDATORS[kind()]?.(config()) ?? null;
     // `setValue` takes a function-shaped payload too (single-image values are
     // objects), so wrap the setter to stop Solid reading one as an updater.
-    const [value, setValueSignal] = createSignal<DataFieldValue | null>(null);
+    const [value, setValueSignal] = createSignal<DataFieldValue | null>(restored?.value ?? null);
     const [picked, setPickedSignal] = createSignal<Definition | null>(null);
+
+    // A picked Definition is stored by id and resolved back asynchronously —
+    // the Library is the owner, and a copy in localStorage would be a second
+    // one. Set straight onto the signal rather than through `pickDefinition`,
+    // which would overwrite the restored label/config/value with the
+    // Definition's own. A Definition that has since gone leaves the draft
+    // standing as an authoring draft, which is the honest fallback.
+    if (restored?.pickedId) {
+        void getDefinitionQueries()
+            .getDefinitionById(restored.pickedId)
+            .then((def) => { if (def) setPickedSignal(def); })
+            .catch(() => { /* leave it as an authoring draft */ });
+    }
     /**
      * Whether the user has said anything about the value slot — including
      * saying *empty*. `value() === null` cannot carry that on its own, and the
@@ -118,7 +174,7 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
      * mint an empty instance, which is the strongest argument against having
      * defaults at all.
      */
-    const [valueTouched, setValueTouched] = createSignal(false);
+    const [valueTouched, setValueTouched] = createSignal(restored?.valueTouched ?? false);
     /**
      * Bumped whenever the value is set by something *other than the value slot* —
      * the `default` mirror, or seeding from a picked Definition.
@@ -216,6 +272,32 @@ export function useDefinitionDraft(): UseDefinitionDraftResult {
 
     const isDirty = () =>
         label().trim() !== '' || value() !== null || picked() !== null || configTouched();
+
+    /**
+     * Persist on every change, and clear the moment the draft stops being dirty.
+     *
+     * `isDirty` doing the clearing is what makes Create and Cancel need no code
+     * of their own: both run `reset()`, which empties the same signals this
+     * effect tracks, so the stored copy goes with them. One rule instead of
+     * three call sites that could each forget.
+     */
+    if (persistFor) {
+        createEffect(() => {
+            const nodeId = persistFor();
+            if (!isDirty()) {
+                clearAddFieldDraft(nodeId);
+                return;
+            }
+            saveAddFieldDraft(nodeId, {
+                kind: kind(),
+                label: label(),
+                config: config(),
+                value: value(),
+                valueTouched: valueTouched(),
+                pickedId: picked()?.id ?? null,
+            });
+        });
+    }
 
     const cancel = () => {
         batch(() => {

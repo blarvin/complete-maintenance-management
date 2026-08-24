@@ -91,7 +91,11 @@
     margin-right: 4px;
     appearance: none;
     background: var(--bg-surface);
-    border: var(--border-width-thin) solid var(--border-strong);
+    /* Was `--border-strong`, which is defined nowhere — an invalid `var()`
+       dropped the whole declaration, so this button has been rendering
+       borderless and its focus ring below was invisible. `--border-default` is
+       the token every other bordered control here uses. */
+    border: var(--border-width-thin) solid var(--border-default);
     border-radius: 50%;
     width: 1rem;
     height: 1rem;
@@ -109,7 +113,7 @@
     background: var(--bg-hover-subtle);
 }
 .revertButton:focus-visible {
-    outline: var(--border-width-thin) solid var(--border-strong);
+    outline: var(--border-width-thin) solid var(--border-default);
     outline-offset: 1px;
 }
 

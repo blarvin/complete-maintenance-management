@@ -19,6 +19,17 @@ export type CommitWithUndoOptions = {
     undo: (result: unknown) => Promise<void> | void;
     /** Static success message, or a fn of the execute result (return null to suppress the toast). */
     message: string | null | ((result: unknown) => string | null);
+    /**
+     * The deferred tail: runs when the undo window *closes* without Undo being
+     * pressed — timing out, being replaced by another toast, or being dismissed
+     * with Esc. Today that is a delete's history row (SPEC → Undo semantics →
+     * *History entry deferral*) — the work an undo should make never have
+     * happened, rather than happen and be reversed.
+     *
+     * Rides the toast, so a suppressed message (`message` returning null) means
+     * no tail either. Nothing to defer without a window to defer past.
+     */
+    onExpire?: (result: unknown) => Promise<void> | void;
 };
 
 export async function commitWithUndo(opts: CommitWithUndoOptions): Promise<boolean> {
@@ -34,6 +45,7 @@ export async function commitWithUndo(opts: CommitWithUndoOptions): Promise<boole
                         await opts.undo(result);
                     },
                 },
+                onExpire: opts.onExpire && (() => opts.onExpire!(result)),
             });
         }
         return true;

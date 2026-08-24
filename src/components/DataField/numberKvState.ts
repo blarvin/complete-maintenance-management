@@ -16,6 +16,14 @@ import type { CompoundValue, NumberKvConfig, NumberKvDisplayFormat } from '../..
 export type NumberKvState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
 
 /**
+ * Decimal or scientific notation, whole-string. This is the gate `Number` does
+ * not have: `Number` also reads radix literals (`0x1A` → 26, `0b101` → 5,
+ * `0o17` → 15) and the word spellings `Infinity` / `-Infinity`, none of which
+ * anyone means to type into a measurement field.
+ */
+const DECIMAL_OR_SCIENTIFIC = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+
+/**
  * Parse the raw edit buffer to a number. Empty (or whitespace) → null; anything
  * that isn't a complete number throws, and `useFieldEdit.save` turns the message
  * into the error Snackbar.
@@ -24,10 +32,16 @@ export type NumberKvState = 'none' | 'ok' | 'warn' | 'alarm' | 'stale';
  * and silently discards the rest, so "120nnn" saved as 120 and "1,200" as 1.
  * Scientific input ("1e5") still parses — `scientific` is a supported
  * displayFormat, so the edit buffer has to accept what the display can produce.
+ * The regex runs first so `Number`'s own extras never reach the value; the
+ * `isFinite` check stays behind it for overflow ("1e999" is well-formed and
+ * still infinite).
  */
 export function parseNumber(raw: string): number | null {
     const trimmed = raw.trim();
     if (trimmed === '') return null;
+    if (!DECIMAL_OR_SCIENTIFIC.test(trimmed)) {
+        throw new Error(`"${raw}" is not a valid number`);
+    }
     const n = Number(trimmed);
     if (!Number.isFinite(n)) {
         throw new Error(`"${raw}" is not a valid number`);

@@ -250,7 +250,7 @@ describe.skipIf(!emulatorUp)('SyncManager — emulator round-trip', () => {
 
   describe('the cursor advances off server stamps', () => {
     /**
-     * Bugs #3 against a real server: `updatedAt` here is a genuine
+     * The high-water-mark cursor against a real server: `updatedAt` here is a genuine
      * `serverTimestamp()`, not a fixture, so this is the first test where the
      * cursor and the rows it is compared against come from different clocks
      * for real.
@@ -272,7 +272,7 @@ describe.skipIf(!emulatorUp)('SyncManager — emulator round-trip', () => {
       const cursor = await local.getLastSyncTimestamp();
 
       expect(cursor).toBe(Math.max(...serverStamps));
-      // The point of Bugs #3: the cursor is a value the *server* minted, not
+      // The whole point: the cursor is a value the *server* minted, not
       // one this process made up.
       expect(serverStamps).toContain(cursor);
     });
@@ -325,7 +325,8 @@ describe.skipIf(!emulatorUp)('SyncManager — emulator round-trip', () => {
 
   describe('history convergence through Firestore', () => {
     /**
-     * Tech Debt #4 on the path where it actually bit. Two clients both at
+     * IMPLEMENTATION.md → *History ID Scheme*, on the path where it actually
+     * bit. Two clients both at
      * rev 5 on the same element, both pushing — through `applySyncItem`, the
      * real push, whose `setDoc` carries no merge and no create-guard.
      */

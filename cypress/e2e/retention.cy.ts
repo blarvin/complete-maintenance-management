@@ -4,7 +4,8 @@
  * have, the client keeps what it holds; the only way a node leaves the tree is
  * a soft delete (`deletedAt`), which travels as an ordinary field update.
  *
- * This is the regression test for ISSUES Bugs #4. `FullCollectionSync` used to
+ * This is the regression test for IMPLEMENTATION.md → *Retention over
+ * reconciliation*. `FullCollectionSync` used to
  * delete any local element absent from the server pull, exempting rows still in
  * the sync queue — but a permanently-failed push drops *out* of that queue, so
  * the row least safe to lose was exactly the one that could be purged. The
@@ -74,7 +75,7 @@ describe('data retention', () => {
 
     it('the dev Library seeds survive a full sync against an empty server', () => {
         // The seeds never sync (the bootstrap runner enqueues nothing), so they were
-        // the original victims of the purge — ISSUES Bugs #1, previously fixed
+        // the original victims of the purge, previously fixed
         // by an explicit exemption inside the strategy. Nothing exempts them
         // now; nothing purges. The construction defaults are the visible proof.
         cy.freshVisit();

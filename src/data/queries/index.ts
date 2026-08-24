@@ -12,6 +12,7 @@ export function elementQueriesFromAdapter(adapter: StorageAdapter): IElementQuer
     getRootElements: async () => unwrap(await adapter.listRootElements()),
     getElementById: async (id) => unwrap(await adapter.getElement(id)),
     getChildren: async (parentId) => unwrap(await adapter.listChildElements(parentId)),
+    getDeletedChildren: async (parentId) => unwrap(await adapter.listDeletedChildElements(parentId)),
     getChildrenByKind: async (parentId, kind) => unwrap(await adapter.listChildElementsByKind(parentId, kind)),
     getElementHistory: async (elementId) => unwrap(await adapter.getElementHistory(elementId)),
     nextSiblingOrder: async (parentId, kind) => unwrap(await adapter.nextSiblingOrder(parentId, kind)),

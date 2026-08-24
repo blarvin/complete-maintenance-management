@@ -64,7 +64,8 @@ describe('syncSubscriber', () => {
 
     it('a local soft delete — origin decides, not the deletedAt payload', () => {
       // Deletion is an ordinary write carrying `deletedAt`; it must push like any
-      // other local change. (There is no hard-delete event any more — Bugs #4.)
+      // other local change. (There is no hard-delete event any more —
+      // IMPLEMENTATION.md → *Soft delete is the only delete*.)
       subscribe();
       bus.emit({
         type: 'ELEMENT_WRITTEN',

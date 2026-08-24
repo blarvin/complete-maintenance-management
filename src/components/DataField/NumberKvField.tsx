@@ -12,10 +12,10 @@
  */
 
 import { Show, createMemo, createResource, type Accessor } from 'solid-js';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
-import { useFieldValueSync } from '../../hooks/useFieldValueSync';
+import { useValueSlot } from '../../hooks/useValueSlot';
 import { getDefinitionQueries } from '../../data/queries';
 import type { NumberKvConfig } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import { computeNumberKvState, formatNumberKvDisplay, parseNumber } from './numberKvState';
 import styles from './DataField.module.css';
 import numberStyles from './NumberKvField.module.css';
@@ -32,8 +32,7 @@ export type NumberKvFieldProps = {
     rootRef: Accessor<HTMLElement | undefined>;
     /** Draft config, for a row with no Definition to fetch from (the Add Surface). */
     config?: NumberKvConfig;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange. */
-    pendingMode?: { onChange: (value: number | null) => void | Promise<void>; autoFocus?: boolean };
+    pendingMode?: PendingMode<number>;
 };
 
 function makeValidate(config: NumberKvConfig) {
@@ -121,13 +120,11 @@ const NumberKvBody = (props: NumberKvFieldProps & { config: NumberKvConfig }) =>
         return isPercent && n !== null ? n / 100 : n;
     };
 
-    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
     const {
         isEditing,
         hasValue,
         editValue,
         currentValue,
-        setCurrentValue,
         setEditInputRef,
         valuePointerDown,
         valueKeyDown,
@@ -135,18 +132,11 @@ const NumberKvBody = (props: NumberKvFieldProps & { config: NumberKvConfig }) =>
         inputBlur,
         inputKeyDown,
         inputChange,
-    } = useFieldEdit<number>({
-        fieldId: props.id,
-        initialValue: props.value,
+    } = useValueSlot<number>(props, {
         format: formatEdit, // edit buffer shows bare number (×100 for percent), units affix sits outside
         parse: parseEdit,
         validate: makeValidate(config),
-        rootRef: props.rootRef,
-        pendingMode: props.pendingMode,
     });
-
-    useFieldValueSync<number>(props.id, setCurrentValue);
-    /* eslint-enable solid/reactivity */
 
     const labelId = () => `field-label-${props.id}`;
     const helper = buildHelperText(config);
@@ -192,6 +182,9 @@ const NumberKvBody = (props: NumberKvFieldProps & { config: NumberKvConfig }) =>
                     ref={setEditInputRef}
                     type="text"
                     inputMode="decimal"
+                    // The action key commits and dismisses — it does not advance
+                    // to a next field. See useFieldEdit → inputBlur.
+                    enterkeyhint="done"
                     classList={{
                         [styles.datafieldValue]: true,
                         [numberStyles.input]: true,

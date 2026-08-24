@@ -20,13 +20,21 @@
  * element.
  */
 
-import { createSignal, onCleanup } from 'solid-js';
+import { Show, createSignal, onCleanup } from 'solid-js';
 import styles from './ElementIdRow.module.css';
 
 export type ElementIdRowProps = {
     id: string;
     /** Field label, e.g. `ID`. */
     label?: string;
+    /**
+     * The Element's revision, rendered `v3` after the id. Rides this row rather
+     * than claiming one of its own: an id and a version are one fact about the
+     * same row of storage, and the details block above spends its lines on
+     * things a reader looks for (SPEC → the Config band is already deeply
+     * nested). Omitted where the host has no history to count.
+     */
+    version?: number;
 };
 
 /** Long enough to read as feedback, short enough not to linger into the next act. */
@@ -60,6 +68,9 @@ export const ElementIdRow = (props: ElementIdRowProps) => {
         <div class={styles.row}>
             <span class={styles.label}>{props.label ?? 'ID'}</span>
             <code class={styles.id}>{props.id}</code>
+            <Show when={props.version !== undefined}>
+                <span class={styles.version} title="Revision">{`v${props.version}`}</span>
+            </Show>
             <button
                 type="button"
                 class={styles.copyButton}

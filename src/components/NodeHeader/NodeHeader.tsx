@@ -43,9 +43,27 @@ export type NodeHeaderProps = {
     /** Whether to render the expand/collapse chevron. Default true; false for
      *  content-free kinds (no children/DataCard — e.g. the `jobs` lens, #5). */
     showChevron?: boolean;
+    /** Given, the title is double-tap renameable — subject to the tap not being
+     *  spoken for already; see `canRename` below. */
+    onRenameName?: (next: string) => Promise<void>;
+    /** Same, for the subtitle. */
+    onRenameSubtitle?: (next: string) => Promise<void>;
 };
 
 export const NodeHeader = (props: NodeHeaderProps) => {
+    /**
+     * Rename is offered only where the tap is not already spoken for.
+     *
+     * A double-tap is the right gesture — a header carries other gestures, and
+     * the accidental-brush guard is exactly what that needs — but on a
+     * **clickable** card the header *is* the navigation target, and the first
+     * tap of the pair re-roots before the second can arrive. So there is no
+     * gesture left there, and the honest place for renaming is the card whose
+     * tap means nothing: the PARENT card, the node you are already inside.
+     * Getting to it costs one tap, which is the tap that used to be in the way.
+     */
+    const canRename = () => !props.isClickable;
+
     const handleBodyKeyDown = (e: KeyboardEvent) => {
         if (props.onNodeClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -96,8 +114,23 @@ export const NodeHeader = (props: NodeHeaderProps) => {
                         when={props.isConstruction}
                         fallback={
                             <>
-                                <NodeTitle name={props.name} id={props.titleId} />
-                                <NodeSubtitle subtitle={props.subtitle} />
+                                <NodeTitle
+                                    name={props.name}
+                                    id={props.titleId}
+                                    rename={
+                                        props.onRenameName && canRename()
+                                            ? { editKey: `${props.id}::name`, commit: props.onRenameName }
+                                            : undefined
+                                    }
+                                />
+                                <NodeSubtitle
+                                    subtitle={props.subtitle}
+                                    rename={
+                                        props.onRenameSubtitle && canRename()
+                                            ? { editKey: `${props.id}::subtitle`, commit: props.onRenameSubtitle }
+                                            : undefined
+                                    }
+                                />
                                 {/* Manifest-driven meta in the subtitle slot: org count / jobs rollup (#6b). */}
                                 <KindAdornment id={props.id} isParent={!!props.isParent} />
                             </>

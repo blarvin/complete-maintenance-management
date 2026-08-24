@@ -6,10 +6,12 @@
  * surfaces — opening one closes the others. Surface contract and roster
  * live in ./addFieldSurfaces.ts.
  *
- * The roster gates construction mode too: with it empty, a node under
- * construction renders its persisted fields only (there are none yet) and the
- * defaults arrive anyway — useNodeCreation seeds and commits the pending draft
- * itself, so nothing here has to be mounted for that to happen.
+ * The roster gates construction mode too, and under the current one no surface
+ * draws there: the Add Surface excludes itself when `isConstruction` and the
+ * other two are not enabled. So a node under construction renders its persisted
+ * fields only (there are none yet) and the defaults arrive anyway —
+ * useNodeCreation seeds and commits the pending draft itself, so nothing here
+ * has to be mounted for that to happen.
  *
  * Data arrives via useElementChildren (writes emit; readers subscribe) —
  * no reload callbacks are threaded to children. Composer orchestration
@@ -48,7 +50,7 @@ export type FieldListProps = {
 export const FieldList = (props: FieldListProps) => {
     const { children: fields } = useElementChildren(() => props.nodeId, 'fields');
 
-    const maxPersistedCardOrder = createMemo(() => {
+    const maxPersistedSiblingOrder = createMemo(() => {
         if (fields().length === 0) return -1;
         return Math.max(...fields().map(f => f.siblingOrder));
     });
@@ -98,7 +100,7 @@ export const FieldList = (props: FieldListProps) => {
                 <AddFieldSurface
                     nodeId={props.nodeId}
                     admittedKinds={admittedFieldKinds()}
-                    baseOrder={maxPersistedCardOrder()}
+                    baseOrder={maxPersistedSiblingOrder()}
                     activeSurface={activeSurface}
                     setActiveSurface={setActiveSurface}
                 />
@@ -108,7 +110,7 @@ export const FieldList = (props: FieldListProps) => {
                 <FieldComposerSlot
                     nodeId={props.nodeId}
                     mode={mode()}
-                    currentMaxCardOrder={maxPersistedCardOrder()}
+                    currentMaxCardOrder={maxPersistedSiblingOrder()}
                     initialDefinitionIds={props.initialDefinitionIds}
                     activeSurface={activeSurface}
                     setActiveSurface={setActiveSurface}
@@ -118,7 +120,7 @@ export const FieldList = (props: FieldListProps) => {
             <Show when={!props.hideAddSurfaces && ENABLED_ADD_FIELD_SURFACES.includes('legacy') && !props.isConstruction}>
                 <CreateDataField
                     nodeId={props.nodeId}
-                    currentMaxCardOrder={maxPersistedCardOrder()}
+                    currentMaxCardOrder={maxPersistedSiblingOrder()}
                     activeSurface={activeSurface}
                     setActiveSurface={setActiveSurface}
                 />

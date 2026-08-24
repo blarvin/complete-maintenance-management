@@ -14,10 +14,10 @@
  */
 
 import { Show, createResource, type Accessor } from 'solid-js';
-import { useFieldEdit } from '../../hooks/useFieldEdit';
-import { useFieldValueSync } from '../../hooks/useFieldValueSync';
+import { useValueSlot } from '../../hooks/useValueSlot';
 import { getDefinitionQueries } from '../../data/queries';
 import type { TextKvConfig } from '../../data/models';
+import type { PendingMode } from '../../kinds/types';
 import styles from './DataField.module.css';
 
 export type TextKvFieldProps = {
@@ -27,9 +27,7 @@ export type TextKvFieldProps = {
     rootRef: Accessor<HTMLElement | undefined>;
     /** Draft config, for a row with no Definition to fetch from (the Add Surface). */
     config?: TextKvConfig;
-    /** When set, edits are buffered (no IDB write) and forwarded via onChange.
-     *  `autoFocus` is set only for the row the user just ticked. */
-    pendingMode?: { onChange: (value: string | null) => void | Promise<void>; autoFocus?: boolean };
+    pendingMode?: PendingMode<string>;
 };
 
 const formatText = (v: string | null): string => v ?? '';
@@ -87,13 +85,14 @@ export const TextKvField = (props: TextKvFieldProps) => {
 };
 
 const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
-    /* eslint-disable solid/reactivity -- mount-time constants; rows remount per field (<For> reference-keyed) */
+    // eslint-disable-next-line solid/reactivity -- mount-time constant; the Body remounts per config (<Show keyed>)
+    const config = props.config;
+
     const {
         isEditing,
         displayValue,
         hasValue,
         editValue,
-        setCurrentValue,
         setEditInputRef,
         valuePointerDown,
         valueKeyDown,
@@ -101,22 +100,14 @@ const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
         inputBlur,
         inputKeyDown,
         inputChange,
-    } = useFieldEdit<string>({
-        fieldId: props.id,
-        initialValue: props.value,
+    } = useValueSlot<string>(props, {
         format: formatText,
         parse: parseText,
-        validate: makeValidate(props.config),
-        rootRef: props.rootRef,
-        pendingMode: props.pendingMode,
+        validate: makeValidate(config),
     });
-    /* eslint-enable solid/reactivity */
-
-    // eslint-disable-next-line solid/reactivity -- mount-time constant; rows remount per field
-    useFieldValueSync<string>(props.id, setCurrentValue);
 
     const labelId = () => `field-label-${props.id}`;
-    const isMultiline = () => !!props.config.multiline;
+    const isMultiline = () => !!config.multiline;
 
     return (
         <Show
@@ -145,6 +136,9 @@ const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
                 fallback={
                     <input
                         ref={setEditInputRef}
+                        // The action key commits and dismisses — it does not
+                        // advance to a next field. See useFieldEdit → inputBlur.
+                        enterkeyhint="done"
                         classList={{
                             [styles.datafieldValue]: true,
                             [styles.datafieldValueUnderlined]: !!editValue(),
@@ -161,6 +155,9 @@ const TextKvBody = (props: TextKvFieldProps & { config: TextKvConfig }) => {
             >
                 <textarea
                     ref={setEditInputRef}
+                    // Truthful here too: this textarea's Enter saves rather than
+                    // inserting a newline (deliberate — see the docblock above).
+                    enterkeyhint="done"
                     classList={{
                         [styles.datafieldValue]: true,
                         [styles.datafieldTextarea]: true,

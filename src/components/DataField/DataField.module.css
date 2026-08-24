@@ -137,11 +137,20 @@
     margin-top: 0.25em;
 }
 
+/* The `label` track is fixed (--label-width), so a label longer than it
+   ellipsizes rather than widening the column — which would move every other
+   row's value. `min-width: 0` lets the item shrink to the track; without it a
+   grid item's automatic minimum is its content. The full name is still
+   reachable: it is the row's `title`. */
 .datafieldLabel {
     grid-column: label;
     color: var(--text-primary);
     font-weight: normal;
     cursor: default;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* isUnfilled — a fact the record doesn't hold yet. De-emphasis, not colour:

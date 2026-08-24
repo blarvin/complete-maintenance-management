@@ -15,7 +15,7 @@
  * no storage change, no editing (SPEC → The Library).
  */
 
-import { createResource, For, Show, Suspense } from 'solid-js';
+import { createResource, createSignal, For, Show, Suspense } from 'solid-js';
 import { getDefinitionQueries } from '../../data/queries';
 import { isFieldLikeDefinitionKind } from '../../data/libraryChrome';
 import { DataField } from '../DataField/DataField';
@@ -23,6 +23,7 @@ import { getInlineManifest } from '../../kinds/registry';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
+import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import type { Definition } from '../../data/models';
 import nodeStyles from '../TreeNode/TreeNode.module.css';
 import styles from './LibraryViews.module.css';
@@ -32,8 +33,22 @@ const DefinitionNode = (props: { def: Definition }) => {
     const { toggleCardExpanded } = useAppTransitions();
     const isExpanded = () => selectors.getDataCardState(appState, props.def.id) === 'EXPANDED';
 
+    // The receiving half of a Field's *from <Definition>* line: arriving here
+    // centres and flashes the Definition's card, the same way a Field row
+    // answers an `internal-link`'s `→`. Without it the reveal would land on the
+    // lens with nothing to say which of thirty rows it meant.
+    const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
+    const isRevealed = useRevealOnArrival(() => props.def.id, wrapperEl);
+
     return (
-        <div class={nodeStyles.nodeWrapper} style={{ '--datacard-indent': '18px' }}>
+        <div
+            ref={setWrapperEl}
+            classList={{
+                [nodeStyles.nodeWrapper]: true,
+                [nodeStyles.nodeWrapperRevealed]: isRevealed(),
+            }}
+            style={{ '--datacard-indent': '18px' }}
+        >
             <NodeHeader
                 id={props.def.id}
                 titleId={`node-title-${props.def.id}`}

@@ -130,7 +130,7 @@ describe('IDBAdapter — element operations', () => {
     expect(props).toEqual(expect.arrayContaining(['parentId', 'siblingOrder', 'subtitle', 'value']));
   });
 
-  it('soft-deletes and restores an element, logging a delete history row', async () => {
+  it('soft-deletes and restores an element, writing no delete history row', async () => {
     await adapter.createElement({ id: 'x', kind: 'node', parentId: null, name: 'X' });
     await adapter.softDeleteElement('x');
     const after = await adapter.getElement('x');
@@ -139,12 +139,76 @@ describe('IDBAdapter — element operations', () => {
     const roots = await adapter.listRootElements();
     expect(roots.data).toHaveLength(0);
 
+    // The tombstone alone leaves no audit trace: that is what makes an undo
+    // inside the window a non-event (SPEC → Undo semantics).
     const hist = await adapter.getElementHistory('x');
-    expect(hist.data.some(h => h.action === 'delete')).toBe(true);
+    expect(hist.data.some(h => h.action === 'delete')).toBe(false);
 
     await adapter.restoreElement('x');
     const restored = await adapter.getElement('x');
     expect(restored.data?.deletedAt).toBeNull();
+  });
+
+  it('logElementDeleteHistory writes the deferred delete row, with the pre-delete value', async () => {
+    await seedLibraryDefinition('fd-del', 'text-kv');
+    await adapter.createElement({
+      id: 'y', kind: 'text-kv', parentId: null, name: 'Y', definitionId: 'fd-del', value: 'last known',
+    });
+    await adapter.softDeleteElement('y');
+    await adapter.logElementDeleteHistory('y');
+
+    const hist = await adapter.getElementHistory('y');
+    const row = hist.data.find(h => h.action === 'delete');
+    expect(row).toBeDefined();
+    expect(row!.property).toBe('value');
+    // A soft delete leaves `value` intact, so the deferred read still has it.
+    expect(row!.prevValue).toBe('last known');
+    expect(row!.newValue).toBeNull();
+  });
+
+  it('listDeletedChildElements is the exact complement of listChildElements', async () => {
+    await seedLibraryDefinition('fd-c', 'text-kv');
+    await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
+    for (const id of ['f1', 'f2', 'f3']) {
+      await adapter.createElement({ id, kind: 'text-kv', parentId: 'p', name: id, definitionId: 'fd-c' });
+    }
+    await adapter.softDeleteElement('f2');
+
+    const live = await adapter.listChildElements('p');
+    const gone = await adapter.listDeletedChildElements('p');
+    expect(live.data.map(e => e.id)).toEqual(['f1', 'f3']);
+    expect(gone.data.map(e => e.id)).toEqual(['f2']);
+
+    // A restore moves the row back across the same line.
+    await adapter.restoreElement('f2');
+    expect((await adapter.listDeletedChildElements('p')).data).toHaveLength(0);
+    expect((await adapter.listChildElements('p')).data.map(e => e.id)).toEqual(['f1', 'f2', 'f3']);
+  });
+
+  it('listDeletedChildElements returns newest tombstone first', async () => {
+    await seedLibraryDefinition('fd-o', 'text-kv');
+    await adapter.createElement({ id: 'p', kind: 'node', parentId: null, name: 'P' });
+    for (const id of ['a', 'b']) {
+      await adapter.createElement({ id, kind: 'text-kv', parentId: 'p', name: id, definitionId: 'fd-o' });
+    }
+    await adapter.softDeleteElement('a');
+    // `now()` is millisecond-resolution, so two deletes in the same tick would
+    // tie; the wait is what makes the ordering assertion mean anything.
+    await new Promise((r) => setTimeout(r, 5));
+    await adapter.softDeleteElement('b');
+
+    const gone = await adapter.listDeletedChildElements('p');
+    expect(gone.data.map(e => e.id)).toEqual(['b', 'a']);
+  });
+
+  it('logElementDeleteHistory writes nothing for an element that was restored', async () => {
+    await adapter.createElement({ id: 'z', kind: 'node', parentId: null, name: 'Z' });
+    await adapter.softDeleteElement('z');
+    await adapter.restoreElement('z');
+    await adapter.logElementDeleteHistory('z');
+
+    const hist = await adapter.getElementHistory('z');
+    expect(hist.data.some(h => h.action === 'delete')).toBe(false);
   });
 
   it('listChildElementsByKind filters by kind', async () => {

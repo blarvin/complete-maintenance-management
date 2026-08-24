@@ -5,17 +5,22 @@
  * Field logic is delegated to FieldList component.
  */
 
-import { Show, createSignal } from 'solid-js';
+import { Show, createResource, createSignal } from 'solid-js';
 import { NodeHeader } from '../NodeHeader/NodeHeader';
 import { DataCard } from '../DataCard/DataCard';
 import { FieldList } from '../FieldList/FieldList';
 import { LensRollup } from '../LensRollup/LensRollup';
 import { TreeNodeDetails } from '../TreeNodeDetails/TreeNodeDetails';
+import { DeletedFields } from '../TreeNodeDetails/DeletedFields';
+import { DetailBands, type DetailBand } from '../DetailBands/DetailBands';
 import { ElementIdRow } from '../ElementIdRow/ElementIdRow';
 import { TreeBreadcrumbs } from '../Breadcrumbs/TreeBreadcrumbs';
 import { useAppState, useAppTransitions, selectors } from '../../state/appState';
 import { useRevealOnArrival } from '../../hooks/useRevealOnArrival';
 import { getCommandBus } from '../../data/commands';
+import { getElementQueries } from '../../data/queries';
+import { compareHistory } from '../../data/storage/historyHelpers';
+import { formatTimestampShort } from '../../utils/time';
 import { commitWithUndo } from '../../data/services/commitWithUndo';
 import { canHaveChildren } from '../../kinds/childrenPolicy';
 import { isLibraryChrome } from '../../data/libraryChrome';
@@ -54,6 +59,35 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
         toggleCardExpanded(props.id);
     };
 
+    /**
+     * The node's own metadata, read from its history: the `create` row dates it,
+     * the newest row says who touched it last and when, and that row's `rev` is
+     * the version. Sourced here rather than from the Element because the Element
+     * carries no `createdAt` and no revision at all — both live only in the log.
+     *
+     * **Gated on the panel being open.** `TreeNodeDetails` animates rather than
+     * unmounts, so its children are mounted for every node on screen; an ungated
+     * fetch would be one history read per visible node per paint of the tree.
+     * Error-catching fetcher, the idiom the field renderers use: a failed read
+     * degrades to "—", never to an unhandled rejection.
+     */
+    const [meta] = createResource(
+        () => (isDetailsExpanded() ? props.id : null),
+        async (id) => {
+            try {
+                const rows = (await getElementQueries().getElementHistory(id)).sort(compareHistory);
+                return {
+                    createdAt: rows.find((r) => r.action === 'create')?.updatedAt ?? null,
+                    latest: rows.length ? rows[rows.length - 1] : null,
+                };
+            } catch {
+                return null;
+            }
+        },
+    );
+
+    const stamp = (at: number | null | undefined) => (at ? formatTimestampShort(at) : '—');
+
     const handleDeleteNode = async () => {
         const nodeId = props.id;
         const parentId = props.parentId;
@@ -61,10 +95,55 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             message: 'Node deleted',
             execute: () => getCommandBus().execute({ type: 'DELETE_ELEMENT', payload: { id: nodeId } }),
             undo: () => getCommandBus().execute({ type: 'RESTORE_ELEMENT', payload: { id: nodeId } }),
+            // Same deferral as a Field delete: the tombstone is immediate, the
+            // audit row waits out the undo window (SPEC → Undo semantics).
+            onExpire: () => getCommandBus().execute({ type: 'LOG_ELEMENT_DELETE', payload: { id: nodeId } }),
         });
         if (ok) {
             props.onNavigateUp?.(parentId ?? null);
         }
+    };
+
+    /**
+     * The first production caller of `UPDATE_ELEMENT_NAME`. Registered since the
+     * command bus landed and exercised only by `elementCommands.test.ts`, which
+     * also means this is the first time an `internal-link`'s live pin has a
+     * rename to follow. Renaming a *Field* is still undecided, and is what the
+     * ISSUES item now holds.
+     *
+     * Undo is the same command with the previous text, captured here — the
+     * closure-based undo the Snackbar contract asks for, no snapshot.
+     */
+    const renameNode = async (next: string) => {
+        const id = props.id;
+        const prev = props.name;
+        await commitWithUndo({
+            message: 'Node renamed',
+            execute: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_NAME',
+                payload: { id, name: next },
+            }),
+            undo: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_NAME',
+                payload: { id, name: prev },
+            }),
+        });
+    };
+
+    const resubtitleNode = async (next: string) => {
+        const id = props.id;
+        const prev = props.subtitle;
+        await commitWithUndo({
+            message: 'Subtitle updated',
+            execute: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_SUBTITLE',
+                payload: { id, subtitle: next },
+            }),
+            undo: () => getCommandBus().execute({
+                type: 'UPDATE_ELEMENT_SUBTITLE',
+                payload: { id, subtitle: prev },
+            }),
+        });
     };
 
     const titleId = () => `node-title-${props.id}`;
@@ -89,6 +168,50 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
     const isChrome = () => isLibraryChrome(props.kind);
     const showDataCard = () => !isChrome() && (ownsChildren() || isLens());
 
+    /**
+     * The node panel's bands, in the shape a Field's details already use
+     * (`DetailBands` — headings that are their own chevrons, open state
+     * persisted in `uiPrefs`). One band today: everything that acts on the node
+     * rather than describing it.
+     *
+     * Titled **Node Tools** rather than `Tools` on purpose. A Field's Tools band
+     * is frequently on screen at the same time — a card's fields expanded above
+     * an open node panel — and two identically-titled headings is a real
+     * ambiguity for a reader before it is one for a test selector.
+     */
+    const detailBands = (): DetailBand[] => [
+        {
+            id: 'tools',
+            title: 'Node Tools',
+            // Library chrome owns no Fields and offers no delete, so the band
+            // would be a heading over nothing.
+            present: !isChrome(),
+            collapsible: true,
+            // Closed. Deleting an asset is the most destructive act in the app;
+            // it should cost a deliberate tap rather than sit under the cursor
+            // every time the panel opens.
+            defaultOpen: false,
+            body: () => (
+                <div class={detailsStyles.toolsBody}>
+                    {/* Renders nothing at all unless this node has deleted
+                        Fields, so a clean node's Tools band is just the
+                        delete action, as it was before. */}
+                    <DeletedFields nodeId={props.id} />
+                    <div class={detailsStyles.actionsRow}>
+                        <button
+                            type="button"
+                            class={detailsStyles.deleteButton}
+                            onClick={() => void handleDeleteNode()}
+                            aria-label="Delete this asset"
+                        >
+                            Delete Asset
+                        </button>
+                    </div>
+                </div>
+            ),
+        },
+    ];
+
     return (
         <div
             ref={setWrapperEl}
@@ -99,33 +222,35 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
             style={{ '--datacard-indent': indentVar() }}
         >
             <TreeNodeDetails nodeId={props.id} isOpen={isDetailsExpanded()}>
+                {/* No heading. The panel opens from the node's own header, one
+                    row above — a "Node Details" title only restated where the
+                    reader already is, and cost the breadcrumb its place at the
+                    top. The panel now reads top-down as: where this node is,
+                    what it says, when and by whom, its id, then what can be
+                    done to it. */}
                 <div>
                     <TreeBreadcrumbs nodeId={props.id} />
-                    <h3 style={{ margin: '0 0 var(--space-3) 0', 'font-size': 'var(--text-base)', 'font-weight': 600 }}>
-                        Node Details
-                    </h3>
-                    <div style={{ color: 'var(--text-muted)', 'font-size': 'var(--text-sm)' }}>
-                        {/* Future: Metadata section */}
-                        {/* CreatedAt, UpdatedAt, UpdatedBy */}
-
-                        {/* Future: Breadcrumb hierarchy */}
-                        {/* Path: Root > Parent > Current */}
+                    {/* A compact block, not one row per fact: the byline, then
+                        both dates and the last hand on one line. The id and the
+                        version pair up on the row below, which was already
+                        there. */}
+                    <div class={detailsStyles.metaBlock}>
+                        <Show when={props.subtitle}>
+                            <div class={detailsStyles.metaByline}>{props.subtitle}</div>
+                        </Show>
+                        <div>
+                            {`Created ${stamp(meta()?.createdAt)} · Updated ${stamp(meta()?.latest?.updatedAt)}`}
+                            <Show when={meta()?.latest?.updatedBy}>
+                                {(by) => ` by ${by()}`}
+                            </Show>
+                        </div>
                     </div>
                     <div class={detailsStyles.idRow}>
-                        <ElementIdRow id={props.id} />
+                        <ElementIdRow id={props.id} version={meta()?.latest?.rev} />
                     </div>
-                    <Show when={!isChrome()}>
-                        <div class={detailsStyles.actionsRow}>
-                            <button
-                                type="button"
-                                class={detailsStyles.deleteButton}
-                                onClick={() => void handleDeleteNode()}
-                                aria-label="Delete this asset"
-                            >
-                                Delete Asset
-                            </button>
-                        </div>
-                    </Show>
+                    <div class={detailsStyles.bandHost}>
+                        <DetailBands bands={detailBands()} persistKey={props.id} />
+                    </div>
                 </div>
             </TreeNodeDetails>
             <NodeHeader
@@ -143,6 +268,8 @@ export const TreeNodeDisplay = (props: TreeNodeDisplayProps) => {
                 onExpand={showDataCard() ? toggleExpand : undefined}
                 onDetailsToggle={() => toggleNodeDetailsExpanded(props.id)}
                 showChevron={showDataCard()}
+                onRenameName={isChrome() ? undefined : renameNode}
+                onRenameSubtitle={isChrome() ? undefined : resubtitleNode}
             />
             <Show when={showDataCard()}>
                 <DataCard isOpen={isExpanded()}>
