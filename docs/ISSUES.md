@@ -88,6 +88,4 @@ The registry/manifest model is decided (SPECIFICATION.md → Data Model; per-kin
 
 38.) **Config nesting depth, at phone width** — a `number-kv` goes band → group → compound → member, each indent one `--chevron-col-width`, inside a Data Card already indented under a node. Re-checked 2026-08-15 after the rework, at a 638px card (≈ `--container-max`): it reads comfortably, and the retired picker's `border-left` plus its `space-4 + space-2` indent are gone, so a level came off. **Actual phone width is still unverified** — Chrome would not shrink below ~674px inner width, so this stayed a hand-test on a real device. Cheapest fixes if it ever bites: drop the indent for the innermost level, or let a group row's children align with the group label rather than past it.
 
----
-
-56.)
+56.)  **restoration of a deleted Field can reinstate a stale siblingOrder, out of order**
